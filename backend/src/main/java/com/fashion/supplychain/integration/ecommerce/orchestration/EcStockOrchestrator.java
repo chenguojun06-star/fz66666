@@ -10,7 +10,7 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcWarehouseAllocatio
 import com.fashion.supplychain.integration.ecommerce.service.EcOrderSplitService;
 import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestionService;
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcWarehouseAllocationService;
 import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.style.entity.ProductSku;
@@ -30,7 +30,7 @@ import java.util.List;
 @ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class EcStockOrchestrator {
 
-    @Autowired private EcUniversalStockService universalStockService;
+    @Autowired private EcUniversalStockOrchestrator universalStockService;
     @Autowired private EcStockAlertService stockAlertService;
     @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
     /** D-640：分仓分配 / 订单拆分查询（原在 EcStockController 直接注入） */
@@ -279,7 +279,7 @@ public class EcStockOrchestrator {
     }
 
     // ===== D-640：以下查询方法从 EcStockController 下沉 =====
-    // 原 Controller 直接注入了 EcUniversalStockService / EcStockAlertService /
+    // 原 Controller 直接注入了 EcUniversalStockOrchestrator / EcStockAlertService /
     // EcPurchaseSuggestionService / EcWarehouseAllocationService / EcOrderSplitService
     // 共 5 个 Service，属「Controller 依赖多个 Service」。
     // 前 3 个本类早已持有，故只补后 2 个依赖。

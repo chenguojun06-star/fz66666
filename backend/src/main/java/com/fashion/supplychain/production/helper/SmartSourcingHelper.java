@@ -1,4 +1,4 @@
-package com.fashion.supplychain.production.service.impl;
+package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-public class SmartSourcingServiceImpl implements SmartSourcingService {
+public class SmartSourcingHelper implements SmartSourcingService {
 
     @Autowired
     private StyleInfoMapper styleInfoMapper;

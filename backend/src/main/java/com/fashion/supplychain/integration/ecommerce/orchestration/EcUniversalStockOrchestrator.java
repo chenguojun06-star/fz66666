@@ -1,8 +1,9 @@
-package com.fashion.supplychain.integration.ecommerce.service;
+package com.fashion.supplychain.integration.ecommerce.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.mapper.EcUniversalStockMapper;
@@ -25,7 +26,7 @@ import java.util.Set;
 
 @Slf4j
 @Service
-public class EcUniversalStockService extends ServiceImpl<EcUniversalStockMapper, EcUniversalStock> {
+public class EcUniversalStockOrchestrator extends ServiceImpl<EcUniversalStockMapper, EcUniversalStock> {
 
     @Autowired
     private ProductWarehousingService productWarehousingService;

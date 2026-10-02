@@ -1,10 +1,11 @@
-package com.fashion.supplychain.finance.service.impl;
+package com.fashion.supplychain.finance.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.mapper.ShipmentReconciliationMapper;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
@@ -20,12 +21,12 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class ShipmentReconciliationServiceImpl extends BaseReconciliationServiceImpl<ShipmentReconciliation, ShipmentReconciliationMapper>
+public class ShipmentReconciliationHelper extends BaseReconciliationServiceImpl<ShipmentReconciliation, ShipmentReconciliationMapper>
         implements ShipmentReconciliationService {
 
     private final ProductionOrderService productionOrderService;
 
-    public ShipmentReconciliationServiceImpl(ProductionOrderService productionOrderService) {
+    public ShipmentReconciliationHelper(ProductionOrderService productionOrderService) {
         this.productionOrderService = productionOrderService;
     }
 

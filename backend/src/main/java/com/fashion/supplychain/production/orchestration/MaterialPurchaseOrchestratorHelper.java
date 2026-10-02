@@ -541,7 +541,7 @@ public class MaterialPurchaseOrchestratorHelper {
                 .count();
         if (activeCount > 0) return false;
 
-        // 可用库存 = Σ(quantity − lockedQuantity)，口径同 SmartSourcingServiceImpl
+        // 可用库存 = Σ(quantity − lockedQuantity)，口径同 SmartSourcingHelper
         List<MaterialStock> stocks = materialStockService.lambdaQuery()
                 .eq(MaterialStock::getMaterialCode, materialCode)
                 .eq(MaterialStock::getTenantId, tenantId)

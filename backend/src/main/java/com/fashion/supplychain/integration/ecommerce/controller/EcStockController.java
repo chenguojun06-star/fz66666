@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * 电商智能库存 Controller（库存 / 预警 / 采购建议 / 分仓分配 / 订单拆分）。
  *
- * <p>D-640：原先本类直接注入了 EcUniversalStockService、EcStockAlertService、
+ * <p>D-640：原先本类直接注入了 EcUniversalStockOrchestrator、EcStockAlertService、
  * EcPurchaseSuggestionService、EcWarehouseAllocationService、EcOrderSplitService
  * 共 5 个 Service，属「Controller 依赖多个 Service」。查询已全部下沉到
  * {@link EcStockOrchestrator}，本类只保留端点声明与响应组装。

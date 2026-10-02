@@ -7,7 +7,7 @@ import com.fashion.supplychain.finance.service.EcSalesRevenueService;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.OrderProcessQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -53,7 +53,7 @@ class EcProductionLinkOrchestratorTest {
 
     @Mock private EcommerceOrderService ecOrderService;
     @Mock private EcSalesRevenueService ecSalesRevenueService;
-    @Mock private EcUniversalStockService ecUniversalStockService;
+    @Mock private EcUniversalStockOrchestrator ecUniversalStockService;
     @Mock private ProductionOrderService productionOrderService;
     @Mock private OrderProcessQueryService orderProcessQueryService;
 

@@ -6,7 +6,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
@@ -62,7 +62,7 @@ public class OrderManagementOrchestrator {
     private ProductSkuService productSkuService;
 
     @Autowired(required = false)
-    private EcUniversalStockService ecUniversalStockService;
+    private EcUniversalStockOrchestrator ecUniversalStockService;
 
     @Autowired(required = false)
     private EcommerceOrderService ecommerceOrderService;

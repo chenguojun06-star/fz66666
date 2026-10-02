@@ -3,7 +3,7 @@ package com.fashion.supplychain.integration.ecommerce.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EcStockDiscrepancyOrchestrator {
 
     @Autowired
-    private EcUniversalStockService universalStockService;
+    private EcUniversalStockOrchestrator universalStockService;
 
     @Autowired
     private ProductSkuService productSkuService;

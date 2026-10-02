@@ -4,7 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.entity.EcStockAlert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcPurchaseSuggestion;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
 import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestionService;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 )
 public class EcStockQueryTool {
 
-    @Autowired private EcUniversalStockService universalStockService;
+    @Autowired private EcUniversalStockOrchestrator universalStockService;
     @Autowired private EcStockAlertService stockAlertService;
     @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
 

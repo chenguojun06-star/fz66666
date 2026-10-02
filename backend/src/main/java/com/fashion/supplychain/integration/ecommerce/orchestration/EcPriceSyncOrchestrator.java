@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
 import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
@@ -45,7 +45,7 @@ public class EcPriceSyncOrchestrator {
     private static final double LOW_SALES_RATE = 0.5, HIGH_SALES_RATE = 2.0; // 低/高销量阈值（单/天）
     /** 内存中的调价建议缓存：key = tenantId:skuId */
     private final Map<String, PriceSuggestion> suggestionCache = new ConcurrentHashMap<>();
-    @Autowired private EcUniversalStockService universalStockService;
+    @Autowired private EcUniversalStockOrchestrator universalStockService;
     @Autowired private EcommerceOrderService ecommerceOrderService;
     @Autowired private ProductSkuService productSkuService;
     @Autowired private BackendActionFlagService backendActionFlagService;

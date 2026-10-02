@@ -1,4 +1,4 @@
-package com.fashion.supplychain.production.service.impl;
+package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -24,11 +24,11 @@ import org.springframework.util.StringUtils;
 import java.util.Map;
 
 /**
- * 订单转移Service实现类
+ * 订单转移Helper（原 OrderTransferServiceImpl，D-716 按治理方案更名移包）
  */
 @Service
 @Slf4j
-public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, OrderTransfer>
+public class OrderTransferHelper extends ServiceImpl<OrderTransferMapper, OrderTransfer>
         implements OrderTransferService {
 
     @Autowired

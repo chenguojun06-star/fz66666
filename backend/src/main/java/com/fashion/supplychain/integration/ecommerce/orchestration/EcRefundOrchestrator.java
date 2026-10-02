@@ -8,7 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.system.service.BackendActionFlagService;
 import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
@@ -32,7 +32,7 @@ public class EcRefundOrchestrator {
     @Autowired
     private EcommerceOrderService ecommerceOrderService;
     @Autowired
-    private EcUniversalStockService ecUniversalStockService;
+    private EcUniversalStockOrchestrator ecUniversalStockService;
     @Autowired(required = false)
     private PlatformNotifyHelper platformNotifyHelper;
     @Autowired

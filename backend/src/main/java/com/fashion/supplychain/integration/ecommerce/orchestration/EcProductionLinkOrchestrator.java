@@ -7,7 +7,7 @@ import com.fashion.supplychain.finance.service.EcSalesRevenueService;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.OrderProcessQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -75,7 +75,7 @@ public class EcProductionLinkOrchestrator {
     private EcSalesRevenueService ecSalesRevenueService;
 
     @Autowired(required = false)
-    private EcUniversalStockService ecUniversalStockService;
+    private EcUniversalStockOrchestrator ecUniversalStockService;
 
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
@@ -316,7 +316,7 @@ public class EcProductionLinkOrchestrator {
     /**
      * 库存联动快照：按 {@code style_id} 取 {@code t_ec_universal_stock} 并汇总<b>款级行</b>。
      *
-     * <p>该表由 {@code EcUniversalStockService.recalculateStock} 在电商接单/出库/入库时维护，
+     * <p>该表由 {@code EcUniversalStockOrchestrator.recalculateStock} 在电商接单/出库/入库时维护，
      * 是"仓库 ↔ 电商"联动的真实落点。两点必须注意：
      * <ul>
      *   <li><b>只统计 {@code warehouse} 为空的款级汇总行</b>：recalculateStock 会为每个 SKU

@@ -5,7 +5,7 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcOrderSplit;
 import com.fashion.supplychain.integration.ecommerce.entity.EcWarehouseAllocation;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.EcOrderSplitService;
-import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcWarehouseAllocationService;
 import com.fashion.supplychain.integration.ecommerce.service.SmartWarehouseAllocator;
 import com.fashion.supplychain.style.entity.ProductSku;
@@ -31,7 +31,7 @@ public class EcOrderProcessOrchestrator {
     private EcOrderSplitService orderSplitService;
 
     @Autowired
-    private EcUniversalStockService universalStockService;
+    private EcUniversalStockOrchestrator universalStockService;
 
     @Autowired
     private EcStockOrchestrator stockOrchestrator;

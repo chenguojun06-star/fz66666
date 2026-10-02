@@ -2,6 +2,7 @@ package com.fashion.supplychain.integration.ecommerce.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcUniversalStockOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.entity.EcWarehouseAllocation;
 import com.fashion.supplychain.integration.ecommerce.mapper.EcWarehouseAllocationMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 public class SmartWarehouseAllocator {
 
     @Autowired
-    private EcUniversalStockService universalStockService;
+    private EcUniversalStockOrchestrator universalStockService;
 
     @Autowired
     private EcWarehouseAllocationMapper allocationMapper;
