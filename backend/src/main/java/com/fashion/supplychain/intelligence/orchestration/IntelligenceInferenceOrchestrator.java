@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -104,6 +105,48 @@ public class IntelligenceInferenceOrchestrator {
     private static final long AUTH_CIRCUIT_RESET_MS = 30 * 60 * 1000L; // 30 分钟
     private final ConcurrentHashMap<String, AtomicInteger> authFailCount = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> authCircuitOpenSince = new ConcurrentHashMap<>();
+
+    // ===== D-719 余额熔断：DeepSeek 返回 402（账户余额不足）后停止外呼、明确提示，充值后自愈 =====
+    // 用户拍板（2026-10-03）：402 不再逐次真打 API 降级，而是熔断 + 直接提示「账户余额不足」
+    static final long BALANCE_COOLDOWN_MS = 30 * 60 * 1000L; // 熔断冷却 30 分钟，期满放行一次真实调用探测
+    public static final String BALANCE_NOTICE_TEXT =
+            "【系统提示】AI 账户余额不足，AI 功能已临时降级。请管理员为模型账户充值，充值后约 30 分钟内自动恢复。";
+    private final AtomicBoolean balanceExhausted = new AtomicBoolean(false);
+    private volatile long balanceExhaustedAt = 0L;
+
+    /** 余额熔断是否生效（冷却期满自动半开：放行本次真实调用探测——仍欠费会重新熔断，已充值则自然恢复） */
+    private boolean isBalanceCircuitOpen() {
+        if (!balanceExhausted.get()) {
+            return false;
+        }
+        if (System.currentTimeMillis() - balanceExhaustedAt >= BALANCE_COOLDOWN_MS) {
+            if (balanceExhausted.compareAndSet(true, false)) {
+                log.info("[BalanceCircuit] 余额熔断冷却期结束，放行探测调用（若仍欠费将重新熔断）");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /** 收到 402 即记熔断起点；compareAndSet 保证「首次进入」只告警一次 */
+    private void markBalanceExhausted(String provider) {
+        balanceExhaustedAt = System.currentTimeMillis();
+        if (balanceExhausted.compareAndSet(false, true)) {
+            log.error("[BalanceCircuit] {} 返回 402（账户余额不足）→ 熔断 {} 分钟：期间所有 AI 调用不再外呼、"
+                    + "直接返回「余额不足」提示；充值后冷却期满自动恢复", provider, BALANCE_COOLDOWN_MS / 60000);
+        }
+    }
+
+    private IntelligenceInferenceResult buildBalanceExhaustedResult(String traceId, long start) {
+        IntelligenceInferenceResult r = new IntelligenceInferenceResult();
+        r.setSuccess(false);
+        r.setErrorMessage("ai-balance-exhausted（402 账户余额不足，已熔断停止外呼）");
+        r.setContent(BALANCE_NOTICE_TEXT);
+        r.setTraceId(traceId);
+        r.setLatencyMs(System.currentTimeMillis() - start);
+        return r;
+    }
+
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
@@ -219,6 +262,11 @@ public class IntelligenceInferenceOrchestrator {
         if (!cronInferenceEnabled && isCronContext()) {
             return buildCronDisabledResult(traceId, start, scene);
         }
+        // D-719：余额熔断生效期间不再外呼，直接返回明确提示。
+        // 刻意提前 return 绕过关键词兜底——用户拍板要「显式提示余额不足」而非静默降级
+        if (isBalanceCircuitOpen()) {
+            return buildBalanceExhaustedResult(traceId, start);
+        }
 
         IntelligenceInferenceResult result;
         if (intelligenceModelGatewayOrchestrator.isGatewayReady()
@@ -272,6 +320,15 @@ public class IntelligenceInferenceOrchestrator {
         if (!cronInferenceEnabled && isCronContext()) {
             return buildCronDisabledResult(traceId, start, scene);
         }
+        // D-719：余额熔断——先给气泡发一条明确提示再结束流（SSE 消费方拿到的就是提示文案）
+        if (isBalanceCircuitOpen()) {
+            try {
+                chunkConsumer.accept(BALANCE_NOTICE_TEXT, true);
+            } catch (Exception ignore) {
+                // 消费方已断开不影响返回
+            }
+            return buildBalanceExhaustedResult(traceId, start);
+        }
 
         StreamConfig cfg = resolveStreamConfig();
         IntelligenceInferenceResult result = new IntelligenceInferenceResult();
@@ -292,6 +349,10 @@ public class IntelligenceInferenceOrchestrator {
                     sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofLines());
 
             if (response.statusCode() != 200) {
+                // D-719：402 = 账户余额不足 → 熔断，停止后续外呼
+                if (response.statusCode() == 402) {
+                    markBalanceExhausted("stream");
+                }
                 result.setSuccess(false);
                 result.setErrorMessage("http-" + response.statusCode());
                 readStreamErrorBody(response, result);
@@ -512,6 +573,12 @@ public class IntelligenceInferenceOrchestrator {
             try {
                 HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 int code = response.statusCode();
+                // D-719：402 = 账户余额不足（视觉与对话共用同一余额）→ 熔断，停止重试/换模型外呼
+                if (code == 402) {
+                    markBalanceExhausted("vision:" + model.name);
+                    lastVisionError.set("AI 账户余额不足，图片识别暂不可用，请充值后自动恢复");
+                    return null;
+                }
                 // 401 鉴权失败：累计计数，达到阈值后熔断，停止刷屏
                 if (code == 401) {
                     int fails = recordAuthFailure(model.name);
@@ -945,6 +1012,10 @@ public class IntelligenceInferenceOrchestrator {
                 if (retryResult != null) return retryResult;
             }
             result.setSuccess(false);
+            // D-719：402 = 账户余额不足 → 熔断，后续调用不再外呼
+            if (response.statusCode() == 402) {
+                markBalanceExhausted(provider);
+            }
             result.setErrorMessage("http-" + response.statusCode());
             log.warn("[IntelligenceInference] {} 调用失败 status={} body={}", provider, response.statusCode(),
                     response.body().substring(0, Math.min(200, response.body().length())));
