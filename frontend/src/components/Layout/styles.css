@@ -544,6 +544,23 @@
   padding: 0;
   margin: 2px 6px;
   text-align: center;
+  /* D-722 削字根治：antd 给 collapsed 项的固定内容宽（实测 ~23px）只比
+     11px 两字标题（21.9px）多 1.1px，Windows 字体渲染/显示缩放下文字略宽
+     即被 holder 的 overflow:hidden 削边（线上截图两字词第二字被切半）。
+     改为吃满行宽（自身 margin 占 12px）+ 溢出可见双保险。 */
+  width: calc(100% - 12px);
+  overflow: visible;
+}
+
+/* D-722：折叠态隐藏滚动条（滚轮滚动保留）。Windows/Edge 的占位式滚动条
+   会占掉 ~17px，把 48px 内容区挤到 ~31px，项加 12px 边距直接溢出被
+   overflow-x:hidden 裁掉——这是线上"文字被遮挡"的第二个挤压源 */
+.sidebar-menu.ant-menu-inline-collapsed {
+  scrollbar-width: none;
+}
+.sidebar-menu.ant-menu-inline-collapsed::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* 折叠态下 antd 原生 label / 展开箭头不参与纵排，一律不占位（弹层是独立 portal 不受影响） */
