@@ -2,8 +2,12 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-02（✅D-716 service→service A/B 类收尾清零 19 → 15（治理方案目标达成）+ ✅D-717 教程内容回补 D-514~D-715 大改版）
+> 最后更新：2026-10-02（✅D-716 service→service A/B 类收尾清零 19 → 15 + ✅D-717 教程内容回补 D-514~D-715 大改版 + ✅D-718 resilience4j 死依赖删除）
 > 上一版：2026-10-01（①归档 08-31 及以前内容；②✅D-698 Spring Boot 3.4.5 → 4.1.1 升级上线 + 🔴D-699 SSE 流截断/DSML 泄漏 + 🔴D-700 AI 成本归因 + D-674~D-711 前端 as any 治理）
+
+## ✅ D-718：resilience4j 死依赖删除（2026-10-02）
+
+Boot 4.1 升级评估（D-698）遗留的「resilience4j spring-boot4 变体」待办，实查后**问题不存在**：pom 4 个 artifact（spring-boot3/circuitbreaker/ratelimiter/timelimiter 2.2.0）+ application.yml 一整段 circuitbreaker/timelimiter 实例配置，但**全仓 main/test 零 import**——真实的断路器是 IntelligenceModelGatewayOrchestrator 自实现的 GatewayCircuitBreaker（连续失败计数+冷却+恢复日志），与 resilience4j 无关。已删除 pom 依赖 + yml 配置块，留 D-718 注释指向真实断路器；勘误 CODE_WIKI.md 技术栈表与 SpringBoot升级评估文档（评估时的「需换 spring-boot4 版」结论作废）。mvn compile 绿、全量测试零失败。**教训：升级评估先 grep import 核实真实使用面，别为没在用的依赖规划迁移。**
 
 ## ✅ D-716：service→service 架构违规 A/B 类收尾清零（2026-10-02，19 → 15）
 

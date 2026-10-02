@@ -2,9 +2,17 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-02（D-716 service→service A/B 类收尾清零 19 → 15 + D-717 教程内容回补 D-514~D-715）
+> 最后更新：2026-10-02（D-716 service→service A/B 类收尾清零 19 → 15 + D-717 教程内容回补 D-514~D-715 + D-718 resilience4j 死依赖删除）
 
 ## 已完成
+
+### 2026-10-02 D-718 resilience4j 死依赖删除
+
+- [x] 实查：pom 4 个 artifact + yml 一段实例配置，全仓 main/test 零 import；真实断路器是 IntelligenceModelGatewayOrchestrator 自实现的 GatewayCircuitBreaker
+- [x] 删 pom 依赖（留 D-718 注释）+ application.yml resilience4j 配置块（留指针注释）
+- [x] 勘误 docs/CODE_WIKI.md 技术栈表 + docs/SpringBoot升级评估-3.4到4.1.md（「需换 spring-boot4 版」结论作废）
+- [x] D-698 升级评估遗留的「resilience4j spring-boot4 变体」待办就此关闭；mvn compile 绿 + 全量测试零失败
+- [ ] 教训入档：升级评估先 grep import 核实真实使用面，别为没在用的依赖规划迁移
 
 ### 2026-10-02 D-716 service→service 架构违规 A/B 类收尾清零（19 → 15，治理目标达成）
 

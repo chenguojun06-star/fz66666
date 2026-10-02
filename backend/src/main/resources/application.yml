@@ -672,48 +672,7 @@ tts:
     subscription-key: ${TTS_AZURE_SUBSCRIPTION_KEY:}
     region: ${TTS_AZURE_REGION:eastasia}
 
-resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        slow-call-rate-threshold: 80
-        slow-call-duration-threshold: 5s
-        wait-duration-in-open-state: 30s
-        permitted-number-of-calls-in-half-open-state: 3
-        minimum-number-of-calls: 5
-    instances:
-      database:
-        base-config: default
-        failure-rate-threshold: 60
-        slow-call-duration-threshold: 3s
-        wait-duration-in-open-state: 20s
-      aiService:
-        base-config: default
-        failure-rate-threshold: 70
-        slow-call-duration-threshold: 30s
-        wait-duration-in-open-state: 60s
-      paymentService:
-        base-config: default
-        failure-rate-threshold: 50
-        slow-call-duration-threshold: 10s
-        wait-duration-in-open-state: 30s
-      logisticsService:
-        base-config: default
-        failure-rate-threshold: 60
-        slow-call-duration-threshold: 15s
-        wait-duration-in-open-state: 60s
-  timelimiter:
-    configs:
-      default:
-        timeout-duration: 10s
-    instances:
-      aiService:
-        timeout-duration: 90s
-      paymentService:
-        timeout-duration: 30s
-      logisticsService:
-        timeout-duration: 15s
+# D-718：resilience4j 配置块已随死依赖一并删除（无任何代码消费这些实例配置）；
+# 实际熔断行为见 IntelligenceModelGatewayOrchestrator 的自实现 GatewayCircuitBreaker。
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）

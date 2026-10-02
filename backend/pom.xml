@@ -263,26 +263,9 @@
             <version>3.1.1422</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot3</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-ratelimiter</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-timelimiter</artifactId>
-            <version>2.2.0</version>
-        </dependency>
+        <!-- D-718：resilience4j 全家桶已删除 —— pom 声明 + yml 配置俱全，但全仓零 import，
+             真实断路器是 IntelligenceModelGatewayOrchestrator 自实现的 GatewayCircuitBreaker。
+             Boot 4.1 升级评估曾计划换 spring-boot4 变体，实查后确认为死依赖，直接删除。 -->
 
     </dependencies>
 

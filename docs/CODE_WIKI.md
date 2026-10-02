@@ -525,7 +525,7 @@ Prompt 组装核心，注入 17+ 上下文块：
 | WebSocket | spring-boot-starter-websocket | BOM |
 | 安全 | spring-boot-starter-security | BOM |
 | AI | spring-ai BOM | 1.0.0 |
-| 韧性 | resilience4j-spring-boot3 | 2.2.0 |
+| 韧性 | ~~resilience4j~~ 已删除（D-718 死依赖，零代码引用） | — |
 | 监控 | micrometer-registry-prometheus | BOM |
 | API 文档 | springdoc-openapi-starter-webmvc-ui | 2.6.0 |
 | 工具 | hutool-all / lombok / pinyin4j | 5.8.27 / 1.18.40 / 2.5.1 |

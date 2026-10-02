@@ -67,7 +67,7 @@
 | Tomcat 11 | 未直接引用 | 🟢 低 |
 | 虚拟线程（`spring.threads.virtual`） | 91 处 `ThreadLocal`/`Executors` | 🟡 需评估 |
 | **MyBatis-Plus starter 切换** | 当前 `mybatis-plus-spring-boot3-starter:3.5.12` | 🟡 **必改 artifactId** |
-| resilience4j | `resilience4j-spring-boot3:2.2.0` + `spring6` | 🟡 需换 spring-boot4 版 |
+| resilience4j | ~~需换 spring-boot4 版~~ | ✅ 已删除（D-718：实查全仓零 import，系死依赖，无需迁移） |
 | Flyway | 10.20.1 | 🟢 随 Boot BOM 走 |
 
 ### 3.3 Jackson 是主要工作量
@@ -95,6 +95,10 @@
 `spring-boot-autoconfigure 4.0.x`，与 Boot 4.1 可能需对齐 patch 版本。
 
 resilience4j 同样需要 `resilience4j-spring-boot3` → `spring-boot4` 变体。
+
+> **D-718 勘误（2026-10-02）**：实查发现 resilience4j 全仓零代码引用（真正的断路器是
+> IntelligenceModelGatewayOrchestrator 自实现的 GatewayCircuitBreaker），系死依赖，
+> 已连同 yml 配置块一并删除，无需迁移。
 
 ---
 
