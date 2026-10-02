@@ -26,6 +26,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.fashion.supplychain.system.helper.EmployeeNoGenerator employeeNoGenerator;
+
     @Override
     public Page<User> getUserPage(Long page, Long pageSize, String username, String name, String roleName,
             String status) {
@@ -65,6 +68,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 角色同步逻辑已移至 UserOrchestrator，此处不再调用 RoleService
 
         return save(user);
+    }
+
+    /**
+     * D-721：工号系统自带。重写 MP 的 save() 作为唯一收口——saveUser() 及租户主账号、
+     * 子账号、申请开户、Excel 导入、OpenAPI 导入、工厂账号等全部建用户入口最终都落到这里，
+     * 新建用户工号留空时按租户内注册先后顺序自动排号（0001 起）。显式传入的工号不覆盖。
+     */
+    @Override
+    public boolean save(User user) {
+        if (user != null && user.getId() == null && user.getTenantId() != null
+                && !StringUtils.hasText(user.getEmployeeNo())) {
+            user.setEmployeeNo(employeeNoGenerator.next(user.getTenantId()));
+        }
+        return super.save(user);
     }
 
     @Override

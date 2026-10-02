@@ -106,7 +106,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         <Row gutter={16} className="mt-sm">
           <Col span={8}>
             <Form.Item name="employeeNo" label="工号">
-              <Input placeholder="如：EMP001（选填）" maxLength={50} />
+              <Input placeholder="留空自动按顺序生成（如 0001）" maxLength={50} />
             </Form.Item>
           </Col>
           <Col span={8}>
