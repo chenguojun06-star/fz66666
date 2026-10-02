@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Input, Pagination, Radio, Space, Spin, Typography } from 'antd';
+import { Button, Input, Pagination, Radio, Space, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { SearchOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import SheetRichViewer from '@/components/common/SheetRichViewer';
@@ -308,9 +309,9 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
             </div>
           ) : (
             <div className="u-flex-1 u-br-6 u-p-16" style={{ minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', background: 'var(--color-bg-container)' }}>
-              <Spin spinning={previewLoading}>
+              <BrandLoading spinning={previewLoading}>
                 <SheetRichViewer content={previewHtml} minHeight={320} />
-              </Spin>
+              </BrandLoading>
             </div>
           )}
         </div>

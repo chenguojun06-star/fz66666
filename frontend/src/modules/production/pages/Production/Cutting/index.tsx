@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { App, Button, Empty, Space, Spin } from 'antd';
+import { App, Button, Empty, Space } from 'antd';
 
 import PageLayout from '@/components/common/PageLayout';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
@@ -225,7 +226,7 @@ const CuttingManagement: React.FC = () => {
 
           {isEntryPage && !activeTask ? (
             taskResolving ? (
-              <div className="u-ta-center" style={{ padding: 64 }}><Spin /></div>
+              <div className="u-ta-center" style={{ padding: 64 }}><BrandLoader size={40} /></div>
             ) : (
               <Empty description="未找到裁剪任务（可能已被退回或删除）" style={{ padding: 48 }}>
                 <Button type="primary" onClick={() => resetActiveTask(true)}>返回裁剪管理</Button>

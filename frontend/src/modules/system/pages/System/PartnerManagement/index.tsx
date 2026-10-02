@@ -10,8 +10,9 @@ import type { ApiResult } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
 import { useUser } from '@/utils/AuthContext';
 import {
-  App, Avatar, Button, Empty, Input, Space, Spin, Tag,
+  App, Avatar, Button, Empty, Input, Space, Tag,
 } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { TableColumnsType } from 'antd';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import {
@@ -218,7 +219,7 @@ const PartnerManagement: React.FC = () => {
           </div>
         }
       >
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           {treeData.length === 0 && !loading ? (
             <Empty description="暂无合作企业数据" style={{ padding: '60px 0' }} />
           ) : (
@@ -301,7 +302,7 @@ const PartnerManagement: React.FC = () => {
               </div>
             </div>
           )}
-        </Spin>
+        </BrandLoading>
       </PageLayout>
 
       <AssignMemberModal

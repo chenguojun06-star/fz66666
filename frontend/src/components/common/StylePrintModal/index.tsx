@@ -10,7 +10,8 @@
  *   - 主文件仅做组合与布局
  */
 import React from 'react';
-import { Button, Drawer, Space, Spin } from 'antd';
+import { Button, Drawer, Space } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PrinterOutlined } from '@ant-design/icons';
 
 import { StylePrintModalProps } from './types';
@@ -71,7 +72,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       footer={null}
     >
       <div style={{ padding: '16px', flex: 1, overflow: 'auto' }}>
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           {/* 顶部操作栏 */}
           <div style={{
             marginBottom: 12, padding: '10px 16px',
@@ -139,7 +140,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               loading={loading}
             />
           </div>
-        </Spin>
+        </BrandLoading>
       </div>
     </Drawer>
   );

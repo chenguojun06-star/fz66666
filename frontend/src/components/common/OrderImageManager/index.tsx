@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Empty, Popconfirm, Spin, Tooltip } from 'antd';
+import { App, Button, Empty, Popconfirm, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import { HistoryOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
@@ -178,7 +179,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         )}
       </div>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {totalCount === 0 && !loading ? (
           <Empty description="暂无图片" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -258,7 +259,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
             </div>
           </div>
         )}
-      </Spin>
+      </BrandLoading>
 
       <ResizableModal
         title="图片更新历史"

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Button, Tag, Modal, Card, Statistic, Row, Col, Empty, Spin, Popconfirm, App } from 'antd';
+import { Button, Tag, Modal, Card, Statistic, Row, Col, Empty, Popconfirm, App } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import { SearchOutlined, DeleteOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import { intelligenceApi, type OrphanDataScanResultDTO, type OrphanDataItemDTO, type OrphanDataCategoryStat } from '@/services/intelligence/intelligenceApi';
@@ -196,7 +197,7 @@ const OrphanDataPage: React.FC = () => {
               <Button icon={<ReloadOutlined />} onClick={() => handleSelectCategory(selectedTable)}>刷新</Button>
             </div>
           </div>
-          <Spin spinning={loadingItems}>
+          <BrandLoading spinning={loadingItems}>
             <ResizableTable
               storageKey="orphan-data-table"
               rowKey="id"
@@ -207,7 +208,7 @@ const OrphanDataPage: React.FC = () => {
               emptyDescription="暂无数据"
               scroll={{ x: 900 }}
             />
-          </Spin>
+          </BrandLoading>
         </div>
       )}
     </div>

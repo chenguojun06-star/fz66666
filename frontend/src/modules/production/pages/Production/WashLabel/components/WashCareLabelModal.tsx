@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Radio, Spin } from 'antd';
+import { Button, Radio } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PrinterOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import type { ProductionOrder } from '@/types/production';
@@ -115,7 +116,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
 
   return (
     <SideDrawer title="打印洗水唛" open={open} onClose={onCancel} width="85%" footer={null}>
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 15, marginBottom: 8 }}>纸张规格</div>
           <Radio.Group value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
@@ -130,7 +131,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
           width={paper.w}
           height={paper.h}
         />
-      </Spin>
+      </BrandLoading>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button onClick={onCancel}>取消</Button>
         <Button type="primary" icon={<PrinterOutlined />} loading={printing} onClick={handlePrint}>

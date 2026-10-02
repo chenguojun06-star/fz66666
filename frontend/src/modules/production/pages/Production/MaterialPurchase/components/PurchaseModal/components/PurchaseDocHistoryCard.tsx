@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Empty, Image, Space, Spin, Tooltip } from 'antd';
+import { Card, Empty, Image, Space, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { FileImageOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { PurchaseDocRecord } from '../PurchaseDetailView.helpers';
@@ -37,7 +38,7 @@ const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList
         </Space>
       }
     >
-      <Spin spinning={docsLoading}>
+      <BrandLoading spinning={docsLoading}>
         <div className="u-d-flex u-fwrap-wrap u-gap-16">
           {docList.map((doc) => (
             <div
@@ -73,7 +74,7 @@ const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList
             </div>
           ))}
         </div>
-      </Spin>
+      </BrandLoading>
     </Card>
   );
 };

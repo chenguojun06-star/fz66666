@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useMemo, memo } from 'react';
-import { App, Spin, Image } from 'antd';
+import { App, Image } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -258,12 +259,12 @@ function MultiImageUploadBox({
       )}
 
       {canAdd && (
-        <Spin spinning={uploading}>
+        <BrandLoading spinning={uploading}>
           <div onClick={handleClick} style={addBoxStyle}>
             <PlusOutlined style={{ fontSize: 15, color: MUTED_COLOR }} />
             <div style={{ fontSize: 15, color: MUTED_COLOR, marginTop: 4 }}>{label}</div>
           </div>
-        </Spin>
+        </BrandLoading>
       )}
     </div>
   );

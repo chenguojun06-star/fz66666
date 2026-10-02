@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Input, Typography, Spin } from 'antd';
+import { Button, Input, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import { BrandLoader } from '@/components/common/loading';
 
 interface ShareLinkModalProps {
   open: boolean;
@@ -23,7 +24,7 @@ const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl
   >
     {shareLoading ? (
       <div className="u-ta-center" style={{ padding: '20px 0' }}>
-        <Spin /> <span className="u-ml-8">正在生成分享链接…</span>
+        <BrandLoader size={20} /> <span className="u-ml-8">正在生成分享链接…</span>
       </div>
     ) : (
       <>

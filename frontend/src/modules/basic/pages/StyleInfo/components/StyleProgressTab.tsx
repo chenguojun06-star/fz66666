@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Empty, Spin, Tag } from 'antd';
+import { Empty, Tag } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -235,7 +236,7 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
   }, [pattern]);
 
   if (loading) {
-    return <div className="u-ta-center" style={{ padding: 40 }}><Spin tip="加载中..." /></div>;
+    return <div className="u-ta-center" style={{ padding: 40 }}><BrandLoader size={48} label="加载中..." /></div>;
   }
 
   if (!detail) {

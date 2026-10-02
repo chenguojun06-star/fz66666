@@ -11,11 +11,11 @@ import {
   Modal,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
 } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { DownOutlined, ReloadOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons';
@@ -321,7 +321,7 @@ export default function ScanRecordManage() {
         )}
       </Space>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <Table<ScanRecordManageRow>
           rowKey="id"
           size="small"
@@ -337,7 +337,7 @@ export default function ScanRecordManage() {
             onChange: (p, ps) => { setPageNum(p); setPageSize(ps); },
           }}
         />
-      </Spin>
+      </BrandLoading>
 
       {/* 编辑弹窗 */}
       <Modal
@@ -396,7 +396,7 @@ export default function ScanRecordManage() {
         onClose={() => { setLogOpen(false); setLogTarget(null); setLogRows([]); }}
         destroyOnHidden
       >
-        <Spin spinning={logLoading}>
+        <BrandLoading spinning={logLoading}>
           {logRows.length === 0 ? (
             <Text type="secondary">暂无修改/撤回记录</Text>
           ) : (
@@ -415,7 +415,7 @@ export default function ScanRecordManage() {
               ))}
             </Space>
           )}
-        </Spin>
+        </BrandLoading>
       </Drawer>
     </>
   );

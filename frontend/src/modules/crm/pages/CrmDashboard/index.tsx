@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { Button, Card, Col, Input, Row, Select, Space, Spin } from 'antd';
+import { Button, Card, Col, Input, Row, Select, Space } from 'antd';
 import {
   CheckCircleOutlined, PlusOutlined, SearchOutlined,
   TeamOutlined, TrophyOutlined, UserOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import { BrandLoader } from '@/components/common/loading';
 import { useNavigate } from 'react-router-dom';
 import { paths } from '@/routeConfig';
 import LockedView from './components/LockedView';
@@ -163,7 +164,7 @@ const CrmDashboard: React.FC = () => {
     <>
       <div style={{ padding: '24px' }}>
         {checking ? (
-          <div className="u-ta-center" style={{ padding: '80px 0' }}><Spin size="large" /></div>
+          <div className="u-ta-center" style={{ padding: '80px 0' }}><BrandLoader size={64} /></div>
         ) : subscribed ? (
           <CustomerManagement />
         ) : (

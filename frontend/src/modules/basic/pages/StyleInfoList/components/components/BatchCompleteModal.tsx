@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Checkbox, InputNumber, Modal, Spin, Tag } from 'antd';
+import { Alert, Checkbox, InputNumber, Modal, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import api from '@/utils/api';
 import type { PatternProductionSnapshot } from '../styleTableViewUtils.types';
 
@@ -136,7 +137,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
       width={560}
       destroyOnHidden
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <Alert
           type="info"
           showIcon
@@ -210,7 +211,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
             有 {missingQtyCount} 个已勾选的色码还没填数量，提交时会自动跳过。
           </div>
         )}
-      </Spin>
+      </BrandLoading>
     </Modal>
   );
 };

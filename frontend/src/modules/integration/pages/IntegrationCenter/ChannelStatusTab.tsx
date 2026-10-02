@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Card, Badge, Statistic, Button, Tag, Spin, Tooltip, Divider } from 'antd';
+import { Row, Col, Card, Badge, Statistic, Button, Tag, Tooltip, Divider } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   CheckCircleOutlined,
   WarningOutlined,
@@ -87,7 +88,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
   };
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       {/* 统计栏 */}
       {stats && (
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
@@ -223,7 +224,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
         onClose={() => setConfigModalOpen(false)}
         onSaved={() => fetchData()}
       />
-    </Spin>
+    </BrandLoading>
   );
 };
 

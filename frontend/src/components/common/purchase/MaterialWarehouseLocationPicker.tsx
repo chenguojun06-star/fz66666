@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Select, Spin } from 'antd';
+import { Alert, Button, Select } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { useNavigate } from 'react-router-dom';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
@@ -58,7 +59,7 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
         <div className="u-fs-12 u-mb-6" style={{ color: 'var(--color-text-secondary)' }}>
           第二步：点击选择库位{value ? `（已选 ${value}）` : ''}
         </div>
-        <Spin spinning={locationsLoading}>
+        <BrandLoading spinning={locationsLoading}>
           {(locations || []).length === 0 ? (
             <Alert
               type="info"
@@ -97,7 +98,7 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
               })}
             </div>
           )}
-        </Spin>
+        </BrandLoading>
       </div>
     </div>
   );

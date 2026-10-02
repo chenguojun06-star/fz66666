@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Spin, Tabs, Switch } from 'antd';
+import { Alert, Button, Tabs, Switch } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { TabsProps } from 'antd';
 import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
@@ -141,7 +142,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
   }, [orderDetail]);
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       {/* D-518 环节核验：管理员可在父节点弹窗顶部直接开关——开启后本环节扫码核验上一环节子工序完成 */}
       {isAdminUser && (
         <div
@@ -364,7 +365,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
           ].filter(Boolean) as NonNullable<TabsProps['items']>;
         })()}
       />
-    </Spin>
+    </BrandLoading>
   );
 };
 

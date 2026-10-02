@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Form, Input, InputNumber, DatePicker, Select, Radio, Spin, message } from 'antd';
+import { Form, Input, InputNumber, DatePicker, Select, Radio, message } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
@@ -156,7 +157,7 @@ const SampleLoanModal: React.FC<SampleLoanModalProps> = ({ visible, prefillData,
             placeholder="输入款号搜索样衣"
             filterOption={false}
             onSearch={(val) => searchSamples(val)}
-            notFoundContent={searching ? <Spin size="small" /> : null}
+            notFoundContent={searching ? <BrandLoader size={20} /> : null}
             options={sampleOptions.map(s => ({
               label: `${s.styleNo} (${s.color}/${s.size}) - 可用${s.available}件`,
               value: s.id,

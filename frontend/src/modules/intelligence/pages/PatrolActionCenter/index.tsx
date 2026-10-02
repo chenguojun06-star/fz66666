@@ -7,7 +7,8 @@
  * 路由挂载：intelligence/patrol-action-center
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Rate, Space, Spin, Tabs, Tag, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Rate, Space, Tabs, Tag, message } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { CheckOutlined, CloseOutlined, PlayCircleOutlined, UndoOutlined, MessageOutlined, StopOutlined, RobotOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -309,7 +310,7 @@ const PatrolActionCenter: React.FC = () => {
 
   return (
     <div className="patrol-center">
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <div className="patrol-summary">
           <Card className="patrol-summary-card">
             <div className="patrol-summary-value">{summary.pendingCount}</div>
@@ -344,7 +345,7 @@ const PatrolActionCenter: React.FC = () => {
           showIndex={false}
           storageKey="patrol-action-center-table"
         />
-      </Spin>
+      </BrandLoading>
 
       <Modal
         title={modalTitle}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Row, Col, Tag, Button, Input, Select, Space, Spin, Empty, Popover, Typography, Form, InputNumber, Tabs, Tooltip, Image } from 'antd';
+import { Row, Col, Tag, Button, Input, Select, Space, Empty, Popover, Typography, Form, InputNumber, Tabs, Tooltip, Image } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import { PlusOutlined, DeleteOutlined, SendOutlined, ThunderboltOutlined, FireOutlined, CheckCircleOutlined } from '@ant-design/icons';
@@ -57,7 +58,7 @@ export default function SelectionCenter() {
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>新增候选款</Button>
       </div>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {filtered.length === 0 && !loading ? (
           <Empty description="暂无候选款，点击「新增候选款」开始选品" style={{ marginTop: 80 }} />
         ) : (
@@ -140,7 +141,7 @@ export default function SelectionCenter() {
               onChange={(page, size) => { setCurrentPage(page); setPageSize(size); }} />
           </div>
         )}
-      </Spin>
+      </BrandLoading>
 
       <ResizableModal title="新增候选款" open={addOpen} onCancel={() => { setAddOpen(false); addForm.resetFields(); }} onOk={handleAddSave} width="40vw" okText="确认添加">
         <Form form={addForm} layout="vertical" style={{ marginTop: 8 }}>

@@ -1,6 +1,7 @@
 // 库位详情抽屉 - 显示库位信息和库存明细
 import React from 'react';
-import { Drawer, Empty, Spin, Tag, Row, Col, Button } from 'antd';
+import { Drawer, Empty, Tag, Row, Col, Button } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ImportOutlined, ExportOutlined, SwapOutlined } from '@ant-design/icons';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import type { LocationItem, LocationSkuItem } from './types';
@@ -100,7 +101,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
             )}
           </div>
 
-          <Spin spinning={locationItemsLoading}>
+          <BrandLoading spinning={locationItemsLoading}>
             {locationItems.length === 0 && !locationItemsLoading ? (
               <Empty description="该库位暂无库存" />
             ) : selectedLocation.warehouseType === 'MATERIAL' ? (
@@ -187,7 +188,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 ))}
               </div>
             )}
-          </Spin>
+          </BrandLoading>
         </div>
       )}
     </Drawer>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { App, Image, Button, Table, Tag, Empty, Spin, Tooltip, Space } from 'antd';
+import { App, Image, Button, Table, Tag, Empty, Tooltip, Space } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { UploadOutlined, DeleteOutlined, EyeOutlined, SyncOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
@@ -322,7 +323,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       </div>
 
       {/* 颜色图片表格（一行一颜色） */}
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {colorImages.length === 0 ? (
           <Empty description="该款暂无颜色配置，请在尺码颜色中配置" />
         ) : (
@@ -339,7 +340,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无颜色" /> }}
           />
         )}
-      </Spin>
+      </BrandLoading>
 
       {/* 受控大图预览（由操作列眼睛图标触发） */}
       <Image

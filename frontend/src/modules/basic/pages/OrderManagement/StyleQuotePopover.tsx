@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Popover, Spin, Tag } from 'antd';
+import { Popover, Tag } from 'antd';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { BrandLoader } from '@/components/common/loading';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
 /* ===== 类型 ===== */
@@ -87,7 +88,7 @@ const StyleQuotePopover: React.FC<{
   } : null;
 
   const content = loading ? (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin /></div>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><BrandLoader size={40} /></div>
   ) : !data ? (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 15, color: 'var(--color-text-tertiary)', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据

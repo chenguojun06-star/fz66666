@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { App, Input, Button, Empty, Spin, Table, Tag, Image, Drawer, Alert } from 'antd';
+import { App, Input, Button, Empty, Table, Tag, Image, Drawer, Alert } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   WarningOutlined,
 } from '@ant-design/icons';
@@ -253,7 +254,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
         </div> : null}
 
         <div className="u-flex-1 u-ov-auto" style={{ minHeight: 200 }}>
-          <Spin spinning={totalLoading}>
+          <BrandLoading spinning={totalLoading}>
             {unifiedItems.length === 0 && !totalLoading ? (
               <Empty description="暂无备注与链路记录" />
             ) : (
@@ -299,7 +300,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
               ]}
             />
             )}
-          </Spin>
+          </BrandLoading>
         </div>
       </div>
     </Drawer>

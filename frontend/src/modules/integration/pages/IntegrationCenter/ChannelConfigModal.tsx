@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Form, Input, Switch, Alert, Descriptions, Spin } from 'antd';
+import { Form, Input, Switch, Alert, Descriptions } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   KeyOutlined,
   LinkOutlined,
@@ -133,7 +134,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
       width="40vw"
       destroyOnHidden
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <Alert
           type="info"
           showIcon
@@ -204,7 +205,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
             </Form.Item>
           ))}
         </Form>
-      </Spin>
+      </BrandLoading>
     </ResizableModal>
   );
 };

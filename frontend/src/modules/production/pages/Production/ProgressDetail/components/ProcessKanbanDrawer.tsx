@@ -3,7 +3,8 @@
 // 主组件只负责组合 Hook + 子组件，渲染 Drawer 视图切换
 
 import React from 'react';
-import { Drawer, Spin, Tabs, Tag, Space, Button, Badge, Divider } from 'antd';
+import { Drawer, Tabs, Tag, Space, Button, Badge, Divider } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   SafetyCertificateOutlined, ReloadOutlined, AppstoreOutlined, FileTextOutlined, ArrowLeftOutlined,
 } from '@ant-design/icons';
@@ -49,7 +50,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>
       }
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {qcRecord ? (
           <QcRecordForm
             qcRecord={qcRecord}
@@ -125,7 +126,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         )}
 
       {orderNo && <OrderOperationLogSection orderNo={orderNo} />}
-      </Spin>
+      </BrandLoading>
     </Drawer>
   );
 };

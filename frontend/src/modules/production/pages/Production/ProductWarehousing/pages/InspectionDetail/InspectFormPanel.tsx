@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/components/common/loading';
 import React from 'react';
-import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Spin, Popconfirm, Typography, Tooltip } from 'antd';
+import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Popconfirm, Typography, Tooltip } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ToolOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { BatchSelectBundleRow } from '../../types';
@@ -62,7 +63,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
 
         {batchSelectRows.length === 0 ? (
           <div className="u-ta-center" style={{ padding: '32px 0', color: 'rgba(0,0,0,0.45)' }}>
-            {bundlesLoading ? <Spin spinning tip="正在加载菲号..."><div /></Spin> : '该订单暂无裁剪菲号'}
+            {bundlesLoading ? <BrandLoader size={40} label="正在加载菲号..." block /> : '该订单暂无裁剪菲号'}
           </div>
         ) : (
           <ResizableTable<BatchSelectBundleRow>

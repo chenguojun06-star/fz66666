@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Drawer, Spin, Empty, Tag, Table, Tooltip, Button, Alert } from 'antd';
+import { Drawer, Empty, Tag, Table, Tooltip, Button, Alert } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -194,7 +195,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
         </Button>
       }
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {error && (
           <Alert
             type="error"
@@ -276,7 +277,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             locale={{ emptyText: <Empty description="该工厂暂无在产订单" /> }}
           />
         </div>
-      </Spin>
+      </BrandLoading>
     </Drawer>
   );
 };

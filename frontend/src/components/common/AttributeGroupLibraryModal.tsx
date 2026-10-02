@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Empty, Input, Modal, Space, Spin, Tabs, Tag, Tooltip } from 'antd';
+import { App, Button, Empty, Input, Modal, Space, Tabs, Tag, Tooltip } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import api from '@/utils/api';
@@ -377,7 +378,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
       ) : null}
       {loading ? (
         <div className="u-ta-center" style={{ padding: '32px 0' }}>
-          <Spin />
+          <BrandLoader size={40} />
         </div>
       ) : (
         <div className="u-d-flex u-br-8 u-ov-hidden" style={{ minHeight: 420, border: '1px solid var(--color-border)' }}>

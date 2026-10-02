@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { App, Button, InputNumber, Popconfirm, Select, Spin, Drawer } from 'antd';
+import { App, Button, InputNumber, Popconfirm, Select, Drawer } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -290,7 +291,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
         </div>
       }
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <div className="u-mb-12 u-d-flex u-ai-center u-gap-8">
           <CircleIconButton type="add" size={24} title="新增工序行" onClick={handleAddRow} />
           <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>点击 + 号新增工序行</span>
@@ -305,7 +306,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
           scroll={{ x: 'max-content' }}
           locale={{ emptyText: '暂无工序，点击上方按钮添加' }}
         />
-      </Spin>
+      </BrandLoading>
     </Drawer>
   );
 };

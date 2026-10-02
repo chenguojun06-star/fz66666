@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, Input, Popover, Select, Upload, message as antdMessage, Spin } from 'antd';
+import { App, Button, Input, Popover, Select, Upload, message as antdMessage } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { CopyOutlined, PlusOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
@@ -287,7 +288,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
         confirmLoading={ocrLoading}
         width={480}
       >
-        <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
+        <BrandLoading spinning={ocrLoading} tip="正在识别，请稍候...">
           <div
             style={{ padding: '16px 0', outline: 'none' }}
             onPaste={(e) => {
@@ -342,7 +343,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
               </div>
             )}
           </div>
-        </Spin>
+        </BrandLoading>
       </ResizableModal>
           <AttributeGroupLibraryModal
         open={attrLibOpen}

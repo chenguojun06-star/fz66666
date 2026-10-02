@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Radio, Select, Space, Spin, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Radio, Select, Space, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
@@ -160,7 +161,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
   };
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       {/* D-360g：嵌入 NodeDetailModal 时统一头由 NodeDetailBody 渲染，这里不再重复 */}
       {embedded ? null : (
       <ProductionOrderHeader
@@ -477,7 +478,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           </Form.Item>
         </Form>
       </ResizableModal>
-    </Spin>
+    </BrandLoading>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Space, Typography, Tag, Empty, Spin, message, Popconfirm, Row, Col } from 'antd';
+import { Card, Button, Space, Typography, Tag, Empty, message, Popconfirm, Row, Col } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PlusOutlined, EditOutlined, DeleteOutlined, PrinterOutlined, SettingOutlined } from '@ant-design/icons';
 import type { PrintTemplate } from '../PrintTemplateDesigner/types';
 import { TEMPLATE_TYPE_OPTIONS } from '../PrintTemplateDesigner/types';
@@ -131,7 +132,7 @@ const PrintTemplateList: React.FC = () => {
       </div>
 
       {/* 模板列表 */}
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {templates.length === 0 ? (
           <Empty description="暂无模板，点击上方按钮新建" />
         ) : (
@@ -188,7 +189,7 @@ const PrintTemplateList: React.FC = () => {
             })}
           </Row>
         )}
-      </Spin>
+      </BrandLoading>
 
       {/* 设计器弹窗 */}
       <ResizableModal

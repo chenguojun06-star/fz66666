@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Checkbox, Empty, Input, Radio, Spin, Table, Tag, Typography } from 'antd';
+import { Button, Checkbox, Empty, Input, Radio, Table, Tag, Typography } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import type { PermissionNode, RoleRecord } from './helpers';
 
 const { Text } = Typography;
@@ -102,7 +103,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
 
   // 渲染菜单权限卡片
   const renderPermCard = () => {
-    if (permLoading) return <div className="u-ta-center" style={{ padding: '48px 0' }}><Spin size="large" /></div>;
+    if (permLoading) return <div className="u-ta-center" style={{ padding: '48px 0' }}><BrandLoader size={64} /></div>;
     if (!sectionsComputed.length) return <Empty description="暂无可配置权限" style={{ padding: '48px 0' }} />;
 
     const allIds = sectionsComputed.flatMap(s => s.items.flatMap(it => it.allIds));

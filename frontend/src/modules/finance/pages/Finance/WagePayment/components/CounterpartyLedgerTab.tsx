@@ -7,12 +7,12 @@ import {
   Input,
   Segmented,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
   Modal,
 } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { PrinterOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -396,7 +396,7 @@ export default function CounterpartyLedgerTab() {
         </Text>
       </Space>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <Table<CounterpartyGroup>
           rowKey={rowKeyOf}
           size="small"
@@ -412,7 +412,7 @@ export default function CounterpartyLedgerTab() {
             style: { cursor: 'pointer' },
           })}
         />
-      </Spin>
+      </BrandLoading>
 
       {/* D-474：打印前勾选要显示的列 */}
       <Modal

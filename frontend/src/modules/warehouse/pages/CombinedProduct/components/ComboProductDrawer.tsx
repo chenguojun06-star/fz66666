@@ -3,7 +3,8 @@
  * 分区：基础信息 / 包含商品 / 图片 / 其它信息；子商品至少 2 个不同 SKU。
  */
 import React from 'react';
-import { App as AntApp, Button, Checkbox, Descriptions, Input, InputNumber, Spin, Tag } from 'antd';
+import { App as AntApp, Button, Checkbox, Descriptions, Input, InputNumber, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import SideDrawer from '@/components/common/SideDrawer';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { comboProductApi, type ComboProductVO } from '@/services/warehouse/comboProductApi';
@@ -219,7 +220,7 @@ const ComboProductDrawer: React.FC<ComboProductDrawerProps> = ({ open, onClose, 
         )
       }
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <div className="u-d-flex u-gap-16">
           <nav style={{ width: 108, flexShrink: 0 }}>
             <div style={{ position: 'sticky', top: 8 }} className="u-d-flex u-fd-column u-gap-8">
@@ -328,7 +329,7 @@ const ComboProductDrawer: React.FC<ComboProductDrawerProps> = ({ open, onClose, 
             </section>
           </div>
         </div>
-      </Spin>
+      </BrandLoading>
     </SideDrawer>
   );
 };

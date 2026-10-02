@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Popover, Spin, Tag } from 'antd';
+import { Popover, Tag } from 'antd';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { BrandLoader } from '@/components/common/loading';
 
 /* ===== 类型定义 ===== */
 interface WorkerDefect {
@@ -72,7 +73,7 @@ const DefectTracePopover: React.FC<{
   const showDot = hasDefects || (data != null && data.totalDefects > 0);
 
   const content = loading ? (
-    <div className="u-ta-center u-p-16" style={{ width: 280 }}><Spin /></div>
+    <div className="u-ta-center u-p-16" style={{ width: 280 }}><BrandLoader size={40} /></div>
   ) : !data || data.totalDefects === 0 ? (
     <div className="u-fs-14 u-ta-center u-p-12" style={{ width: 260, color: 'var(--color-text-tertiary)' }}>
        该订单暂无次品记录

@@ -4,9 +4,10 @@
  * 2. 视觉AI质检（图片URL → 缺陷检测 / 款式识别 / 色差检测）
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { Alert, Button, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Tag, Typography } from 'antd';
 import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { BrandLoader } from '@/components/common/loading';
 import { qualityAiApi, QualityAiSuggestionResult } from '@/services/production/productionApi';
 import { toPercent } from '@/utils/format';
 
@@ -69,7 +70,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       <div className="u-d-flex u-ai-center u-gap-6 u-mb-8">
         <XiaoyunCloudAvatar size={16} active />
         <Text strong style={{ fontSize: 15, color: 'var(--color-primary)' }}>AI质检助手</Text>
-        {loading && <Spin style={{ marginLeft: 4 }} />}
+        {loading && <BrandLoader size={20} style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (
           <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 15 }}>
             {verdictLabel[data.historicalVerdict]}

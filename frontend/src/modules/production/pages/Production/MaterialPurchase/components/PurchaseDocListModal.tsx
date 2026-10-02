@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Empty, Image, Spin, Tag } from 'antd';
+import { App, Button, Empty, Image, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { FileImageOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
@@ -65,7 +66,7 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCance
       onCancel={onCancel}
       footer={<Button onClick={onCancel}>关闭</Button>}
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {docs.length === 0 && !loading ? (
           <Empty
             image={<FileImageOutlined style={{ fontSize: 48, color: 'var(--color-text-quaternary)' }} />}
@@ -108,7 +109,7 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCance
             </div>
           </Image.PreviewGroup>
         )}
-      </Spin>
+      </BrandLoading>
     </ResizableModal>
   );
 };

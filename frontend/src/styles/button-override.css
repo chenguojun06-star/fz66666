@@ -149,6 +149,75 @@
   cursor: wait;
 }
 
+/* D-702：把 AntD 按钮自带的旋转圆点换成品牌极简云标。
+   全站 300+ 处 <Button loading={...}> 都由 AntD 内部渲染图标，无法逐个替换组件；
+   在此统一接管是唯一能一次覆盖全部入口的做法，也保证按钮内联的加载视觉与
+   BrandLoader / BrandMark 完全一致。
+   DOM：.ant-btn-loading-icon > .anticon-loading（AntD 内部结构，随版本可能变化，
+   故同时用 :after 兜底并保留原图标隐藏逻辑）。 */
+.ant-btn-loading-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+}
+
+.ant-btn-loading-icon .anticon,
+.ant-btn-loading-icon .anticon-loading,
+.ant-btn-loading-icon > svg {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 云体：三团 + 底座，用当前文字色（按钮态），小尺寸下仍可辨识 */
+.ant-btn-loading-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  width: 1em;
+  height: 0.72em;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.9;
+  animation: btnBrandMarkPulse 1.2s ease-in-out infinite;
+}
+
+/* 呼吸条：表示「在动」 */
+.ant-btn-loading-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 74%;
+  transform: translateX(-50%);
+  height: 0.1em;
+  min-height: 1px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: btnBrandMarkBar 1.2s ease-in-out infinite;
+}
+
+@keyframes btnBrandMarkPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes btnBrandMarkBar {
+  0%, 100% { width: 30%; opacity: 0.45; }
+  50% { width: 52%; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ant-btn-loading-icon::before,
+  .ant-btn-loading-icon::after {
+    animation: none;
+  }
+}
+
 /* ========== 图标按钮 ========== */
 .ant-btn-icon-only {
   border-radius: 6px !important;

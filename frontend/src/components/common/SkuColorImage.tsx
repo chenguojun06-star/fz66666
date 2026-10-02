@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Spin, Tooltip } from 'antd';
+import { Image, Tooltip } from 'antd';
 import { PictureOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
@@ -67,7 +68,11 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
   }, [styleNo, color]);
 
   if (loading) {
-    return <Spin size="small" style={{ width: size, height: size }} />;
+    return (
+      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <BrandLoader size={Math.min(20, size)} />
+      </div>
+    );
   }
 
   if (!imageUrl) {

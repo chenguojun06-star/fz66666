@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Form, Select, InputNumber, Descriptions, Button, Space,
-  Alert, Typography, Tag, Divider, message, Timeline, Spin,
-} from 'antd';
+  Alert, Typography, Tag, Divider, message, Timeline } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   SendOutlined, PrinterOutlined, CalculatorOutlined,
   LoadingOutlined, EnvironmentOutlined,
@@ -204,7 +204,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
           {trackList.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left' }}>
               <Divider plain>物流轨迹</Divider>
-              <Spin spinning={tracking}>
+              <BrandLoading spinning={tracking}>
                 <Timeline
                   items={trackList.map((t, i) => ({
                     color: i === 0 ? 'green' : 'blue',
@@ -217,7 +217,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
                     ),
                   }))}
                 />
-              </Spin>
+              </BrandLoading>
             </div>
           )}
         </div>

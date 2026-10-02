@@ -2,7 +2,8 @@
  * 已开通模块 Tab — 展示当前套餐包含的核心模块 + 已购买增值模块
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Tag, Space, Spin, Typography, App, Divider, Statistic, Empty } from 'antd';
+import { Row, Col, Card, Tag, Space, Typography, App, Divider, Statistic, Empty } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import {
   CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined,
   SyncOutlined,
@@ -132,7 +133,7 @@ const MyModulesTab: React.FC = () => {
         ))}
       </Row>
 
-      {loading && <div className="u-ta-center u-p-24"><Spin /></div>}
+      {loading && <div className="u-ta-center u-p-24"><BrandLoader size={40} /></div>}
       {!loading && addons.length === 0 && (
         <Card style={{ marginTop: 20 }}>
           <Empty description="当前未开通增值模块" image={Empty.PRESENTED_IMAGE_SIMPLE} />

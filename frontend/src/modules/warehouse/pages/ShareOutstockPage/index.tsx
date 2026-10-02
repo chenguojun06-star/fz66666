@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Spin, Result as AntResult, Tag } from 'antd';
+import { Result as AntResult, Tag } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import {
   ShoppingOutlined,
   PhoneOutlined,
@@ -44,7 +45,7 @@ const ShareOutstockPage: React.FC = () => {
   if (loading) {
     return (
       <div style={loadingStyle}>
-        <Spin size="large" />
+        <BrandLoader size={64} />
         <div className="u-mt-16 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>正在加载出货信息…</div>
       </div>
     );

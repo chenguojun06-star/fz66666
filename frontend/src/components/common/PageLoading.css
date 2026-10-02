@@ -11,19 +11,8 @@
   width: 100%;
 }
 
-.page-loading-wrapper .ant-spin {
-  color: var(--color-text-secondary);
-}
-
-.page-loading-wrapper .ant-spin-dot-item {
-  background-color: var(--color-text-tertiary);
-}
-
-.page-loading-wrapper .ant-spin-text {
-  color: var(--color-text-tertiary);
-  font-size: 14px;
-  margin-top: 12px;
-}
+/* D-702：原先此处有 3 条针对 .ant-spin 的规则，Spin 迁移后已失效（死规则）。
+   文案颜色/字号改由 BrandLoader 自身的 .label 承担。 */
 
 /* 全屏遮罩 */
 .page-loading-fullscreen {

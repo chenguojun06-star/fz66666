@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Form, Select, Spin, InputNumber, Tag, Space, Typography } from 'antd';
+import { Form, Select, InputNumber, Tag, Space, Typography } from 'antd';
 import type { FormInstance } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import type { SubProcessRow } from '../SampleProcessList.helpers';
 
@@ -143,7 +144,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
               const label = String(option?.label ?? '').toLowerCase();
               return label.includes(kw);
             }}
-            notFoundContent={fetching ? <Spin size="small" /> : '暂无工人，请在系统管理-工厂工人中添加'}
+            notFoundContent={fetching ? <BrandLoader size={20} /> : '暂无工人，请在系统管理-工厂工人中添加'}
             options={workers.map((w) => ({
               value: w.workerName,
               label: `${w.workerName}${w.workerNo ? `（${w.workerNo}）` : ''}${w.phone ? ` · ${w.phone}` : ''}`,

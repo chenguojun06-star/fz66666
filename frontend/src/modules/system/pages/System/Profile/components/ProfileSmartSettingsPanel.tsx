@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Form, InputNumber, Select, Space, Spin, Switch, Typography, message } from 'antd';
+import { Button, Card, Form, InputNumber, Select, Space, Switch, Typography, message } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { DownOutlined, MessageOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { SmartFeatureKey } from '@/smart/core/featureFlags';
 import type { TenantIntelligenceProfilePayload, TenantIntelligenceProfileResponse } from '@/services/system/tenantIntelligenceProfileService';
@@ -331,7 +332,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                 保存设置
               </Button>
             </Space>
-            <Spin spinning={loadingBackendActions}>
+            <BrandLoading spinning={loadingBackendActions}>
               {BACKEND_ACTION_KEYS.map((actionKey) => {
                 const meta = BACKEND_ACTION_LABELS[actionKey];
                 return (
@@ -360,7 +361,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                   </div>
                 );
               })}
-            </Spin>
+            </BrandLoading>
             {!canManageSmartFlags && (
               <Typography.Text type="secondary" style={{ fontSize: 15 }}>
                 当前账号仅可查看自动执行开关，修改需使用租户管理员账号。
@@ -379,7 +380,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
           </Typography.Text>
         </div>
         <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
-          <Spin spinning={loadingSmartProfile || savingSmartProfile}>
+          <BrandLoading spinning={loadingSmartProfile || savingSmartProfile}>
             <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
               <Typography.Text type="secondary" style={{ fontSize: 15 }}>
                 未手工配置时，系统会根据订单延期、异常扫码和结算节奏自动学习一套偏好。
@@ -445,7 +446,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                 当前账号仅可查看租户智能经营偏好，修改需使用租户管理员账号。
               </Typography.Text>
             )}
-          </Spin>
+          </BrandLoading>
         </Card>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spin, Select, Empty, Tooltip } from 'antd';
+import { Select, Empty, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { getGraphAbStats, type ABSceneStat } from '@/services/intelligence/intelligenceApi';
 
 const SCENE_LABELS: Record<string, string> = {
@@ -42,7 +43,7 @@ const ABTestStatsPanel: React.FC = () => {
   const bestFeedback = winner(rows, 'avgFeedback', true);
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
         <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>按场景对比近 {days} 天数据</span>
         <Select value={days} onChange={setDays} style={{ width: 100 }}
@@ -77,7 +78,7 @@ const ABTestStatsPanel: React.FC = () => {
           })}
         </div>
       )}
-    </Spin>
+    </BrandLoading>
   );
 };
 

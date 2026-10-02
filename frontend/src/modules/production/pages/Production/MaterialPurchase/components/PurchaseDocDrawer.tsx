@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { App, Button, Empty, Image, Spin, Tooltip } from 'antd';
+import { App, Button, Empty, Image, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PlusOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import PurchaseDocRecognizeModal from './PurchaseDocRecognizeModal';
@@ -78,7 +79,7 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
           上传新单据
         </Button>
       </div>
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {docs.length === 0 ? (
           <Empty
             style={{ marginTop: 48 }}
@@ -122,7 +123,7 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
             ))}
           </div>
         )}
-      </Spin>
+      </BrandLoading>
 
       {/* 上传+AI识别（原独立弹窗，合并进抽屉） */}
       <PurchaseDocRecognizeModal

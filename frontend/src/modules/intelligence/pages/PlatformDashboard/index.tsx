@@ -10,7 +10,8 @@
  * 路由挂载：intelligence/platform-dashboard（通过 routeConfig.ts 注册）
  */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Card, Col, Row, Select, Spin, Statistic, Tag, Typography, Alert } from 'antd';
+import { Card, Col, Row, Select, Statistic, Tag, Typography, Alert } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useUser } from '@/utils/AuthContext';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -161,7 +162,7 @@ export const PlatformDashboard: React.FC = () => {
 
       {error && <Alert type="error" title={error} style={{ marginBottom: 16 }} closable />}
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {/* 综合指标卡 */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
           {[
@@ -226,7 +227,7 @@ export const PlatformDashboard: React.FC = () => {
             </Card>
           </Col>
         </Row>
-      </Spin>
+      </BrandLoading>
     </div>
   );
 };

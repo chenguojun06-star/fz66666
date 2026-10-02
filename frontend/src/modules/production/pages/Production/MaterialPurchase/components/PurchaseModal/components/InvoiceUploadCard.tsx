@@ -1,6 +1,7 @@
 import React from 'react';
-import { Card, Space, Spin } from 'antd';
-import { FileImageOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Card, Space } from 'antd';
+import { FileImageOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 
 interface InvoiceUploadCardProps {
@@ -32,7 +33,7 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
     >
       {invoiceUploading && (
         <div className="u-mb-8">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 16 }} />} /> 上传中...
+          <BrandLoader size={20} /> 上传中...
         </div>
       )}
       <MultiImageUploadBox

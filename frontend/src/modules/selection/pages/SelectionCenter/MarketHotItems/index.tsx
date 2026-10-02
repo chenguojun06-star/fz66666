@@ -1,4 +1,5 @@
-import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, Image } from 'antd';
+import { Row, Col, Button, Tag, Space, Typography, Tooltip, Input, Empty, Popover, Rate, Tabs, Image } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import { HOT_KEYWORDS, buildMarketInsight, computeMarketAnalysis } from './helpers';
@@ -85,7 +86,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
             )}
           </Space>
         </div>
-        <Spin spinning={dailyHotLoading || refreshing}>
+        <BrandLoading spinning={dailyHotLoading || refreshing}>
           {dailyHot && dailyHot.cached && dailyHot.groups.length > 0 ? (
             <Tabs type="card"
               items={dailyHot.groups.map(g => ({
@@ -131,7 +132,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
               </Text>
             )
           )}
-        </Spin>
+        </BrandLoading>
       </div>
 
       {/* 搜索栏 */}
@@ -159,7 +160,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
         ))}
       </div>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {searchHistory.length > 0 ? (
           <div className="u-d-flex u-fd-column" style={{ gap: 18 }}>
             {searchHistory.map((section, sectionIndex) => {
@@ -249,7 +250,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
             />
           )
         )}
-      </Spin>
+      </BrandLoading>
     </div>
   );
 }

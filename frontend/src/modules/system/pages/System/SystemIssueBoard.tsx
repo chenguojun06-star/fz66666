@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Tag, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import PersistentTabs from '@/components/common/PersistentTabs';
 import { BugOutlined, CheckCircleOutlined, CodeOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
@@ -220,7 +221,7 @@ export default function SystemIssueBoard() {
         </Col>
       </Row>
       <Card title="问题明细">
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           {summary && (summary.issues ?? []).length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 当前无已知问题，系统运行正常</Text>} />
           ) : (
@@ -236,7 +237,7 @@ export default function SystemIssueBoard() {
               }
             />
           )}
-        </Spin>
+        </BrandLoading>
       </Card>
     </>
   );
@@ -245,7 +246,7 @@ export default function SystemIssueBoard() {
     <>
       {feError && <Alert title="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Card title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
-        <Spin spinning={feLoading}>
+        <BrandLoading spinning={feLoading}>
           {feErrors.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 暂无前端异常记录</Text>} />
           ) : (
@@ -257,7 +258,7 @@ export default function SystemIssueBoard() {
               emptyDescription="暂无数据"
             />
           )}
-        </Spin>
+        </BrandLoading>
       </Card>
     </>
   );

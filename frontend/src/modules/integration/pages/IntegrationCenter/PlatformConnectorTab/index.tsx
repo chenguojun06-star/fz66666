@@ -1,5 +1,6 @@
 import React from 'react';
-import { Row, Col, Card, Statistic, Button, Spin, Alert, Empty } from 'antd';
+import { Row, Col, Card, Statistic, Button, Alert, Empty } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   ApiOutlined, ShoppingCartOutlined, DollarOutlined, CloudUploadOutlined, InboxOutlined, ShopOutlined,
 } from '@ant-design/icons';
@@ -28,7 +29,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
   const [wizardOpen, setWizardOpen] = React.useState(false);
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       <div className="u-p-08px">
         {/* ====== 数据总览 ====== */}
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
@@ -131,7 +132,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         onClose={() => setWizardOpen(false)}
         onChanged={loadAllStatus}
       />
-    </Spin>
+    </BrandLoading>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Drawer, Table, Card, Divider, Typography, Button, Spin, DatePicker } from 'antd';
+import { Drawer, Table, Card, Divider, Typography, Button, DatePicker } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { DollarOutlined, ClockCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -264,7 +265,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
       onClose={onClose}
       styles={{ wrapper: { width: '85%' }, body: { padding: '16px 20px' } }}
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
       {/* 顶部汇总卡片 */}
       <Card
         size="small"
@@ -330,7 +331,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         scroll={{ x: 'max-content' }}
         locale={{ emptyText: '暂无成本明细数据' }}
       />
-      </Spin>
+      </BrandLoading>
     </Drawer>
   );
 };

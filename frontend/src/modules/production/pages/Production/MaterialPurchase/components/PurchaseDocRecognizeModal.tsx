@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { App, Button, InputNumber, Space, Spin, Tag, Upload } from 'antd';
+import { App, Button, InputNumber, Space, Tag, Upload } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { InboxOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -188,7 +189,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
       onCancel={handleClose}
       footer={null}
     >
-      <Spin spinning={recognizing} tip="AI识别中，请稍候…">
+      <BrandLoading spinning={recognizing} tip="AI识别中，请稍候…">
         <Space orientation="vertical" style={{ width: '100%' }} size={16}>
           {!result && (
             <>
@@ -282,7 +283,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
             </>
           )}
         </Space>
-      </Spin>
+      </BrandLoading>
     </ResizableModal>
   );
 };

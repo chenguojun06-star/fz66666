@@ -1,6 +1,7 @@
 import React from 'react';
-import { Empty, Spin } from 'antd';
+import { Empty } from 'antd';
 import StandardPagination from '@/components/common/StandardPagination';
+import { BrandLoader } from '@/components/common/loading';
 import { ProductionOrder } from '@/types/production';
 import { getProgressColorStatus } from '@/utils/progressColor';
 import { isOrderFrozenByStatus } from '@/utils/api';
@@ -45,7 +46,7 @@ const ProgressRowList: React.FC<ProgressRowListProps> = ({
   if (loading) {
     return (
       <div className="u-d-flex u-jc-center" style={{ padding: '60px 0' }}>
-        <Spin size="large" />
+        <BrandLoader size={64} />
       </div>
     );
   }

@@ -1,5 +1,6 @@
+import { BrandLoading } from '@/components/common/loading';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Button, InputNumber, Space, Alert, Radio, Spin } from 'antd';
+import { Button, InputNumber, Space, Alert, Radio } from 'antd';
 import { PrinterOutlined, QrcodeOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -203,11 +204,11 @@ const LocationLabelPrintModal: React.FC<Props> = ({
             {previewQrUrl ? (
               <img src={previewQrUrl} alt="QR预览" style={{ width: 36, height: 36 }} />
             ) : (
-              <Spin size="small">
+              <BrandLoading size={20}>
                 <div style={{ width: 36, height: 36, background: 'var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>
                   <QrcodeOutlined />
                 </div>
-              </Spin>
+              </BrandLoading>
             )}
           </div>
         </div>

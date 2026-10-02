@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Empty, Spin, Table, Tag, Typography } from 'antd';
+import { Empty, Table, Tag, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import api from '@/utils/api';
 
 interface OrderOperationLogItem {
@@ -48,7 +49,7 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
         <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
         <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>
       </div>
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {logs.length === 0 && !loading ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
@@ -77,7 +78,7 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
             </a>
           </div>
         )}
-      </Spin>
+      </BrandLoading>
     </div>
   );
 };

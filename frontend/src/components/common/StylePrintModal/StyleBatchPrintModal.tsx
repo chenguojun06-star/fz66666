@@ -8,8 +8,9 @@
  * - 合并为一份（次）：一次确认整批送出，页码整批连续。
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Space, Spin, Tag } from 'antd';
+import { App, Button, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 
 import SideDrawer from '@/components/common/SideDrawer';
 import { useUser } from '@/utils/AuthContext';
@@ -191,7 +192,7 @@ const StyleBatchPrintModal: React.FC<StyleBatchPrintModalProps> = ({ open, onClo
 
       {busy && (
         <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Spin size="small" />
+          <BrandLoader size={20} />
           <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{busy.text}</div>
         </div>
       )}

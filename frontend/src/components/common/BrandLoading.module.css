@@ -1,0 +1,37 @@
+/* ════════════════════════════════════════════════════════════
+   内容区加载包装器（D-702）
+   children 常驻（用户仍能看到旧数据），仅叠加遮罩 —— 与 AntD Spin 行为一致
+   ════════════════════════════════════════════════════════════ */
+
+.wrap {
+  position: relative;
+  min-height: 40px;
+}
+
+.mask {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 半透明遮罩：保留 children 的轮廓，让用户知道「还是那些数据，只是处理中」 */
+  background: var(--color-bg-mask, rgba(255, 255, 255, 0.72));
+  border-radius: inherit;
+  animation: brandMaskIn 0.18s ease-out;
+}
+
+@keyframes brandMaskIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mask {
+    animation: none;
+  }
+}

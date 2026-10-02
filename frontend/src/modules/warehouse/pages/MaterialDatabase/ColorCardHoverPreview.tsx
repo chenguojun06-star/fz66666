@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Spin, Tag } from 'antd';
+import { Tag } from 'antd';
 import { BookOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { colorNameToHex } from './MaterialColorItemsModal';
@@ -78,7 +79,7 @@ const ColorCardHoverPreview: React.FC<ColorCardHoverPreviewProps> = ({ card, lim
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <Spin size="small" />
+          <BrandLoader size={20} />
           <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)', marginTop: 6 }}>正在翻开色卡本…</div>
         </div>
       ) : top.length === 0 ? (

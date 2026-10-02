@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Image, Spin, Tooltip } from 'antd';
+import { App, Image, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   DeleteOutlined, EyeOutlined, LeftOutlined, PictureOutlined, PlusOutlined,
   RightOutlined, StarFilled, StarOutlined,
@@ -283,7 +284,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
 
         {/* ➕ 上传卡（点击/拖拽/粘贴） */}
         {canAdd && (
-          <Spin spinning={uploading}>
+          <BrandLoading spinning={uploading}>
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
@@ -298,7 +299,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                 款式图 {displayImages.length}/{MAX_IMAGES}
               </div>
             </div>
-          </Spin>
+          </BrandLoading>
         )}
 
         {displayImages.length === 0 && !isNewMode && (

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Popover, Spin } from 'antd';
+import { Popover } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import api from '../../utils/api';
 
 // ── 类型定义 ─────────────────────────────────────────────────────────────
@@ -196,7 +197,7 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
       content={
         profile === 'loading' ? (
           <div className="u-p-8px12px">
-            <Spin />
+            <BrandLoader size={40} />
           </div>
         ) : profile === null ? (
           <div className="u-p-8px12px u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>

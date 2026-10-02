@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Button, Select, Input, Tag, Progress, Spin, Alert, Divider, Rate, Segmented, Tooltip } from 'antd';
+import { Button, Select, Input, Tag, Progress, Alert, Divider, Rate, Segmented, Tooltip } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import { BrandLoader } from '@/components/common/loading';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { ThunderboltOutlined, BranchesOutlined, HistoryOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useAgentGraphStore, type NodeEvent } from '@/stores/useAgentGraphStore';
@@ -73,7 +74,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
                 position: 'relative',
               }}>
                 {label}
-                {active && <Spin style={{ marginLeft: 6 }} />}
+                {active && <BrandLoader size={20} style={{ marginLeft: 6 }} />}
                 {done && <span className="u-ml-4"></span>}
               </div>
             </Tooltip>
@@ -241,7 +242,7 @@ const AgentGraphPanel: React.FC = () => {
           {/* ── 执行中 ────────────────────────────────────── */}
           {streaming && nodeEvents.length === 0 && (
             <div className="u-ta-center" style={{ padding: '20px 0', color: 'var(--color-accent-purple)' }}>
-              <Spin />
+              <BrandLoader size={20} />
               <span className="u-ml-8 u-fs-14">
                 AI 多代理图推理中… 数字孪生 → 主管 → 专家 → 反思
               </span>

@@ -4,7 +4,8 @@
  * 实际库存按子SKU逐个扣减，每个子SKU一行出库记录、共用一张出库单号。
  */
 import React from 'react';
-import { App, Button, Card, Col, Input, InputNumber, Row, Select, Spin, Tag } from 'antd';
+import { App, Button, Card, Col, Input, InputNumber, Row, Select, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import SideDrawer from '@/components/common/SideDrawer';
 import ResizableTable from '@/components/common/ResizableTable';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
@@ -249,9 +250,9 @@ const ComboOutboundDrawer: React.FC<ComboOutboundDrawerProps> = ({ open, onClose
         </>
       )}
       {!combo && (
-        <Spin spinning={detailLoading}>
+        <BrandLoading spinning={detailLoading}>
           <Card><div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-tertiary)' }}>请先搜索并选择要出库的组合商品（套装）</div></Card>
-        </Spin>
+        </BrandLoading>
       )}
     </SideDrawer>
   );

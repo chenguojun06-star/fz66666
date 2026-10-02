@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/components/common/loading';
 import React from 'react';
-import { Card, Spin, Button, Tabs, Alert, Drawer } from 'antd';
+import { Card, Button, Tabs, Alert, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
@@ -59,7 +60,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
 
   if (loading) return (
     <div className="u-d-flex u-jc-center u-ai-center" style={{ minHeight: 400 }}>
-      <Spin size="large" spinning tip="加载中..."><div /></Spin>
+      <BrandLoader size={64} label="加载中..." block />
     </div>
   );
   if (!briefing) return (

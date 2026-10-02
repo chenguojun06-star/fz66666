@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Input, Popconfirm, Select, Space, Spin, Tag } from 'antd';
+import { Button, Input, Popconfirm, Select, Space, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { parseWashLabelPartsMap, parseWashNotePerPart, serializeWashLabelParts } from '@/utils/washLabel';
 import { useDictOptions, autoCollectDictEntry } from '@/hooks/useDictOptions';
@@ -91,7 +92,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const hasRows = activeParts.length > 0;
 
   return (
-    <Spin spinning={dictLoading}>
+    <BrandLoading spinning={dictLoading}>
       <div>
         {hasRows && (
           <>
@@ -214,6 +215,6 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
           <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>（未设置成分）</span>
         )}
       </div>
-    </Spin>
+    </BrandLoading>
   );
 }

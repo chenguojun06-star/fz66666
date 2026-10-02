@@ -9,11 +9,11 @@ import {
   Modal,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
 } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -757,7 +757,7 @@ export default function CounterpartyBillDrawer({
         </Button>
       </Space>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <Table<BillAggregation>
           rowKey="id"
           size="small"
@@ -781,7 +781,7 @@ export default function CounterpartyBillDrawer({
             },
           }}
         />
-      </Spin>
+      </BrandLoading>
 
       {/* D-473 兜底：该对象没有账单流水时，回退展示历史付款记录，避免点开一片空白 */}
       {!loading && total === 0 && (

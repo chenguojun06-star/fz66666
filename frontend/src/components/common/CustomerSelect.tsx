@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AutoComplete, Spin, Tooltip } from 'antd';
+import { AutoComplete, Tooltip } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
@@ -130,7 +131,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         style={style}
-        notFoundContent={loading ? <Spin /> : '未找到匹配的客户（可直接输入客户名称）'}
+        notFoundContent={loading ? <BrandLoader size={40} /> : '未找到匹配的客户（可直接输入客户名称）'}
         filterOption={(inputValue, option) => {
           const searchText = inputValue.toLowerCase();
           const companyName = (option?.customer?.companyName || '').toLowerCase();

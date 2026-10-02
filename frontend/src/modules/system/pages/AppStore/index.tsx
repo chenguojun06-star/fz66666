@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Row, Col, Tag, Button, Form, Input, Select, InputNumber, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
+import { Card, Row, Col, Tag, Button, Form, Input, Select, InputNumber, Badge, Alert, Steps, Divider, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -90,9 +91,9 @@ const AppStore: React.FC = () => {
       <div className="page-header">
         <div><h2>应用商店</h2><p>一键开通API对接，填写您的接口地址即可使用</p></div>
       </div>
-      <Spin spinning={myAppsLoading}>{renderMyApps()}</Spin>
+      <BrandLoading spinning={myAppsLoading}>{renderMyApps()}</BrandLoading>
       <div className="u-fw-600 u-fs-15 u-mb-12"><ShoppingCartOutlined style={{ marginRight: 6 }} />全部应用</div>
-      <Spin spinning={loading}><Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).map(renderAppCard)}</Row></Spin>
+      <BrandLoading spinning={loading}><Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).map(renderAppCard)}</Row></BrandLoading>
 
       {/* 应用详情弹窗 */}
       <ResizableModal title={<div className="u-d-flex u-ai-center u-gap-8"><span className="u-fs-15">{selectedApp?.appIcon}</span><span className="u-fs-15">{selectedApp?.appName}</span>{isAppActivated(selectedApp?.appCode || '') && <Tag color="green">已开通</Tag>}</div>}

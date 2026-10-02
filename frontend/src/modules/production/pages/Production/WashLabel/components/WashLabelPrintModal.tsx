@@ -9,7 +9,8 @@
  *  · QR内容：款号-颜色-码数-序号（本地生成，不走外部API）
  */
 import { useState, useEffect, useCallback } from 'react';
-import { InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } from 'antd';
+import { InputNumber, Button, Alert, Checkbox, Tag, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import SideDrawer from '@/components/common/SideDrawer';
@@ -337,7 +338,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
         </div>
       )}
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {!loading && rows.length === 1 && rows[0].color === '-' && (
           <Alert
             title="未找到裁剪明细，使用订单整体数据打印"
@@ -352,7 +353,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
          
           bordered
         />
-      </Spin>
+      </BrandLoading>
 
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16,

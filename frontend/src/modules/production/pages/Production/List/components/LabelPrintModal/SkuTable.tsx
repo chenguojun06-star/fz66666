@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Button, Checkbox, InputNumber, Spin, Tag } from 'antd';
+import { Button, Checkbox, InputNumber, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -86,7 +87,7 @@ export default function SkuTable({ open, order, styleInfo, printColLabel, onPrin
 
   return (
     <div>
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <ResizableTable
           dataSource={rows}
           columns={columns}
@@ -94,7 +95,7 @@ export default function SkuTable({ open, order, styleInfo, printColLabel, onPrin
           rowKey="key"
           bordered
         />
-      </Spin>
+      </BrandLoading>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <Button onClick={onClose}>关闭</Button>
         <Button

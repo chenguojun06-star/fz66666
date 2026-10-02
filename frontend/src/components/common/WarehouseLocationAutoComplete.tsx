@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AutoComplete, Spin } from 'antd';
+import { AutoComplete } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import { useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import api from '@/utils/api';
 
@@ -108,7 +109,7 @@ const WarehouseLocationAutoComplete: React.FC<WarehouseLocationAutoCompleteProps
       onSelect={handleSelect}
       placeholder={placeholder || '请选择或输入仓位'}
       filterOption={false}
-      notFoundContent={isLoading ? <Spin /> : (activeOptions.length === 0 ? '暂无数据' : '无匹配项')}
+      notFoundContent={isLoading ? <BrandLoader size={40} /> : (activeOptions.length === 0 ? '暂无数据' : '无匹配项')}
       style={style}
     />
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Spin, Tag, Button } from 'antd';
+import { Tag, Button } from 'antd';
 import { ThunderboltOutlined, WarningOutlined, CheckCircleOutlined, BulbOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
@@ -139,7 +140,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
     };
   }, [actionTasks, brainData]);
 
-  if (loading) return <div className="insight-card-loading"><Spin /></div>;
+  if (loading) return <div className="insight-card-loading"><BrandLoader size={40} /></div>;
   if (mode === 'sidebar') {
     return (
       <div className="insight-sidebar">

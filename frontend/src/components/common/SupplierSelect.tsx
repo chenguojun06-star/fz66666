@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AutoComplete, Spin, Tooltip } from 'antd';
+import { AutoComplete, Tooltip } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import factoryApi from '../../services/system/factoryApi';
 import type { Factory } from '@/types/system';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
@@ -217,7 +218,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         style={{ width: '100%', ...style }}
-        notFoundContent={loading ? <Spin /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
+        notFoundContent={loading ? <BrandLoader size={40} /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
         filterOption={(inputValue, option) => {
           const searchText = inputValue.toLowerCase();
           const factoryName = (option?.factory?.factoryName || '').toLowerCase();

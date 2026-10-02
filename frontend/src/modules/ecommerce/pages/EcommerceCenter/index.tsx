@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Row, Col, Card, Statistic, Button, Tag, Spin, Space, Typography, Empty, Tabs, message,
+  Row, Col, Card, Statistic, Button, Tag, Space, Typography, Empty, Tabs, message,
 } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   ApiOutlined, ShopOutlined, ShoppingCartOutlined, DollarOutlined,
@@ -258,7 +259,7 @@ const EcommerceCenter: React.FC = () => {
     {
       key: 'overview',
       label: <span><ShopOutlined /> 平台总览</span>,
-      children: <Spin spinning={loading}>{overviewContent}</Spin>,
+      children: <BrandLoading spinning={loading}>{overviewContent}</BrandLoading>,
     },
     {
       key: 'payment-records',

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Progress, Spin, Tag } from 'antd';
+import { Button, Progress, Tag } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import type { DifficultyAssessment, VisualAIResponse } from '@/services/intelligence/intelligenceApi';
 import { difficultyColor, SEVERITY_COLOR } from '../helpers';
 import { cleanVisionText } from '../../StyleBasicInfoForm/styleFeature';
@@ -26,7 +27,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
     <div className="u-flex-1" style={{ minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(114,46,209,0.04)', border: '1px solid rgba(114,46,209,0.12)' }}>
       <div className="u-fs-13 u-fw-600" style={{ marginBottom: 5, color: 'var(--color-accent-purple)' }}>难度评估</div>
       {loading ? (
-        <Spin />
+        <BrandLoader size={40} />
       ) : activeDifficulty ? (
         <div>
           <div className="u-d-flex u-ai-center u-jc-between" style={{ marginBottom: 3 }}>

@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/components/common/loading';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Progress, Spin, Result as AntResult, Tag, Image } from 'antd';
+import { Progress, Result as AntResult, Tag, Image } from 'antd';
 import {
   ClockCircleFilled, ClockCircleOutlined, CalendarOutlined, TeamOutlined,
   MessageOutlined, FieldTimeOutlined, DeploymentUnitOutlined,
@@ -28,7 +29,7 @@ const ShareOrderPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div style={S.pageStyle}><Spin size="large" spinning tip="加载中…"><div /></Spin></div>;
+  if (loading) return <div style={S.pageStyle}><BrandLoader size={64} label="加载中…" block /></div>;
   if (error || !data) return <div style={S.pageStyle}><AntResult status="warning" title={error || '订单信息不存在'} subTitle="此分享链接可能已过期或不存在，请联系发送方重新分享" /></div>;
 
   const progress = Math.min(100, Math.max(0, data.productionProgress ?? 0));

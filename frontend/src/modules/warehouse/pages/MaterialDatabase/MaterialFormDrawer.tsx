@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Col, Drawer, Form, Input, InputNumber, Row, Select, Spin } from 'antd';
+import { Button, Col, Drawer, Form, Input, InputNumber, Row, Select } from 'antd';
 import type { FormInstance } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import MaterialColorCardRecognizer from '@/components/common/MaterialColorCardRecognizer';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -217,7 +218,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
                       showSearch
                       placeholder="搜索并选择关联辅料（如拉链、纽扣）"
                       optionFilterProp="label"
-                      notFoundContent={accessoryLoading ? <Spin size="small" /> : '暂无辅料，请先在物料资料中添加辅料'}
+                      notFoundContent={accessoryLoading ? <BrandLoader size={20} /> : '暂无辅料，请先在物料资料中添加辅料'}
                       options={accessoryOptions.map(a => ({
                         value: a.id,
                         label: `${a.materialName}${a.materialCode ? `（${a.materialCode}）` : ''}${a.supplierName ? ` · ${a.supplierName}` : ''}`,

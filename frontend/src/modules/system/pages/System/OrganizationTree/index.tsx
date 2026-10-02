@@ -3,7 +3,8 @@ import PageLayout from '@/components/common/PageLayout';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
 import { useUser } from '@/utils/AuthContext';
-import { App, Button, Empty, Input, Space, Spin } from 'antd';
+import { App, Button, Empty, Input, Space } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import {
   ApartmentOutlined, BankOutlined, PlusOutlined, SnippetsOutlined,
 } from '@ant-design/icons';
@@ -256,7 +257,7 @@ const OrganizationTreePage: React.FC = () => {
         {treeData.length > 0 && (
           <StatsCards departments={internalDepartments} totalMembers={visibleTotalMembers} />
         )}
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           {visibleTreeData.length === 0 && !loading ? (
             <Empty description="暂无组织架构数据" style={{ padding: '60px 0' }}>
               {!isFactoryAccount && (
@@ -308,7 +309,7 @@ const OrganizationTreePage: React.FC = () => {
               />
             </div>
           )}
-        </Spin>
+        </BrandLoading>
       </PageLayout>
 
       <DepartmentDialog

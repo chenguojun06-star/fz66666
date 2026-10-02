@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Button, Spin, message, Radio, Checkbox } from 'antd';
+import { Button, message, Radio, Checkbox } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -229,7 +230,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                 </Button>
             ]}
         >
-            <Spin spinning={loading} tip="正在生成对账单明细...">
+            <BrandLoading spinning={loading} tip="正在生成对账单明细...">
                 <div style={{ marginBottom: 16 }}>
                     <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16 }}>
                         <span style={{ fontWeight: 500 }}>打印版本：</span>
@@ -300,7 +301,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>请先选择需要打印的工厂</div>
                     )}
                 </div>
-            </Spin>
+            </BrandLoading>
         </ResizableModal>
     );
 };

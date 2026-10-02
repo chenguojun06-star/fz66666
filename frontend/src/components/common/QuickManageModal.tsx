@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Empty, Input, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd';
+import { App, Button, Empty, Input, Popconfirm, Select, Tag, Tooltip } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { QuestionCircleOutlined, SaveOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons';
 import { clearApiCache } from '@/utils/api/core';
 import api from '@/utils/api';
@@ -392,7 +393,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           <div className="u-mb-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
           </div>
-          <Spin spinning={loading}>
+          <BrandLoading spinning={loading}>
             <div className="u-flex-1" style={{ minHeight: 120, overflowY: 'auto', marginLeft: -4 }}>
               {filtered.length === 0 && !loading ? (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" style={{ marginTop: 24 }} />
@@ -427,7 +428,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                 })
               )}
             </div>
-          </Spin>
+          </BrandLoading>
         </div>
 
         {/* ===== 右侧：编辑区 ===== */}

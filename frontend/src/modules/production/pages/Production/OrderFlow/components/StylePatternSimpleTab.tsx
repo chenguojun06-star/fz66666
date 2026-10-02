@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Spin, Button, Space, Tag } from 'antd';
+import { Card, Button, Space, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { FileOutlined } from '@ant-design/icons';
 import SheetRichViewer from '@/components/common/SheetRichViewer';
 import type { StyleAttachment } from '@/types/style';
@@ -165,9 +166,9 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             label: ' 工艺说明',
             children: (
               <Card style={{ marginBottom: 16 }}>
-                <Spin spinning={loading}>
+                <BrandLoading spinning={loading}>
                   <SheetRichViewer content={productionReq} emptyText="暂无工艺说明" />
-                </Spin>
+                </BrandLoading>
               </Card>
             ),
           },

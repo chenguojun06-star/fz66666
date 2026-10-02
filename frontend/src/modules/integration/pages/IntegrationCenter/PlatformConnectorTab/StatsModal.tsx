@@ -1,6 +1,7 @@
 import React from 'react';
-import { Alert, Button, Card, Col, Descriptions, Row, Space, Spin, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { ShopOutlined, ShoppingCartOutlined, SyncOutlined, CheckCircleOutlined, InboxOutlined, BarChartOutlined, WarningOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import { formatMoney } from '@/utils/format';
 import type { PlatformMeta } from '../PlatformConnectorConstants';
@@ -124,7 +125,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
               title={<React.Fragment><WarningOutlined /> {`缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`}</React.Fragment>} />
           )}
         </div>
-      ) : (<Spin />)}
+      ) : (<BrandLoader size={40} />)}
     </ResizableModal>
   );
 };

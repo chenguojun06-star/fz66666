@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
-import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker } from 'antd';
+import { Card, Row, Col, Space, Table, Empty, DatePicker } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { Dayjs } from 'dayjs';
 import { useFinanceDashboardData } from './hooks/useFinanceDashboardData';
 import styles from './index.module.css';
@@ -87,11 +88,11 @@ const FinanceDashboard: React.FC = () => {
             title="现金流趋势（业务发生口径，含每日经营流水）"
             className={styles.chartCard}
           >
-            <Spin spinning={cashFlowLoading}>
+            <BrandLoading spinning={cashFlowLoading}>
               <Suspense fallback={<div className={styles.emptyChart}>图表加载中...</div>}>
                 <ReactECharts option={cashFlowChartOption} style={{ height: 300 }} />
               </Suspense>
-            </Spin>
+            </BrandLoading>
           </Card>
         </Col>
       </Row>
@@ -124,7 +125,7 @@ const FinanceDashboard: React.FC = () => {
   );
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       {/* D-273：每日流水并入财务总览做 tab（数据同源：六类业务流水） */}
       <PersistentTabs
         paramName="tab"
@@ -135,7 +136,7 @@ const FinanceDashboard: React.FC = () => {
           { key: 'dailyFlow', label: '每日流水', children: <DailyFlowContent /> },
         ]}
       />
-    </Spin>
+    </BrandLoading>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Spin } from 'antd';
 import dayjs from 'dayjs';
+import { BrandLoader } from '@/components/common/loading';
 import { useStageScanData } from './useStageScanData';
 import type { StageStatus } from './types';
 
@@ -79,7 +79,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
 
       {scanData.loading ? (
         <div className="u-ta-center u-mb-6" style={{ paddingTop: 6, paddingBottom: 4, borderTop: '1px solid var(--color-border-light)' }}>
-          <Spin /><span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>加载子工序…</span>
+          <BrandLoader size={20} /><span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (
         <div className="u-mb-6" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6 }}>

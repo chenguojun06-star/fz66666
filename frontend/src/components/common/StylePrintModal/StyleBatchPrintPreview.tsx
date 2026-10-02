@@ -7,7 +7,8 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCodeLib from 'qrcode';
-import { Empty, Spin } from 'antd';
+import { Empty } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 
 import { useUser } from '@/utils/AuthContext';
 
@@ -82,7 +83,7 @@ const StyleBatchPrintPreview: React.FC<StyleBatchPrintPreviewProps> = ({ open, i
       </div>
       <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, background: 'var(--color-bg-base)', minHeight: 120 }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 32 }}><Spin tip="正在装载第一单数据…" /></div>
+          <div style={{ textAlign: 'center', padding: 32 }}><BrandLoader size={48} label="正在装载第一单数据…" /></div>
         ) : bundle ? (
           <>
             <style>{STYLE_PRINT_CONTENT_CSS}</style>

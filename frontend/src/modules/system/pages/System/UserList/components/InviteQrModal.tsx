@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/components/common/loading';
 import React from 'react';
-import { Button, Spin } from 'antd';
+import { Button,  } from 'antd';
 import { LinkOutlined } from '@ant-design/icons';
 import SmallModal from '@/components/common/SmallModal';
 import { message } from '@/utils/antdStatic';
@@ -29,7 +30,7 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, onClose, user }
     >
       <div className="u-ta-center" style={{ padding: '16px 0' }}>
         {inviteQr.loading ? (
-          <Spin tip="正在生成二维码..."><div style={{ padding: '48px 0' }} /></Spin>
+          <BrandLoader size={48} label="正在生成二维码..." block style={{ padding: '48px 0' }} />
         ) : inviteQr.qrBase64 ? (
           <>
             <img src={inviteQr.qrBase64} alt="邀请二维码" className="u-d-block" style={{ width: 200, height: 200, margin: '0 auto 12px' }} />

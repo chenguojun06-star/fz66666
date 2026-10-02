@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useMemo, memo } from 'react';
-import { App, Spin } from 'antd';
+import { App } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
@@ -185,7 +186,7 @@ function ImageUploadBox({
         style={{ display: 'none' }}
         onChange={handleFileChange}
       />
-      <Spin spinning={uploading}>
+      <BrandLoading spinning={uploading}>
         <div
           ref={dropRef}
           onClick={handleClick}
@@ -211,7 +212,7 @@ function ImageUploadBox({
             </div>
           )}
         </div>
-      </Spin>
+      </BrandLoading>
       {hasImage && showClear && !disabled && (
         <button type="button" onClick={handleClear} style={clearBtnStyle}>
           清除

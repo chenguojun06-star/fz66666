@@ -7,7 +7,7 @@
  * 包含：核心指标卡片 · 7日趋势折线图 · 决策卡片（问题+方案） · AI建议
  */
 import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
-import { Button, Spin, Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import {
   ExclamationCircleOutlined,
   WarningOutlined,
@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
+import { BrandLoader } from '@/components/common/loading';
 import api, { ApiResult } from '@/utils/api';
 import type { BriefData } from './types';
 import { LEVEL_COLOR, LEVEL_BG, LEVEL_BORDER } from './constants';
@@ -95,7 +96,7 @@ const DailyTodoModal: React.FC = () => {
     >
       {loading ? (
         <div className="u-ta-center" style={{ padding: '60px 0' }}>
-          <Spin spinning tip="正在分析生产数据..."><div /></Spin>
+          <BrandLoader size={48} label="正在分析生产数据..." block />
         </div>
       ) : brief ? (
         <div className="u-p-04px">
@@ -159,7 +160,7 @@ const DailyTodoModal: React.FC = () => {
               </div>
               <Suspense fallback={
                 <div className="u-d-flex u-ai-center u-jc-center" style={{ height: 180 }}>
-                  <Spin />
+                  <BrandLoader size={40} />
                 </div>
               }>
                 <ReactECharts

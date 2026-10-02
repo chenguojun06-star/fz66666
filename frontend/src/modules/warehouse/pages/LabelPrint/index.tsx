@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Input, Button, Space, Radio, Spin, Row, Col } from 'antd';
+import { Card, Input, Button, Space, Radio, Row, Col } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { SearchOutlined } from '@ant-design/icons';
 import { useLabelPrintData } from './hooks/useLabelPrintData';
 import PrintSettingsPanel from './components/PrintSettingsPanel';
@@ -102,7 +103,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
         </div>
       </Card>
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {!selectedOrder ? (
           orders.length > 0 ? (
             <Card>
@@ -215,7 +216,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
             </Col>
           </Row>
         )}
-      </Spin>
+      </BrandLoading>
 
       <SaveTemplateModal
         open={saveTemplateOpen}

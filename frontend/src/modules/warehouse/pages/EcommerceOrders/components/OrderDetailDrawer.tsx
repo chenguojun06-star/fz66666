@@ -1,5 +1,6 @@
 import React from 'react';
-import { Drawer, Descriptions, Divider, Spin, Tag, Typography } from 'antd';
+import { Drawer, Descriptions, Divider, Tag, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { CheckCircleOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getPlatformTag } from '@/utils/platform';
@@ -30,7 +31,7 @@ const ComboSection: React.FC<{ comboCode: string }> = ({ comboCode }) => {
   }, [comboCode]);
 
   return (
-    <Spin spinning={loading}>
+    <BrandLoading spinning={loading}>
       <Descriptions column={2} bordered size="small" style={{ marginBottom: 8 }}>
         <Descriptions.Item label="组合编码"><Tag color="geekblue" style={{ margin: 0 }}><DeploymentUnitOutlined /> {comboCode}</Tag></Descriptions.Item>
         <Descriptions.Item label="组合可售">
@@ -59,7 +60,7 @@ const ComboSection: React.FC<{ comboCode: string }> = ({ comboCode }) => {
       <div className="u-fs-12 u-mt-8" style={{ color: 'var(--color-text-tertiary)' }}>
         出库时按上方子SKU逐个扣减库存，每个子SKU生成一行出库记录（共用一张出库单号），销售金额按套装单价分摊。
       </div>
-    </Spin>
+    </BrandLoading>
   );
 };
 

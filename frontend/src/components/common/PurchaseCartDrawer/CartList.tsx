@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Table, Checkbox, InputNumber, Button, Popconfirm, Empty, Spin, Tag, App, Tooltip, Image } from 'antd';
+import { Table, Checkbox, InputNumber, Button, Popconfirm, Empty, Tag, App, Tooltip, Image } from 'antd';
 import { EditOutlined, CheckOutlined, CloseOutlined, DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import type { ColumnsType } from 'antd/es/table';
 import type { PurchaseCartItem, UpdateCartItemRequest } from '@/types/purchaseCart';
 
@@ -264,7 +265,7 @@ export const CartList: React.FC<CartListProps> = ({
   if (loading) {
     return (
       <div className="u-ta-center" style={{ padding: '80px 0' }}>
-        <Spin tip="加载中..." />
+        <BrandLoader size={48} label="加载中..." />
       </div>
     );
   }

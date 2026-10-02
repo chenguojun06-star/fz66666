@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { App, Button, Card, Col, DatePicker, Empty, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tabs, Tag } from 'antd';
+import { App, Button, Card, Col, DatePicker, Empty, Form, Image, Input, InputNumber, Row, Select, Space, Statistic, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import { BrandLoader } from '@/components/common/loading';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
@@ -276,7 +277,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     onChange={(e) => { if (e.target.files?.length) processFiles(e.target.files); e.target.value = ''; }}
                   />
                   <Button
-                    icon={uploadedDocs.some(d => d.recognizing) ? <Spin /> : <UploadOutlined />}
+                    icon={uploadedDocs.some(d => d.recognizing) ? <BrandLoader size={18} /> : <UploadOutlined />}
                     disabled={uploadedDocs.some(d => d.recognizing)}
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -288,7 +289,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <div className="u-d-flex u-fwrap-wrap u-gap-8">
                       {uploadedDocs.map((doc, idx) => (
                         <div key={doc.tempId} className="u-pos-relative u-fshrink-0">
-                          {doc.recognizing ? (<div className="u-d-flex u-ai-center u-jc-center u-br-6" style={{ width: 72, height: 72, border: '1px dashed var(--color-border-antd)', background: 'var(--color-bg-container)' }}><Spin /></div>)
+                          {doc.recognizing ? (<div className="u-d-flex u-ai-center u-jc-center u-br-6" style={{ width: 72, height: 72, border: '1px dashed var(--color-border-antd)', background: 'var(--color-bg-container)' }}><BrandLoader size={40} /></div>)
                             : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
                           <Button type="text" danger icon={<CloseCircleOutlined />}
                             style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}

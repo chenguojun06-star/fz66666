@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Empty, Spin, Tag } from 'antd';
+import { Alert, Empty, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { DownOutlined, LoadingOutlined, RightOutlined } from '@ant-design/icons';
 import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
 import OrderLearningFactoryScoreBoard from './OrderLearningFactoryScoreBoard';
@@ -57,7 +58,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
 
       {expanded && (
         <div style={{ padding: '12px', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
-          <Spin spinning={loading}>
+          <BrandLoading spinning={loading}>
             {!presented ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 学习建议暂不可用" />
             ) : (
@@ -80,7 +81,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
                 <OrderLearningGapCard lines={presented.gapLines} />
               </div>
             )}
-          </Spin>
+          </BrandLoading>
         </div>
       )}
     </div>

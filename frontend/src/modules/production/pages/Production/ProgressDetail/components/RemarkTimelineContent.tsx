@@ -2,7 +2,8 @@
 // 抽离自原 ProcessKanbanDrawer.tsx，保持业务逻辑不变
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spin, Tag, Button, Input, Empty, Table } from 'antd';
+import { Tag, Button, Input, Empty, Table } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
 import { formatDateTime } from '@/utils/datetime';
@@ -56,7 +57,7 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
           <Button type="primary" onClick={handleAdd} loading={submitting} disabled={!content.trim()}>提交</Button>
         </div>
       )}
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {remarks.length === 0 && !loading ? (
           <Empty description="暂无备注" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -74,7 +75,7 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
             ]}
           />
         )}
-      </Spin>
+      </BrandLoading>
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Badge, Card, Empty, Radio, Spin, Tag, Typography } from 'antd';
+import { Alert, Badge, Card, Empty, Radio, Tag, Typography } from 'antd';
 import type { RadioChangeEvent } from 'antd';
 import { CrownOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import api from '@/utils/api';
 import './RoleTemplateSelector.css';
 
@@ -81,7 +82,7 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
   if (loading) {
     return (
       <div className="u-ta-center" style={{ padding: '40px 0' }}>
-        <Spin tip="加载模板中..." />
+        <BrandLoader size={48} label="加载模板中..." />
       </div>
     );
   }

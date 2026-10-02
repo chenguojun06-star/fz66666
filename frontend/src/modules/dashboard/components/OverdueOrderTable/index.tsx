@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Spin } from 'antd';
+import { Button, Card } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiMessage, isApiSuccess } from '@/utils/api';
@@ -235,7 +236,7 @@ const OverdueOrderTable: React.FC = () => {
         </div>
       )}
       <div className="overdue-order-table-body">
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           <ResizableTable
             storageKey="overdue-order-dashboard-v2"
             columns={columns}
@@ -252,7 +253,7 @@ const OverdueOrderTable: React.FC = () => {
             size="middle"
             className="overdue-order-table"
           />
-        </Spin>
+        </BrandLoading>
       </div>
     </Card>
   );

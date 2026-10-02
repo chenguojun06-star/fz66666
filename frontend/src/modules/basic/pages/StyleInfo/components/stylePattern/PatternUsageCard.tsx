@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Card, Input, Select, Space, Spin, Typography } from 'antd';
+import { Button, Card, Input, Select, Space, Typography } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleBom } from '@/types/style';
@@ -126,7 +127,7 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
       {activeSizes.length === 0 ? (
         <Text type="secondary">款式未配置码数，请先在基本信息中填写码数配置</Text>
       ) : (
-        <Spin spinning={bomLoading}>
+        <BrandLoading spinning={bomLoading}>
           {bomList.length === 0 && !bomLoading ? (
             <Text type="secondary">物料清单中暂无面料/里料，请先在物料清单中添加面辅料</Text>
           ) : (
@@ -142,7 +143,7 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
               disableFillScrollY
             />
           )}
-        </Spin>
+        </BrandLoading>
       )}
     </Card>
   );

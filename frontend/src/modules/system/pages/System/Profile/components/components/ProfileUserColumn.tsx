@@ -2,7 +2,8 @@
  * 左列 — 用户信息表单 + 修改密码（标准卡片分区）
  */
 import React from 'react';
-import { Button, Card, Form, Input, Spin } from 'antd';
+import { Button, Card, Form, Input } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { LockOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 
@@ -26,7 +27,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
     return (
         <div>
             <Card title="个人信息" style={{ marginBottom: 16 }}>
-                <Spin spinning={loading}>
+                <BrandLoading spinning={loading}>
                     <Form form={form} layout="vertical" requiredMark={false}>
                         <Form.Item name="avatarUrl" hidden><Input /></Form.Item>
                         <Form.Item label="用户名" name="username"><Input disabled autoComplete="username" /></Form.Item>
@@ -46,7 +47,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
                         </Form.Item>
                         <Form.Item label="邮箱" name="email"><Input disabled autoComplete="email" /></Form.Item>
                     </Form>
-                </Spin>
+                </BrandLoading>
             </Card>
 
             <Card title="修改密码">

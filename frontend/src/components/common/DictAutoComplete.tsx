@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AutoComplete, AutoCompleteProps, Spin, Tooltip } from 'antd';
+import { AutoComplete, AutoCompleteProps, Tooltip } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import { useAutoCollectDict } from '@/hooks/useAutoCollectDict';
 import api from '@/utils/api';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
@@ -182,7 +183,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
         onSelect={handleSelect}
         placeholder={placeholder || `请选择或输入...`}
         filterOption={false}
-        notFoundContent={loading ? <Spin /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
+        notFoundContent={loading ? <BrandLoader size={40} /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
         suffix={manageSuffix ?? externalSuffix}
         // disabled 此前只用来隐藏齿轮、没传给输入框，锁定态照样能改（D-264）
         disabled={disabled}

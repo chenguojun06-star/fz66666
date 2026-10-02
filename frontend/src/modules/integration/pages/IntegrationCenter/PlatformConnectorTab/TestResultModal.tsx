@@ -1,6 +1,7 @@
 import React from 'react';
-import { Alert, Button, Descriptions, List, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Descriptions, List, Space, Tag, Typography } from 'antd';
 import { ShopOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import ResizableModal from '@/components/common/ResizableModal';
 import { message } from '@/utils/antdStatic';
 import type { PlatformMeta } from '../PlatformConnectorConstants';
@@ -61,7 +62,7 @@ const TestResultModal: React.FC<TestResultModalProps> = ({ open, testResult, act
             </div>
           )}
         </div>
-      ) : (<Spin tip="测试中..." />)}
+      ) : (<BrandLoader size={48} label="测试中..." />)}
     </ResizableModal>
   );
 };

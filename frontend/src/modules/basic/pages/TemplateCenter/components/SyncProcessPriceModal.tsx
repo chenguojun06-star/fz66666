@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Input, Popover, Space, Spin, Tooltip, Image } from 'antd';
+import { Button, Input, Popover, Space, Tooltip, Image } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import SideDrawer from '@/components/common/SideDrawer';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
@@ -193,7 +194,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
           }}
         />
         <Button
-          icon={imageUploading ? <Spin /> : <CameraOutlined />}
+          icon={imageUploading ? <BrandLoader size={18} /> : <CameraOutlined />}
           disabled={!readyForScope}
           onClick={() => fileInputRef.current?.click()}
         >

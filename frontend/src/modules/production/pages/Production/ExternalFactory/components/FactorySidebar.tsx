@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Tag, Spin, Empty } from 'antd';
+import { Card, Tag, Empty } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ShopOutlined, CheckCircleOutlined, SyncOutlined, WarningOutlined, AppstoreOutlined } from '@ant-design/icons';
 
 export interface FactoryStats {
@@ -56,7 +57,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
         styles={{ body: { padding: 0 } }}
         style={{ borderRadius: 0, borderRight: 0, borderTop: 0 }}
       >
-        <Spin spinning={loading}>
+        <BrandLoading spinning={loading}>
           <div
             onClick={() => onSelect(null)}
             style={{
@@ -133,7 +134,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
               )}
             </div>
           ))}
-        </Spin>
+        </BrandLoading>
       </Card>
     </div>
   );

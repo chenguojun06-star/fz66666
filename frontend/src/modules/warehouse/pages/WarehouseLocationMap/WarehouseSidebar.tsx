@@ -1,6 +1,7 @@
 // 仓库侧边栏 - 仓库列表
 import React from 'react';
-import { Switch, Empty, Tag, Spin, Button } from 'antd';
+import { Switch, Empty, Tag, Button } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ShopOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { WAREHOUSE_TYPE_MAP } from './types';
 import type { WarehouseAreaItem } from './types';
@@ -39,7 +40,7 @@ const WarehouseSidebar: React.FC<Props> = ({
         </Button>
       </div>
       <div className="wlm-warehouse-list">
-        <Spin spinning={areasLoading}>
+        <BrandLoading spinning={areasLoading}>
           {areas.length === 0 && !areasLoading ? (
             <Empty description="暂无仓库，点击上方新建" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
@@ -79,7 +80,7 @@ const WarehouseSidebar: React.FC<Props> = ({
               </div>
             ))
           )}
-        </Spin>
+        </BrandLoading>
       </div>
     </div>
   );

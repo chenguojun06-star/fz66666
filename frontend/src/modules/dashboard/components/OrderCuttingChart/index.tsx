@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { Card, Spin } from 'antd';
+import { Card } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import api from '@/utils/api';
 import './styles.css';
 
@@ -206,7 +207,7 @@ const OrderCuttingChart: React.FC = () => {
       className="order-cutting-chart-card"
       variant="borderless"
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         <div className="chart-container">
           {data.dates.length > 0 ? (
             <Suspense fallback={<div className="empty-chart">图表加载中...</div>}>
@@ -216,7 +217,7 @@ const OrderCuttingChart: React.FC = () => {
             <div className="empty-chart">暂无数据</div>
           )}
         </div>
-      </Spin>
+      </BrandLoading>
     </Card>
   );
 };

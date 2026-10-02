@@ -11,7 +11,7 @@
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin, Upload } from 'antd';
+import { Upload } from 'antd';
 import {
   AppstoreOutlined,
   CloseOutlined,
@@ -21,6 +21,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import { MENU_INDEX } from './helpers';
+import { BrandLoader } from '@/components/common/loading';
 import { useCommandPaletteData } from './useCommandPaletteData';
 import ResultList from './ResultList';
 import ImageGrid from './ImageGrid';
@@ -83,7 +84,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             autoComplete="off"
             spellCheck={false}
           />
-          {(loading || imageSearchLoading) && <Spin style={{ marginRight: 8 }} size="small" />}
+          {(loading || imageSearchLoading) && <BrandLoader size={20} style={{ marginRight: 8 }} />}
           {!loading && !imageSearchLoading && (query || imageSearchMode) && (
             <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); setImageSearchMode(false); inputRef.current?.focus(); }}>
               <CloseOutlined style={{ fontSize: 14 }} />
@@ -151,7 +152,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
           {imageSearchMode && imageSearchLoading && (
             <div className="cp-empty-hint">
-              <Spin size="large" />
+              <BrandLoader size={64} />
               <div className="u-mt-12">正在以图搜款…</div>
             </div>
           )}

@@ -9,8 +9,9 @@
  *   • 深空主题，与太空舱风格一致
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Input, Spin, Empty } from 'antd';
+import { Input, Empty } from 'antd';
 import type { InputRef } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import {
   SearchOutlined, FileTextOutlined, AppstoreOutlined,
   UserOutlined, RightOutlined, PlusCircleOutlined,
@@ -191,7 +192,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         {/* 搜索输入框 */}
         <div className="u-d-flex u-ai-center" style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
-            ? <Spin style={{ marginRight: 12 }} />
+            ? <BrandLoader size={18} onColor style={{ marginRight: 12 }} />
             : <SearchOutlined style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 15, marginRight: 12 }} />
           }
           <Input

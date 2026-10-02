@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/components/common/loading';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Progress, Tag, Spin, Alert } from 'antd';
+import { Progress, Tag, Alert } from 'antd';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { clampProgress } from '@/modules/production/utils/calcOrderProgress';
 
@@ -127,7 +128,7 @@ const ShareOrderPage: React.FC = () => {
   if (loading) {
     return (
       <div className="u-d-flex u-jc-center u-ai-center" style={{ minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
-        <Spin size="large" spinning tip="加载中..."><div /></Spin>
+        <BrandLoader size={64} label="加载中..." block />
       </div>
     );
   }

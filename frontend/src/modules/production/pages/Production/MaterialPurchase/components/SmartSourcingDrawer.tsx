@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Button, Card, Drawer, Tabs, Table, Tag, Tooltip, Space, Alert, Collapse, Input,
-  InputNumber, Select, Checkbox, Statistic, Empty, Spin, Divider, message, Form,
+  InputNumber, Select, Checkbox, Statistic, Empty, Divider, message, Form,
 } from 'antd';
+import { BrandLoading, BrandLoader } from '@/components/common/loading';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -549,7 +550,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     const detail = detailMap[r.orderNo];
     const loading = !!detailLoadingMap[r.orderNo];
     const ov = overviewMap[r.orderNo];
-    if (loading) return <Spin style={{ padding: 12 }} />;
+    if (loading) return <BrandLoader size={40} style={{ padding: 12 }} />;
     if (!detail || detail.length === 0) {
       return (
         <div style={{ padding: 8 }}>
@@ -862,7 +863,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
         />
       )}
 
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {data.length > 0 && (
           <Table
             size="small"
@@ -874,7 +875,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
             columns={netDemandColumns}
           />
         )}
-      </Spin>
+      </BrandLoading>
 
       {data.length > 0 && <Divider style={{ margin: '12px 0' }} />}
       <div className="u-d-flex u-jc-end">

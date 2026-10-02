@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Spin, Tag, Upload, message } from 'antd';
+import { Button, Dropdown, Tag, Upload, message } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { CopyOutlined, DownOutlined, RobotOutlined } from '@ant-design/icons';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
@@ -219,7 +220,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         confirmLoading={ocrLoading}
         width="40vw"
       >
-        <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
+        <BrandLoading spinning={ocrLoading} tip="正在识别，请稍候...">
           <div
             style={{ padding: '16px 0', outline: 'none' }}
             tabIndex={0}
@@ -258,7 +259,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
               </div>
             )}
           </div>
-        </Spin>
+        </BrandLoading>
       </ResizableModal>
     </div>
   );

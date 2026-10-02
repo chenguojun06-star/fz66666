@@ -8,8 +8,9 @@
  *  - AI 文字建议
  */
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Button, Space, Spin, Tag } from 'antd';
+import { Button, Space, Tag } from 'antd';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { BrandLoader } from '@/components/common/loading';
 import { DownOutlined, ReloadOutlined, RightOutlined, WarningOutlined } from '@ant-design/icons';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
@@ -205,7 +206,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
   if (loading) {
     return (
       <div className="u-ta-center" style={{ padding: '12px 0' }}>
-        <Spin />
+        <BrandLoader size={20} />
         <span className="u-ml-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
           正在分析历史数据…
         </span>

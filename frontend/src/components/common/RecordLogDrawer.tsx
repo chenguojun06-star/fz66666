@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Empty, Spin, Table, Tag } from 'antd';
+import { Button, Empty, Table, Tag } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { ReloadOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import api from '@/utils/api';
@@ -118,7 +119,7 @@ const RecordLogDrawer: React.FC<Props> = ({ open, onClose, title, filter }) => {
         </div>
       )}
     >
-      <Spin spinning={loading}>
+      <BrandLoading spinning={loading}>
         {logs.length === 0 && !loading ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作日志" style={{ marginTop: 60 }} />
         ) : (
@@ -164,7 +165,7 @@ const RecordLogDrawer: React.FC<Props> = ({ open, onClose, title, filter }) => {
             ]}
           />
         )}
-      </Spin>
+      </BrandLoading>
     </SideDrawer>
   );
 };

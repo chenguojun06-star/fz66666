@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Popconfirm, Progress, Tag, Button, Empty, Spin, Tooltip } from 'antd';
+import { Popconfirm, Progress, Tag, Button, Empty, Tooltip } from 'antd';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -8,6 +8,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi, type AgentBackgroundTaskDTO } from '@/services/intelligence/intelligenceApi';
+import { BrandLoader } from '@/components/common/loading';
 import { useAuthState } from '@/utils/AuthContext';
 import './BackgroundTaskPanel.css';
 
@@ -74,7 +75,7 @@ const BackgroundTaskPanel: React.FC<BackgroundTaskPanelProps> = ({
   if (loading && tasks.length === 0) {
     return (
       <div className="bg-task-panel-loading">
-        <Spin size="small" />
+        <BrandLoader size={20} />
         <span>加载中...</span>
       </div>
     );

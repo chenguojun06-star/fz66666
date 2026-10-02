@@ -1,6 +1,7 @@
 // 库位网格 - 显示库位卡片
 import React from 'react';
-import { Empty, Spin, Tooltip, Checkbox } from 'antd';
+import { Empty, Tooltip, Checkbox } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { InboxOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getLocationStatus, getStatusBg, getStatusBorder, getStatusColor } from './helpers';
 import type { LocationItem } from './types';
@@ -29,7 +30,7 @@ const WarehouseLocationGrid: React.FC<Props> = ({
   onDeleteLocation,
 }) => {
   return (
-    <Spin spinning={locationsLoading}>
+    <BrandLoading spinning={locationsLoading}>
       {filteredLocations.length > 0 ? (
         <div className="wlm-location-grid">
           {filteredLocations.map(location => {
@@ -99,7 +100,7 @@ const WarehouseLocationGrid: React.FC<Props> = ({
           style={{ marginTop: 60 }}
         />
       )}
-    </Spin>
+    </BrandLoading>
   );
 };
 

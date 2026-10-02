@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Spin, Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import { BrandLoader } from '@/components/common/loading';
 import { BulbOutlined, ReloadOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
@@ -108,7 +109,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           {!effectiveStyleNo ? (
             <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>当前款号为空，暂无法生成报价建议</div>
           ) : loading ? (
-            <div className="u-ta-center" style={{ padding: '12px 0' }}><Spin /></div>
+            <div className="u-ta-center" style={{ padding: '12px 0' }}><BrandLoader size={40} /></div>
           ) : error ? (
             <div className="u-fs-14" style={{ color: 'var(--color-error)' }}>{error}</div>
           ) : data ? (

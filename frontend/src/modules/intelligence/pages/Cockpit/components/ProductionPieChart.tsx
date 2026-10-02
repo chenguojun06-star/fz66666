@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Spin, Empty } from 'antd';
+import { Empty } from 'antd';
+import { BrandLoader } from '@/components/common/loading';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
@@ -237,7 +238,7 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
     });
   }, [stats.stageStats]);
 
-  if (loading) return <div className="pie-card-loading"><Spin /></div>;
+  if (loading) return <div className="pie-card-loading"><BrandLoader size={40} /></div>;
   if (stats.totalQuantity === 0) return <div className="pie-card-empty"><Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>;
 
   if (mode === 'sidebar') {

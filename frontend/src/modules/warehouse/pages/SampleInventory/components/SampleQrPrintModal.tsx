@@ -14,7 +14,8 @@
  * 3. 打印参数与现网标签一致：qrcode 库 ECC 'M'、480px 位图、打印尺寸 ≥15mm，扫码可靠性不受影响。
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Button, InputNumber, Modal, Radio, Space, Spin } from 'antd';
+import { Alert, Button, InputNumber, Modal, Radio, Space } from 'antd';
+import { BrandLoading } from '@/components/common/loading';
 import { PrinterOutlined, SwapOutlined } from '@ant-design/icons';
 import QRCodeLib from 'qrcode';
 
@@ -256,7 +257,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
         </Button>,
       ]}
     >
-      <Spin spinning={resolving} tip="正在关联样衣生产记录...">
+      <BrandLoading spinning={resolving} tip="正在关联样衣生产记录...">
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
           {unresolvable.length > 0 && (
             <Alert
@@ -344,7 +345,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             </div>
           )}
         </Space>
-      </Spin>
+      </BrandLoading>
     </Modal>
   );
 };

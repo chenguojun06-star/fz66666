@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
-import { Card, Spin, Tabs } from 'antd';
+import { Card, Tabs } from 'antd';
 import { DollarOutlined } from '@ant-design/icons';
+import { BrandLoader } from '@/components/common/loading';
 import { useUser } from '@/utils/AuthContext';
 import { hasPermission } from '@/utils/permission';
 import { permissionCodes } from '@/routeConfig';
@@ -13,7 +14,7 @@ const EmployeeAdvance = React.lazy(() => import('../EmployeeAdvance'));
 
 const tabSuspense = (
   <div className="u-ta-center" style={{ padding: 80 }}>
-    <Spin />
+    <BrandLoader size={40} />
   </div>
 );
 
