@@ -2,9 +2,25 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-01（①归档 08-31 及以前内容；②D-698 Spring Boot 4.1.1 升级上线 + D-699 SSE 截断/DSML 泄漏 + D-700 AI 成本归因重建 + D-674~D-711 前端 as any 大批次）
+> 最后更新：2026-10-02（D-716 service→service A/B 类收尾清零 19 → 15 + D-717 教程内容回补 D-514~D-715）
 
 ## 已完成
+
+### 2026-10-02 D-716 service→service 架构违规 A/B 类收尾清零（19 → 15，治理目标达成）
+
+- [x] A2 SmartSourcingServiceImpl → SmartSourcingHelper（production.helper）；接口保留，调用方（Controller+PatrolJob）零改动
+- [x] A3 ShipmentReconciliationServiceImpl → ShipmentReconciliationHelper（finance.helper）；对订单仅 getById/lambdaQuery 取数；补基类 BaseReconciliationServiceImpl 显式 import（同包隐式 → 显式）
+- [x] B2 EcUniversalStockService → EcUniversalStockOrchestrator（ecommerce.orchestration）；实为具体类（非接口），10 个调用方 import+字段全量更新；删 4 行注释空壳 EcUniversalStockServiceImpl.java
+- [x] B3 OrderTransferServiceImpl → OrderTransferHelper（production.helper）；避开与既有 OrderTransferOrchestrator 撞名；Controller 保留接口注入仍只依赖 1 个 Service（规则6 合法）
+- [x] 基线 service.depends.on.service 19 → 15；剩余全部为 C 类（方案明确不动）；ArchUnit 7 规则全绿
+- [x] 坑①移包后原同包类要补 import（EcommerceOrderService/SmartWarehouseAllocator 两处编译错当场暴露）；坑②排除式 grep 漏掉同包调用方 SmartWarehouseAllocator，终查全仓 grep 类名抓回
+
+### 2026-10-02 D-717 教程内容回补 D-514~D-715 大改版（D-655 同步纪律首次专项执行）
+
+- [x] 重写「首页使用指南」（流程引导可配置 + 经营数据折叠 + 服务栏，D-526/530/665）
+- [x] 更新 AI 巡检（铃铛简报面板/整卡×关闭/目标翻译/24h冷却，D-626/654）、组合商品（管理页入口/套装出库工具条/电商套装订单，D-529/532/533）、供应商（编码自动生成 D-657）、物料采购（需求速览+一览+灰项原因 D-660/664）、样衣（置顶+字段治理 FAQ D-625）
+- [x] 新增「统一待办中心」（岗位池领取/已完成维度）、「批量打印生产单/工艺单」（逐单连打 vs 合并一份）、「电商平台店铺授权」（四步向导/手把手引导/三档能力）
+- [x] Tutorial/README.md 现状备忘更新到 D-717；tsc 0 错、前端 493/493 绿；步骤文案对照现行 UI 核实
 
 ### 2026-10-01 D-698 Spring Boot 3.4.5 → 4.1.1 升级上线（PR #27）
 

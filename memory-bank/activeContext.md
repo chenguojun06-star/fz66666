@@ -2,8 +2,25 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-01（①归档 08-31 及以前内容；②✅D-698 Spring Boot 3.4.5 → 4.1.1 升级上线 + 🔴D-699 SSE 流截断/DSML 泄漏 + 🔴D-700 AI 成本归因 + D-674~D-711 前端 as any 治理）
-> 上一版：2026-09-30（✅D-654 巡检工单刷量根治 + D-655 教程中心死按钮接真 + D-632~D-671 架构违规收敛 Controller→多Service 33 → 0）
+> 最后更新：2026-10-02（✅D-716 service→service A/B 类收尾清零 19 → 15（治理方案目标达成）+ ✅D-717 教程内容回补 D-514~D-715 大改版）
+> 上一版：2026-10-01（①归档 08-31 及以前内容；②✅D-698 Spring Boot 3.4.5 → 4.1.1 升级上线 + 🔴D-699 SSE 流截断/DSML 泄漏 + 🔴D-700 AI 成本归因 + D-674~D-711 前端 as any 治理）
+
+## ✅ D-716：service→service 架构违规 A/B 类收尾清零（2026-10-02，19 → 15）
+
+治理方案（docs/架构违规治理方案.md）A 类 3 + B 类 3 共 6 项，D-693 已清 A1/B1，本批清掉剩余 4 项 → 只剩 C 类 15 项（方案明确「降到 15 即停、C 类不要碰」）。四项均沿用「更名移包、接口保留、调用方零改动」模式：
+- **A2** SmartSourcingServiceImpl → `SmartSourcingHelper`（production.helper）；依赖 PurchaseCartService 带 @Lazy，调用图零改动。
+- **A3** ShipmentReconciliationServiceImpl → `ShipmentReconciliationHelper`（finance.helper）；对订单仅 getById/lambdaQuery 取数；⚠️ 基类 BaseReconciliationServiceImpl 留在 service.impl，移包后补 import（同包隐式可见 → 显式 import）。
+- **B2** EcUniversalStockService → `EcUniversalStockOrchestrator`（ecommerce.orchestration）。**实为具体类直接继承 MP ServiceImpl**（docs 里按接口理解有偏差），无接口；10 个调用方 import+字段类型全量更新（含测试）。⚠️ 两个同包陷阱：①原与 EcommerceOrderService 同包免 import，移包后要补；②漏网调用方 SmartWarehouseAllocator 在 ecommerce/service 包内，首轮按目录排除过滤漏掉，终查 grep 抓回——**排除式 grep 会漏同包调用方，收尾必须全仓 grep 类名**。顺带删除只有 4 行注释的空壳 EcUniversalStockServiceImpl.java。
+- **B3** OrderTransferServiceImpl → `OrderTransferHelper`（production.helper）；不能叫 *Orchestrator——production/orchestration 已有同名 OrderTransferOrchestrator（715 行）会撞名。Controller 同时依赖接口+Orchestrator，接口保留后仍只依赖 1 个 Service（规则6 按「字段数>1」计，合法）。
+基线 arch-baseline.properties 19 → 15 附完整记录。ArchUnit 7 规则全绿。
+
+## ✅ D-717：教程内容回补 D-514~D-715 大改版（2026-10-02）
+
+D-655 定的同步纪律首次专项执行（此前内容停在 D-513）。更新 6 篇现有教程 + 新增 3 篇 + README 备忘更新：
+- **重写**「首页使用指南」（原「首页数据分析」）：流程引导面板（可配置/恢复默认，D-526/530/665）+ 经营数据折叠区 + 右侧服务栏。
+- **更新** AI 巡检（补顶部铃铛预警简报面板：侧滑/整卡×当日关闭/目标显示单号款号/24h 冷却，D-626/654）；组合商品（创建入口=成品管理→组合商品、套装出库=商品仓储工具条、新增「电商平台卖套装」步骤，D-529/532/533）；供应商管理（编码自动生成，D-657）；物料采购（需求速览条+整单需求一览+灰项原因，D-660/664）；样衣开发（置顶图钉+字段治理 FAQ，D-625）。
+- **新增**「统一待办中心」（入口=小云面板待办任务/铃铛、岗位池领取、已完成维度，D-612/613/617/618/694）、「批量打印生产单/工艺单」（逐单连打 vs 合并一份，D-611/611b）、「电商平台店铺授权」（四步向导+手把手引导+三档能力，D-587/589）。
+- 验证：tsc 0 错、前端 493/493 绿。教程步骤文案均对照现行 UI 核实（首页区块读 Dashboard/index.tsx、电商授权读 EcommerceCenter、待办入口读 TaskListView 位置）。
 
 ## ✅ D-698：Spring Boot 3.4.5 → 4.1.1 升级上线（2026-10-01，已推 PR #27 已上线）
 
