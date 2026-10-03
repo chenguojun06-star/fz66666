@@ -55,6 +55,11 @@ public class ProductOutstockOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
+    /** D-733：销售出货自动生成应收（发货即应收）。@Lazy 与上方跨模块注入保持同一风格。 */
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.crm.helper.OutstockReceivableHelper outstockReceivableHelper;
+
     public IPage<ProductOutstock> list(Map<String, Object> params) {
         // P1 修复（铁律4 多租户隔离）：工厂账号强制隔离，只能查看自己工厂订单的出库单
         Map<String, Object> effectiveParams = params != null ? new HashMap<>(params) : new HashMap<>();
@@ -145,6 +150,17 @@ public class ProductOutstockOrchestrator {
             throw new IllegalStateException("保存失败");
         }
         logAppendHelper.appendCreate(outstock.getId());
+
+        // D-733：销售出货自动生成应收（用户拍板「发货即应收」）。
+        // ⚠️ 非阻塞：应收生成失败绝不能影响出库主流程；幂等由 helper 内部保证。
+        if (outstockReceivableHelper != null) {
+            try {
+                outstockReceivableHelper.createForShipment(outstock);
+            } catch (Exception e) {
+                log.warn("[出库保存] 自动生成应收失败（不影响出库）: outstockNo={}, {}",
+                        outstock.getOutstockNo(), e.getMessage());
+            }
+        }
 
         // 异步推送物流信息给已对接客户
         if (webhookPushHelper != null) {

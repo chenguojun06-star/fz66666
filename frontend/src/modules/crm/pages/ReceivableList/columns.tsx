@@ -8,6 +8,17 @@ import { STATUS_CONFIG } from './helpers';
 
 const { Text } = Typography;
 
+/**
+ * 来源业务 → 展示文案。
+ * D-733：新增成品出货自动生成的应收（sourceBizType=PRODUCT_OUTSTOCK）；
+ * 顺手补上出货对账口径（对账单推送的应收），避免表格里直接暴露英文码。
+ */
+const SOURCE_BIZ_META: Record<string, { text: string; color: string }> = {
+  MATERIAL_PICKUP: { text: '面辅料领取', color: 'purple' },
+  PRODUCT_OUTSTOCK: { text: '成品出货', color: 'blue' },
+  SHIPMENT_RECONCILIATION: { text: '出货对账', color: 'geekblue' },
+};
+
 export interface ReceivableColumnHandlers {
   openReceivableDetail: (record: Receivable) => void;
   goToMaterialPickup: (record: Receivable, tab: 'pickup' | 'payment') => void;
@@ -34,7 +45,10 @@ export function buildColumns(handlers: ReceivableColumnHandlers): ColumnsType<Re
       title: '来源业务',
       dataIndex: 'sourceBizType',
       width: 120,
-      render: (v?: string) => v === 'MATERIAL_PICKUP' ? <Tag color="purple">面辅料领取</Tag> : (v || '-'),
+      render: (v?: string) => {
+        const meta = v ? SOURCE_BIZ_META[v] : undefined;
+        return meta ? <Tag color={meta.color}>{meta.text}</Tag> : (v || '-');
+      },
     },
     {
       title: '来源单号',

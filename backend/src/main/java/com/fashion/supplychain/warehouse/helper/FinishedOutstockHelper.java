@@ -110,6 +110,10 @@ public class FinishedOutstockHelper {
     @Autowired
     private StockChangePublisher stockChangePublisher;
 
+    /** D-733：销售出货自动生成应收（发货即应收） */
+    @Autowired
+    private com.fashion.supplychain.crm.helper.OutstockReceivableHelper outstockReceivableHelper;
+
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
                                   StyleInfoService styleInfoService,
@@ -597,6 +601,16 @@ public class FinishedOutstockHelper {
         outstock.setUpdateTime(now);
         outstock.setDeleteFlag(0);
         productOutstockService.save(outstock);
+
+        // D-733：销售出货自动生成应收（用户拍板「发货即应收」）。
+        // ⚠️ 必须非阻塞：应收生成失败绝不能影响出库主流程（出库是仓库作业）。
+        // 幂等由 OutstockReceivableHelper 内部（sourceBizType+sourceBizId）保证。
+        try {
+            outstockReceivableHelper.createForShipment(outstock);
+        } catch (Exception e) {
+            log.warn("[出库保存] 自动生成应收失败（不影响出库）: outstockNo={}, {}",
+                    outstock.getOutstockNo(), e.getMessage());
+        }
 
         // 仓库 → 电商 联动：出库流水落库后重算电商可售库存，联动面板才能实时看到变化
         // 事务提交后触发（无事务则立即），避免下游读到未提交的出库记录
