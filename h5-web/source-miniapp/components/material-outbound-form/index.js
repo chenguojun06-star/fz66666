@@ -41,6 +41,14 @@ function localizeUsageTypes(lang) {
   });
 }
 
+/** 远程选择器每页条数。
+ * ⚠️ 必须是模块级常量——微信组件只把 methods 里的**函数**挂到实例，
+ * 非函数值（数字/字符串）会被丢弃，`this._PICKER_SIZE` 读出来是 undefined，
+ * 请求会变成 `pageSize=undefined` → 后端 400 → 工厂/领料人/订单三个选择器全空
+ * （2026-10-03 线上实测，审计日志 ?page=1&pageSize=undefined）。
+ */
+var PICKER_PAGE_SIZE = 20;
+
 /** 按 key 找用料场景 */
 function findUsageType(key) {
   for (var i = 0; i < USAGE_TYPES.length; i++) {
@@ -399,14 +407,11 @@ Component({
       });
     },
 
-    _PICKER_SIZE: 20,
-
-    /**
-     * 远程取数：订单按 orderNo、工厂按 factoryName、人员按 name（后端均为 LIKE）
+    /** 远程取数：订单按 orderNo、工厂按 factoryName、人员按 name（后端均为 LIKE）
      * @param {Function} cb (list, hasMore)
      */
     _fetchPickerOptions: function (key, kw, page, cb) {
-      var SIZE = this._PICKER_SIZE;
+      var SIZE = PICKER_PAGE_SIZE;
       var self = this;
       this.setData({ pickerLoading: true });
       var params = { page: page, pageSize: SIZE };

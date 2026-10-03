@@ -25,6 +25,9 @@
 const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
 
+/** 远程选择器每页条数（必须模块级——methods 里的非函数值会被微信丢弃，见 D-724） */
+var PICKER_PAGE_SIZE = 20;
+
 /**
  * 入库来源 —— 必须与 PC 端 InboundDrawer「入库来源」、大货入库 finished-inbound
  * 的 SOURCE_TYPES 用**同一套 key**（后端 MaterialWarehouseOperationOrchestrator
@@ -392,10 +395,11 @@ Component({
       });
     },
 
-    _PICKER_SIZE: 20,
-
     _fetchPickerOptions: function (key, kw, page, cb) {
-      var SIZE = this._PICKER_SIZE;
+      // ⚠️ 每页条数用模块级常量 PICKER_PAGE_SIZE——微信组件只把 methods 里的**函数**
+      // 挂到实例，非函数值会被丢弃（this._PICKER_SIZE = undefined → 请求
+      // `pageSize=undefined` → 后端 400 → 订单/供应商/领料人选择器全空，2026-10-03 实测）
+      var SIZE = PICKER_PAGE_SIZE;
       var self = this;
       this.setData({ pickerLoading: true });
       var params = { page: page, pageSize: SIZE };

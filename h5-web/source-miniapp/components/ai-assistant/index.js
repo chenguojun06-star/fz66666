@@ -1,6 +1,11 @@
 const i18n = require('../../utils/i18n/index');
 const NS = 'mp.aiAssistant.';
 
+/** D-237：建议/任务缓存 TTL（毫秒）。
+ * ⚠️ 必须模块级——微信组件只把 methods 里的**函数**挂到实例，非函数值会被丢弃
+ * （this._suggestionCacheTTL = undefined → 缓存判定恒 false → 缓存完全失效，D-724 实修） */
+var SUGGESTION_CACHE_TTL = 5 * 60 * 1000;
+
 const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
@@ -500,11 +505,13 @@ Component({
 
     // D-237：建议/洞察缓存 TTL（毫秒）。页面每次 show 都会触发加载，
     // 原先无脑重新请求导致每次打开内容都在变，用户觉得"老在刷新、一点不专业"。
-    _suggestionCacheTTL: 5 * 60 * 1000,
+    // ⚠️ TTL 常量在文件顶部（SUGGESTION_CACHE_TTL）——微信组件只把 methods 里的
+    // **函数**挂到实例，非函数值会被丢弃（this._suggestionCacheTTL = undefined
+    // → 缓存判定恒 false → 缓存完全失效）。
     _readSuggestionCache(key) {
       try {
         const cached = wx.getStorageSync(key);
-        if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
+        if (cached && cached.ts && (Date.now() - cached.ts < SUGGESTION_CACHE_TTL)) {
           return cached.data;
         }
       } catch (_e) { /* 缓存不可读则按未命中处理 */ }
@@ -657,7 +664,7 @@ Component({
     _loadTasksFromCache() {
       try {
         const cached = wx.getStorageSync('ai_tasks_cache_v2');
-        if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
+        if (cached && cached.ts && (Date.now() - cached.ts < SUGGESTION_CACHE_TTL)) {
           this._applyTasksData(cached.data || {});
           return true;
         }
