@@ -26,8 +26,9 @@ Component({
     addGlobalClass: true,
   },
   properties: {
-    /** 占位提示文字 */
-    placeholder: { type: String, value: '搜索' },
+    /** 占位提示文字（D-740：type 放宽为 null——页面在 i18n 文案表填充前会传 undefined/null，
+     *  框架类型检查会刷屏告警；渲染行为不变：空值仍显示为空） */
+    placeholder: { type: null, value: '搜索' },
     /** 当前搜索关键字（受控） */
     value: { type: String, value: '' },
     /** 是否显示扫码按钮 */

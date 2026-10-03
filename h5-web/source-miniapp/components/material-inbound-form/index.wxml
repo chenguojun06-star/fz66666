@@ -9,7 +9,7 @@
       <input
         class="search-input"
         placeholder="{{t.inputCodePlaceholder}}"
-        value="{{materialCode}}"
+        value="{{inputCode}}"
         bindinput="onCodeInput"
         confirm-type="search"
         bindconfirm="onQuery"
@@ -132,7 +132,7 @@
 <!-- ④ 底部固定提交栏 -->
 <view class="submit-bar" wx:if="{{queried}}">
   <view class="submit-summary">
-    <text class="submit-count">{{materialCode}}</text>
+    <text class="submit-count">{{inputCode}}</text>
     <text class="submit-qty">{{t.inboundQtyText}}</text>
   </view>
   <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">

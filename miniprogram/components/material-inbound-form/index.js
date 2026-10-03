@@ -91,7 +91,9 @@ Component({
   },
 
   data: {
-    materialCode: '',
+    // D-740：改名 inputCode —— 原与 properties.materialCode 同名，组件属性覆盖 data
+    //（控制台警告 "data field materialCode is overwritten by property"），且语义上是两个东西
+    inputCode: '',
     materialInfo: null,
     queried: false,
     loading: false,
@@ -216,7 +218,7 @@ Component({
       var info = this.data.materialInfo || {};
       this.setData({
         't.codeText': i18n.tf('mp.warehouse.materialInbound.codeText',
-          { code: info.materialCode || this.data.materialCode || '' }, l),
+          { code: info.materialCode || this.data.inputCode || '' }, l),
         't.typeText': i18n.tf('mp.warehouse.materialInbound.typeText', { label: this.data.typeLabel || '' }, l),
         't.colorText': i18n.tf('mp.warehouse.materialInbound.colorText', { value: info.color || '' }, l),
         't.fabricWidthText': i18n.tf('mp.warehouse.materialInbound.fabricWidthText', { value: this.data.fabricWidth || '' }, l),
@@ -233,13 +235,13 @@ Component({
     _applyCode: function (code) {
       if (!code || code === this._lastCode) return;
       this._lastCode = code;
-      this.setData({ materialCode: code }, function () {
+      this.setData({ inputCode: code }, function () {
         this.queryMaterial();
       }.bind(this));
     },
 
     onCodeInput: function (e) {
-      this.setData({ materialCode: e.detail.value });
+      this.setData({ inputCode: e.detail.value });
     },
 
     onScan: function () {
@@ -259,7 +261,7 @@ Component({
     },
 
     onQuery: function () {
-      if (!this.data.materialCode) {
+      if (!this.data.inputCode) {
         wx.showToast({ title: i18n.t('common.pleaseInputMaterialCode', this._lang), icon: 'none' });
         return;
       }
