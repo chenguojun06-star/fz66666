@@ -225,6 +225,32 @@ def find_dead_keys(zh_flat, blob):
 #      （第一版就踩了：某字段明明补上了仍报缺失）；
 #   ③ `t` 可能是 `wx:for-item` 的循环别名（如 components/ai-assistant），
 #      此时 {{t.title}} 与 i18n 无关 → 整个文件跳过。
+def find_applylanguage_never_called(sources):
+    """检查 9（D-727）：wxml 用了 {{t.x}}，同目录 js 定义了 applyLanguage，
+    但全文件**没有任何 this.applyLanguage( 调用点** → t 恒为空 → 整页文案空白。
+
+    与检查 8 的区别：检查 8 查"赋值齐不齐"，本检查查"函数有没有人调"。
+    实测 2026-10-03 pages/sales/order-list：applyLanguage 里赋值齐全，但页面对象
+    里 onShow 定义两次、后者覆盖了负责调用它的那个 → 平台订单页文案全空。
+    """
+    out = {}
+    for rel, text in sources.items():
+        if not rel.endswith('.wxml'):
+            continue
+        if not re.search(r'\{\{\s*t\.', text):
+            continue
+        js_rel = rel[:-5] + '.js'
+        js = sources.get(js_rel)
+        if js is None:
+            continue
+        if 'applyLanguage' not in js:
+            continue
+        if re.search(r'this\.applyLanguage\s*\(', js):
+            continue
+        out[rel] = True
+    return out
+
+
 def strip_js_comments(js):
     js = re.sub(r'/\*[\s\S]*?\*/', '', js)
     js = re.sub(r'(?m)^\s*//.*$', '', js)
@@ -548,6 +574,22 @@ def main():
                     print(f'       {page}  [wxml 路径错：js 赋在顶层] {path}')
         else:
             print('    ✅ 无新增缺口')
+
+    # --- 检查 9：applyLanguage 定义了却从不调用（阻塞）---
+    # 比检查 8 更隐蔽：t.x 的赋值**齐全**，但函数没有任何调用点 → t 恒为空对象
+    # → wxml 里所有 {{t.x}} 渲染为空（整页文案空白）。
+    # 实测 2026-10-03：pages/sales/order-list 因页面对象里 onShow 定义两次、
+    # 后者覆盖了负责 applyLanguage 的那个 → 平台订单页文案全空（用户实测报告）。
+    print('[9] applyLanguage 定义了却从不调用（阻塞）')
+    never_called = find_applylanguage_never_called(sources)
+    if never_called:
+        for page in never_called:
+            print(f'       {page}  →  同目录 js 定义了 applyLanguage，但全文件无 '
+                  f'`this.applyLanguage(` 调用（t 恒为空 → 整页文案空白）')
+        print(f'    ❌ {len(never_called)} 个页面/组件从不调用 applyLanguage')
+        problems += len(never_called)
+    else:
+        print('    ✅ 无此类缺口')
 
     print()
     if problems:

@@ -132,6 +132,9 @@ Page({
   },
 
   onShow: function () {
+    // ⚠️ 本页原先有两个 onShow 定义，后者覆盖前者 → applyLanguage 从未执行，
+    // 页面所有 {{t.xxx}} 恒为空（用户实测"文字都不见了"）。合并为一处。
+    this.applyLanguage(i18n.getLanguage());
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     // 静默刷新数据（从子页面返回时数据可能已过期），仅在已加载过的情况下刷新
