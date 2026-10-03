@@ -269,7 +269,10 @@ RESTART_CADDY=0
 echo "$CHANGED" | grep -q '^backend/'  && SERVICES="$SERVICES backend"
 echo "$CHANGED" | grep -q '^frontend/' && SERVICES="$SERVICES frontend"
 # D-728：h5-web/ 变更 → 重建 h5 容器（浏览器直开的 H5 版，与前端同款静态服务）
-echo "$CHANGED" | grep -q '^h5-web/'   && SERVICES="$SERVICES h5"
+# ⚠️ 必须排除 source-miniapp 镜像目录：那两个目录是小程序源码的**只读镜像**
+#（供 H5 适配层比对用，nginx 已 404 屏蔽），不参与 vite 构建；
+# 若不排除，**每次小程序改动都会白重建一次 h5**（D-729 实测触发）。
+echo "$CHANGED" | grep -vE '^h5-web/(public/)?source-miniapp/' | grep -q '^h5-web/' && SERVICES="$SERVICES h5"
 echo "$CHANGED" | grep -q '^deploy/lighthouse/Caddyfile$'         && RESTART_CADDY=1
 echo "$CHANGED" | grep -q '^deploy/lighthouse/docker-compose.yml$' && RESTART_CADDY=1
 # deploy/lighthouse/ 下只有影响运行时配置的文件才需要重建双端；
