@@ -32,7 +32,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 MADGE = os.path.join(FRONTEND, "node_modules", ".bin", "madge")
 BASELINE = os.path.join(FRONTEND, "circular-baseline.json")
-TIMEOUT_SECONDS = 300  # 本地实测 ~60s，留 5 倍余量给 CI 冷启动
+# D-741：项目长大后 madge 实测 ~316s（1948 个文件），300s 门禁已必超时。
+# 调到 900s（实测的 ~3 倍余量），后续若再逼近请考虑给 madge 换 TS 解析策略而不是继续加时间。
+TIMEOUT_SECONDS = 900
 
 GREEN, RED, YELLOW, BLUE, NC = "\033[32m", "\033[31m", "\033[33m", "\033[34m", "\033[0m"
 
