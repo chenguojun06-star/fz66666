@@ -361,7 +361,7 @@ Page({
         riskOrdersQty: toNum(statsData && statsData.riskQuantity) || riskQty,
       };
       const totalWarn = menuData.delayedOrders + menuData.riskOrders;
-      var langZ = this._lang || i18n.getLanguage();
+      var langZ = i18n.getLanguage() || i18n.getLanguage();
       var alertText = totalWarn > 0 ? i18n.tf(NS + 'warnFmt', { n: totalWarn }, langZ) : i18n.t(NS + 'sysNormal', langZ);
 
       const stageBuckets = STAGE_LIST.map(function(stage) {
@@ -406,7 +406,7 @@ Page({
             if (factoryList[i].factoryName === fa.factoryName) {
               factoryList[i].active = !!fa.active;
               factoryList[i].mins = fa.minutesSinceLastScan || 999;
-              factoryList[i].timeText = fa.minutesSinceLastScan < 1 ? i18n.t(NS + 'justNow', this._lang) : fa.minutesSinceLastScan < 60 ? fa.minutesSinceLastScan + i18n.t(NS + 'minAgo', this._lang) : Math.floor(fa.minutesSinceLastScan / 60) + i18n.t(NS + 'hourSuffix', this._lang);
+              factoryList[i].timeText = fa.minutesSinceLastScan < 1 ? i18n.t(NS + 'justNow', i18n.getLanguage()) : fa.minutesSinceLastScan < 60 ? fa.minutesSinceLastScan + i18n.t(NS + 'minAgo', i18n.getLanguage()) : Math.floor(fa.minutesSinceLastScan / 60) + i18n.t(NS + 'hourSuffix', i18n.getLanguage());
               factoryList[i].todayQty = fa.todayQty || 0;
               found = true;
               break;

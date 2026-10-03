@@ -417,7 +417,7 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success) {
-        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, this._lang));
+        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, i18n.getLanguage()));
         return;
       }
       dispatchInlineScanCode(raw);

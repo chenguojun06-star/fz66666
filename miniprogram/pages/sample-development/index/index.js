@@ -423,7 +423,7 @@ Page({
           item._styleNo = item.styleNo || si.styleNo || '';
           item._styleName = item.styleName || si.styleName || '';
           item._cover = getAuthedImageUrl(item.coverImage || si.cover || '');
-          item._statusLabel = getPatternStatusLabel(item.status, this._lang);
+          item._statusLabel = getPatternStatusLabel(item.status, i18n.getLanguage());
           item._statusColor = that.getStatusColorClass(item.status);
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
@@ -453,15 +453,15 @@ Page({
               var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
               if (diffDays < 0) {
                 item._overdue = true;
-                item._daysLeftText = i18n.tf(NS + 'delayedDays', { days: Math.abs(diffDays) }, this._lang);
+                item._daysLeftText = i18n.tf(NS + 'delayedDays', { days: Math.abs(diffDays) }, i18n.getLanguage());
               } else if (diffDays === 0) {
                 item._nearDue = true;
-                item._daysLeftText = i18n.t(NS + 'todayBoard', this._lang);
+                item._daysLeftText = i18n.t(NS + 'todayBoard', i18n.getLanguage());
               } else if (diffDays <= 3) {
                 item._nearDue = true;
-                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, this._lang);
+                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, i18n.getLanguage());
               } else {
-                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, this._lang);
+                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, i18n.getLanguage());
               }
             }
           }
@@ -472,17 +472,17 @@ Page({
           if (customer) meta1Parts.push(customer);
           item._customer = customer;
           var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
-          if (merchandiser) meta1Parts.push(i18n.t(NS + 'merchandiserPrefix', this._lang) + ' ' + merchandiser);
+          if (merchandiser) meta1Parts.push(i18n.t(NS + 'merchandiserPrefix', i18n.getLanguage()) + ' ' + merchandiser);
           var category = item.category || si.category || '';
           category = displayCategory(category);
           if (category) meta1Parts.push(category);
           var season = item.season || si.season || '';
-          if (season && SEASON_MAP[season]) season = i18n.t(NS + SEASON_MAP[season], this._lang);
+          if (season && SEASON_MAP[season]) season = i18n.t(NS + SEASON_MAP[season], i18n.getLanguage());
           if (season) meta1Parts.push(season);
           item._metaLine1 = meta1Parts.join(' · ');
           // 生产管理同款卡片：行4 = 跟单 · 品类 · 季节（客户单独占行3）
           var metaShortParts = [];
-          if (merchandiser) metaShortParts.push(i18n.t(NS + 'merchandiserPrefix', this._lang).replace(':', '') + ' ' + merchandiser);
+          if (merchandiser) metaShortParts.push(i18n.t(NS + 'merchandiserPrefix', i18n.getLanguage()).replace(':', '') + ' ' + merchandiser);
           if (category) metaShortParts.push(category);
           if (season) metaShortParts.push(season);
           item._metaShort = metaShortParts.join(' · ');
@@ -535,7 +535,7 @@ Page({
       })
       .catch(function () {
         that.setData({ loading: false, loadingMore: false });
-        if (reset) toast.error(i18n.t('common.loadFailed', this._lang));
+        if (reset) toast.error(i18n.t('common.loadFailed', i18n.getLanguage()));
       });
   },
 
@@ -758,7 +758,7 @@ Page({
             return (item.styleNo || (item.styleInfo || {}).styleNo) === styleNo;
           }) || records[0];
           if (!hit) {
-            toast.error(i18n.tf(NS + 'noStyleSample', { no: styleNo }, this._lang));
+            toast.error(i18n.tf(NS + 'noStyleSample', { no: styleNo }, i18n.getLanguage()));
             return;
           }
           that.onCardTap({
@@ -767,7 +767,7 @@ Page({
         })
         .catch(function () {
           wx.hideLoading();
-          toast.error(i18n.t(NS + 'queryFailed', this._lang));
+          toast.error(i18n.t(NS + 'queryFailed', i18n.getLanguage()));
         });
     });
   },

@@ -175,11 +175,11 @@ Page({
           that._initWithOrder(records[0]);
         } else {
           that.setData({ loading: false });
-          toast.error(i18n.t(NS + 'orderMissing', this._lang));
+          toast.error(i18n.t(NS + 'orderMissing', i18n.getLanguage()));
         }
       }).catch(function () {
         that.setData({ loading: false });
-        toast.error(i18n.t(NS + 'orderLoadFail', this._lang));
+        toast.error(i18n.t(NS + 'orderLoadFail', i18n.getLanguage()));
       });
     }
   },
@@ -341,7 +341,7 @@ Page({
         if (!res.confirm) return;
         that.setData({ submitting: true });
         api.factoryShipment.ship(payload).then(function () {
-          toast.success(i18n.t(NS + 'shipOk', this._lang));
+          toast.success(i18n.t(NS + 'shipOk', i18n.getLanguage()));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that.setData({
             submitting: false,
@@ -351,7 +351,7 @@ Page({
           that._loadShipmentRecords();
         }).catch(function (e) {
           that.setData({ submitting: false });
-          toast.error(i18n.t(NS + 'shipFailPrefix', this._lang) + (e.message || e));
+          toast.error(i18n.t(NS + 'shipFailPrefix', i18n.getLanguage()) + (e.message || e));
         });
       },
     });
@@ -374,11 +374,11 @@ Page({
       success: function (res) {
         if (!res.confirm) return;
         api.factoryShipment.remove(id).then(function () {
-          toast.success(i18n.t(NS + 'delOk', this._lang));
+          toast.success(i18n.t(NS + 'delOk', i18n.getLanguage()));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that._loadShippableInfo();
           that._loadShipmentRecords();
-        }).catch(function () { toast.error(i18n.t(NS + 'delFail', this._lang)); });
+        }).catch(function () { toast.error(i18n.t(NS + 'delFail', i18n.getLanguage())); });
       },
     });
   },
@@ -420,12 +420,12 @@ Page({
       success: function (res) {
         if (!res.confirm) return;
         api.factoryShipment.receive(shipmentId, payload).then(function () {
-          toast.success(i18n.t(NS + 'receiveOk', this._lang));
+          toast.success(i18n.t(NS + 'receiveOk', i18n.getLanguage()));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that._loadShippableInfo();
           that._loadShipmentRecords();
         }).catch(function (err) {
-          toast.error(i18n.t(NS + 'receiveFailPrefix', this._lang) + (err && err.message ? err.message : ''));
+          toast.error(i18n.t(NS + 'receiveFailPrefix', i18n.getLanguage()) + (err && err.message ? err.message : ''));
         });
       },
     });

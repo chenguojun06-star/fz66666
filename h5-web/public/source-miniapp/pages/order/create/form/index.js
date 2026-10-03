@@ -54,10 +54,10 @@ Page({
       if (msg.indexOf('cancel') !== -1) return;
       if (msg.indexOf('auth') !== -1 || msg.indexOf('deny') !== -1 || msg.indexOf('permission') !== -1) {
         wx.showModal({
-          title: i18n.t(NS + 'cameraPermission', this._lang),
-          content: i18n.t(NS + 'cameraPermMsg', this._lang),
-          confirmText: i18n.t(NS + 'goSettings', this._lang),
-          cancelText: i18n.t('common.cancel', this._lang),
+          title: i18n.t(NS + 'cameraPermission', self._lang),
+          content: i18n.t(NS + 'cameraPermMsg', self._lang),
+          confirmText: i18n.t(NS + 'goSettings', self._lang),
+          cancelText: i18n.t('common.cancel', self._lang),
           success: function (r) {
             if (r.confirm) wx.openSetting({});
           },
@@ -65,7 +65,7 @@ Page({
         return;
       }
       // 真机可见：给出具体失败原因，便于定位
-      wx.showToast({ title: i18n.t(NS + 'pickImageFailedPrefix', this._lang) + (msg || i18n.t(NS + 'unknownReason', this._lang)), icon: 'none', duration: 3000 });
+      wx.showToast({ title: i18n.t(NS + 'pickImageFailedPrefix', self._lang) + (msg || i18n.t(NS + 'unknownReason', self._lang)), icon: 'none', duration: 3000 });
       // 其他失败：降级 wx.chooseImage 再试一次（真机调试模式等兼容场景）
       if (wx.chooseImage) {
         wx.chooseImage({
@@ -78,7 +78,7 @@ Page({
           fail: function (err2) {
             const msg2 = (err2 && err2.errMsg) || '';
             if (msg2.indexOf('cancel') !== -1) return;
-            wx.showToast({ title: i18n.t(NS + 'pickImageFailed', this._lang), icon: 'none' });
+            wx.showToast({ title: i18n.t(NS + 'pickImageFailed', self._lang), icon: 'none' });
           },
         });
         return;
@@ -430,7 +430,7 @@ Page({
         if (name) opts.push({ id: c.id, companyName: name });
       });
       // 小程序 picker 没有 allowClear，插入「（不选）」让用户能清空已选客户
-      if (opts.length) opts.unshift({ id: '', companyName: i18n.t(NS + 'noneOption', this._lang) });
+      if (opts.length) opts.unshift({ id: '', companyName: i18n.t(NS + 'noneOption', self._lang) });
       self.setData({ customerList: opts });
     }).catch(function () {});
 
@@ -531,11 +531,11 @@ Page({
      原先是原生 <picker>：没有搜索框，工厂/人员/客户一多只能一路滚，
      而且人员只加载前 200 条 —— 现在工厂/人员走**远程关键字搜索 + 分页**，部门/客户本地搜索。 */
   _PICKER_CONF: {
-    orgUnit: { title: i18n.t(NS + 'pickDept', this._lang), remote: false },
-    factory: { title: i18n.t(NS + 'pickFactory', this._lang), remote: true },
-    customer: { title: i18n.t(NS + 'pickCustomer', this._lang), remote: false },
-    patternMaker: { title: i18n.t(NS + 'pickPatternMaker', this._lang), remote: true },
-    merchandiser: { title: i18n.t(NS + 'pickMerch', this._lang), remote: true },
+    orgUnit: { title: i18n.t(NS + 'pickDept', i18n.getLanguage()), remote: false },
+    factory: { title: i18n.t(NS + 'pickFactory', i18n.getLanguage()), remote: true },
+    customer: { title: i18n.t(NS + 'pickCustomer', i18n.getLanguage()), remote: false },
+    patternMaker: { title: i18n.t(NS + 'pickPatternMaker', i18n.getLanguage()), remote: true },
+    merchandiser: { title: i18n.t(NS + 'pickMerch', i18n.getLanguage()), remote: true },
   },
   _PICKER_SIZE: 20,
 
@@ -772,7 +772,7 @@ Page({
           values = String(d.dictValue || '').split(/[,，、]/).map(function (v) { return v.trim(); }).filter(Boolean);
         }
         if (values.length) {
-          groups.push({ id: d.id, name: d.dictLabel || d.dictCode || i18n.t(NS + 'unnamedWord', this._lang), values: values });
+          groups.push({ id: d.id, name: d.dictLabel || d.dictCode || i18n.t(NS + 'unnamedWord', i18n.getLanguage()), values: values });
         }
       });
       self.setData({ attrLibGroups: groups });
@@ -949,7 +949,7 @@ Page({
     });
 
     const details = valid.map(function (l) {
-      return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: i18n.t(NS + 'materialSysName', this._lang), materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
+      return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: i18n.t(NS + 'materialSysName', i18n.getLanguage()), materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
     });
 
     const pricingObj = {
@@ -989,7 +989,7 @@ Page({
     const self = this;
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
-      wx.showToast({ title: i18n.t(NS + 'orderOk', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'orderOk', i18n.getLanguage()), icon: 'success' });
       // ★ 图片是建单后才上传的（wxfile 临时文件 → /api/common/upload → t_order_image），
       //   必须等上传完成再返回列表——原 1.5s 定时返回会在网络稍慢时销毁页面、
       //   中断 wx.uploadFile，导致用户上传的款式图丢失（"看起来传了其实没传上"）。
@@ -1001,7 +1001,7 @@ Page({
       });
     }).catch(function (err) {
       self.setData({ submitting: false });
-      wx.showToast({ title: (err && err.message) || i18n.t(NS + 'orderFail', this._lang), icon: 'none', duration: 3000 });
+      wx.showToast({ title: (err && err.message) || i18n.t(NS + 'orderFail', i18n.getLanguage()), icon: 'none', duration: 3000 });
     });
   },
 
@@ -1034,7 +1034,7 @@ Page({
         return null;
       });
     }).catch(function () {
-      wx.showToast({ title: i18n.t(NS + 'coverSaveFail', this._lang), icon: 'none', duration: 3000 });
+      wx.showToast({ title: i18n.t(NS + 'coverSaveFail', i18n.getLanguage()), icon: 'none', duration: 3000 });
       return null;
     });
   },

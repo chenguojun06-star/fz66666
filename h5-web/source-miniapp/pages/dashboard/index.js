@@ -231,9 +231,9 @@ Page({
         loading: false,
       });
       if (apiFailCount >= 3) {
-        wx.showToast({ title: i18n.t(NS + 'loadFailRefresh', this._lang), icon: 'none', duration: 2500 });
+        wx.showToast({ title: i18n.t(NS + 'loadFailRefresh', i18n.getLanguage()), icon: 'none', duration: 2500 });
       } else if (apiFailCount > 0) {
-        wx.showToast({ title: i18n.t(NS + 'partialFail', this._lang), icon: 'none', duration: 2000 });
+        wx.showToast({ title: i18n.t(NS + 'partialFail', i18n.getLanguage()), icon: 'none', duration: 2000 });
       }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
@@ -475,7 +475,7 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success) {
-        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, this._lang));
+        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, i18n.getLanguage()));
         return;
       }
       // 原地解析 + 工序检测，直接跳领取/报工/质检/入库等最终页面

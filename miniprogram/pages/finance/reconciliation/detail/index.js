@@ -136,7 +136,7 @@ Page({
     var that = this;
     this.setData({ loading: true, loadError: '' });
     api.materialReconciliation.getById(id).then(function (r) {
-      r.statusText = this._langResolved ? (this._langResolved[r.status] || r.status) : (STATUS_TEXT_MAP[r.status] || r.status || '—');
+      r.statusText = that._langResolved ? (that._langResolved[r.status] || r.status) : (STATUS_TEXT_MAP[r.status] || r.status || '—');
       r._statusColor = STATUS_COLOR_MAP[r.status] || 'var(--color-text-tertiary)';
       r._image = r.materialImageUrl ? getAuthedImageUrl(r.materialImageUrl) : '';
       r.amountStr = fmtMoney(r.finalAmount != null ? r.finalAmount : r.totalAmount);
@@ -167,7 +167,7 @@ Page({
     }).catch(function (e) {
       that.setData({
         loading: false,
-        loadError: i18n.t(NS + 'loadFailColon', this._lang) + (e.errMsg || e.message || e),
+        loadError: i18n.t(NS + 'loadFailColon', i18n.getLanguage()) + (e.errMsg || e.message || e),
       });
     });
   },
@@ -186,11 +186,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'update', next.status, '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + next.key, this._lang));
+          toast(i18n.t(NS + next.key, i18n.getLanguage()));
           that._loadDetail(item.id);
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -212,11 +212,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'return', '', reason).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnedW', this._lang));
+          toast(i18n.t(NS + 'returnedW', i18n.getLanguage()));
           that._loadDetail(item.id);
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'returnFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });

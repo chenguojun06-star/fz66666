@@ -793,9 +793,9 @@ Page({
 
     printFn(bundles, d.orderNo, d.orderInfo, printOpts).catch(function (err) {
       wx.hideLoading();
-      const msg = err && err.message ? err.message : i18n.t(NS + 'printFail', this._lang);
+      const msg = err && err.message ? err.message : i18n.t(NS + 'printFail', i18n.getLanguage());
       wx.showModal({
-        title: cfg.printMode === 'wifi' ? i18n.t(NS + 'wifiPrintFail', this._lang) : i18n.t(NS + 'btPrintFail', this._lang),
+        title: cfg.printMode === 'wifi' ? i18n.t(NS + 'wifiPrintFail', i18n.getLanguage()) : i18n.t(NS + 'btPrintFail', i18n.getLanguage()),
         content: msg,
         showCancel: false,
       });
@@ -979,6 +979,9 @@ Page({
         const s = scanMap[bid];
         const completed = s && s.total > 0 && s.scanned === s.total;
         const partialScanned = s && s.scanned > 0 && s.scanned < s.total;
+        // D-723 用户拍板：转单时只要扫过码的菲号（含部分扫码）一律置灰不可选，
+        // 避免已报工件数被转单动作带走到新订单造成账实不符
+        const scannedAny = !!(s && s.scanned > 0);
         return {
           id: bid || b.bundleNo,
           bundleLabel: b.bundleNo || b.bundleLabel || bid,
@@ -987,9 +990,9 @@ Page({
           size: b.size,
           layerCount: b.layerCount,
           quantity: b.quantity,
-          _disabled: completed,
+          _disabled: scannedAny,
           _partialScanned: partialScanned,
-          _statusCn: completed ? i18n.t('common.completed', this._lang) : (partialScanned ? i18n.t(NS + 'partialScanned', this._lang) : ''),
+          _statusCn: completed ? i18n.t('common.completed', i18n.getLanguage()) : (partialScanned ? i18n.t(NS + 'partialScanned', i18n.getLanguage()) : ''),
         };
       });
       // D-517：同步过滤结果（新数据默认无关键字 → 全量）
@@ -1098,7 +1101,7 @@ Page({
                 processCode: code,
                 processName: normalizeProcessName(n.name || n.processName || '-'),
                 unitPrice: price,
-                priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
+                priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', i18n.getLanguage()),
                 pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
                 progressStage: stageKey,
                 _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -1118,7 +1121,7 @@ Page({
             processCode: code,
             processName: normalizeProcessName(n.name || '-'),
             unitPrice: price,
-            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
+            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', i18n.getLanguage()),
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
             progressStage: n.progressStage || '-',
             _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -1140,7 +1143,7 @@ Page({
             processCode: code,
             processName: normalizeProcessName(p.processName || p.name || '-'),
             unitPrice: price,
-            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
+            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', i18n.getLanguage()),
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
             progressStage: p.progressStage || p.stage || '-',
             _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -1339,7 +1342,7 @@ Page({
       ? api.production.transferCreateToFactory
       : api.production.transferCreate;
     apiFn(payload).then(function () {
-      toast.success(i18n.t(NS + 'transferOk', this._lang));
+      toast.success(i18n.t(NS + 'transferOk', i18n.getLanguage()));
       that.setData({
         activeTab: 'detail', submitting: false,
         selectedBundles: {}, selectedBundleCount: 0, allSelected: false,
@@ -1348,7 +1351,7 @@ Page({
       });
     }).catch(function (err) {
       that.setData({ submitting: false });
-      toast.error(err.message || i18n.t(NS + 'transferFail', this._lang));
+      toast.error(err.message || i18n.t(NS + 'transferFail', i18n.getLanguage()));
     });
   },
 
@@ -1423,7 +1426,7 @@ Page({
 
       let bundleDisplay = '-';
       if (bundles === 1) {
-        bundleDisplay = '1\u00D7' + lastQty + i18n.t('common.piece', this._lang);
+        bundleDisplay = '1\u00D7' + lastQty + i18n.t('common.piece', i18n.getLanguage());
       } else if (bundles > 1) {
         bundleDisplay = (bundles - 1) + '\u00D7' + bs + ' + 1\u00D7' + lastQty;
       }
@@ -1512,13 +1515,13 @@ Page({
     const that = this;
     this.setData({ cuttingSubmitting: true });
     api.production.generateCuttingBundles(orderId, items).then(function () {
-      toast.success(i18n.t(NS + 'bundleGenOk', this._lang));
+      toast.success(i18n.t(NS + 'bundleGenOk', i18n.getLanguage()));
       triggerDataRefresh('cutting');
       that.setData({ cuttingSubmitting: false, showCuttingForm: false });
       that.loadAll(orderNo);
     }).catch(function (err) {
       console.error('[bundle-detail] generateBundles error', err);
-      toast.error(i18n.t(NS + 'genFailedPrefix', this._lang) + (err.message || i18n.t('common.retryLater', this._lang)));
+      toast.error(i18n.t(NS + 'genFailedPrefix', i18n.getLanguage()) + (err.message || i18n.t('common.retryLater', i18n.getLanguage())));
       that.setData({ cuttingSubmitting: false });
     });
   },

@@ -626,8 +626,8 @@ Page({
         index: idx + 1,
         percent: percent,
         status: status,
-        statusText: percent >= 100 ? i18n.t(NS + 'statusCompleted', this._lang)
-        : (percent > 0 ? percent + '%' : i18n.t(NS + 'statusNotStarted', this._lang)),
+        statusText: percent >= 100 ? i18n.t(NS + 'statusCompleted', i18n.getLanguage())
+        : (percent > 0 ? percent + '%' : i18n.t(NS + 'statusNotStarted', i18n.getLanguage())),
         _clickable: clickable,
         _showLine: idx > 0,
       };
@@ -1046,7 +1046,7 @@ Page({
       // 后端返回 Result<List<OrderRemark>>，ok() 解包后 res 就是数组
       const list = toArray(res);
       const remarkList = list.map(function(item, idx) {
-        const authorName = item.authorName || item.createdByName || i18n.t(NS + 'anonymous', this._lang);
+        const authorName = item.authorName || item.createdByName || i18n.t(NS + 'anonymous', i18n.getLanguage());
         return Object.assign({}, item, {
           _timeText: this.formatRemarkTime(item.createTime || item.createdAt),
           _roleLabel: this.getRoleLabel(item.authorRole),

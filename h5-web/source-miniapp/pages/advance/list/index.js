@@ -195,7 +195,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', i18n.getLanguage()) + (e.message || e));
     });
   },
 
@@ -247,10 +247,10 @@ Page({
       reason: form.reason.trim(),
       orderNo: (form.orderNo || '').trim(),
     }).then(function () {
-      toast(i18n.t(NS + 'applyOk', this._lang));
+      toast(i18n.t(NS + 'applyOk', i18n.getLanguage()));
       that.setData({ showCreateModal: false });
       that._resetAndLoad();
-    }).catch(function (e) { toast(i18n.t(NS + 'applyFailPrefix', this._lang) + (e.message || e)); });
+    }).catch(function (e) { toast(i18n.t(NS + 'applyFailPrefix', i18n.getLanguage()) + (e.message || e)); });
   },
 
   onCancelCreate: function () {
@@ -272,10 +272,10 @@ Page({
     wx.showModal({ title: i18n.t(NS + 'approveTitle', this._lang), content: i18n.t(NS + 'approveConfirm', this._lang), success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.approve(item.id).then(function () {
-        toast(i18n.t(NS + 'approveOk', this._lang));
+        toast(i18n.t(NS + 'approveOk', i18n.getLanguage()));
         that.setData({ showActionSheet: false, currentAdvance: null });
         that._resetAndLoad();
-      }).catch(function (e) { toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'approveFailPrefix', i18n.getLanguage()) + (e.message || e)); });
     }});
   },
 
@@ -286,10 +286,10 @@ Page({
     wx.showModal({ title: i18n.t(NS + 'rejectTitle', this._lang), content: i18n.t(NS + 'rejectConfirm', this._lang), editable: true, placeholderText: i18n.t(NS + 'rejectReasonOpt', this._lang), success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.reject(item.id, res.content || '').then(function () {
-        toast(i18n.t(NS + 'rejected', this._lang));
+        toast(i18n.t(NS + 'rejected', i18n.getLanguage()));
         that.setData({ showActionSheet: false, currentAdvance: null });
         that._resetAndLoad();
-      }).catch(function (e) { toast(i18n.t(NS + 'rejectFailPrefix', this._lang) + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'rejectFailPrefix', i18n.getLanguage()) + (e.message || e)); });
     }});
   },
 

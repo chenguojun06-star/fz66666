@@ -127,19 +127,19 @@ function _uploadFileWithAuth(filePath, formData, callback, pageCtx) {
         const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
         if (data.code === 200) {
           if (!callback) {
-            wx.showToast({ title: i18n.t('mp.sampleDetail.uploadOk', this._lang), icon: 'success' });
+            wx.showToast({ title: i18n.t('mp.sampleDetail.uploadOk', i18n.getLanguage()), icon: 'success' });
             pageCtx && pageCtx.loadAttachments && pageCtx.loadAttachments();
           }
         } else {
-          wx.showToast({ title: data.message || i18n.t('common.uploadFailed', this._lang), icon: 'none' });
+          wx.showToast({ title: data.message || i18n.t('common.uploadFailed', i18n.getLanguage()), icon: 'none' });
         }
       } catch (e) {
-        wx.showToast({ title: i18n.t('common.uploadFailed', this._lang), icon: 'none' });
+        wx.showToast({ title: i18n.t('common.uploadFailed', i18n.getLanguage()), icon: 'none' });
       }
       if (callback) callback();
     },
     fail: () => {
-      wx.showToast({ title: i18n.t('common.uploadFailed', this._lang), icon: 'none' });
+      wx.showToast({ title: i18n.t('common.uploadFailed', i18n.getLanguage()), icon: 'none' });
       if (callback) callback();
     },
   });
@@ -168,7 +168,7 @@ function _downloadWithAuth(url, onSuccess, onFail) {
       if (onFail) {
         onFail(err);
       } else {
-        wx.showToast({ title: i18n.t('mp.sampleDetail.downloadFailed', this._lang), icon: 'none' });
+        wx.showToast({ title: i18n.t('mp.sampleDetail.downloadFailed', i18n.getLanguage()), icon: 'none' });
       }
     },
   });
@@ -486,7 +486,7 @@ Page({
       }
       totalPercent += percent;
       var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
-      var statusText = percent >= 100 ? i18n.t('common.completed', this._lang) : (percent > 0 ? percent + '%' : i18n.t('mp.sampleDetail.stageTodo', this._lang));
+      var statusText = percent >= 100 ? i18n.t('common.completed', i18n.getLanguage()) : (percent > 0 ? percent + '%' : i18n.t('mp.sampleDetail.stageTodo', i18n.getLanguage()));
 
       // 时间标签从 snapshot 获取
       var timeLabel = '';
@@ -501,10 +501,10 @@ Page({
       var delayTone = '';
       if (status === 'in_progress' && snapshot._countdownDays != null) {
         if (snapshot._countdownDays < 0) {
-          delayText = i18n.t(NS + 'overdueLabel', this._lang) + Math.abs(snapshot._countdownDays) + i18n.t(NS + 'daysWord', this._lang);
+          delayText = i18n.t(NS + 'overdueLabel', i18n.getLanguage()) + Math.abs(snapshot._countdownDays) + i18n.t(NS + 'daysWord', i18n.getLanguage());
           delayTone = 'danger';
         } else if (snapshot._countdownDays <= 3) {
-          delayText = i18n.t('mp.sampleDev.filterNearDue', this._lang) + snapshot._countdownDays + i18n.t(NS + 'daysWord', this._lang);
+          delayText = i18n.t('mp.sampleDev.filterNearDue', i18n.getLanguage()) + snapshot._countdownDays + i18n.t(NS + 'daysWord', i18n.getLanguage());
           delayTone = 'warning';
         }
       }
@@ -513,11 +513,11 @@ Page({
       var description = '';
       var stageProgress = percent;
       if (status === 'completed') {
-        description = s.name + i18n.t('common.completed', this._lang);
+        description = s.name + i18n.t('common.completed', i18n.getLanguage());
       } else if (status === 'in_progress') {
-        description = s.name + i18n.t('mp.scanConfirm.statusDoing', this._lang) + ' ' + percent + '%';
+        description = s.name + i18n.t('mp.scanConfirm.statusDoing', i18n.getLanguage()) + ' ' + percent + '%';
       } else {
-        description = i18n.t('mp.sampleDetail.stageTodo', this._lang);
+        description = i18n.t('mp.sampleDetail.stageTodo', i18n.getLanguage());
       }
 
       return {
@@ -621,11 +621,11 @@ Page({
       // 从 progressNodes 取进度，优先用 snapshot 数据
       var percent = getNodeProgress(snapshot, s.key);
       var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
-      var statusText = percent >= 100 ? i18n.t('common.completed', this._lang) : (percent > 0 ? i18n.t('mp.scanConfirm.statusDoing', this._lang) : '');
+      var statusText = percent >= 100 ? i18n.t('common.completed', i18n.getLanguage()) : (percent > 0 ? i18n.t('mp.scanConfirm.statusDoing', i18n.getLanguage()) : '');
       //  fallback：从 styleInfo 直接字段判断（如 patternStatus）
       if (status === 'not_started' && s.key === 'pattern' && styleInfo.patternStatus) {
         status = styleInfo.patternStatus === 'COMPLETED' ? 'completed' : 'in_progress';
-        statusText = styleInfo.patternStatus === 'COMPLETED' ? i18n.t('common.completed', this._lang) : i18n.t('mp.scanConfirm.statusDoing', this._lang);
+        statusText = styleInfo.patternStatus === 'COMPLETED' ? i18n.t('common.completed', i18n.getLanguage()) : i18n.t('mp.scanConfirm.statusDoing', i18n.getLanguage());
       }
       return {
         key: s.key,
@@ -806,7 +806,7 @@ Page({
       const sizeSet = {};
       const partMap = {};
       (list || []).forEach(function (it) {
-        const part = String(it.partName || i18n.t(NS + 'unnamedPart', this._lang)).trim();
+        const part = String(it.partName || i18n.t(NS + 'unnamedPart', i18n.getLanguage())).trim();
         if (!partMap[part]) partMap[part] = {};
         // 尺码可能是组合尺码 "S,M,L"，拆分后每个尺码都关联同一条记录
         var sizeNames = splitSizeNames(it.sizeName);
@@ -1029,7 +1029,7 @@ Page({
 
     function resolveStageName(progressStage) {
       var ps = String(progressStage || '').trim();
-      if (!ps) return i18n.t(NS + 'otherWord', this._lang);
+      if (!ps) return i18n.t(NS + 'otherWord', i18n.getLanguage());
       if (STAGE_MAP[ps]) return STAGE_MAP[ps];
       var lowerPs = ps.toLowerCase();
       for (var k in STAGE_MAP) {
@@ -1345,7 +1345,7 @@ Page({
       (list || []).forEach(function (it) {
         var pc = String(it.processCode || '').trim();
         var pn = String(it.processName || '').trim();
-        var key = pc || pn || i18n.t(NS + 'unnamedProcess', this._lang);
+        var key = pc || pn || i18n.t(NS + 'unnamedProcess', i18n.getLanguage());
         var sn = String(it.size || '').trim();
         if (sn) sizeSet[sn] = true;
         if (!processMap[key]) {
@@ -1761,7 +1761,7 @@ Page({
           styleApi.stageAction(styleId, stage, 'complete')
             .then(function () {
               wx.hideLoading();
-              wx.showToast({ title: i18n.t(NS + 'markSuccess', this._lang), icon: 'success' });
+              wx.showToast({ title: i18n.t(NS + 'markSuccess', i18n.getLanguage()), icon: 'success' });
               // 刷新页面数据
               that.loadStageData();
               if (that.data.styleInfo) {
@@ -1770,7 +1770,7 @@ Page({
             })
             .catch(function (err) {
               wx.hideLoading();
-              var msg = (err && err.message) || i18n.t(NS + 'markFailedRetry', this._lang);
+              var msg = (err && err.message) || i18n.t(NS + 'markFailedRetry', i18n.getLanguage());
               wx.showToast({ title: msg, icon: 'none' });
             });
         }

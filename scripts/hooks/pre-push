@@ -122,6 +122,21 @@ if [[ "$HAS_MINI" -gt 0 ]]; then
     fi
   fi
 
+  # ---- 未定义变量 / 回调内 this._lang 扫描（D-723）----
+  # i18n 批次留下的"加载不报、走到才炸"类手误（裸 lang/language、回调内 this._lang），
+  # CI 不编译小程序、回归脚本只加载不执行，只有静态扫描能拦。
+  UNDEF_CHECK="$ROOT_DIR/scripts/check-miniprogram-undef.sh"
+  if [[ -f "$UNDEF_CHECK" ]]; then
+    bash "$UNDEF_CHECK" "$ROOT_DIR/miniprogram"
+    UNDEF_CODE=$?
+    if [[ $UNDEF_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ 小程序未定义变量/无效 this 扫描未通过，推送已阻止"
+      echo "   修复上述问题后重新 push，或紧急情况: git push --no-verify"
+      exit 1
+    fi
+  fi
+
   # ---- 小程序页面逻辑测试（D-490）----
   # 引用完整性查不出**运行时**问题。今晚实际踩到两个：
   #   - setData 回调不绑定 this（10 处，D-487）

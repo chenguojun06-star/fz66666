@@ -116,10 +116,6 @@ Page({
     wx.setNavigationBarTitle({ title: t('navTitle') });
   },
 
-  onShow: function () {
-    this.applyLanguage(i18n.getLanguage());
-  },
-
   onLoad: function (options) {
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
@@ -232,7 +228,7 @@ Page({
         // displayHelper.findStatus 用 `key || ''` 处理空值，数字 0 会被误判为空，故传 String(statusNum)
         var stText = (statusNum >= 0 && statusNum <= 5)
           ? displayHelper.displaySalesOrderStatusText(String(statusNum))
-          : i18n.t(NS + 'unknown', this._lang);
+          : i18n.t(NS + 'unknown', i18n.getLanguage());
         var st = { text: stText, cls: STATUS_CLS_MAP[statusNum] || 'order-tag--default' };
         // 商品信息
         var productName = r.productName || r.itemName || '';
@@ -272,10 +268,10 @@ Page({
       if (isReset) {
         // 标记加载失败，UI 显示"点击重试"而非"暂无订单"
         that.setData({ loadError: true });
-        toast.error(i18n.t(NS + 'refreshFailed', this._lang));
+        toast.error(i18n.t(NS + 'refreshFailed', i18n.getLanguage()));
       } else {
         // 加载更多失败时也要给用户反馈，并保留 hasMore 让用户可重试
-        toast.info(i18n.t(NS + 'loadMoreFailed', this._lang));
+        toast.info(i18n.t(NS + 'loadMoreFailed', i18n.getLanguage()));
         that.setData({ hasMore: true });
       }
     });

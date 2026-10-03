@@ -103,10 +103,6 @@ Page({
     wx.setNavigationBarTitle({ title: t('navTitle') });
   },
 
-  onShow: function () {
-    this.applyLanguage(i18n.getLanguage());
-  },
-
   onLoad: function () {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
@@ -126,6 +122,9 @@ Page({
   },
 
   onShow: function () {
+    // ⚠️ 本页原先有两个 onShow，后者覆盖前者 → applyLanguage 从未执行
+    //（t/范围标签恒为初始值、导航标题不设）。合并为一处。
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     // 静默刷新数据（从子页面返回时数据可能已过期）
@@ -202,7 +201,7 @@ Page({
     }).catch(function (err) {
       console.warn('[sales-overview] 加载失败:', err && err.errMsg || err);
       that.setData({ loading: false, loadError: true });
-      toast.error(i18n.t(NS + 'refreshFailed', this._lang));
+      toast.error(i18n.t(NS + 'refreshFailed', i18n.getLanguage()));
     });
   },
 

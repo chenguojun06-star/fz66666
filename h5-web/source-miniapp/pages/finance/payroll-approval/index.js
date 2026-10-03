@@ -404,7 +404,7 @@ Page({
       }
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast(i18n.t('common.loadFailed', this._lang) + ': ' + (e.errMsg || e.message || e));
+      toast(i18n.t('common.loadFailed', i18n.getLanguage()) + ': ' + (e.errMsg || e.message || e));
     });
   },
 
@@ -475,11 +475,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'statusAudited', this._lang));
+          toast(i18n.t(NS + 'statusAudited', i18n.getLanguage()));
           that._loadData();
         }).catch(function (err) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (err.errMsg || err.message || err));
+          toast(i18n.t(NS + 'auditFailPrefix', i18n.getLanguage()) + (err.errMsg || err.message || err));
         });
       },
     });
@@ -501,12 +501,12 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'statusAudited', this._lang));
+          toast(i18n.t(NS + 'statusAudited', i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._loadData();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'auditFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -553,7 +553,7 @@ Page({
         });
         chain.then(function () {
           wx.hideLoading();
-          toast(i18n.tf(NS + 'auditDoneFmt', { ok: okCount, fail: failCount }, this._lang));
+          toast(i18n.tf(NS + 'auditDoneFmt', { ok: okCount, fail: failCount }, i18n.getLanguage()));
           that._loadData();
         });
       },

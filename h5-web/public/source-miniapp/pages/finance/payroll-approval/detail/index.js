@@ -191,12 +191,12 @@ Page({
         if (rows[i] && String(rows[i].approvalId || '') === targetId) { hit = rows[i]; break; }
       }
       if (!hit) {
-        that.setData({ loading: false, loadError: i18n.t(NS + 'itemGoneMsg', this._lang) });
+        that.setData({ loading: false, loadError: i18n.t(NS + 'itemGoneMsg', i18n.getLanguage()) });
         return;
       }
       that.setData({ detail: that._enrich(hit), loading: false });
     }).catch(function (e) {
-      that.setData({ loading: false, loadError: i18n.t(NS + 'loadFailColon', this._lang) + (e.errMsg || e.message || e) });
+      that.setData({ loading: false, loadError: i18n.t(NS + 'loadFailColon', i18n.getLanguage()) + (e.errMsg || e.message || e) });
     });
   },
 
@@ -277,11 +277,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'statusAudited', this._lang));
+          toast(i18n.t(NS + 'statusAudited', i18n.getLanguage()));
           that._loadDetail();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'auditFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });

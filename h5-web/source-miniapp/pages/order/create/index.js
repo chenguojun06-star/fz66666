@@ -140,7 +140,7 @@ Page({
       .catch(function (err) {
         console.error('[下单管理] 加载失败:', err);
         self.setData({ styleLoading: false });
-        wx.showToast({ title: i18n.t('common.loadFailed', this._lang), icon: 'none' });
+        wx.showToast({ title: i18n.t('common.loadFailed', i18n.getLanguage()), icon: 'none' });
       });
   },
 

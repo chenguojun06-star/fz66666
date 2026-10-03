@@ -185,7 +185,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
     });
   },
 
@@ -234,11 +234,11 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'approve', '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'stApproved', this._lang));
+          toast(i18n.t(NS + 'stApproved', i18n.getLanguage()));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'approveFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -264,11 +264,11 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'reject', remark).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'stRejected', this._lang));
+          toast(i18n.t(NS + 'stRejected', i18n.getLanguage()));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -290,11 +290,11 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.pay(item.id, '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'payConfirmed', this._lang));
+          toast(i18n.t(NS + 'payConfirmed', i18n.getLanguage()));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -315,12 +315,12 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'approve', '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'stApproved', this._lang));
+          toast(i18n.t(NS + 'stApproved', i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'approveFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -341,12 +341,12 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'reject', remark).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'stRejected', this._lang));
+          toast(i18n.t(NS + 'stRejected', i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -363,12 +363,12 @@ Page({
         wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.pay(item.id, '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'payConfirmed', this._lang));
+          toast(i18n.t(NS + 'payConfirmed', i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });

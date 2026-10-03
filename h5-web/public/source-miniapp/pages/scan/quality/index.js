@@ -261,7 +261,7 @@ Page({
           const authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
           self.setData({ images: self.data.images.concat(authedUrls) });
         }).catch(function () {
-          toast.error(i18n.t(NS + 'photoUploadFailed', this._lang));
+          toast.error(i18n.t(NS + 'photoUploadFailed', i18n.getLanguage()));
         });
       },
       fail: function (err) {

@@ -167,7 +167,7 @@ Page({
         wx.setStorageSync('user_info', userInfo);
       } catch (e) { /* ignore */ }
 
-      wx.showToast({ title: i18n.t('common.saveSuccess', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t('common.saveSuccess', i18n.getLanguage()), icon: 'success' });
 
       // 延迟返回上一页，让 toast 显示完
       setTimeout(function () {
@@ -176,7 +176,7 @@ Page({
     }).catch(function (err) {
       console.warn('[edit-profile] save failed:', err);
       that.setData({ saving: false });
-      wx.showToast({ title: i18n.t('common.saveFailed', this._lang), icon: 'none' });
+      wx.showToast({ title: i18n.t('common.saveFailed', i18n.getLanguage()), icon: 'none' });
     });
   },
 });

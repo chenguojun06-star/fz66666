@@ -145,7 +145,7 @@ Page({
       }
       if (!order || !order.id) {
         that.setData({ loading: false });
-        wx.showToast({ title: i18n.tf(NS + 'orderNotFoundFmt', { no: orderNo }, this._lang), icon: 'none' });
+        wx.showToast({ title: i18n.tf(NS + 'orderNotFoundFmt', { no: orderNo }, i18n.getLanguage()), icon: 'none' });
         return;
       }
       that.setData({
@@ -157,7 +157,7 @@ Page({
     }).catch(function (err) {
       console.error('[process-edit] 按单号加载订单失败:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: i18n.t(NS + 'loadFailedW', this._lang), icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'loadFailedW', i18n.getLanguage()), icon: 'none' });
     });
   },
 
@@ -186,7 +186,7 @@ Page({
       }
       if (!order) {
         that.setData({ loading: false });
-        wx.showToast({ title: i18n.t(NS + 'orderNotExist', this._lang), icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'orderNotExist', i18n.getLanguage()), icon: 'none' });
         return;
       }
       const status = order.status || '';
@@ -210,7 +210,7 @@ Page({
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: i18n.t(NS + 'loadFailedW', this._lang), icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'loadFailedW', i18n.getLanguage()), icon: 'none' });
     });
   },
 
@@ -634,11 +634,11 @@ Page({
           difficulty: n.difficulty, sortOrder: n.sortOrder,
         };
       })));
-      wx.showToast({ title: i18n.t(NS + 'saveOk', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'saveOk', i18n.getLanguage()), icon: 'success' });
     }).catch(function (err) {
       wx.hideLoading();
       console.error('[process-edit] 保存失败:', err);
-      wx.showToast({ title: i18n.t(NS + 'saveFail', this._lang), icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'saveFail', i18n.getLanguage()), icon: 'none' });
     });
   },
 

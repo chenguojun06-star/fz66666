@@ -221,7 +221,7 @@ Page({
         r.statusText = paymentStatusText(r.status);
         r.statusCls = paymentStatusCls(r.status);
         var pmKey = PAYMENT_METHOD_MAP[r.paymentMethod];
-        r.paymentMethodText = pmKey ? i18n.t(NS + pmKey, this._lang || i18n.getLanguage()) : (r.paymentMethod || '');
+        r.paymentMethodText = pmKey ? i18n.t(NS + pmKey, i18n.getLanguage() || i18n.getLanguage()) : (r.paymentMethod || '');
         return r;
       });
       that.setData({
@@ -309,11 +309,11 @@ Page({
     wx.showModal({ title: i18n.t(NS + 'confirmTextW', this._lang), content: i18n.tf(NS + 'payConfirmFmt', { amount: amount.toFixed(2), name: item.payeeName || '' }, this._lang), success: function (res) {
       if (!res.confirm) return;
       api.wagePayment.initiatePayment(payload).then(function () {
-        toast(i18n.t(NS + 'payOk', this._lang));
+        toast(i18n.t(NS + 'payOk', i18n.getLanguage()));
         that.setData({ showPayModal: false, currentPayable: null });
         that._loadStats();
         that._resetAndLoad();
-      }).catch(function (e) { toast(i18n.t(NS + 'payFailPrefix', this._lang) + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'payFailPrefix', i18n.getLanguage()) + (e.message || e)); });
     }});
   },
 
@@ -387,10 +387,10 @@ Page({
     };
     var that = this;
     api.wagePayment.saveAccount(payload).then(function () {
-      toast(i18n.t(NS + 'accountAdded', this._lang));
+      toast(i18n.t(NS + 'accountAdded', i18n.getLanguage()));
       that.setData({ modalView: 'form' });
       that._loadPayeeAccounts(item);
-    }).catch(function (e) { toast(i18n.t(NS + 'addFailPrefix', this._lang) + (e.message || e)); });
+    }).catch(function (e) { toast(i18n.t(NS + 'addFailPrefix', i18n.getLanguage()) + (e.message || e)); });
   },
 
   onCancelRecord: function (e) {
@@ -406,9 +406,9 @@ Page({
         if (!res.confirm) return;
         var reason = (res.content || '').trim();
         api.wagePayment.cancelPayment(id, reason ? { reason: reason } : {}).then(function () {
-          toast(i18n.t(NS + 'cancelled', this._lang));
+          toast(i18n.t(NS + 'cancelled', i18n.getLanguage()));
           that._resetAndLoad();
-        }).catch(function (err) { toast(i18n.t(NS + 'cancelFailPrefix', this._lang) + (err && err.message ? err.message : String(err))); });
+        }).catch(function (err) { toast(i18n.t(NS + 'cancelFailPrefix', i18n.getLanguage()) + (err && err.message ? err.message : String(err))); });
       }
     });
   },
@@ -426,10 +426,10 @@ Page({
         if (!res.confirm) return;
         var remark = (res.content || '').trim();
         api.wagePayment.confirmOffline(id, remark ? { remark: remark } : {}).then(function () {
-          toast(i18n.t(NS + 'confirmed', this._lang));
+          toast(i18n.t(NS + 'confirmed', i18n.getLanguage()));
           that._loadStats();
           that._resetAndLoad();
-        }).catch(function (err) { toast(i18n.t(NS + 'confirmFailPrefix', this._lang) + (err && err.message ? err.message : String(err))); });
+        }).catch(function (err) { toast(i18n.t(NS + 'confirmFailPrefix', i18n.getLanguage()) + (err && err.message ? err.message : String(err))); });
       }
     });
   },

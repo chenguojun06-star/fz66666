@@ -166,7 +166,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false, notFound: true });
-      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
     });
   },
 
@@ -258,7 +258,7 @@ Page({
       that._loadDetail();
     }).catch(function (e) {
       wx.hideLoading();
-      toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
     });
   },
 

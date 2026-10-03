@@ -401,19 +401,19 @@ Page({
       reason: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: i18n.t(NS + 'applySubmitted', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'applySubmitted', i18n.getLanguage()), icon: 'success' });
       self.setData({ supplementOpen: false, supplementSubmitting: false });
       self._needReload = false;
       self._loadData();
       self._loadMyApplies();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || i18n.t('common.submitFailed', this._lang);
+      const errMsg = (e && e.errMsg) || i18n.t('common.submitFailed', i18n.getLanguage());
       wx.showModal({
-        title: i18n.t('common.submitFailed', this._lang),
+        title: i18n.t('common.submitFailed', i18n.getLanguage()),
         content: errMsg,
         showCancel: false,
-        confirmText: i18n.t('common.gotIt', this._lang),
+        confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
       });
       self.setData({ supplementSubmitting: false });
     });
@@ -473,14 +473,14 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'statusApproving', this._lang), mask: true });
         api.attendance.approveApply({ id: applyId }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: i18n.t(NS + 'statusApproved', this._lang), icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'statusApproved', i18n.getLanguage()), icon: 'success' });
           self._loadPendingApplies();
           self._loadAdminList();
         }).catch(function (err) {
           wx.hideLoading();
           wx.showModal({
-            title: i18n.t(NS + 'approveFail', this._lang),
-            content: (err && err.errMsg) || i18n.t('common.operationFailed', this._lang),
+            title: i18n.t(NS + 'approveFail', i18n.getLanguage()),
+            content: (err && err.errMsg) || i18n.t('common.operationFailed', i18n.getLanguage()),
             showCancel: false,
           });
         });
@@ -500,13 +500,13 @@ Page({
         wx.showLoading({ title: i18n.t('mp.sampleDetail.processing', this._lang), mask: true });
         api.attendance.rejectApply({ id: applyId }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: i18n.t(NS + 'statusRejected', this._lang), icon: 'none' });
+          wx.showToast({ title: i18n.t(NS + 'statusRejected', i18n.getLanguage()), icon: 'none' });
           self._loadPendingApplies();
         }).catch(function (err) {
           wx.hideLoading();
           wx.showModal({
-            title: i18n.t('common.operationFailed', this._lang),
-            content: (err && err.errMsg) || i18n.t('common.operationFailed', this._lang),
+            title: i18n.t('common.operationFailed', i18n.getLanguage()),
+            content: (err && err.errMsg) || i18n.t('common.operationFailed', i18n.getLanguage()),
             showCancel: false,
           });
         });
@@ -535,7 +535,7 @@ Page({
       const employeeList = list.map(function (u) {
         return {
           userId: String(u.id || u.userId || u.idStr || ''),
-          userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', this._lang),
+          userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', i18n.getLanguage()),
         };
       }).filter(function (e) { return e.userId; });
       self.setData({
@@ -607,7 +607,7 @@ Page({
           filteredEmployeeList: list.map(function (u) {
             return {
               userId: String(u.id || u.userId || ''),
-              userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', this._lang),
+              userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', i18n.getLanguage()),
               deptName: u.deptName || u.departmentName || '',
             };
           }).filter(function (o) { return o.userId; }),
@@ -682,7 +682,7 @@ Page({
     }).catch(function (e) {
       self.setData({ loading: false });
       console.warn('[attendance.detail] _loadAdminList failed:', e && e.errMsg);
-      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', i18n.getLanguage()), icon: 'none' });
     });
   },
 
@@ -758,17 +758,17 @@ Page({
       remark: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: i18n.t(NS + 'cardSuccess', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'cardSuccess', i18n.getLanguage()), icon: 'success' });
       self.setData({ adminSupplementOpen: false, adminSupplementSubmitting: false });
       self._loadAdminList();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || i18n.t(NS + 'cardFailed', this._lang);
+      const errMsg = (e && e.errMsg) || i18n.t(NS + 'cardFailed', i18n.getLanguage());
       wx.showModal({
-        title: i18n.t(NS + 'cardFailed', this._lang),
+        title: i18n.t(NS + 'cardFailed', i18n.getLanguage()),
         content: errMsg,
         showCancel: false,
-        confirmText: i18n.t('common.gotIt', this._lang),
+        confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
       });
       self.setData({ adminSupplementSubmitting: false });
     });
@@ -830,17 +830,17 @@ Page({
       remark: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: i18n.t(NS + 'adjustSuccess', this._lang), icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'adjustSuccess', i18n.getLanguage()), icon: 'success' });
       self.setData({ adminAdjustOpen: false, adminAdjustSubmitting: false });
       self._loadAdminList();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || i18n.t(NS + 'adjustFailed', this._lang);
+      const errMsg = (e && e.errMsg) || i18n.t(NS + 'adjustFailed', i18n.getLanguage());
       wx.showModal({
-        title: i18n.t(NS + 'adjustFailed', this._lang),
+        title: i18n.t(NS + 'adjustFailed', i18n.getLanguage()),
         content: errMsg,
         showCancel: false,
-        confirmText: i18n.t('common.gotIt', this._lang),
+        confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
       });
       self.setData({ adminAdjustSubmitting: false });
     });
@@ -862,16 +862,16 @@ Page({
         wx.showLoading({ title: i18n.t('mp.sampleDetail.processing', this._lang), mask: true });
         api.attendance.adminCancel({ id: record.id }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: i18n.t(NS + 'statusVoided', this._lang), icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'statusVoided', i18n.getLanguage()), icon: 'success' });
           self._loadAdminList();
         }).catch(function (err) {
           wx.hideLoading();
-          const errMsg = (err && err.errMsg) || i18n.t(NS + 'voidFailed', this._lang);
+          const errMsg = (err && err.errMsg) || i18n.t(NS + 'voidFailed', i18n.getLanguage());
           wx.showModal({
-            title: i18n.t(NS + 'voidFailed', this._lang),
+            title: i18n.t(NS + 'voidFailed', i18n.getLanguage()),
             content: errMsg,
             showCancel: false,
-            confirmText: i18n.t('common.gotIt', this._lang),
+            confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
           });
         });
       },
@@ -887,7 +887,7 @@ Page({
       self._applyData(res || {});
     }).catch(function (e) {
       console.warn('[attendance.detail] _loadData failed:', e && e.errMsg);
-      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', i18n.getLanguage()), icon: 'none' });
     }).then(function () {
       self.setData({ loading: false });
     });
@@ -933,7 +933,7 @@ Page({
       },
       calendar: calendarGrid,
       records: (sortedRecords.forEach(function (r) {
-        r.operatedByText = r.operatorName ? i18n.tf(NS + 'operatedByFmt', { name: r.operatorName }, this._lang || i18n.getLanguage()) : '';
+        r.operatedByText = r.operatorName ? i18n.tf(NS + 'operatedByFmt', { name: r.operatorName }, i18n.getLanguage() || i18n.getLanguage()) : '';
       }), sortedRecords),
     });
   },

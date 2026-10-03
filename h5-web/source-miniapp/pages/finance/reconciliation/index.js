@@ -251,7 +251,7 @@ Page({
       }
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
     });
   },
 
@@ -301,11 +301,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'update', next.status, '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + next.key, this._lang));
+          toast(i18n.t(NS + next.key, i18n.getLanguage()));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -331,11 +331,11 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'return', '', reason).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnedW', this._lang));
+          toast(i18n.t(NS + 'returnedW', i18n.getLanguage()));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'returnFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -358,12 +358,12 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'update', next.status, '').then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + next.key, this._lang));
+          toast(i18n.t(NS + next.key, i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -388,12 +388,12 @@ Page({
         wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'return', '', reason).then(function () {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnedW', this._lang));
+          toast(i18n.t(NS + 'returnedW', i18n.getLanguage()));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast(i18n.t(NS + 'returnFailPrefix', this._lang) + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'returnFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
         });
       },
     });

@@ -176,7 +176,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', i18n.getLanguage()) + (e.errMsg || e.message || e));
     });
   },
 

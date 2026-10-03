@@ -164,7 +164,7 @@ Page({
       });
     }).catch(function () {
       that.setData({ uploading: false });
-      toast(i18n.t(NS + 'imageUploadFailed', this._lang));
+      toast(i18n.t(NS + 'imageUploadFailed', i18n.getLanguage()));
     });
   },
 
@@ -203,11 +203,11 @@ Page({
       this.data.authorRole.trim() || undefined,
       imageUrlsStr,
     ).then(function () {
-      toast(i18n.t(NS + 'remarkAdded', this._lang));
+      toast(i18n.t(NS + 'remarkAdded', i18n.getLanguage()));
       that.setData({ content: '', images: [], _rawImageUrls: [] });
       that._loadRemarks();
     }).catch(function () {
-      toast(i18n.t(NS + 'remarkFailed', this._lang));
+      toast(i18n.t(NS + 'remarkFailed', i18n.getLanguage()));
     }).finally(function () {
       that.setData({ submitting: false });
     });

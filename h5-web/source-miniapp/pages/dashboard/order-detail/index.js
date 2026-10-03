@@ -505,10 +505,10 @@ Page({
         const target = new Date(deliveryDateStr.replace(/-/g, '/'));
         const diff = Math.ceil((target.getTime() - today.getTime()) / 86400000);
         if (diff < 0) {
-          remainDaysText = i18n.t(NS + 'overdueChar', this._lang) + Math.abs(diff) + i18n.t(NS + 'daysUnitW', this._lang);
+          remainDaysText = i18n.t(NS + 'overdueChar', i18n.getLanguage()) + Math.abs(diff) + i18n.t(NS + 'daysUnitW', i18n.getLanguage());
           remainDaysClass = 'days-overdue';
         } else if (diff === 0) {
-          remainDaysText = i18n.t(NS + 'todayWord', this._lang);
+          remainDaysText = i18n.t(NS + 'todayWord', i18n.getLanguage());
           remainDaysClass = 'days-urgent';
         } else {
           remainDaysText = diff + i18n.t(NS + 'daysUnitW', lang);
@@ -754,7 +754,7 @@ Page({
     const timeoutTimer = setTimeout(function () {
       console.warn('[order-detail] 请求超时，关闭 loading');
       if (that.data.loading) {
-        toast.error(i18n.t(NS + 'loadTimeout', this._lang));
+        toast.error(i18n.t(NS + 'loadTimeout', i18n.getLanguage()));
         that.setData({ loading: false });
       }
     }, 10000);
@@ -993,21 +993,21 @@ Page({
       wx.showLoading({ title: i18n.t(NS + 'scrapingTxt', this._lang), mask: true });
       production.scrapOrder({ id: order.id, remark: remark }).then(function () {
         wx.hideLoading();
-        toast.success(i18n.t(NS + 'scrapOk', this._lang));
+        toast.success(i18n.t(NS + 'scrapOk', i18n.getLanguage()));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || i18n.t(NS + 'scrapFail', this._lang));
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'scrapFail', i18n.getLanguage()));
       });
     } else if (m.type === 'complete') {
       wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
       production.completeOrder({ id: order.id }).then(function () {
         wx.hideLoading();
-        toast.success(i18n.t(NS + 'prodCompleted', this._lang));
+        toast.success(i18n.t(NS + 'prodCompleted', i18n.getLanguage()));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || i18n.t(NS + 'completeFail', this._lang));
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'completeFail', i18n.getLanguage()));
       });
     } else if (m.type === 'close') {
       wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
@@ -1017,11 +1017,11 @@ Page({
         remark: remark,
       }).then(function () {
         wx.hideLoading();
-        toast.success(i18n.t(NS + 'orderClosed', this._lang));
+        toast.success(i18n.t(NS + 'orderClosed', i18n.getLanguage()));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || i18n.t(NS + 'closeFail', this._lang));
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'closeFail', i18n.getLanguage()));
       });
     }
   },
@@ -1055,11 +1055,11 @@ Page({
       receiverName: receiverName,
     }).then(function () {
       wx.hideLoading();
-      toast.success(i18n.t(NS + 'claimOk', this._lang));
+      toast.success(i18n.t(NS + 'claimOk', i18n.getLanguage()));
       this._loadFlow();
     }.bind(this)).catch(function (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', this._lang));
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', i18n.getLanguage()));
     });
   },
 
@@ -1078,11 +1078,11 @@ Page({
     wx.showLoading({ title: i18n.t(NS + 'claimingTxt', this._lang), mask: true });
     production.receiveCuttingTaskById(bundle.taskId, receiverId, receiverName).then(function () {
       wx.hideLoading();
-      toast.success(i18n.t(NS + 'claimOk', this._lang));
+      toast.success(i18n.t(NS + 'claimOk', i18n.getLanguage()));
       this._loadFlow();
     }.bind(this)).catch(function (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', this._lang));
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', i18n.getLanguage()));
     });
   },
 });

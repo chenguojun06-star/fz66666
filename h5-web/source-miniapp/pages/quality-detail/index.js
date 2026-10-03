@@ -417,7 +417,7 @@ Page({
           self.setData({ loading: false });
         } else {
           self.setData({ loading: false });
-          toast.error(i18n.t(NS + 'briefLoadFailed', this._lang));
+          toast.error(i18n.t(NS + 'briefLoadFailed', i18n.getLanguage()));
         }
       });
   },
@@ -571,13 +571,13 @@ Page({
         var verdictText = '';
         var verdictCls = '';
         if (historicalVerdict === 'good') {
-          verdictText = i18n.t(NS + 'verdictGood', this._lang);
+          verdictText = i18n.t(NS + 'verdictGood', i18n.getLanguage());
           verdictCls = 'verdict-good';
         } else if (historicalVerdict === 'warn') {
-          verdictText = i18n.t(NS + 'verdictWarn', this._lang);
+          verdictText = i18n.t(NS + 'verdictWarn', i18n.getLanguage());
           verdictCls = 'verdict-warn';
         } else if (historicalVerdict === 'critical') {
-          verdictText = i18n.t(NS + 'verdictCritical', this._lang);
+          verdictText = i18n.t(NS + 'verdictCritical', i18n.getLanguage());
           verdictCls = 'verdict-critical';
         }
 
@@ -646,7 +646,7 @@ Page({
       .catch(function (err) {
         console.error('[QualityDetail] fetchQcRecords failed:', err);
         self.setData({ recordsLoading: false });
-        toast.error(i18n.t(NS + 'recordsLoadFailed', this._lang));
+        toast.error(i18n.t(NS + 'recordsLoadFailed', i18n.getLanguage()));
       });
   },
 
@@ -1061,7 +1061,7 @@ Page({
             'qcSheetData.imageUrls': current.concat(authedUrls),
           });
         }).catch(function () {
-          toast.error(i18n.t('mp.scanQuality.photoUploadFailed', this._lang));
+          toast.error(i18n.t('mp.scanQuality.photoUploadFailed', i18n.getLanguage()));
         });
       },
       fail: function (err) {
@@ -1150,7 +1150,7 @@ Page({
     api.production
       .saveWarehousing(payload)
       .then(function () {
-        toast.success(i18n.t(NS + 'qcSubmitted', this._lang));
+        toast.success(i18n.t(NS + 'qcSubmitted', i18n.getLanguage()));
         self.setData({ submitting: false });
         self.fetchQcRecords();
         self.fetchPendingBundles();
@@ -1161,10 +1161,10 @@ Page({
         console.error('[QualityDetail] submitQc failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: i18n.t('common.submitFailed', this._lang),
-          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+          title: i18n.t('common.submitFailed', i18n.getLanguage()),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
           showCancel: false,
-          confirmText: i18n.t('common.gotIt', this._lang),
+          confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
         });
       });
   },
@@ -1209,7 +1209,7 @@ Page({
             items: items,
           })
           .then(function () {
-            toast.success(i18n.t(NS + 'batchPassOk', this._lang));
+            toast.success(i18n.t(NS + 'batchPassOk', i18n.getLanguage()));
             self.setData({ submitting: false });
             self.fetchQcRecords();
             self.fetchPendingBundles();
@@ -1220,10 +1220,10 @@ Page({
             console.error('[QualityDetail] batchQualified failed:', err);
             self.setData({ submitting: false });
             wx.showModal({
-              title: i18n.t(NS + 'batchPassFail', this._lang),
-              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+              title: i18n.t(NS + 'batchPassFail', i18n.getLanguage()),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
               showCancel: false,
-              confirmText: i18n.t('common.gotIt', this._lang),
+              confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
             });
           });
       },
@@ -1308,7 +1308,7 @@ Page({
     });
     Promise.all(promises)
       .then(function () {
-        toast.success(i18n.t(NS + 'batchFailOk', this._lang));
+        toast.success(i18n.t(NS + 'batchFailOk', i18n.getLanguage()));
         self.setData({ submitting: false, batchUnqualFormVisible: false });
         self.fetchQcRecords();
         self.fetchPendingBundles();
@@ -1319,10 +1319,10 @@ Page({
         console.error('[QualityDetail] batchUnqualified failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: i18n.t(NS + 'batchFailFail', this._lang),
-          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+          title: i18n.t(NS + 'batchFailFail', i18n.getLanguage()),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
           showCancel: false,
-          confirmText: i18n.t('common.gotIt', this._lang),
+          confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
         });
       });
   },
@@ -1415,7 +1415,7 @@ Page({
           var capacity = Number(item.capacity || 0);
           var isFull = capacity > 0 && used >= capacity;
           // D-171：库位显示已用/容量，满库位标注，避免超限
-          var qty = capacity > 0 ? '（' + used + '/' + capacity + (isFull ? ' ' + i18n.t(NS + 'fullSuffix', this._lang) : '') + '）' : '';
+          var qty = capacity > 0 ? '（' + used + '/' + capacity + (isFull ? ' ' + i18n.t(NS + 'fullSuffix', i18n.getLanguage()) : '') + '）' : '';
           return {
             code: code,
             name: (code || item.locationName || item.name || '-') + qty,
@@ -1457,7 +1457,7 @@ Page({
       pickerOptions: (this.data.locationOptions || []).map(function (o) {
         // label 带容量（已用/容量），满库位标出来，让用户一眼避开
         return {
-          label: String(o.label || o.code || '') + (o.capacityText ? '（' + o.capacityText + '）' : '') + (o.isFull ? ' ' + i18n.t(NS + 'fullDotSuffix', this._lang) : ''),
+          label: String(o.label || o.code || '') + (o.capacityText ? '（' + o.capacityText + '）' : '') + (o.isFull ? ' ' + i18n.t(NS + 'fullDotSuffix', i18n.getLanguage()) : ''),
           value: String(o.code || ''),
           isFull: !!o.isFull,
         };
@@ -1533,7 +1533,7 @@ Page({
     api.production
       .updateWarehousing(payload)
       .then(function () {
-        toast.success(i18n.t(NS + 'inboundOk', this._lang));
+        toast.success(i18n.t(NS + 'inboundOk', i18n.getLanguage()));
         self.setData({ submitting: false, whExpandIndex: -1 });
         self.fetchQcRecords();
         self.fetchBriefing();
@@ -1543,10 +1543,10 @@ Page({
         console.error('[QualityDetail] submitWarehouse failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: i18n.t(NS + 'inboundFail', this._lang),
-          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+          title: i18n.t(NS + 'inboundFail', i18n.getLanguage()),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
           showCancel: false,
-          confirmText: i18n.t('common.gotIt', this._lang),
+          confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
         });
       });
   },
@@ -1579,16 +1579,16 @@ Page({
         api.production
           .startBundleRepair(bundleId, userInfo.name || userInfo.username || '')
           .then(function () {
-            toast.success(i18n.t('mp.defect.repairStarted', this._lang));
+            toast.success(i18n.t('mp.defect.repairStarted', i18n.getLanguage()));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'repair' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: i18n.t('common.operationFailed', this._lang),
-              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+              title: i18n.t('common.operationFailed', i18n.getLanguage()),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
               showCancel: false,
-              confirmText: i18n.t('common.gotIt', this._lang),
+              confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
             });
           });
       },
@@ -1617,16 +1617,16 @@ Page({
         api.production
           .completeBundleRepair(bundleId)
           .then(function () {
-            toast.success(i18n.t('mp.defect.repairDone', this._lang));
+            toast.success(i18n.t('mp.defect.repairDone', i18n.getLanguage()));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'repair' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: i18n.t('common.operationFailed', this._lang),
-              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+              title: i18n.t('common.operationFailed', i18n.getLanguage()),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
               showCancel: false,
-              confirmText: i18n.t('common.gotIt', this._lang),
+              confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
             });
           });
       },
@@ -1656,16 +1656,16 @@ Page({
         api.production
           .scrapBundle(bundleId)
           .then(function () {
-            toast.success(i18n.t('mp.defect.scrapped', this._lang));
+            toast.success(i18n.t('mp.defect.scrapped', i18n.getLanguage()));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'scrap' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: i18n.t('common.operationFailed', this._lang),
-              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
+              title: i18n.t('common.operationFailed', i18n.getLanguage()),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', i18n.getLanguage()),
               showCancel: false,
-              confirmText: i18n.t('common.gotIt', this._lang),
+              confirmText: i18n.t('common.gotIt', i18n.getLanguage()),
             });
           });
       },
