@@ -271,7 +271,7 @@ Component({
     queryMaterial: async function () {
       this.setData({ loading: true });
       try {
-        var res = await api.material.scanQuery(this.data.materialCode);
+        var res = await api.material.scanQuery(this.data.inputCode);
         // res 可能直接是对象，也可能包一层
         var info = res && res.data ? res.data : res;
         var mtype = (info && info.materialType) || '';
@@ -286,7 +286,7 @@ Component({
         });
         // 面料额外读「物料资料」的幅宽/克重/成分（只读展示，手机端不需要填）
         if (mtype === 'fabric') {
-          this.loadFabricInfo(this.data.materialCode);
+          this.loadFabricInfo(this.data.inputCode);
         } else {
           this.setData({ fabricWidth: '', fabricWeight: '', fabricComposition: '' });
         }
@@ -352,7 +352,7 @@ Component({
       var key = e.currentTarget.dataset.key;
       var map = {
         // D-517：物料/面料也能「选」，不再只能手输编码或扫码
-        material: { title: 'common.selectMaterial', remote: true, current: this.data.materialCode },
+        material: { title: 'common.selectMaterial', remote: true, current: this.data.inputCode },
         area: { title: 'common.selectWarehouseArea', names: this.data.areaNames, current: this.data.warehouseAreaName },
         location: { title: 'mp.warehouse.materialInbound.selectLocation', names: this.data.locationNames, current: this.data.warehouseLocation },
       };
@@ -426,7 +426,7 @@ Component({
       var label = (e.detail && e.detail.label) || '';
       if (key === 'material') {
         // 选中即按编码查询（与手输/扫码同一条链路）
-        this.setData({ materialCode: (e.detail && e.detail.value) || '' });
+        this.setData({ inputCode: (e.detail && e.detail.value) || '' });
         this._applyCode((e.detail && e.detail.value) || '');
         return;
       }
@@ -545,7 +545,7 @@ Component({
 
     onSubmit: async function () {
       if (this.data.submitting) return;
-      var code = String(this.data.materialCode || '').trim();
+      var code = String(this.data.inputCode || '').trim();
       if (!code) {
         wx.showToast({ title: i18n.t('mp.warehouse.materialInbound.codeRequired', this._lang), icon: 'none' });
         return;

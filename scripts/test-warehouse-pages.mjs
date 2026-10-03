@@ -479,7 +479,7 @@ async function testMaterialInbound() {
   page.attached();
   await new Promise(r => setTimeout(r, 30));
 
-  page.setData({ materialCode: 'MC-1' });
+  page.setData({ inputCode: 'MC-1' });
   await page.onQuery();
   await new Promise(r => setTimeout(r, 30));
   ok('查出物料', !!page.data.materialInfo);
@@ -589,7 +589,7 @@ async function testMaterialOutbound() {
   eq('选中订单带出款号', page.data.styleNo, 'ST-9');
   eq('选中工厂', page.data.factoryName, '本厂');
 
-  page.setData({ materialCode: 'MC-1' });
+  page.setData({ materialCode: "MC-1" });
   await page.onQuery();
   await new Promise(r => setTimeout(r, 30));
   eq('取到 stockId', page.data.stockId, 'stk-1');
@@ -2102,7 +2102,7 @@ function testI18nMaterialInboundForm() {
   const { page: qP } = loadComponent(js, makeApi());
   qP.attached();
   qP.applyLanguage('en-US');
-  qP.setData({ materialCode: 'MC-1' });
+  qP.setData({ inputCode: 'MC-1' });
   qP.queryMaterial();
   return new Promise((resolve) => setTimeout(() => {
     eq('入库表单类型标签已本地化', qP.data.typeLabel, 'Fabric');
