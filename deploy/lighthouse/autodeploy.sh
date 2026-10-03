@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 # 自动拉取部署机器人（D-430）：由 cron 每 2 分钟调用
-# 有新代码 → 拉取；backend/ 或 frontend/ 有变动才重建对应容器
+# 有新代码 → 拉取；backend/ frontend/ h5-web/ 有变动才重建对应容器
 # miniprogram/文档类改动只拉代码不重建（省 7 分钟构建）
 # =====================================================================
 set -e
@@ -182,7 +182,7 @@ if [ -f "$COMPOSE" ]; then
   RUNNING=$(sudo docker compose -f "$COMPOSE" ps --services --status running 2>/dev/null || true)
   MISSING=""
   for S in $DEFINED; do
-    case "$S" in backend|frontend) continue ;; esac
+    case "$S" in backend|frontend|h5) continue ;; esac
     case " $SWEEP_SKIP " in *" $S "*) continue ;; esac
     echo "$RUNNING" | grep -qx "$S" || MISSING="$MISSING $S"
   done
@@ -268,6 +268,8 @@ SERVICES=""
 RESTART_CADDY=0
 echo "$CHANGED" | grep -q '^backend/'  && SERVICES="$SERVICES backend"
 echo "$CHANGED" | grep -q '^frontend/' && SERVICES="$SERVICES frontend"
+# D-728：h5-web/ 变更 → 重建 h5 容器（浏览器直开的 H5 版，与前端同款静态服务）
+echo "$CHANGED" | grep -q '^h5-web/'   && SERVICES="$SERVICES h5"
 echo "$CHANGED" | grep -q '^deploy/lighthouse/Caddyfile$'         && RESTART_CADDY=1
 echo "$CHANGED" | grep -q '^deploy/lighthouse/docker-compose.yml$' && RESTART_CADDY=1
 # deploy/lighthouse/ 下只有影响运行时配置的文件才需要重建双端；
@@ -282,7 +284,9 @@ if [ -n "$SERVICES" ]; then
   # ── 串行构建（D-453，2026-09-17 P0）：Maven 与 Vite 并行构建曾把 2核4G 全栈机器打到假死，必须逐个来 ──
   # 顺序固定 backend → frontend：后端构建期间旧容器继续服务，新后端先起来健康了，再动前端
   notify "🚀 服装66666 开始部署 ${LOCAL} → ${REMOTE}（重建：${SERVICES}，可用内存 ${AVAIL_MB}MB）"
-  for S in backend frontend; do
+  # 顺序固定 backend → frontend → h5：后端构建期间旧容器继续服务，新后端先起来健康了，
+  # 再动前端；h5 是纯静态（构建最轻），排最后，不与前两者抢内存（D-728）
+  for S in backend frontend h5; do
     case " $SERVICES " in
       *" $S "*)
         echo "[$(date '+%F %T')] 串行构建 $S ..."

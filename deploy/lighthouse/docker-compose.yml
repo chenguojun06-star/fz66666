@@ -40,6 +40,22 @@ services:
     depends_on:
       - backend
 
+  # ── H5 版（浏览器直开，不依赖微信）──
+  # D-728：h5-web/ 代码早已完成（65 页面，含扫码全流程）但从未部署；
+  # 旧的 CloudBase 承载（h5.webyszl.cn → 106.55.89.12）已失效，改由本机承载。
+  # 用途：① 国内客户/老板手机浏览器直接看进度（发链接即可，免装小程序）
+  #       ② 海外工人（越南 Zalo / 柬埔寨 Facebook 生态）扫码报工
+  # 纯静态 nginx，不含业务进程，故不依赖 backend（浏览器直接调 api.webyszl.cn，
+  # CORS 白名单已含 https://h5.webyszl.cn）。API 地址在构建期由 Dockerfile 的
+  # ARG VITE_API_BASE_URL 注入（默认 https://api.webyszl.cn）。
+  h5:
+    build:
+      context: ../../h5-web
+    mem_limit: 64m
+    restart: unless-stopped
+    expose:
+      - "80"
+
   # ── Spring Boot 后端 ──
   backend:
     build: ../../backend

@@ -44,6 +44,16 @@ www.webyszl.cn {
 	reverse_proxy frontend:80
 }
 
+# D-728：H5 版（浏览器直开，无需微信）。
+# 面向 ① 国内客户/老板手机看进度 ② 海外工人扫码报工（越南/柬埔寨当地不用微信）。
+# 纯静态 nginx，页面内直接调 https://api.webyszl.cn（CORS 白名单已含本域名），
+# 故此处只需反代静态资源，不需要 /api 转发。
+# ⚠️ 首次生效需要 DNS 已指向本机（106.55.12.216）——Caddy 靠 ACME 申请证书，
+#    DNS 未切换前该站点无法签发证书（属预期，切换后自动签发）。
+h5.webyszl.cn {
+	reverse_proxy h5:80
+}
+
 webyszl.cn {
 	redir https://www.webyszl.cn{uri} permanent
 }
