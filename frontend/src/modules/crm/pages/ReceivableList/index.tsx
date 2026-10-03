@@ -8,6 +8,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import CreateReceivableModal from './components/CreateReceivableModal';
 import MarkReceivedModal from './components/MarkReceivedModal';
 import ReceivableDetailModal from './components/ReceivableDetailModal';
+import PaymentTermSetting from './components/PaymentTermSetting';
 import { toMoneyLocale, formatMoney } from '@/utils/format';
 import { useReceivableData } from './hooks/useReceivableData';
 import { buildColumns } from './columns';
@@ -58,15 +59,19 @@ const ReceivableList: React.FC = () => {
   return (
     <>
       <div className="u-p-24">
-        {/* 页头说明 */}
-        <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
-          <h2 className="u-m-0 u-fs-16">
-            <DollarOutlined style={{ marginRight: 8 }} />
-            应收管理
-          </h2>
-          <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
-            客户应收款项：订单/样衣产生的应收在这里登记与跟进；到账后登记收款核销
-          </span>
+        {/* 页头说明 + 账期设置（D-741） */}
+        <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }}
+          styles={{ body: { padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' } }}>
+          <div>
+            <h2 className="u-m-0 u-fs-16">
+              <DollarOutlined style={{ marginRight: 8 }} />
+              应收管理
+            </h2>
+            <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
+              客户应收款项：订单/样衣产生的应收在这里登记与跟进；到账后登记收款核销
+            </span>
+          </div>
+          <PaymentTermSetting />
         </Card>
 
         {/* 统计卡片 */}

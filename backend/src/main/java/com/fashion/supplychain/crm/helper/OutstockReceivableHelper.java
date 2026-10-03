@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * 销售出货 → 应收账款 自动生成（D-733）
@@ -70,6 +71,10 @@ public class OutstockReceivableHelper {
     @Autowired
     private CustomerService customerService;
 
+    /** D-741：账期天数（出货后 N 天到期，租户可配置，默认 30） */
+    @Autowired
+    private com.fashion.supplychain.crm.orchestration.TenantSettingOrchestrator tenantSettingOrchestrator;
+
     /**
      * 若该出库单为「销售出货」，自动生成一张应收账款（幂等、非阻塞）。
      *
@@ -114,7 +119,12 @@ public class OutstockReceivableHelper {
         r.setOrderNo(order.getOrderNo());
         r.setAmount(amount);
         r.setReceivedAmount(outstock.getPaidAmount() == null ? BigDecimal.ZERO : outstock.getPaidAmount());
-        r.setDescription("成品出库自动生成（出库单 " + outstock.getOutstockNo() + "）");
+        // D-741：到期日 = 出库时间 + 账期天数（租户可配置，默认 30 天，读不到自动回退）
+        int termDays = tenantSettingOrchestrator.getPaymentTermDays(
+                outstock.getTenantId() != null ? outstock.getTenantId() : UserContext.tenantId());
+        LocalDateTime base = outstock.getCreateTime() != null ? outstock.getCreateTime() : LocalDateTime.now();
+        r.setDueDate(base.toLocalDate().plusDays(termDays));
+        r.setDescription("成品出库自动生成（出库单 " + outstock.getOutstockNo() + "，账期 " + termDays + " 天）");
         r.setSourceBizType(SOURCE_BIZ_TYPE);
         r.setSourceBizId(outstock.getId());
         r.setSourceBizNo(outstock.getOutstockNo());
