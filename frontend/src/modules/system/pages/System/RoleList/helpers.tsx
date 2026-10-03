@@ -47,7 +47,7 @@ export const MODULE_SECTIONS = [
   { title: '电商运营', items: [
     { label: '平台总览', code: permissionCodes.ecommerceCenter },
   ]},
-  { title: 'CRM客户管理', items: [
+  { title: '客户管理', items: [
     { label: '客户档案（含应收账款）', code: permissionCodes.crm },
   ]},
   { title: '财务管理', items: [

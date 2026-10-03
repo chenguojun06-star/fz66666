@@ -27,7 +27,8 @@ const CORE_MODULES: Array<{ code: string; name: string; icon: React.ReactNode; d
   { code: 'MATERIAL',     name: '物料管理', icon: <InboxOutlined />, desc: '面辅料采购、库存管理、出入库记录' },
   { code: 'WAREHOUSE',    name: '成品管理', icon: <HomeOutlined />, desc: '成品入库、发货管理、库存盘点' },
   { code: 'FINANCE',      name: '财务管理', icon: <MoneyCollectOutlined />, desc: '工资结算、对账单、财务报表' },
-  { code: 'CRM',          name: 'CRM客户管理', icon: <TeamOutlined />, desc: '客户档案、跟单记录、信用评级' },
+  // D-732：客户管理已取消收费，去 CRM 前缀
+  { code: 'CRM',          name: '客户管理', icon: <TeamOutlined />, desc: '客户档案、订单进度、应收账款' },
   { code: 'PROCUREMENT',  name: '供应商管理', icon: <ShoppingCartOutlined />, desc: '供应商档案、采购协同' },
   { code: 'SYSTEM',       name: '系统设置', icon: <SettingOutlined />, desc: '人员管理、岗位权限、组织架构、数据导入' },
   { code: 'DASHBOARD',    name: '仪表盘',   icon: <DashboardOutlined />, desc: '经营概览、数据统计、智能日报' },

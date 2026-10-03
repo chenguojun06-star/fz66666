@@ -333,15 +333,15 @@
       "finance": "Finance",
       "system": "System",
       "appStore": "App Store",
-      "customer": "Customer",
+      "customer": "Tenant management",
       "tenant": "API Integration",
       "integrationCenter": "Integration Center"
     },
     "short": {
       "appStore": "Store",
       "basic": "Sample",
-      "crm": "CRM",
-      "customer": "Client",
+      "crm": "Client",
+      "customer": "Tenant",
       "dashboard": "Dash",
       "ecommerce": "E-com",
       "finance": "Finance",

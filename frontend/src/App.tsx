@@ -248,7 +248,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="财税工具"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeDashboard} element={<RouteErrorBoundary pageName="财务总览"><Suspense fallback={routeFallback}><FinanceDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dailyFlow} element={<RouteErrorBoundary pageName="每日流水"><Suspense fallback={routeFallback}><DailyFlow /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.crm} element={<RouteErrorBoundary pageName="客户管理"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><CrmReceivableList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financePaymentSchedule} element={<RouteErrorBoundary pageName="付款计划"><Suspense fallback={routeFallback}><PaymentSchedule /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />

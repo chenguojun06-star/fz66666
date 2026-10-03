@@ -333,15 +333,15 @@
       "finance": "Quản lý tài chính",
       "system": "Cài đặt hệ thống",
       "appStore": "Cửa hàng ứng dụng",
-      "customer": "Quản lý khách hàng",
+      "customer": "Quản lý người thuê",
       "tenant": "Tích hợp API",
       "integrationCenter": "Trung tâm tích hợp"
     },
     "short": {
       "appStore": "App",
       "basic": "Mẫu",
-      "crm": "CRM",
-      "customer": "KH",
+      "crm": "KH",
+      "customer": "Tenant",
       "dashboard": "Bảng",
       "ecommerce": "TMĐT",
       "finance": "TC",

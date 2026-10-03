@@ -53,7 +53,10 @@ export function useFactoryListData() {
     openLogModal,
   } = useLogModal();
 
-  const [managementTab, setManagementTab] = usePersistentState<'supplier' | 'customer'>('factory-list-management-tab', 'supplier');
+  // D-732：原「客户管理」tab 已移除，本页只剩「供应商管理」→ 固定 supplier。
+  // ⚠️ 刻意不再读 localStorage 旧值：老用户存过 'customer' 时，Tabs 会匹配不到任何 tab
+  //    导致整页空白，且下方 `if (managementTab !== 'supplier') return;` 会让工厂列表不加载。
+  const managementTab = 'supplier' as const;
   const [activeTab, setActiveTab] = usePersistentState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('factory-list-supplier-tab', 'ALL');
 
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
@@ -179,10 +182,10 @@ export function useFactoryListData() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const view = params.get('view');
     const factoryName = (params.get('factoryName') || '').trim();
     const factoryCode = (params.get('factoryCode') || '').trim();
-    setManagementTab(view === 'customer' ? 'customer' : 'supplier');
+    // D-732：`?view=customer` 深链已废弃（客户管理统一到「客户管理 → 客户档案」模块），
+    // 且全仓无任何地方生成该参数，故直接忽略，不再切换 tab。
     if (factoryName || factoryCode) {
       setQueryParams((prev) => ({
         ...prev,
@@ -191,7 +194,7 @@ export function useFactoryListData() {
         factoryCode: factoryCode || prev.factoryCode,
       }));
     }
-  }, [location.search, setManagementTab]);
+  }, [location.search]);
 
   useEffect(() => {
     if (!factoryModal.visible) {
@@ -232,7 +235,8 @@ export function useFactoryListData() {
     });
   }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
 
-  const handleManagementTabChange = (tab: string) => setManagementTab(tab as 'supplier' | 'customer');
+  // D-732：只剩「供应商管理」一个 tab，切换回调保留为空实现（Tabs 组件仍需要 onChange）
+  const handleManagementTabChange = (_tab: string) => { /* no-op */ };
   const handleTabChange = (tab: string) => {
     const t = tab as 'ALL' | 'MATERIAL' | 'OUTSOURCE';
     setActiveTab(t);

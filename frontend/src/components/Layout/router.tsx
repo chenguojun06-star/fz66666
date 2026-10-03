@@ -131,7 +131,8 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/system/partner-management') return '合作企业管理';
   if (base === '/system/orphan-data') return '孤立数据';
   if (base === '/system/app-store') return '应用商店';
-  if (base === '/system/customer') return '客户管理';
+  // D-732：该页面实为平台超管的「租户管理」（原与工厂侧「客户管理」同名易混）
+  if (base === '/system/customer') return '租户管理';
   if (base === '/system/tenant') return 'API对接管理';
   if (base === '/basic/template-center') return '模板中心';
   if (base === '/basic/pattern-revision') return '纸样修改';

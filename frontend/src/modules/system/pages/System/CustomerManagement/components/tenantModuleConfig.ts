@@ -50,7 +50,7 @@ export const MODULE_SECTIONS = [
     { path: '/finance/ec-revenue', label: 'EC销售收入' },
     { path: '/finance/tax-export', label: '财税导出' },
   ]},
-  { key: 'crm', title: 'CRM客户管理', paths: [
+  { key: 'crm', title: '客户管理', paths: [
     { path: '/crm', label: '客户档案' },
     { path: '/crm/receivables', label: '应收账款' },
   ]},
@@ -95,7 +95,8 @@ export const TRIAL_OPTIONS = [
 ];
 
 export const MODULE_OPTIONS = [
-  { value: 'CRM_MODULE', label: 'CRM 客户管理', category: 'UI功能模块' },
+  // D-732：客户管理已取消收费（原「CRM 客户管理」），模块开关保留但改名为「客户管理」
+  { value: 'CRM_MODULE', label: '客户管理', category: 'UI功能模块' },
   { value: 'PROCUREMENT', label: '供应商采购管理', category: 'UI功能模块' },
   { value: 'FINANCE_TAX', label: '财税导出', category: 'UI功能模块' },
   { value: 'ORDER_SYNC', label: '下单对接', category: '核心对接' },

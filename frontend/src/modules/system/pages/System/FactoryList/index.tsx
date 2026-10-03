@@ -14,7 +14,8 @@ import factoryApi from '@/services/system/factoryApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { Factory as FactoryType } from '@/types/system';
-import CustomerManagementTab from './CustomerManagementTab';
+// D-732：原「客户管理」tab 已移除——它与 /crm「客户档案」同数据源同功能，
+// 统一收敛到「客户管理」模块（菜单 → 客户管理 → 客户档案），避免两处维护。
 import SupplierUserManager from './SupplierUserManager';
 import AdmissionAuditModal from './components/AdmissionAuditModal';
 import FactoryFormModal from './components/FactoryFormModal';
@@ -83,7 +84,7 @@ const FactoryList: React.FC = () => {
           <span className="u-d-flex u-ai-center">
             <ShopOutlined style={{ marginRight: 8, fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
             <span className="u-fw-700" style={{ fontSize: 22 }}>
-              {managementTab === 'customer' ? '客户管理' : '供应商管理'}
+              供应商管理
             </span>
           </span>
         }
@@ -250,11 +251,6 @@ const FactoryList: React.FC = () => {
                   />
                 </>
               ),
-            },
-            {
-              key: 'customer',
-              label: '客户管理',
-              children: <CustomerManagementTab active={managementTab === 'customer'} />,
             },
           ]}
         />

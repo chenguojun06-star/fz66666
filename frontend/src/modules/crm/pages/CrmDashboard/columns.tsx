@@ -10,10 +10,12 @@ export interface CustomerColumnHandlers {
   openDrawer: (record: Customer) => void;
   openEditModal: (record: Customer) => void;
   handleDelete: (record: Customer) => void;
+  /** D-732：打开「客户门户账号」管理弹窗（开户/改密/停用） */
+  openPortalAccount: (record: Customer) => void;
 }
 
 export function buildColumns(handlers: CustomerColumnHandlers): ColumnsType<Customer> {
-  const { openDrawer, openEditModal, handleDelete } = handlers;
+  const { openDrawer, openEditModal, handleDelete, openPortalAccount } = handlers;
   return [
     { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code style={{ fontSize: 15 }}>{v}</Text> },
     { title: '公司名称', dataIndex: 'companyName', width: 180, render: (v, r) => (
@@ -30,10 +32,11 @@ export function buildColumns(handlers: CustomerColumnHandlers): ColumnsType<Cust
     { title: '创建人', dataIndex: 'creatorName', width: 90 },
     { title: '创建时间', dataIndex: 'createTime', width: 160, render: v => v?.substring(0, 16) ?? '-' },
     {
-      title: '操作', width: 160, fixed: 'right',
+      title: '操作', width: 200, fixed: 'right',
       render: (_, record) => {
         const actions: RowAction[] = [
           { key: 'detail', label: '详情', primary: true, onClick: () => openDrawer(record) },
+          { key: 'portal', label: '门户账号', onClick: () => openPortalAccount(record) },
           { key: 'edit', label: '编辑', onClick: () => openEditModal(record) },
           { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(record) },
         ];

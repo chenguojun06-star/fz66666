@@ -333,15 +333,15 @@
       "finance": "财务管理",
       "system": "系统设置",
       "appStore": "应用商店",
-      "customer": "客户管理",
+      "customer": "租户管理",
       "tenant": "API对接管理",
       "integrationCenter": "集成对接中心"
     },
     "short": {
       "appStore": "商店",
       "basic": "样衣",
-      "crm": "CRM",
-      "customer": "客户",
+      "crm": "客户",
+      "customer": "租户",
       "dashboard": "仪表",
       "ecommerce": "电商",
       "finance": "财务",

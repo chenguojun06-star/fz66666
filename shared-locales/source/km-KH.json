@@ -333,15 +333,15 @@
       "finance": "គ្រប់គ្រងហិរញ្ញវត្ថុ",
       "system": "ការកំណត់ប្រព័ន្ធ",
       "appStore": "ហាងកម្មវិធី",
-      "customer": "គ្រប់គ្រងអតិថិជន",
+      "customer": "Tenant management",
       "tenant": "ភ្ជាប់ API",
       "integrationCenter": "មជ្ឈមណ្ឌលបញ្ចូល"
     },
     "short": {
       "appStore": "ហាង",
       "basic": "គំរូ",
-      "crm": "CRM",
-      "customer": "អតិថិជន",
+      "crm": "អតិថិជន",
+      "customer": "Tenant",
       "dashboard": "ផ្ទាំង",
       "ecommerce": "អូនឡាញ",
       "finance": "ហិរញ្ញ",

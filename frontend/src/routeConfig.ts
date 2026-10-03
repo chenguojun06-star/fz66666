@@ -605,8 +605,10 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
-    title: 'CRM客户管理',
-    shortTitle: 'CRM',
+    // D-732：原「CRM客户管理」（付费模块）已取消收费 → 统一为「客户管理」，
+    // 与工厂管理页里重复的客户 tab 合并到此处，成为**唯一入口**。
+    title: '客户管理',
+    shortTitle: '客户',
     key: 'crm',
     icon: React.createElement(TeamOutlined),
     items: [
@@ -678,8 +680,11 @@ export const menuConfig: MenuSection[] = [
     path: paths.appStore,
   },
   {
-    title: '客户管理',
-    shortTitle: '客户',
+    // D-732：原名为「客户管理」，实为**平台超管的租户管理**（租户列表/注册审核/
+    // 开票/广播/反馈），与工厂侧的「客户管理」同名易混 → 改名「租户管理」。
+    // ⚠️ key 保持 'customer' 不动（菜单权限键，改名会影响已配置权限）。
+    title: '租户管理',
+    shortTitle: '租户',
     key: 'customer',
     icon: React.createElement(CrownOutlined),
     path: paths.customerManagement,
