@@ -26,8 +26,7 @@ const APP_ID_TO_MENU_KEY = {
   'materialInventory': 'miniprogram.menu.materialInventory',
   'materialPicking': 'miniprogram.menu.materialPicking',
   'materialScan': 'miniprogram.menu.materialScan',
-  'finishedInbound': 'miniprogram.menu.finishedInbound',
-  'finishedOutbound': 'miniprogram.menu.finishedOutbound',
+  // D-739：成品入库/成品出库独立图标已移除——与成品仓储功能重复
   'locationScan': 'miniprogram.menu.locationScan',
   'factoryShipment': 'miniprogram.menu.factoryShipment',
   'materialDatabase': 'miniprogram.menu.materialDatabase',
@@ -75,9 +74,9 @@ const ALL_APPS = [
     { id: 'materialDatabase', nameKey: 'appMaterialDatabase', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
   ]},
   { groupKey: 'groupFinished', items: [
-    { id: 'finishedInbound', nameKey: 'appFinishedInbound', iconClass: 'icon-menu-inbound', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inbound/index' },
+    // D-739：去掉独立的「成品入库/成品出库」图标（与成品仓储重复、无款式上下文）。
+    // 入库/出库入口在成品仓储列表页与款式详情页（带款式参数）。
     { id: 'finishedInventory', nameKey: 'appFinishedInventory', iconClass: 'icon-menu-stock-check', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inventory/index' },
-    { id: 'finishedOutbound', nameKey: 'appFinishedOutbound', iconClass: 'icon-menu-outbound', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-outbound/index' },
     { id: 'locationScan', nameKey: 'appLocationScan', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
   ]},
   { groupKey: 'groupFinance', items: [
