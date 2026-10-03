@@ -2,8 +2,10 @@ package com.fashion.supplychain.crm.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -28,9 +30,13 @@ import java.math.BigDecimal;
  *   <li>仅 `outstockType=shipment`（销售出货）；调拨 transfer_out / 损耗 damage_out /
  *       样品 sample_out / 其他 other_out **一律不产生应收**</li>
  *   <li>金额取 `totalAmount`，必须 &gt; 0</li>
- *   <li>客户取**关联生产订单的 customerId**（与 CRM 侧同一口径：精确匹配，
- *       <b>刻意不做公司名模糊匹配</b>——历史 like 实现曾造成跨客户数据泄露 E-P0-1）</li>
- *   <li>订单无客户则跳过（内部单）</li>
+ *   <li>客户解析（两级，用户口径「一切以实际出库给客户为准」）：
+ *     ① 关联生产订单的 customerId（与 CRM 侧同一口径：精确匹配，
+ *        <b>刻意不做公司名模糊匹配</b>——历史 like 实现曾造成跨客户数据泄露 E-P0-1）；
+ *     ② 订单缺失/未关联客户时（**备货直发客户**，仓库出库无订单），按出库单
+ *        customerName 在客户档案内做<b>全等匹配</b>（不是 like，避免"甲公司"误挂
+ *        "甲公司分公司"）；匹配到多个同名客户时告警并取第一个
+ *     ③ 都匹配不到 → 跳过（真·内部出库）</li>
  *   <li><b>幂等</b>：由 {@link ReceivableOrchestrator#create} 按
  *       {@code sourceBizType + sourceBizId} 查重，重复调用（重放/重复提交/补跑）
  *       不会产生第二张应收单</li>
@@ -61,6 +67,9 @@ public class OutstockReceivableHelper {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private CustomerService customerService;
+
     /**
      * 若该出库单为「销售出货」，自动生成一张应收账款（幂等、非阻塞）。
      *
@@ -79,15 +88,28 @@ public class OutstockReceivableHelper {
         }
 
         Long tenantId = UserContext.tenantId();
+
+        // 客户解析（两级）：① 订单 customerId ② 出库单客户名全等匹配客户档案
+        String customerId = null;
         ProductionOrder order = findOrder(outstock, tenantId);
-        if (order == null || !StringUtils.hasText(order.getCustomerId())) {
-            log.info("[出货应收] 订单未关联客户，跳过自动应收: outstockNo={}, orderNo={}",
-                    outstock.getOutstockNo(), outstock.getOrderNo());
+        if (order != null && StringUtils.hasText(order.getCustomerId())) {
+            customerId = order.getCustomerId();
+        } else {
+            Customer byName = resolveCustomerByExactName(outstock.getCustomerName(), tenantId);
+            if (byName != null) {
+                customerId = byName.getId();
+                log.info("[出货应收] 订单未关联客户，按出库单客户名匹配档案: outstockNo={}, customerName={}, customerId={}",
+                        outstock.getOutstockNo(), outstock.getCustomerName(), customerId);
+            }
+        }
+        if (!StringUtils.hasText(customerId)) {
+            log.info("[出货应收] 无法确定客户（订单与客户档案都未匹配到），跳过: outstockNo={}, customerName={}",
+                    outstock.getOutstockNo(), outstock.getCustomerName());
             return;
         }
 
         Receivable r = new Receivable();
-        r.setCustomerId(order.getCustomerId());
+        r.setCustomerId(customerId);
         r.setOrderId(order.getId());
         r.setOrderNo(order.getOrderNo());
         r.setAmount(amount);
@@ -118,5 +140,36 @@ public class OutstockReceivableHelper {
             w.eq(ProductionOrder::getTenantId, tenantId);
         }
         return productionOrderService.getOne(w.last("LIMIT 1"));
+    }
+
+    /**
+     * 按出库单上的客户名，在租户内<b>全等匹配</b>客户档案（备货直发客户、无订单场景）。
+     *
+     * <p>⚠️ 刻意用全等（eq）而非 like：like 会把「甲公司」的出库误挂到「甲公司分公司」，
+     * 重蹈 E-P0-1 跨客户数据泄露的覆辙。同名多客户时告警并取第一个（同名通常即同客户）。
+     */
+    private Customer resolveCustomerByExactName(String customerName, Long tenantId) {
+        if (!StringUtils.hasText(customerName) || tenantId == null) {
+            return null;
+        }
+        String name = customerName.trim();
+        long count = customerService.lambdaQuery()
+                .eq(Customer::getCompanyName, name)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .count();
+        if (count == 0) {
+            return null;
+        }
+        if (count > 1) {
+            log.warn("[出货应收] 客户档案存在 {} 个同名客户「{}」，取第一个（建议在客户档案里去重）", count, name);
+        }
+        return customerService.lambdaQuery()
+                .eq(Customer::getCompanyName, name)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .orderByAsc(Customer::getCreateTime)
+                .last("LIMIT 1")
+                .one();
     }
 }
