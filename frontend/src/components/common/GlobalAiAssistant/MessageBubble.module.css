@@ -87,6 +87,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 4px 4px 8px;
+  /* D-738：提醒卡片很多时自身限高滚动，不把聊天区整个撑爆 */
+  max-height: 42vh;
+  overflow-y: auto;
 }
 
 .pendingItem {
