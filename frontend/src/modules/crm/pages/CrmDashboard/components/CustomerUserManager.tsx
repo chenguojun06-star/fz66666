@@ -8,6 +8,17 @@ import { formatDateTime } from '@/utils/datetime';
 /** 客户门户登录地址（H5，客户凭账号直接登录，无需装小程序/加微信） */
 const PORTAL_LOGIN_URL = 'https://h5.webyszl.cn/crm-client/login';
 
+/**
+ * 统一取错误文案。
+ * ⚠️ 刻意不用 `err: any`：前端质量基线 ratchet 只许减不许增（见 scripts/check-frontend-quality.py）。
+ */
+const errMsg = (err: unknown, fallback: string): string =>
+  err instanceof Error && err.message ? err.message : fallback;
+
+/** antd 表单校验失败对象的形状判断（同样为了避开 `any`） */
+const isFormError = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && 'errorFields' in err;
+
 interface Props {
   open: boolean;
   customerId: string;
@@ -36,8 +47,8 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
       setLoading(true);
       const res = await customerUserApi.list(customerId);
       setUsers(res?.data || []);
-    } catch (err: any) {
-      message.error(err?.message || '加载失败');
+    } catch (err) {
+      message.error(errMsg(err, '加载失败'));
     } finally {
       setLoading(false);
     }
@@ -109,9 +120,9 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
           ),
         });
       }
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error(err?.message || '开户失败');
+    } catch (err) {
+      if (isFormError(err)) return;
+      message.error(errMsg(err, '开户失败'));
     } finally {
       setCreateLoading(false);
     }
@@ -139,8 +150,8 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
               </div>
             ),
           });
-        } catch (err: any) {
-          message.error(err?.message || '重置失败');
+        } catch (err) {
+          message.error(errMsg(err, '重置失败'));
         }
       },
     });
@@ -152,8 +163,8 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
       await customerUserApi.toggleStatus(user.id);
       message.success(`已${willBe}账号 ${user.username}`);
       loadUsers();
-    } catch (err: any) {
-      message.error(err?.message || '操作失败');
+    } catch (err) {
+      message.error(errMsg(err, '操作失败'));
     }
   };
 
@@ -162,8 +173,8 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
       await customerUserApi.delete(user.id);
       message.success(`已删除账号 ${user.username}`);
       loadUsers();
-    } catch (err: any) {
-      message.error(err?.message || '删除失败');
+    } catch (err) {
+      message.error(errMsg(err, '删除失败'));
     }
   };
 
@@ -189,7 +200,7 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
       title: '操作',
       key: 'actions',
       width: 220,
-      render: (_: any, record: CustomerUserItem) => (
+      render: (_, record: CustomerUserItem) => (
         <Space size={4}>
           <Button onClick={() => handleResetPassword(record)}>重置密码</Button>
           <Button onClick={() => handleToggleStatus(record)}>
