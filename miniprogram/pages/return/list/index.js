@@ -8,18 +8,41 @@ const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBi
 const { hasFeaturePermission } = require('../../../utils/permission');
 const displayHelper = require('../../../utils/displayHelper');
 
-// 退货状态文案兜底：RETURNED/APPROVED/REFUNDED 是退货业务专属状态，
-// 不在 displayHelper.RETURN_STATUS_LABEL 中，本地保留兜底文案
+// 退货状态文案：RETURNED/APPROVED/REFUNDED 是退货业务专属状态，
+// 不在 displayHelper.RETURN_STATUS_LABEL 中，本地兜底到 mp.returnList.* 命名空间。
+// ⚠️ 兜底值存的是「语言包键名」，必须经 returnStatusLabel 翻译后再用——
+//    此前直接把键名当文案返回，界面显示成 statusApproved / statusReturned（用户实测报告）。
 const RETURN_STATUS_FALLBACK = {
   RETURNED: 'statusReturned',
   APPROVED: 'statusApproved',
   REFUNDED: 'statusRefunded',
 };
 
-function returnStatusLabel(status) {
-  if (RETURN_STATUS_FALLBACK[status]) return RETURN_STATUS_FALLBACK[status];
+function returnStatusLabel(status, lang) {
+  const fallbackKey = RETURN_STATUS_FALLBACK[status];
+  if (fallbackKey) return i18n.t(NS + fallbackKey, lang || i18n.getLanguage());
   var fromHelper = displayHelper.displayReturnStatusText(status);
   return fromHelper || status || '-';
+}
+
+/** 把「只带 labelKey 的选项」按当前语言展开成 wxml 需要的 {key, label}（同 finished-outbound 约定） */
+function localizeTypeTabs(lang) {
+  return [
+    { key: 'purchase', label: i18n.t(NS + 'typePurchase', lang) },
+    { key: 'sales', label: i18n.t(NS + 'typeSales', lang) },
+  ];
+}
+
+/** 状态标签（key 用于计数取值），label 必须是译文 */
+function buildStatusTabs(lang, sales) {
+  const tab = (key, cls) => ({ key, label: returnStatusLabel(key, lang), cls });
+  return [
+    { key: 'all', label: i18n.t(NS + 'filterAll', lang), cls: 'all' },
+    tab('PENDING', 'pending'),
+    tab('APPROVED', 'approved'),
+    sales ? tab('REFUNDED', 'refunded') : tab('RETURNED', 'returned'),
+    tab('REJECTED', 'rejected'),
+  ];
 }
 
 Page({
@@ -28,24 +51,10 @@ Page({
     loading: false,
     activeType: 'purchase', // 'purchase' | 'sales'
     activeStatus: 'all',
-    typeTabs: [
-      { key: 'purchase', labelKey: 'typePurchase' },
-      { key: 'sales', labelKey: 'typeSales' },
-    ],
-    statusTabs: [
-      { key: 'all', labelKey: 'filterAll', cls: 'all' },
-      { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
-      { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
-      { key: 'RETURNED', label: returnStatusLabel('RETURNED'), cls: 'returned' },
-      { key: 'REJECTED', label: returnStatusLabel('REJECTED'), cls: 'rejected' },
-    ],
-    statusTabsSales: [
-      { key: 'all', labelKey: 'filterAll', cls: 'all' },
-      { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
-      { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
-      { key: 'REFUNDED', label: returnStatusLabel('REFUNDED'), cls: 'refunded' },
-      { key: 'REJECTED', label: returnStatusLabel('REJECTED'), cls: 'rejected' },
-    ],
+    // 标签在 applyLanguage 里按当前语言展开（wxml 渲染 item.label）
+    typeTabs: localizeTypeTabs(i18n.getLanguage()),
+    statusTabs: buildStatusTabs(i18n.getLanguage(), false),
+    statusTabsSales: buildStatusTabs(i18n.getLanguage(), true),
     statusCounts: {
       all: 0,
       PENDING: 0,
@@ -77,12 +86,12 @@ Page({
         loadingMore: t('loadingMore'),
         noMore: t('noMore'),
       },
+      // 标签随语言刷新（原先只在模块加载时算一次 → 切语言不生效）
+      typeTabs: localizeTypeTabs(lang),
+      statusTabs: buildStatusTabs(lang, false),
+      statusTabsSales: buildStatusTabs(lang, true),
     });
     wx.setNavigationBarTitle({ title: t('navTitle') });
-  },
-
-  onShow() {
-    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad() {
@@ -102,6 +111,9 @@ Page({
   },
 
   onShow() {
+    // ⚠️ 本页原先有两个 onShow 定义，后一个覆盖前一个 → applyLanguage 从未执行
+    //（t 恒为空对象、导航标题不设）。合并为一处。
+    this.applyLanguage(i18n.getLanguage());
     if (this._needRefresh) {
       this._needRefresh = false;
       this.loadData();

@@ -115,10 +115,6 @@ Page({
     wx.setNavigationBarTitle({ title: t('navTitle') });
   },
 
-  onShow() {
-    this.applyLanguage(i18n.getLanguage());
-  },
-
   onLoad: function (options) {
     var opts = options || {};
     this.setData({
@@ -129,6 +125,8 @@ Page({
   },
 
   onShow: function () {
+    // ⚠️ 原先两个 onShow 定义，后者覆盖前者 → applyLanguage 从未执行。合并为一处。
+    this.applyLanguage(i18n.getLanguage());
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._resetAndLoad();
