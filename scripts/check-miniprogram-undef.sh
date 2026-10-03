@@ -53,6 +53,19 @@ else
   echo "[mp-undef] ✅ 回调内 this._lang 0 处"
 fi
 
+# ── ③ wxml 循环变量遮蔽 data 键（D-729）──
+# 背景：D-623 把待办按钮写成 <button>{{t.btnView}}</button>，而卡片循环变量也叫 t
+# （wx:for-item="t"）——WXML 里循环变量遮蔽组件 data 的同名键，取到待办对象的
+# btnView（不存在）→ 按钮文字渲染成空。编译通过、真机不报错，8 道门禁全部放行。
+echo "[mp-undef] 🔍 wxml 循环变量遮蔽扫描（wx:for-item 与 data 键同名）"
+SHADOW_OUT=$(node "$ROOT_DIR/scripts/check-mp-wxml-shadow.js" "$MINI_DIR" 2>&1)
+SHADOW_CODE=$?
+echo "$SHADOW_OUT"
+if [[ $SHADOW_CODE -ne 0 ]]; then
+  echo "❌ wxml-shadow：循环变量遮蔽 data 键，推送已阻止"
+  FAIL=1
+fi
+
 if [[ $FAIL -ne 0 ]]; then
   echo ""
   echo "⚠️  小程序不走 CI 编译 —— 这类错误会直到开发者工具/真机运行阶段才暴露。"

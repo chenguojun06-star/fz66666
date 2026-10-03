@@ -447,6 +447,9 @@ function normalizeBusinessTask(t) {
     createdAt: t.createdAt || '',
     timeText: timeText,
     metaText: metaParts.join(' · '),
+    // D-729：款式封面图（后端 enrichCoverImages 按 styleNo 从 t_style_info.cover 补的原始路径）
+    // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权；无图时前端回落款号占位块
+    coverImage: getAuthedImageUrl(t.coverImage || t.styleCover || t.styleImage || ''),
   };
 }
 

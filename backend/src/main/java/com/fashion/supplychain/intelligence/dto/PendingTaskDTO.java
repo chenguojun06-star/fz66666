@@ -38,6 +38,12 @@ public class PendingTaskDTO {
     /** 领取人角色标签（如"跟单员"、"财务人员"、"工厂"），前端展示用 */
     private String assigneeRole;
 
+    /**
+     * 款式封面图（t_style_info.cover 原值，未加签），手机端待办卡片左侧 48×48 缩略图用。
+     * 由 PendingTaskOrchestrator.enrichCoverImages 按 styleNo 批量富化；无款号或无封面时为空，前端回落款号占位块。
+     */
+    private String coverImage;
+
     public int getPriorityOrder() {
         if ("high".equals(priority)) return 0;
         if ("medium".equals(priority)) return 1;

@@ -305,21 +305,25 @@
           <view class="section-count-badge business-badge">{{sec.count}}</view>
         </view>
         <view class="task-card task-type-business" hover-class="task-card-hover" hover-stay-time="100"
-            wx:for="{{sec.items}}" wx:for-item="t" wx:key="id"
-            catchtap="handleBusinessTask" data-item="{{t}}">
+            wx:for="{{sec.items}}" wx:for-item="task" wx:key="id"
+            catchtap="handleBusinessTask" data-item="{{task}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <!-- D-729：还原款式小图（9 月统一接口改造时随卡片模板一起丢失）；无封面时回落款号占位块 -->
+            <image wx:if="{{task.coverImage}}" class="task-cover-img" src="{{task.coverImage}}" mode="aspectFit" />
+            <view wx:elif="{{task.styleNo}}" class="task-cover-placeholder">{{task.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
-                <text class="task-order-no biz-title">{{t.title}}</text>
-                <text class="task-priority-tag" style="color:{{t.priorityCls}}">{{t.priorityText}}</text>
+                <text class="task-order-no biz-title">{{task.title}}</text>
+                <text class="task-priority-tag" style="color:{{task.priorityCls}}">{{task.priorityText}}</text>
               </view>
-              <text class="task-name" wx:if="{{t.description}}">{{t.description}}</text>
-              <text class="task-meta" wx:if="{{t.metaText}}">{{t.metaText}}</text>
+              <text class="task-name" wx:if="{{task.description}}">{{task.description}}</text>
+              <text class="task-meta" wx:if="{{task.metaText}}">{{task.metaText}}</text>
             </view>
             <view class="task-action-col">
-              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="{{t.taskType}}" data-id="{{t.id}}">×</view>
-              <button class="task-action-btn default-btn" size="mini" catchtap="handleBusinessTask" data-item="{{t}}">{{t.btnView}}</button>
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="{{task.taskType}}" data-id="{{task.id}}">×</view>
+              <!-- 注意：循环变量不能叫 t，否则会遮蔽语言包 data.t，{{t.btnView}} 取到 undefined → 按钮文字全空（D-729） -->
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleBusinessTask" data-item="{{task}}">{{t.btnView}}</button>
             </view>
           </view>
         </view>

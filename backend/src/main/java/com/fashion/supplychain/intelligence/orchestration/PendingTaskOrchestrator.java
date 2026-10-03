@@ -159,6 +159,8 @@ public class PendingTaskOrchestrator {
             if (task.getId() != null) deduped.putIfAbsent(task.getId(), task);
         }
         List<PendingTaskDTO> dedupedAll = new ArrayList<>(deduped.values());
+        // D-729：按款号批量补款式封面图，供手机端待办卡片显示款式小图（9 月统一接口改造后缩略图整块丢失）
+        enrichCoverImages(dedupedAll);
         dedupedAll.sort(Comparator.comparingInt(PendingTaskDTO::getPriorityOrder)
                 .thenComparing(t -> t.getCreatedAt() != null ? t.getCreatedAt() : LocalDateTime.MIN,
                         Comparator.reverseOrder()));
@@ -1516,6 +1518,47 @@ public class PendingTaskOrchestrator {
     private boolean isFinanceRole() {
         String role = UserContext.role();
         return role != null && (role.contains("财务") || role.toLowerCase().contains("finance"));
+    }
+
+    /**
+     * D-729：按款号批量富化款式封面图（t_style_info.cover），供手机端待办卡片左侧缩略图使用。
+     * 统一待办 DTO 原本不带图，9 月统一接口改造后卡片款式小图整块消失，这里一次性查完再映射，避免逐行查库。
+     * 只补空值、不覆盖已有值；查库失败仅告警，不影响待办主流程。
+     *
+     * @param tasks 已去重的待办列表（原地写入 coverImage）
+     */
+    private void enrichCoverImages(List<PendingTaskDTO> tasks) {
+        if (tasks == null || tasks.isEmpty()) return;
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) return;
+        Set<String> styleNos = tasks.stream()
+                .filter(t -> !StringUtils.hasText(t.getCoverImage()))
+                .map(PendingTaskDTO::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (styleNos.isEmpty()) return;
+
+        Map<String, String> coverMap = new HashMap<>();
+        try {
+            List<StyleInfo> styles = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+                    .eq(StyleInfo::getTenantId, tenantId)
+                    .and(w -> w.isNull(StyleInfo::getDeleteFlag).or().eq(StyleInfo::getDeleteFlag, 0))
+                    .in(StyleInfo::getStyleNo, styleNos));
+            for (StyleInfo si : styles) {
+                if (StringUtils.hasText(si.getCover()) && StringUtils.hasText(si.getStyleNo())) {
+                    coverMap.putIfAbsent(si.getStyleNo(), si.getCover());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[统一待办] 款式封面预取失败（不影响主流程）: {}", e.getMessage());
+        }
+        if (coverMap.isEmpty()) return;
+
+        for (PendingTaskDTO t : tasks) {
+            if (StringUtils.hasText(t.getCoverImage())) continue;
+            String cover = coverMap.get(t.getStyleNo());
+            if (StringUtils.hasText(cover)) t.setCoverImage(cover);
+        }
     }
 
     private Map<String, ProductionOrder> batchLoadOrders(Long tenantId, List<String> orderNos) {
