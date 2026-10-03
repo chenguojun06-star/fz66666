@@ -65,7 +65,7 @@ const ReceivableList: React.FC = () => {
             应收管理
           </h2>
           <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
-            客户欠我们的钱：订单/样衣产生的应收在这里登记与催收；到账后登记收款核销
+            客户应收款项：订单/样衣产生的应收在这里登记与跟进；到账后登记收款核销
           </span>
         </Card>
 

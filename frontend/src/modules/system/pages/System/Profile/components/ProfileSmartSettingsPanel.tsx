@@ -108,7 +108,7 @@ const BACKEND_ACTION_LABELS: Record<string, { title: string; desc: string }> = {
   },
   'backend.action.auto_receivable_notify': {
     title: '逾期应收自动通知',
-    desc: '应收单逾期时自动通知管理员跟进催收。关闭后仅标记逾期状态，不发送通知。',
+    desc: '应收单逾期时自动通知管理员跟进处理。关闭后仅标记逾期状态，不发送通知。',
   },
   'backend.action.auto_worker_anomaly_notify': {
     title: '工人效率异常自动通知',

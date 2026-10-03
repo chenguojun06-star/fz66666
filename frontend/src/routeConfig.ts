@@ -354,7 +354,7 @@ const pageMetaMap: Record<string, PageMeta> = {
       '💰 应收金额汇总',
       '⚠️ 逾期应收提醒',
       '📊 回款进度',
-      '📋 客户欠款明细',
+      '📋 客户应收明细',
     ],
   },
 
