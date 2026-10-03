@@ -836,7 +836,7 @@ Component({
                   description: a.dataSummary || '',
                   command: a.command || '',
                   urgency: a.icon === 'alert' ? 'high' : 'medium',
-                  buttonText: actType === 'execute' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : i18n.t(NS + 'btnAsk', i18n.getLanguage());
+                  buttonText: actType === 'execute' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : i18n.t(NS + 'btnAsk', i18n.getLanguage()),
                   prefilledTags: buildPrefilledTags(a.prefilledParams),
                 };
               }).filter(Boolean);
@@ -885,7 +885,7 @@ Component({
                       description: a.dataSummary || '',
                       command: a.command || '',
                       urgency: a.icon === 'alert' ? 'high' : 'medium',
-                      buttonText: a.actionType === 'EXECUTE' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : a.actionType === 'ASK' ? i18n.t(NS + 'btnAsk', i18n.getLanguage()) : i18n.t(NS + 'btnView', i18n.getLanguage());
+                      buttonText: a.actionType === 'EXECUTE' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : a.actionType === 'ASK' ? i18n.t(NS + 'btnAsk', i18n.getLanguage()) : i18n.t(NS + 'btnView', i18n.getLanguage()),
                       prefilledTags: buildPrefilledTags(a.prefilledParams),
                     };
                   });
