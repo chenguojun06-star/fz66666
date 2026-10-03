@@ -12,6 +12,7 @@ const { isFactoryOwner } = require('../../../utils/storage');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const displayHelper = require('../../../utils/displayHelper');
 const { decodeParam } = require('../../../utils/urlParams');
+const orderTransform = require('../utils/orderTransform.js');
 
 /**
  * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
@@ -50,6 +51,10 @@ Page({
     isFactory: false,
     isTenantAdmin: false,
     activeTab: 0,
+    // D-726：终态订单（已完成/已关闭等，口径与列表页 isClosedStatus 一致）或
+    // 被订单级锁定的订单不显示「发货」Tab——后端 ship 接口本就会拒绝（D-310），
+    // 这里前置隐藏，避免"能点、点了才报错"的体验。
+    canShip: true,
     loading: false,
     // 发货 Tab
     shippableInfo: null,
@@ -187,10 +192,20 @@ Page({
   _initWithOrder: function (rawOrder) {
     var order = rawOrder || {};
     var that = this;
-    this.setData({ order: order, loading: false });
-    // 用 colorGroups 的 sizeMap 展开成颜色×尺码明细行
-    this._buildShipDetails(order, []);
-    this._loadShippableInfo();
+    // D-726：终态/锁定订单 → 隐藏发货 Tab，默认停在「发货记录」
+    var closed = typeof order.isClosed === 'boolean'
+      ? order.isClosed
+      : orderTransform.isClosedStatus(order.status);
+    var shipLocked = Number(order.factoryShipLocked) === 1;
+    var canShip = !closed && !shipLocked;
+    var patch = { order: order, loading: false, canShip: canShip };
+    if (!canShip) patch.activeTab = 1;
+    this.setData(patch);
+    if (canShip) {
+      // 用 colorGroups 的 sizeMap 展开成颜色×尺码明细行
+      this._buildShipDetails(order, []);
+      this._loadShippableInfo();
+    }
     this._loadShipmentRecords();
   },
 
@@ -314,6 +329,7 @@ Page({
 
   onSubmitShip: function () {
     if (this.data.submitting) return;
+    if (!this.data.canShip) return; // D-726：终态/锁定订单防御性拦截（正常已被 UI 隐藏）
     var details = this.data.shipDetails.filter(function (d) { return d.quantity > 0; });
     if (details.length === 0) { toast.error(i18n.t(NS + 'fillShipQty', this._lang)); return; }
     var totalQty = details.reduce(function (sum, d) { return sum + d.quantity; }, 0);

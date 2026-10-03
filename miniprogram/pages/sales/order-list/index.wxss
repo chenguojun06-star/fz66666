@@ -28,6 +28,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
+  /* 防止 scroll-view 内被压缩导致文字截断（实测 pill 只显示"已"半个词） */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tab-pill--on {
   background: var(--color-primary);
@@ -57,6 +60,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
+  /* 同上：防压缩截断 */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .status-pill--on {
   background: var(--color-primary);

@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   padding: var(--space-12, 12rpx) 0;
-  border-bottom: 1rpx solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 .row:last-child { border-bottom: none; }
 .row-label {
@@ -138,7 +138,7 @@
 }
 .sku-item {
   padding: var(--space-12, 12rpx) 0;
-  border-bottom: 1rpx solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 .sku-item:last-child { border-bottom: none; }
 .sku-main { display: flex; align-items: center; }

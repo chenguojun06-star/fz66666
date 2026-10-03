@@ -17,15 +17,15 @@
   <!-- D-302：尺寸表（有款式资料才显示） -->
   <size-table wx:if="{{order && order.styleId}}" style-id="{{order.styleId}}" />
 
-  <!-- Tab 切换 -->
+  <!-- Tab 切换（D-726：终态/锁定订单不显示发货 Tab） -->
   <view class="tab-bar">
-    <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="onSwitchTab">{{t.shipTab}}</view>
+    <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="onSwitchTab" wx:if="{{canShip}}">{{t.shipTab}}</view>
     <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="onSwitchTab">{{t.navTitle}}</view>
     <view class="tab-item {{activeTab===2?'tab-active':''}}" data-tab="2" bindtap="onSwitchTab" wx:if="{{isTenantAdmin}}">{{t.receiveTitle}}</view>
   </view>
 
   <!-- ===== Tab1: 发货 ===== -->
-  <view wx:if="{{activeTab===0}}" class="tab-content">
+  <view wx:if="{{activeTab===0 && canShip}}" class="tab-content">
     <!-- 可发数量行 -->
     <view class="ship-remaining-row" wx:if="{{shippableInfo}}">
       <text class="ship-remaining-label">{{t.shippableLabel}}</text>
@@ -90,8 +90,8 @@
     <view style="height: 80px;"></view>
   </view>
 
-  <!-- 底部固定确认发货按钮（仅发货 Tab 显示） -->
-  <view wx:if="{{activeTab===0}}" class="submit-bar">
+  <!-- 底部固定确认发货按钮（仅发货 Tab 显示；终态/锁定订单不显示 D-726） -->
+  <view wx:if="{{activeTab===0 && canShip}}" class="submit-bar">
     <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmitShip">{{submitting ? t.submittingW2 : t.confirmShipW}}</view>
   </view>
 
