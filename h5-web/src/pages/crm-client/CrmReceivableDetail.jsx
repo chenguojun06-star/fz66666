@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
+import { daysOverdue } from '@/utils/overdue';
 import { receivableStatusText } from './CrmReceivables';
 
 const CrmReceivableDetail = () => {
@@ -42,6 +43,14 @@ const CrmReceivableDetail = () => {
         <div style={s.row}><span style={s.label}>未收金额</span><span style={{ ...s.val, color: '#e74c3c' }}>¥{r.outstandingAmount?.toLocaleString() || 0}</span></div>
         <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{receivableStatusText(r.status)}</span></div>
         <div style={s.row}><span style={s.label}>到期日</span><span style={s.val}>{r.dueDate || '-'}</span></div>
+        {daysOverdue(r.dueDate, r.outstandingAmount) != null && (
+          <div style={s.row}>
+            <span style={s.label}>逾期</span>
+            <span style={{ ...s.val, color: '#e74c3c', fontWeight: '700' }}>
+              已逾期 {daysOverdue(r.dueDate, r.outstandingAmount)} 天
+            </span>
+          </div>
+        )}
         <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{r.orderNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>描述</span><span style={s.val}>{r.description || '-'}</span></div>
       </div>

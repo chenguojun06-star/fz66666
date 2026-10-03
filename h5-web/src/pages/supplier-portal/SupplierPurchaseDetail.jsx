@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import supplierPortal from '@/api/supplierPortal';
+import { daysOverdue } from '@/utils/overdue';
 import { purchaseStatusText } from './SupplierPurchases';
 
 const SupplierPurchaseDetail = () => {
@@ -67,6 +68,9 @@ const SupplierPurchaseDetail = () => {
   if (loading) return <div style={s.loading}>加载中...</div>;
   if (!data?.purchase) return <div style={s.empty}>采购单不存在</div>;
   const p = data.purchase;
+  // D-731：供应商最关心「还差多少没交、是不是已经超期了」——自己看到就不必等对方催
+  const remainQty = Math.max(0, Number(p.purchaseQuantity || 0) - Number(p.arrivedQuantity || 0));
+  const arrivalOverdue = remainQty > 0 ? (daysOverdue(p.expectedArrivalDate, remainQty) || 0) : 0;
 
   return (
     <div style={s.page}>
@@ -82,10 +86,24 @@ const SupplierPurchaseDetail = () => {
         <div style={s.row}><span style={s.label}>规格</span><span style={s.val}>{p.specifications || '-'}</span></div>
         <div style={s.row}><span style={s.label}>采购数量</span><span style={s.val}>{p.purchaseQuantity || 0} {p.unit || ''}</span></div>
         <div style={s.row}><span style={s.label}>已到货</span><span style={s.val}>{p.arrivedQuantity || 0}</span></div>
+        <div style={s.row}>
+          <span style={s.label}>未交货</span>
+          <span style={{ ...s.val, color: remainQty > 0 ? '#e67e22' : '#27ae60', fontWeight: '700' }}>
+            {remainQty} {p.unit || ''}
+          </span>
+        </div>
         <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{purchaseStatusText(p.status)}</span></div>
         <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{p.orderNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>款号</span><span style={s.val}>{p.styleNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>预计到货</span><span style={s.val}>{p.expectedArrivalDate || '-'}</span></div>
+        {arrivalOverdue > 0 && (
+          <div style={s.row}>
+            <span style={s.label}>交期</span>
+            <span style={{ ...s.val, color: '#e74c3c', fontWeight: '700' }}>
+              已超预计到货 {arrivalOverdue} 天
+            </span>
+          </div>
+        )}
       </div>
 
       {p.status !== 'completed' && p.status !== 'cancelled' && (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
+import { daysOverdue } from '@/utils/overdue';
 
 const RECEIVABLE_STATUS_MAP = {
   PENDING: '待付款', PARTIAL: '部分付款', PAID: '已付清',
@@ -71,6 +72,14 @@ const CrmReceivables = () => {
           <div style={s.cardRow}><span style={s.cardLabel}>已收</span><span style={s.cardVal}>¥{r.receivedAmount?.toLocaleString() || 0}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>未收</span><span style={{ ...s.cardVal, color: '#e74c3c' }}>¥{r.outstandingAmount?.toLocaleString() || 0}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>到期日</span><span style={s.cardVal}>{r.dueDate || '-'}</span></div>
+          {daysOverdue(r.dueDate, r.outstandingAmount) != null && (
+            <div style={s.cardRow}>
+              <span style={s.cardLabel}>逾期</span>
+              <span style={{ ...s.cardVal, color: '#e74c3c', fontWeight: '700' }}>
+                已逾期 {daysOverdue(r.dueDate, r.outstandingAmount)} 天
+              </span>
+            </div>
+          )}
         </div>
       ))}
       {totalPages > 1 && (

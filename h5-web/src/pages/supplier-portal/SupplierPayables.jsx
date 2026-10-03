@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import supplierPortal from '@/api/supplierPortal';
+import { daysOverdue } from '@/utils/overdue';
 
 const SupplierPayables = () => {
   const [payables, setPayables] = useState([]);
@@ -83,6 +84,14 @@ const SupplierPayables = () => {
           <div style={s.cardRow}><span style={s.cardLabel}>已付金额</span><span style={{ ...s.cardVal, color: '#27ae60' }}>¥{(p.paidAmount || 0).toLocaleString()}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>未付金额</span><span style={{ ...s.cardVal, color: '#e74c3c' }}>¥{(p.outstandingAmount || 0).toLocaleString()}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>到期日</span><span style={s.cardVal}>{p.dueDate || '-'}</span></div>
+          {daysOverdue(p.dueDate, p.outstandingAmount) != null && (
+            <div style={s.cardRow}>
+              <span style={s.cardLabel}>逾期</span>
+              <span style={{ ...s.cardVal, color: '#e74c3c', fontWeight: '700' }}>
+                已逾期 {daysOverdue(p.dueDate, p.outstandingAmount)} 天
+              </span>
+            </div>
+          )}
           {p.description && <div style={s.cardRow}><span style={s.cardLabel}>说明</span><span style={s.cardVal}>{p.description}</span></div>}
         </div>
       ))}

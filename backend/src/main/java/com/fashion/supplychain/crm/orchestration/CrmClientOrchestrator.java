@@ -14,7 +14,9 @@ import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.crm.service.ReceivableReceiptLogService;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.orchestration.ProductionOrderFlowOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +73,7 @@ public class CrmClientOrchestrator {
     @Autowired private MaterialPurchaseService materialPurchaseService;
     @Autowired private ReceivableService receivableService;
     @Autowired private ReceivableReceiptLogService receivableReceiptLogService;
+    @Autowired private ProductionOrderFlowOrchestrator productionOrderFlowOrchestrator;
     @Autowired private AuthTokenService authTokenService;
     @Autowired private PasswordEncoder passwordEncoder;
 
@@ -276,7 +279,58 @@ public class CrmClientOrchestrator {
         List<Receivable> receivables = receivableService.list(receivableWrapper);
         result.put("receivables", receivables.stream().map(this::buildReceivableView).collect(Collectors.toList()));
 
+        // D-731：客户最关心「货发了没 / 做到哪道工序了」——复用订单流程编排的**同一口径**
+        //（与工厂/PC 看到的完全一致，避免出现"客户看到 60%、业务员看到 70%"的新扯皮）。
+        // 流程编排是重查询（含扫码记录/裁剪/入库等），但客户门户查看详情频次低，可接受。
+        // ⚠️ 必须 try-catch 兜底：流程数据缺失绝不能影响订单详情主流程（客户门户优先可用）。
+        try {
+            ProductionOrderFlowOrchestrator.OrderFlowResponse flow =
+                    productionOrderFlowOrchestrator.getOrderFlow(orderId);
+            if (flow != null) {
+                result.put("stages", flow.getStages() == null ? Collections.emptyList() : flow.getStages());
+                List<ProductOutstock> outstocks = flow.getOutstocks() == null
+                        ? Collections.emptyList() : flow.getOutstocks();
+                List<Map<String, Object>> shipments = outstocks.stream()
+                        .filter(o -> o != null && (o.getDeleteFlag() == null || o.getDeleteFlag() == 0))
+                        .map(this::buildShipmentView)
+                        .collect(Collectors.toList());
+                result.put("shipments", shipments);
+                // 已发货合计（客户看"已发 X / 未发 Y"）
+                int shipped = outstocks.stream()
+                        .filter(o -> o != null && (o.getDeleteFlag() == null || o.getDeleteFlag() == 0))
+                        .mapToInt(o -> o.getOutstockQuantity() == null ? 0 : o.getOutstockQuantity())
+                        .sum();
+                result.put("shippedQuantity", shipped);
+            }
+        } catch (Exception e) {
+            log.warn("[CrmClient] 订单流程数据加载失败（不影响订单详情） orderId={}", orderId, e);
+        }
+
         return Result.success(result);
+    }
+
+    /**
+     * 发货记录视图（成品出库）。
+     *
+     * <p>客户最关心的三件事：<b>哪个快递 / 单号多少 / 到了没</b>。字段直接取自
+     * {@code t_product_outstock}，不额外拼装，避免与工厂侧口径不一致。
+     */
+    private Map<String, Object> buildShipmentView(ProductOutstock o) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", o.getId());
+        m.put("outstockNo", o.getOutstockNo());
+        m.put("quantity", o.getOutstockQuantity());
+        m.put("outstockType", o.getOutstockType());
+        m.put("expressCompany", o.getExpressCompany());
+        m.put("trackingNo", o.getTrackingNo());
+        m.put("warehouseAreaName", o.getWarehouseAreaName());
+        m.put("shipTime", o.getCreateTime());
+        m.put("receiveTime", o.getReceiveTime());
+        m.put("receivedByName", o.getReceivedByName());
+        m.put("customerName", o.getCustomerName());
+        m.put("shippingAddress", o.getShippingAddress());
+        m.put("remark", o.getRemark());
+        return m;
     }
 
     // ------------------------------------------------------------------
