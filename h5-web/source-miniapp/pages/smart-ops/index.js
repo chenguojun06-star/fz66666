@@ -369,7 +369,7 @@ Page({
         const qty = bucketOrders.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
         const leadOrder = bucketOrders.length > 0 ? bucketOrders[0] : null;
         return {
-          key: stage.key, label: i18n.t(NS + stage.i18nKey, lang), count: bucketOrders.length, quantity: qty,
+          key: stage.key, label: i18n.t(NS + stage.i18nKey, i18n.getLanguage()), count: bucketOrders.length, quantity: qty,
           leadOrderNo: leadOrder ? leadOrder.orderNo : '',
           leadProgress: leadOrder ? calcProgress(leadOrder) : 0,
           orders: bucketOrders.map(toOrderRow),
@@ -416,7 +416,7 @@ Page({
             const mins = fa.minutesSinceLastScan || 999;
             factoryList.push({
               factoryName: fa.factoryName, active: !!fa.active, mins: mins,
-              timeText: mins < 1 ? i18n.t(NS + 'justNow', lang) : mins < 60 ? mins + i18n.t(NS + 'minAgo', lang) : Math.floor(mins / 60) + i18n.t(NS + 'hourSuffix', lang),
+              timeText: mins < 1 ? i18n.t(NS + 'justNow', i18n.getLanguage()) : mins < 60 ? mins + i18n.t(NS + 'minAgo', i18n.getLanguage()) : Math.floor(mins / 60) + i18n.t(NS + 'hourSuffix', i18n.getLanguage()),
               todayQty: fa.todayQty || 0, activeOrders: 0, totalQty: 0, highRiskCount: 0, overdueCount: 0,
             });
           }

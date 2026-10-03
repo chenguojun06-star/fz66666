@@ -398,7 +398,7 @@ Page({
 
     // 计算整体状态（取最差状态）
     const displayStatus = this._computeGroupStatus(items);
-    const statusConfig = resolveStatusDisplay(displayStatus, lang) || { label: i18n.t(NS + 'stTodoW', lang), tagClass: 'tag-gray' };
+    const statusConfig = resolveStatusDisplay(displayStatus, i18n.getLanguage()) || { label: i18n.t(NS + 'stTodoW', i18n.getLanguage()), tagClass: 'tag-gray' };
 
     // 物料数量
     const materialCount = items.length;
@@ -500,7 +500,7 @@ Page({
   _normalizeItem(item) {
     const rawStatus = String(item.status || '').trim().toLowerCase();
     const displayStatus = this._computeDisplayStatus(item);
-    const statusConfig = resolveStatusDisplay(rawStatus, lang) || resolveStatusDisplay(displayStatus, lang) || { label: i18n.t(NS + 'pendingClaimW', lang), tagClass: 'tag-orange' };
+    const statusConfig = resolveStatusDisplay(rawStatus, i18n.getLanguage()) || resolveStatusDisplay(displayStatus, i18n.getLanguage()) || { label: i18n.t(NS + 'pendingClaimW', i18n.getLanguage()), tagClass: 'tag-orange' };
 
     const styleCoverUrl = getAuthedImageUrl(item.styleCover || '');
 

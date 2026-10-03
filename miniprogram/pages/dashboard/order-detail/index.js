@@ -367,7 +367,7 @@ Page({
     const styleId = order.styleId || order.style_id;
     if (!styleId) {
       // 无资料下单：订单未关联款式档案
-      this.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'noSizeNoStyle', lang) });
+      this.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'noSizeNoStyle', i18n.getLanguage()) });
       return;
     }
     if (this._sizeSpecLoadedFor === styleId && (this.data.sizeSpec || this.data.sizeSpecHint)) return;
@@ -378,11 +378,11 @@ Page({
         const spec = buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
         self.setData({
           sizeSpec: spec,
-          sizeSpecHint: spec ? '' : i18n.t(NS + 'noSizeDataHint', lang),
+          sizeSpecHint: spec ? '' : i18n.t(NS + 'noSizeDataHint', i18n.getLanguage()),
         });
       }).catch(function (err) {
       console.warn('[order-detail] 加载尺寸表失败:', err);
-      self.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'sizeLoadFailed', lang) });
+      self.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'sizeLoadFailed', i18n.getLanguage()) });
     });
   },
 

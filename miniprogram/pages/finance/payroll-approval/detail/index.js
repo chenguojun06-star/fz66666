@@ -214,9 +214,9 @@ Page({
     var eligible = canOperate && hasApproval && !audited && canAudit;
 
     var blockReason = '';
-    if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', lang);
-    else if (audited) blockReason = i18n.t(NS + 'itemAuditedMsg', lang);
-    else if (!canAudit) blockReason = i18n.t(NS + 'factoryNotClosed', lang);
+    if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', i18n.getLanguage());
+    else if (audited) blockReason = i18n.t(NS + 'itemAuditedMsg', i18n.getLanguage());
+    else if (!canAudit) blockReason = i18n.t(NS + 'factoryNotClosed', i18n.getLanguage());
 
     // D-428：结算异常判定（与列表页同一套规则）
     var amtNum = Number(r.totalAmount || 0);
@@ -224,9 +224,9 @@ Page({
     var priceNum = Number(r.unitPrice || 0);
     var abnormalText = '';
     if (!hasApproval) {
-      abnormalText = i18n.t(NS + 'missingAuditIdLong', lang);
+      abnormalText = i18n.t(NS + 'missingAuditIdLong', i18n.getLanguage());
     } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
-      abnormalText = i18n.t(NS + 'zeroAmountWarn', lang);
+      abnormalText = i18n.t(NS + 'zeroAmountWarn', i18n.getLanguage());
     }
 
     r.audited = audited;
@@ -236,7 +236,7 @@ Page({
     r.blockReason = blockReason;
     r._abnormalText = abnormalText;
     r._isAbnormal = !!abnormalText;
-    r.auditText = audited ? i18n.t(NS + 'statusAudited', lang) : i18n.t(NS + 'statusAuditing', lang);
+    r.auditText = audited ? i18n.t(NS + 'statusAudited', i18n.getLanguage()) : i18n.t(NS + 'statusAuditing', i18n.getLanguage());
     r._statusColor = audited ? 'var(--color-success)' : 'var(--color-warning)';
     r.orderStatusText = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()] || (r.orderStatus || '—');
     r.amountStr = r.totalAmount != null ? Number(r.totalAmount).toFixed(2) : '0.00';

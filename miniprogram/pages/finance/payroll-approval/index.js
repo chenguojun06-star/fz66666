@@ -205,7 +205,7 @@ Page({
     if (isFactoryAccount()) {
       this.setData({
         blocked: true,
-        blockedMsg: i18n.t(NS + 'factoryPermHint', lang || i18n.getLanguage()),
+        blockedMsg: i18n.t(NS + 'factoryPermHint', i18n.getLanguage() || i18n.getLanguage()),
         canOperate: false,
       });
       return;
@@ -215,7 +215,7 @@ Page({
       canOperate: hasFeaturePermission('approve_payroll'),
       _year: now.getFullYear(),
       _month: now.getMonth() + 1,
-      monthLabel: now.getFullYear() + i18n.t(NS + 'yearUnitW', lang || i18n.getLanguage()) + (now.getMonth() + 1) + i18n.t(NS + 'monthUnitW', lang || i18n.getLanguage()),
+      monthLabel: now.getFullYear() + i18n.t(NS + 'yearUnitW', i18n.getLanguage() || i18n.getLanguage()) + (now.getMonth() + 1) + i18n.t(NS + 'monthUnitW', i18n.getLanguage() || i18n.getLanguage()),
       monthValue: now.getFullYear() + '-' + pad2(now.getMonth() + 1),
     });
   },
@@ -299,10 +299,10 @@ Page({
         var eligible = that.data.canOperate && hasApproval && !audited && canAudit;
 
         var blockReason = '';
-        if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', lang);
-        else if (audited) blockReason = i18n.t(NS + 'statusAudited', lang);
+        if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', i18n.getLanguage());
+        else if (audited) blockReason = i18n.t(NS + 'statusAudited', i18n.getLanguage());
         else if (!canAudit) {
-          blockReason = i18n.t(NS + 'factoryNotClosed', lang);
+          blockReason = i18n.t(NS + 'factoryNotClosed', i18n.getLanguage());
         }
 
         // D-428：结算异常判定 —— 异常项前端标红，提示用户核实详情
@@ -314,13 +314,13 @@ Page({
         var abnormalText = '';
         var cardCls = '';
         if (!hasApproval) {
-          abnormalText = i18n.t(NS + 'missingAuditIdLong', lang);
+          abnormalText = i18n.t(NS + 'missingAuditIdLong', i18n.getLanguage());
           cardCls = 'order-card--danger';
         } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
-          abnormalText = i18n.t(NS + 'zeroAmountWarn', lang);
+          abnormalText = i18n.t(NS + 'zeroAmountWarn', i18n.getLanguage());
           cardCls = 'order-card--danger';
         } else if (!audited && !canAudit) {
-          abnormalText = i18n.t(NS + 'factoryNotClosedShort', lang);
+          abnormalText = i18n.t(NS + 'factoryNotClosedShort', i18n.getLanguage());
           cardCls = 'order-card--warn';
         }
 
@@ -335,14 +335,14 @@ Page({
         r.audited = audited;
         r.canAudit = canAudit;
         r.isExternalFactory = isExternalFactory;
-        r.auditText = audited ? i18n.t(NS + 'statusAudited', lang) : i18n.t(NS + 'statusAuditing', lang);
+        r.auditText = audited ? i18n.t(NS + 'statusAudited', i18n.getLanguage()) : i18n.t(NS + 'statusAuditing', i18n.getLanguage());
         r.auditCls = audited ? 'tag-green' : 'tag-orange';
         r.eligible = eligible;
         r.blockReason = blockReason;
         r._abnormalText = abnormalText;
         r._cardCls = cardCls;
         var osKey = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()];
-        r.orderStatusText = osKey ? i18n.t(osKey, lang) : (r.orderStatus || '—');
+        r.orderStatusText = osKey ? i18n.t(osKey, i18n.getLanguage()) : (r.orderStatus || '—');
         r.amountStr = r.totalAmount != null ? Number(r.totalAmount).toFixed(2) : '0.00';
         r.unitPriceStr = r.unitPrice != null ? Number(r.unitPrice).toFixed(2) : '—';
         r.quantityStr = r.quantity != null ? String(r.quantity) : '0';
@@ -357,21 +357,21 @@ Page({
         var endText = fmtDateTime(r.endTime);
         var startText = fmtDateTime(r.startTime);
         if (endText) {
-          r._timeText = i18n.t(NS + 'completeFmt', lang) + endText;
+          r._timeText = i18n.t(NS + 'completeFmt', i18n.getLanguage()) + endText;
         } else if (startText) {
-          r._timeText = i18n.t(NS + 'startFmt', lang) + startText;
+          r._timeText = i18n.t(NS + 'startFmt', i18n.getLanguage()) + startText;
         } else {
           r._timeText = '';
         }
         // D-421：来源标注（样衣 / 大货 / 裁床）
         var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || SCAN_TYPE_FALLBACK;
         r._sourceKind = scan.kind;
-        r._sourceText = i18n.t(NS + scan.key, lang);
+        r._sourceText = i18n.t(NS + scan.key, i18n.getLanguage());
         // D-426：结算类型标签（自己完成 / 内部指派 / 外发工厂）
         var dkey = String(r.delegateTargetType || '').toLowerCase();
         var dty = DELEGATE_TYPE_MAP[dkey] || DELEGATE_TYPE_MAP.none;
         r._factoryKind = dty.kind;
-        r._factoryText = i18n.t(NS + dty.key, lang);
+        r._factoryText = i18n.t(NS + dty.key, i18n.getLanguage());
         return r;
       });
 
@@ -386,7 +386,7 @@ Page({
         notFrozenCount: notFrozenCount,
         noApprovalIdCount: noApprovalIdCount,
         abnormalCount: abnormalCount,
-        abnormalText: i18n.tf(NS + 'abnormalFmt', { n: abnormalCount }, lang),
+        abnormalText: i18n.tf(NS + 'abnormalFmt', { n: abnormalCount }, i18n.getLanguage()),
         loading: false,
       });
 

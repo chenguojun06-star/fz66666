@@ -251,8 +251,8 @@ Page({
 
         return {
           ...item,
-          materialTypeCN: (function(){ var k = MATERIAL_TYPE_MAP[item.materialType]; return k ? i18n.t(NS + k, lang) : (item.materialType || ''); })(),
-          statusText: resolvePurchaseText(status, lang),
+          materialTypeCN: (function(){ var k = MATERIAL_TYPE_MAP[item.materialType]; return k ? i18n.t(NS + k, i18n.getLanguage()) : (item.materialType || ''); })(),
+          statusText: resolvePurchaseText(status, i18n.getLanguage()),
           statusColor: resolvePurchaseColor(status),
           isActionable,
           needsReceive,

@@ -1226,9 +1226,9 @@ Page({
       const list = _unwrapList(res);
       list.forEach(s => {
         const rawType = s.type || s.processType || '';
-        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] ? i18n.t(PROCESS_TYPE_MAP[rawType], lang) : i18n.t(NS + 'unknownWord', lang)) : '';
+        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] ? i18n.t(PROCESS_TYPE_MAP[rawType], i18n.getLanguage()) : i18n.t(NS + 'unknownWord', i18n.getLanguage())) : '';
         const statusKey = String(s.status || '').toLowerCase();
-        s._statusText = getProcessStatusLabel(statusKey, lang);
+        s._statusText = getProcessStatusLabel(statusKey, i18n.getLanguage());
         s.status = statusKey || s.status;
         const qty = Number(s.quantity || 0);
         const price = Number(s.unitPrice || s.price || 0);

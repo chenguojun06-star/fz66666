@@ -228,10 +228,10 @@ Page({
         // D-421：来源标注（样衣 / 大货）
         var src = SOURCE_TYPE_MAP[String(r.sourceType || '').toLowerCase()] || SOURCE_TYPE_FALLBACK;
         r._sourceKind = src.kind;
-        r._sourceText = i18n.t(NS + src.key, lang);
+        r._sourceText = i18n.t(NS + src.key, i18n.getLanguage());
         // 下一步可推进的文案（无下一步则不显示操作）
         var next = NEXT_STEP[r.status];
-        r.nextLabel = next ? i18n.t(NS + next.key, lang) : '';
+        r.nextLabel = next ? i18n.t(NS + next.key, i18n.getLanguage()) : '';
         return r;
       });
       that.setData({

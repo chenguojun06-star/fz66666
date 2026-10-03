@@ -257,8 +257,8 @@ Component({
         } catch (err) { console.error('get user info error', err); }
 
         const greeting = userName
-          ? i18n.tf(NS + 'greetWithFmt', { name: userName }, lang)
-          : i18n.t(NS + 'greetPlain', lang);
+          ? i18n.tf(NS + 'greetWithFmt', { name: userName }, i18n.getLanguage())
+          : i18n.t(NS + 'greetPlain', i18n.getLanguage());
 
         const sysInfo = wx.getWindowInfo();
         const sw = sysInfo.windowWidth || 375;
