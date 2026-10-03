@@ -91,7 +91,7 @@ function finishLogin(user, token, refreshToken) {
 function validateUsername(username) {
   return (
     validateByRule(username, {
-      name: i18n.t('login.username', language),
+      name: i18n.t('login.username', i18n.getLanguage()),
       required: true,
       minLength: 3,
       maxLength: 20,
@@ -106,7 +106,7 @@ function validateUsername(username) {
  * @returns {string} 错误信息，空字符串表示验证通过
  */
 function validatePassword(password) {
-  return validateByRule(password, { name: i18n.t('login.password', language), required: true, minLength: 6, maxLength: 20 }) || '';
+  return validateByRule(password, { name: i18n.t('login.password', i18n.getLanguage()), required: true, minLength: 6, maxLength: 20 }) || '';
 }
 
 /**
@@ -119,7 +119,7 @@ function validateApiBaseUrl(url) {
   if (!v) {
     return '';
   } // 可选字段
-  const error = validateByRule(v, { name: i18n.t('login.serverUrl', language), required: false, pattern: /^https?:\/\// });
+  const error = validateByRule(v, { name: i18n.t('login.serverUrl', i18n.getLanguage()), required: false, pattern: /^https?:\/\// });
   if (error) {
     return error;
   }
