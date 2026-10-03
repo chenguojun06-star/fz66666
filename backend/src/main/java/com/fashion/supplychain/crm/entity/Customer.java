@@ -35,7 +35,7 @@ public class Customer {
     /** 地址 */
     private String address;
 
-    /** 客户等级：VIP / NORMAL */
+    /** 客户等级：1~5（字符串存储，1级最高）；历史值 VIP/NORMAL 已迁移为 1/3（D-736） */
     private String customerLevel;
 
     /** 客户类型：NORMAL/DISTRIBUTOR（Phase 4 分销/B2B） */

@@ -7,7 +7,7 @@ import { formatMoney } from '@/utils/format';
 import type { Customer, Receivable } from '@/services/crm/customerApi';
 import type { ProductionOrder } from '@/types/production';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
-import { RECEIVABLE_STATUS_CONFIG } from '../helpers';
+import { RECEIVABLE_STATUS_CONFIG, customerLevelColor, customerLevelLabel } from '../helpers';
 
 interface CustomerDetailDrawerProps {
   open: boolean;
@@ -51,7 +51,7 @@ const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 <Descriptions column={2} bordered>
                   <Descriptions.Item label="客户编号">{drawerData.customerNo}</Descriptions.Item>
                   <Descriptions.Item label="等级">
-                    {drawerData.customerLevel === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>}
+                    <Tag color={customerLevelColor(drawerData.customerLevel)}>{customerLevelLabel(drawerData.customerLevel)}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="联系人">{drawerData.contactPerson || '-'}</Descriptions.Item>
                   <Descriptions.Item label="联系电话">{drawerData.contactPhone || '-'}</Descriptions.Item>

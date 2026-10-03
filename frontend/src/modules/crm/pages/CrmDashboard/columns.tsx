@@ -3,6 +3,7 @@ import { Button, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import type { Customer } from '@/services/crm/customerApi';
+import { customerLevelColor, customerLevelLabel } from './helpers';
 
 const { Text } = Typography;
 
@@ -21,9 +22,9 @@ export function buildColumns(handlers: CustomerColumnHandlers): ColumnsType<Cust
     { title: '公司名称', dataIndex: 'companyName', width: 180, render: (v, r) => (
       <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => openDrawer(r)}>{v}</Button>
     )},
-    { title: '等级', dataIndex: 'customerLevel', width: 90, render: v =>
-      v === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>
-    },
+    { title: '等级', dataIndex: 'customerLevel', width: 90, render: v => (
+      <Tag color={customerLevelColor(v)}>{customerLevelLabel(v)}</Tag>
+    )},
     { title: '联系人', dataIndex: 'contactPerson', width: 100 },
     { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
     { title: '状态', dataIndex: 'status', width: 90, render: v =>

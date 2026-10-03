@@ -20,7 +20,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
 
   useEffect(() => {
     if (open) {
-      form.setFieldsValue(editData ?? { status: 'ACTIVE', customerLevel: 'NORMAL' });
+      form.setFieldsValue(editData ?? { status: 'ACTIVE', customerLevel: '3' });
     } else {
       form.resetFields();
     }

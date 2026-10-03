@@ -45,7 +45,7 @@ public class CrmCustomerTool extends AbstractAgentTool {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("action", stringProp("动作: list_customer | get_customer | analyze_customer | value_analysis"));
         properties.put("companyName", stringProp("客户公司名称关键词"));
-        properties.put("customerLevel", stringProp("客户级别: A / B / C / D"));
+        properties.put("customerLevel", stringProp("客户等级: 1 / 2 / 3 / 4 / 5（1级最高）"));
         properties.put("contactPerson", stringProp("联系人名字"));
         properties.put("customerId", stringProp("客户ID"));
         return buildToolDef(

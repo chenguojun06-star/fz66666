@@ -10,7 +10,7 @@ import { useShareOrderDialog } from '@/modules/production/pages/Production/Progr
 import type { TablePaginationConfig } from 'antd/es/table';
 import { INITIAL_STATS } from '../helpers';
 
-type Stats = { total: number; activeCount: number; newThisMonth: number; vip: number };
+type Stats = { total: number; activeCount: number; newThisMonth: number; levelOne: number };
 
 // CRM 客户管理业务逻辑 Hook
 export const useCustomerData = () => {
@@ -51,7 +51,7 @@ export const useCustomerData = () => {
     try {
       const res: ApiResult = await customerApi.getStats();
       const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-      setStats({ total: (data?.total as number) ?? 0, activeCount: (data?.activeCount as number) ?? 0, newThisMonth: (data?.newThisMonth as number) ?? 0, vip: (data?.vip as number) ?? 0 });
+      setStats({ total: (data?.total as number) ?? 0, activeCount: (data?.activeCount as number) ?? 0, newThisMonth: (data?.newThisMonth as number) ?? 0, levelOne: (data?.levelOne as number) ?? 0 });
     } catch { /* 统计失败不影响主流程 */ }
   }, []);
 

@@ -66,7 +66,7 @@ const CustomerManagement: React.FC = () => {
         {[
           { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: 'var(--color-primary)' },
           { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: 'var(--color-success)' },
-          { icon: <TrophyOutlined />, label: 'VIP客户', value: stats.vip, color: 'var(--color-warning)' },
+          { icon: <TrophyOutlined />, label: '一级客户', value: stats.levelOne, color: 'var(--color-warning)' },
           { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: 'var(--color-accent-purple)' },
         ].map(s => (
           <Col span={6} key={s.label}>

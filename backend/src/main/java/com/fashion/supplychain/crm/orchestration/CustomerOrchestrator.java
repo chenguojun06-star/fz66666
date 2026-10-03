@@ -168,7 +168,8 @@ public class CustomerOrchestrator {
         long newThisMonth = all.stream()
                 .filter(c -> c.getCreateTime() != null && c.getCreateTime().isAfter(startOfMonth))
                 .count();
-        long vip = all.stream().filter(c -> "VIP".equals(c.getCustomerLevel())).count();
+        // D-736：客户等级改为数字分级（1~5，1级最高），不再用 VIP/NORMAL
+        long levelOne = all.stream().filter(c -> "1".equals(c.getCustomerLevel())).count();
         long activeCount = all.stream().filter(c -> "ACTIVE".equals(c.getStatus())).count();
 
         // P0 修复：工厂账号 linkedOrderCount 仅统计本工厂关联订单
@@ -193,7 +194,7 @@ public class CustomerOrchestrator {
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
         result.put("newThisMonth", newThisMonth);
-        result.put("vip", vip);
+        result.put("levelOne", levelOne);
         result.put("activeCount", activeCount);
         result.put("linkedOrderCount", linkedOrderCount);
         return result;

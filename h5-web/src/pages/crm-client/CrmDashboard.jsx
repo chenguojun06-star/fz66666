@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useCrmClientStore from '@/stores/crmClientStore';
 import crmClient from '@/api/crmClient';
 import { orderStatusText } from './CrmOrders';
+import { customerLevelText, isTopLevel } from '@/utils/customerLevel';
 
 const CrmDashboard = () => {
   const customer = useCrmClientStore((s) => s.customer);
@@ -45,7 +46,7 @@ const CrmDashboard = () => {
       <div style={styles.header}>
         <div>
           <h1 style={styles.greeting}>您好，{customer?.companyName || '客户'}</h1>
-          <p style={styles.subGreeting}>{customer?.customerLevel === 'VIP' ? '⭐ VIP客户' : '欢迎回来'}</p>
+          <p style={styles.subGreeting}>{isTopLevel(customer?.customerLevel) ? `⭐ ${customerLevelText(customer?.customerLevel)}` : '欢迎回来'}</p>
         </div>
       </div>
 

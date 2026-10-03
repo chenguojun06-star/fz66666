@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCrmClientStore from '@/stores/crmClientStore';
 import crmClient from '@/api/crmClient';
+import { customerLevelText } from '@/utils/customerLevel';
 
 const CrmProfile = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const CrmProfile = () => {
       <div style={s.avatarArea}>
         <div style={s.avatar}>{displayData?.companyName?.charAt(0) || '?'}</div>
         <div style={s.name}>{displayData?.companyName || '-'}</div>
-        <div style={s.level}>{displayData?.customerLevel === 'VIP' ? '⭐ VIP客户' : '普通客户'}</div>
+        <div style={s.level}>{customerLevelText(displayData?.customerLevel)}</div>
       </div>
 
       <div style={s.card}>
