@@ -169,7 +169,19 @@ public class AgentLoopEngine {
 
             HandoffEngine.HandoffResult handoffResult = tryHandoffIfNeeded(ctx, cb);
             if (handoffResult != null && handoffResult.isDelegated()) {
-                return handleFinalAnswer(ctx, handoffResult.getSubAgentResult(), cb);
+                boolean dataToolsSelected = ctx.getVisibleApiTools() != null && !ctx.getVisibleApiTools().isEmpty();
+                if (!dataToolsSelected) {
+                    return handleFinalAnswer(ctx, handoffResult.getSubAgentResult(), cb);
+                }
+                // D-743b：领域专家命中且系统已为本问题预选了查询工具时，专家答案只作参考初判——
+                // 它自身不带工具，直接当终稿就是"未查实时数据纯推测"（生产实证：交期风控Agent
+                // 对订单进度问询答不出任何真实数据）。注入初判后继续主循环，强制用工具核实。
+                ctx.getMessages().add(AiMessage.system(
+                        "[领域专家初判（仅供参考，未经数据核实）]\n" + handoffResult.getSubAgentResult()
+                                + "\n\n[系统要求] 以上是领域专家的框架性分析。请立即调用本轮已预选的查询工具获取真实数据，"
+                                + "用事实修正或填充该初判后再给用户最终回答；严禁编造单号、日期、数量、百分比。"));
+                log.info("[AgentLoop] Handoff 专家答案已注入主循环，继续工具核实: preSelectedTools={}",
+                        ctx.getVisibleApiTools().size());
             }
 
             AgentCheckpointManager checkpointManager = checkpointManagerProvider.getIfAvailable();

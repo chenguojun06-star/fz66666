@@ -158,16 +158,49 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         }
         try {
             StringBuilder contentBuilder = new StringBuilder();
+            StringBuilder reasoningBuilder = new StringBuilder();
             boolean[] streamError = {false};
-            // 流式路径不携带工具定义：流中工具调用交由编排层走非流式工具循环，与 1.0 行为一致
-            chatModel.stream(new Prompt(convertMessages(messages), buildOptions(scene, null)))
+            // 工具定义必须随流式请求下发（D-743b：流式不带工具 → 模型永远无法发起工具调用，
+            // AgentLoop 流式主循环整体哑火，用户只会拿到无实时数据的"裸"回答）。
+            // 2.0 的 ChunkMerger 会把工具调用分片合并成完整调用，这里按 id 兜底去重聚合。
+            Map<String, AiToolCall> toolCallAggregator = new java.util.LinkedHashMap<>();
+            chatModel.stream(new Prompt(convertMessages(messages), buildOptions(scene, tools)))
                     .doOnNext(resp -> {
-                        if (resp.getResult() != null && resp.getResult().getOutput() != null) {
-                            String chunk = resp.getResult().getOutput().getText();
-                            if (chunk != null && !chunk.isEmpty()) {
-                                contentBuilder.append(chunk);
-                                chunkConsumer.accept(chunk, false);
+                        if (resp.getResult() == null || resp.getResult().getOutput() == null) {
+                            return;
+                        }
+                        var output = resp.getResult().getOutput();
+                        if (output.hasToolCalls()) {
+                            for (var tc : output.getToolCalls()) {
+                                String key = tc.id() != null && !tc.id().isBlank()
+                                        ? tc.id() : tc.name() + "#" + toolCallAggregator.size();
+                                AiToolCall merged = toolCallAggregator.get(key);
+                                if (merged == null) {
+                                    AiToolCall call = new AiToolCall();
+                                    call.setId(tc.id());
+                                    call.setType(tc.type());
+                                    AiToolCall.AiFunctionCall fn = new AiToolCall.AiFunctionCall();
+                                    fn.setName(tc.name());
+                                    fn.setArguments(tc.arguments());
+                                    call.setFunction(fn);
+                                    toolCallAggregator.put(key, call);
+                                } else if (tc.arguments() != null) {
+                                    String prev = merged.getFunction().getArguments();
+                                    merged.getFunction().setArguments(
+                                            prev == null ? tc.arguments() : prev + tc.arguments());
+                                }
                             }
+                        }
+                        if (output.getMetadata() != null) {
+                            Object rc = output.getMetadata().get("reasoningContent");
+                            if (rc instanceof String s && !s.isEmpty()) {
+                                reasoningBuilder.append(s);
+                            }
+                        }
+                        String chunk = output.getText();
+                        if (chunk != null && !chunk.isEmpty()) {
+                            contentBuilder.append(chunk);
+                            chunkConsumer.accept(chunk, false);
                         }
                     })
                     .doOnError(err -> {
@@ -194,6 +227,14 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             int estimatedCompletion = contentBuilder.length() / 2;
             result.setPromptTokens(estimatedPrompt);
             result.setCompletionTokens(estimatedCompletion);
+            if (!reasoningBuilder.isEmpty()) {
+                result.setReasoningContent(reasoningBuilder.toString());
+            }
+            if (!toolCallAggregator.isEmpty()) {
+                List<AiToolCall> toolCalls = new ArrayList<>(toolCallAggregator.values());
+                result.setToolCalls(toolCalls);
+                result.setToolCallCount(toolCalls.size());
+            }
             if (streamError[0]) {
                 result.setErrorMessage("stream partially delivered, " + contentBuilder.length() + " chars before error");
             }
