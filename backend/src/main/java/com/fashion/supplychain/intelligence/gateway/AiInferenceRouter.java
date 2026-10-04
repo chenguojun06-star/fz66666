@@ -299,14 +299,7 @@ public class AiInferenceRouter implements AiInferenceGateway {
         try {
             if (aiCostTrackingOrchestrator != null) {
                 aiCostTrackingOrchestrator.recordAsync(
-                        result.getModel() != null ? result.getModel() : result.getProvider(),
-                        scene,
-                        result.getPromptTokens(),
-                        result.getCompletionTokens(),
-                        (int) result.getLatencyMs(),
-                        result.isSuccess(),
-                        result.getErrorMessage()
-                );
+                        AiCostTrackingOrchestrator.InferenceCost.of(result, scene));
             }
         } catch (Exception e) {
             log.debug("[AiInferenceRouter] cost tracking failed: {}", e.getMessage());

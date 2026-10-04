@@ -918,14 +918,16 @@ public class IntelligenceInferenceOrchestrator {
         // 流式响应的 usage 在 SSE 增量里拿不到准数，故成本表里的流式行天然是估算口径，
         // 与非流式的真实 usage 口径不同 —— 分析时需按 engine 区分，不要直接相加当作精确账单。
         if (aiCostTrackingOrchestrator != null) {
-            aiCostTrackingOrchestrator.recordAsync(
+            aiCostTrackingOrchestrator.recordAsync(new AiCostTrackingOrchestrator.InferenceCost(
                     result.getModel() != null ? result.getModel() : result.getProvider(),
                     scene,
                     estimatedPrompt,
                     estimatedCompletion,
+                    result.getPromptCacheHitTokens(),
+                    result.getPromptCacheMissTokens(),
                     (int) result.getLatencyMs(),
                     result.isSuccess(),
-                    result.getErrorMessage());
+                    result.getErrorMessage()));
         }
     }
 
@@ -1105,14 +1107,16 @@ public class IntelligenceInferenceOrchestrator {
         // 系统对「钱花在哪」完全失明。本类是所有推理结果唯一的收口点，在这里补记一次，
         // 才能做到 100% 归因（Router 侧保留，重复行由 scene+traceId 区分，不影响汇总）。
         if (aiCostTrackingOrchestrator != null) {
-            aiCostTrackingOrchestrator.recordAsync(
+            aiCostTrackingOrchestrator.recordAsync(new AiCostTrackingOrchestrator.InferenceCost(
                     result.getModel() != null ? result.getModel() : result.getProvider(),
                     scene,
                     result.getPromptTokens(),
                     result.getCompletionTokens(),
+                    result.getPromptCacheHitTokens(),
+                    result.getPromptCacheMissTokens(),
                     (int) result.getLatencyMs(),
                     result.isSuccess(),
-                    result.getErrorMessage());
+                    result.getErrorMessage()));
         }
     }
 

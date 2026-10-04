@@ -71,6 +71,9 @@ public class IntelligenceAdminController {
 
     @Autowired
     private com.fashion.supplychain.intelligence.health.AiComponentHealthIndicator aiComponentHealthIndicator;
+    /** D-702：新增成本/缓存查询入口所需 */
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.AiCostTrackingOrchestrator aiCostTrackingOrchestrator;
 
     // ── AI推理路由状态 ──
 
@@ -91,6 +94,35 @@ public class IntelligenceAdminController {
         result.put("status", health.getStatus().getCode());
         result.put("components", health.getDetails());
         return Result.success(result);
+    }
+
+    // ── AI 成本与缓存（D-702）──
+
+    /**
+     * 成本汇总（按当前租户）。
+     *
+     * <p>D-702：这个方法此前<b>已实现但从未被任何 controller 暴露</b>，是死代码 ——
+     * 也因此它内部那个列名错误（查 {@code estimated_cost_usd}，表里实为 {@code estimated_cost}）
+     * 一直没有暴露。现一并挂出，调用前请确认已修列名。
+     */
+    @GetMapping("/ai-cost/summary")
+    public Result<Map<String, Object>> getAiCostSummary(@RequestParam(defaultValue = "7") int days) {
+        return Result.success(aiCostTrackingOrchestrator.getCostSummary(days));
+    }
+
+    /**
+     * Prompt 缓存命中率（数据库口径，可回溯）。
+     *
+     * <p>调研确认 Prompt Caching 可使 LLM 成本降低 45–80%（arXiv 2601.06007），
+     * DeepSeek 缓存命中价约为未命中的 1/10。要判断是否值得优化 prompt 前缀稳定性，
+     * 前提是能长期观测命中率。
+     *
+     * <p>此前该数据只累计在内存 AtomicLong（重启清零、无历史），且唯一打印它的日志行
+     * 因 {@code ai.observability.enabled} 默认 false 而永不执行 —— 等于「解析了但没人看得见」。
+     */
+    @GetMapping("/ai-cost/cache-hit")
+    public Result<Map<String, Object>> getAiCacheHitRate(@RequestParam(defaultValue = "7") int days) {
+        return Result.success(aiCostTrackingOrchestrator.getCacheHitSummary(days));
     }
 
     // ── 孤儿数据 ──

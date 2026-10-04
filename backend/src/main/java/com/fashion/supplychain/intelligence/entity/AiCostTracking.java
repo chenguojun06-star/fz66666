@@ -58,6 +58,21 @@ public class AiCostTracking {
 
     private Integer completionTokens;
 
+    /**
+     * D-702：Prompt 缓存命中 token。
+     *
+     * <p>调研确认 Prompt Caching 可使 LLM 成本降低 45–80%（arXiv 2601.06007），
+     * DeepSeek 缓存命中价约为未命中的 1/10。此前该数据只累计在内存 AtomicLong，
+     * 唯一出口被门控、且唯一日志行因 {@code ai.observability.enabled=false}
+     * 永不执行 → 等于没有。故随每次推理落库，使命中率可查、可看趋势。
+     */
+    @TableField("prompt_cache_hit_tokens")
+    private Integer promptCacheHitTokens;
+
+    /** D-702：Prompt 缓存未命中 token。与上一列共同决定命中率。 */
+    @TableField("prompt_cache_miss_tokens")
+    private Integer promptCacheMissTokens;
+
     private Integer totalTokens;
 
     /** 表列名为 estimated_cost（不是 estimated_cost_usd） */
