@@ -346,6 +346,24 @@ public class AiInferenceRouter implements AiInferenceGateway {
         return "deepseek-flash";
     }
 
+    /**
+     * D-744b：messages+tools 版模型选择重载——AgentLoop PREMIUM 分级路径专用。
+     * 与标准 chat 同套熔断/降级/记账：分级只影响模型覆盖，不得丢失工具调用能力。
+     */
+    @Override
+    public IntelligenceInferenceResult chatWithModel(String scene, List<AiMessage> messages, List<AiTool> tools, String modelId) {
+        AiInferenceGateway gateway = resolveGateway(scene);
+        IntelligenceInferenceResult result = gateway.chatWithModel(scene, messages, tools, modelId);
+        trackSpringAiHealth(result);
+        if (isSpringAiCircuitOpen() && !"legacy".equals(gateway.getProviderName())) {
+            log.info("[AiInferenceRouter] Spring AI 熔断触发，降级到 legacy 重试 scene={}", scene);
+            result = legacyAdapter.chatWithModel(scene, messages, tools, modelId);
+            result.setFallbackUsed(true);
+        }
+        recordCostAndAudit(scene, result);
+        return result;
+    }
+
     public String chatSimple(String prompt) {
         if (prompt == null || prompt.isBlank()) {
             log.warn("[AiInferenceRouter] chatSimple 收到空 prompt，跳过 LLM 调用");

@@ -74,6 +74,16 @@ public class LegacyInferenceAdapter implements AiInferenceGateway {
         return delegate.isVisionModelEnabled();
     }
 
+    /**
+     * 带模型选择的聊天接口实现（per-call model selection）。
+     * Legacy 链路不支持 per-call 模型覆盖（单模型站点本就无差别），但 D-744b 的
+     * messages+tools 重载必须保留原生消息与工具定义——否则 PREMIUM 分级场景模型无法调工具。
+     */
+    @Override
+    public IntelligenceInferenceResult chatWithModel(String scene, List<AiMessage> messages, List<AiTool> tools, String modelId) {
+        return delegate.chat(scene, messages, tools);
+    }
+
     @Override
     public String getProviderName() {
         return "legacy";

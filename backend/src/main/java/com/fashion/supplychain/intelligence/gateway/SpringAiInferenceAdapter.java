@@ -347,6 +347,20 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                 .build();
     }
 
+    /** D-744b：在工具版 options 基础上支持 per-call 模型覆盖（模型分级路径用） */
+    private OpenAiChatOptions buildOptions(String scene, List<AiTool> tools, String modelId) {
+        OpenAiChatOptions base = buildOptions(scene, tools);
+        if (modelId == null || modelId.isBlank() || modelId.equals(base.getModel())) {
+            return base;
+        }
+        return OpenAiChatOptions.builder()
+                .model(modelId)
+                .temperature(base.getTemperature())
+                .maxTokens(base.getMaxTokens())
+                .toolCallbacks(base.getToolCallbacks())
+                .build();
+    }
+
     /**
      * 带模型 ID 的 options 构建（per-call model selection 支持）。
      *
@@ -411,6 +425,49 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         // 降级到标准 chat
         IntelligenceInferenceResult fallback = chat("model-selection", null, prompt);
         return fallback != null ? fallback.getContent() : "";
+    }
+
+    /**
+     * 带模型覆盖 + 完整消息/工具的聊天（D-744b：PREMIUM 分级路径专用）。
+     * 模型 ID 覆盖默认模型，工具定义照常下发——分级场景不再丢失工具调用能力。
+     */
+    @Override
+    public IntelligenceInferenceResult chatWithModel(String scene, List<AiMessage> messages, List<AiTool> tools, String modelId) {
+        long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) return budgetCheck;
+
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+                if (chatModel == null) {
+                    return buildErrorResult(new IllegalStateException("ChatModel bean not available"), start);
+                }
+                ChatResponse response = chatModel.call(new Prompt(convertMessages(messages),
+                        buildOptions(scene, tools, modelId)));
+                IntelligenceInferenceResult result = convertResult(response, start);
+                extractToolCalls(response, result);
+                if (modelId != null && !modelId.isBlank()) {
+                    result.setModel(modelId);
+                }
+                recordTokenUsage(result);
+                return result;
+            } catch (Exception e) {
+                lastError = e;
+                if (isRetryable(e) && attempt < 2) {
+                    long backoffMs = (long) Math.pow(2, attempt) * 500 + (long)(Math.random() * 200);
+                    log.warn("[SpringAiAdapter] chatWithModel(messages) failed (attempt={}), retrying in {}ms: {}",
+                            attempt + 1, backoffMs, e.getMessage());
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                } else {
+                    break;
+                }
+            }
+        }
+        log.warn("[SpringAiAdapter] chatWithModel(messages) failed after retries: {}",
+                lastError != null ? lastError.getMessage() : "unknown");
+        return buildErrorResult(lastError, start);
     }
 
     private double resolveTemperature(String scene) {

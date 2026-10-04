@@ -416,42 +416,31 @@ public class AgentLoopEngine {
      */
     private IntelligenceInferenceResult performInferenceWithModel(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
         long start = System.currentTimeMillis();
-        // 将消息列表拼接成完整 prompt
-        StringBuilder promptBuilder = new StringBuilder();
-        if (ctx.getMessages() != null) {
-            for (AiMessage msg : ctx.getMessages()) {
-                if (msg.getContent() == null) continue;
-                String role = msg.getRole() != null ? msg.getRole() : "user";
-                promptBuilder.append("[role:").append(role).append("]\n")
-                        .append(msg.getContent()).append("\n\n");
-            }
-        }
-        String prompt = promptBuilder.toString();
-
         Long tenantId = ctx.getTenantId();
-        long userIdHash = ctx.getUserId() != null ? ctx.getUserId().hashCode() : 0L;
         String modelId = ctx.getModelId();
 
         log.info("[AgentLoop] 使用 PREMIUM 模型推理 iter={} modelId={} tenantId={}",
                 iter, modelId, tenantId);
 
-        // 调用 chatWithModel（会路由到 SpringAiInferenceAdapter 真正覆盖模型）
-        String content = inferenceGateway.chatWithModel(prompt, tenantId, userIdHash, modelId);
-
-        // 包装成 IntelligenceInferenceResult（保持下游处理一致）
-        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
-        result.setSuccess(content != null && !content.isEmpty());
-        result.setProvider("model-selection");
-        result.setModel(modelId);
-        result.setContent(content != null ? content : "");
+        // D-744b：改走「messages+tools+模型」重载。旧实现把消息列表拍平成纯文本 prompt 调
+        // chatWithModel(prompt,...)，工具定义传不进去 → PREMIUM 场景模型永远无法发起工具调用
+        // （生产实证 iter=1/2 toolCalls=0、终稿纯推测+防幻觉守卫示警）。
+        IntelligenceInferenceResult result = inferenceGateway.chatWithModel(
+                "agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(), modelId);
+        if (result == null) {
+            result = new IntelligenceInferenceResult();
+            result.setSuccess(false);
+            result.setErrorMessage("model-selection inference returned null");
+        }
+        result.setProvider(result.getProvider() != null ? result.getProvider() : "model-selection");
+        if (modelId != null && !modelId.isBlank()) {
+            result.setModel(modelId);
+        }
         result.setLatencyMs(System.currentTimeMillis() - start);
-        result.setResponseChars(content != null ? content.length() : 0);
-        result.setPromptTokens(prompt.length() / 4);
-        result.setCompletionTokens(content != null ? content.length() / 2 : 0);
 
-        // 推送完整内容到前端（非流式，一次性推送）
-        if (content != null && !content.isEmpty() && cb instanceof StreamingAgentLoopCallback) {
-            cb.onAnswerChunk(content);
+        // 推送完整内容到前端（非流式，一次性推送；工具调用轮次 content 为空，不推）
+        if (result.getContent() != null && !result.getContent().isEmpty() && cb instanceof StreamingAgentLoopCallback) {
+            cb.onAnswerChunk(result.getContent());
         }
         return result;
     }

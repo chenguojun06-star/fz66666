@@ -40,4 +40,16 @@ public interface AiInferenceGateway {
         IntelligenceInferenceResult result = chat("model-selection", null, prompt);
         return result != null ? result.getContent() : "";
     }
+
+    /**
+     * 带模型选择 + 完整消息/工具的聊天重载（D-744b）。
+     *
+     * <p>原 chatWithModel(prompt,...) 只收拍平的纯文本 prompt，工具定义传不进去——
+     * AgentLoop 的 PREMIUM 分级路径因此永远无法发起工具调用（生产实证 iter=1/2 toolCalls=0）。
+     * 本重载保留原生消息结构与工具定义，同时支持 per-call 模型覆盖。
+     * 默认实现忽略 modelId 直接走标准工具链路（向后兼容，无需改既有实现类）。
+     */
+    default IntelligenceInferenceResult chatWithModel(String scene, List<AiMessage> messages, List<AiTool> tools, String modelId) {
+        return chat(scene, messages, tools);
+    }
 }
