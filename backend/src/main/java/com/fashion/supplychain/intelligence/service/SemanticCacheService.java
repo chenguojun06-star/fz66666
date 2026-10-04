@@ -143,6 +143,12 @@ public class SemanticCacheService {
         if (response == null || response.length() <= minResponseLength) {
             return;
         }
+        // D-745：零工具记录的"未查实时数据"类回答禁止入缓存——引擎侧任何断点（Handoff/分级/工具缺失）
+        // 产出的无数据答案一旦被缓存，后续同样的提问会持续回放坏答案，且修复上线后仍被缓存挡住
+        // （生产实证：19:35 的提问命中 19:09 的坏答案缓存）。守卫文案由 AgentLoopEngine 防幻觉层统一生成。
+        if (response.contains("未查询系统实时数据")) {
+            return;
+        }
         try {
             totalStores.incrementAndGet();
 
