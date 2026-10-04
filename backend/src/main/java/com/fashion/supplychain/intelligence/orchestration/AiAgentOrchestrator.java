@@ -1295,12 +1295,41 @@ public class AiAgentOrchestrator {
     private boolean isQuickPathEligible(String userMessage) {
         if (userMessage == null || userMessage.length() > 1000) return false;
         XiaoyunPatterns.IntentType intent = XiaoyunPatterns.estimateIntent(userMessage);
-        if (intent == XiaoyunPatterns.IntentType.ACTION_COMMAND) return false;
+
+        // 【D-702 P0】数据可信性闸门：只要问题里出现业务数据关键词，就必须进 Agent 循环查库。
+        //
+        // 修复前的实际状况（生产实测）：
+        //   · 唯一会传工具的推理路径 scene='agent-loop' 在成本表里 **记录数为 0**
+        //   · 而 QuickPath 调 inferenceGateway.chatStream("ai-advisor", msgs, java.util.List.of())
+        //     第 3 参是**空工具列表**，且日志里「降级到Agent循环」同样为 0
+        //   → 结论：86 个工具注册完好，却一次都没被真实流量调用过。
+        //
+        // 后果不是"少了个功能"，而是**编造数据**：QuickPath 只有 RAG 知识库 + 页面上下文 + 记忆库，
+        // 没有业务工具。于是「查一下 BR24001 的进度」「库存多少」这类问题会得到一句流利、
+        // 但数字来自语言模型推测的回答，完全不碰生产表。
+        // 这违反 CLAUDE.md 铁律 7（禁止用推测伪造业务数据）——假数字会被当真用于经营决策，
+        // 比功能缺失严重得多。故此处按「宁可慢、不可假」的原则收紧。
+        //
+        // 注意顺序：SMALL_TALK 必须**先于**本闸门判断。问候语里含「好的/收到/明白/知道了」
+        // 等词，若先拦业务词会把「好的」误判成业务查询，白白走一次工具循环。
         if (intent == XiaoyunPatterns.IntentType.SMALL_TALK) return true;
-        if (intent == XiaoyunPatterns.IntentType.KNOWLEDGE_ASK) return true;
-        if (intent == XiaoyunPatterns.IntentType.SIMPLE_QUERY) return true;
-        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS && userMessage.length() <= 500) return true;
-        return userMessage.length() <= 100;
+
+        // 只问方法/步骤的「知识问」不需要查生产表，RAG 能答。
+        // 必须放在业务词闸门**之前**：否则「扫码流程是怎样的」这类纯文档提问会被「扫码」拦下，
+        // 白跑一次工具循环（更慢、更耗 token），属于为修正确性而过度牺牲性能。
+        if (XiaoyunPatterns.isKnowledgeOnlyQuestion(userMessage)) return true;
+
+        if (XiaoyunPatterns.isBusinessKeyword(userMessage)) {
+            log.info("[QuickPath-Gate] 问题含业务数据关键词，降级到 Agent 循环查库: \"{}\"",
+                    userMessage.length() > 60 ? userMessage.substring(0, 60) + "..." : userMessage);
+            return false;
+        }
+
+        // 「入库/建单/审批/结算/撤回扫码」等写操作本就不能走快速通道
+        if (intent == XiaoyunPatterns.IntentType.ACTION_COMMAND) return false;
+
+        // 走到这里说明不含业务数据关键词 —— 知识问答、闲聊、方法类咨询，无需查库
+        return true;
     }
 
     /** 安全获取 CompletableFuture 当前结果：未完成或异常返回空字符串，不阻塞 */
