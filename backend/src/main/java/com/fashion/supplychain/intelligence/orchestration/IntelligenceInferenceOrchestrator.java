@@ -768,6 +768,11 @@ public class IntelligenceInferenceOrchestrator {
         root.put("temperature", SCENE_TEMPERATURE.getOrDefault(scene, DEFAULT_TEMPERATURE));
         root.put("max_tokens", SCENE_MAX_TOKENS.getOrDefault(scene, DEFAULT_MAX_TOKENS));
         root.put("stream", true);
+        // D-702：显式要求流式响应携带 usage。
+        // 不开这个开关时 DeepSeek 流式**完全不返回 usage**，导致 prompt_cache_hit_tokens
+        // 无从获得 —— 缓存命中率恒为 0，观测改造等于白做。
+        // 开了之后 usage 出现在最后一个 chunk（该 chunk 的 choices 是空数组）。
+        root.set("stream_options", MAPPER.createObjectNode().put("include_usage", true));
         root.set("messages", MAPPER.valueToTree(messages));
         if (tools != null && !tools.isEmpty()) root.set("tools", MAPPER.valueToTree(tools));
         if (thinkingMode != null) root.put("thinking_mode", thinkingMode);
@@ -795,6 +800,23 @@ public class IntelligenceInferenceOrchestrator {
         StringBuilder reasoningContent;
         /** D-699：DSML 跨 delta 缓冲，只攒「已含完整换行」的确定行，半行留在缓冲区等下一片 */
         final StringBuilder dsmlPending = new StringBuilder();
+        /**
+         * D-702：流式真实 usage。
+         *
+         * <p>此前流式路径<b>从未</b>解析 usage，而是用 promptChars/4、responseChars/2 估算，
+         * 旧注释据此认定流式拿不到真实 usage、缓存两列必然为 0 —— 这个前提是错的：
+         * DeepSeek 支持 {@code stream_options.include_usage}，会在最后一个 chunk 返回完整 usage，
+         * 含 {@code prompt_cache_hit_tokens} / {@code prompt_cache_miss_tokens}。
+         *
+         * <p>还有一个隐藏陷阱：带 usage 的那个 chunk 的 {@code choices} 是<b>空数组</b>，
+         * 若沿用「choices 为空就 return」的写法会把它整块丢掉 —— 两个缺陷叠加，
+         * 结果就是缓存命中率永远 0。
+         */
+        int realPromptTokens;
+        int realCompletionTokens;
+        int realCacheHitTokens;
+        int realCacheMissTokens;
+        boolean usageReceived;
     }
 
     private void parseStreamLines(java.util.stream.Stream<String> lines,
@@ -805,6 +827,17 @@ public class IntelligenceInferenceOrchestrator {
             if ("[DONE]".equals(data)) return;
             try {
                 JsonNode chunk = MAPPER.readTree(data);
+                // D-702：usage 必须**在 choices 判空之前**提取。
+                // 开启 include_usage 后，携带 usage 的那个 chunk 的 choices 是空数组，
+                // 下面的 `choices 为空就 return` 会把它整块丢掉 → 缓存命中率恒为 0。
+                JsonNode usageNode = chunk.path("usage");
+                if (!usageNode.isMissingNode()) {
+                    acc.realPromptTokens = usageNode.path("prompt_tokens").asInt(0);
+                    acc.realCompletionTokens = usageNode.path("completion_tokens").asInt(0);
+                    acc.realCacheHitTokens = usageNode.path("prompt_cache_hit_tokens").asInt(0);
+                    acc.realCacheMissTokens = usageNode.path("prompt_cache_miss_tokens").asInt(0);
+                    acc.usageReceived = true;
+                }
                 JsonNode choices = chunk.path("choices");
                 if (!choices.isArray() || choices.isEmpty()) return;
                 JsonNode delta = choices.get(0).path("delta");
@@ -910,19 +943,34 @@ public class IntelligenceInferenceOrchestrator {
         result.setResponseChars(acc.fullContent.length());
         int estimatedPrompt = result.getPromptChars() / 4;
         int estimatedCompletion = result.getResponseChars() / 2;
-        result.setPromptTokens(estimatedPrompt);
-        result.setCompletionTokens(estimatedCompletion);
-        aiAgentTokenBudgetService.recordUsage(estimatedPrompt, estimatedCompletion);
+        // D-702：优先用流式真实 usage（含缓存命中/未命中），拿不到才回退估算。
+        // 只有估算口径时缓存两列必然是 0，命中率无法计算，所以这里必须做这个分支。
+        int promptForAccounting;
+        int completionForAccounting;
+        if (acc.usageReceived) {
+            promptForAccounting = acc.realPromptTokens;
+            completionForAccounting = acc.realCompletionTokens;
+            result.setPromptCacheHitTokens(acc.realCacheHitTokens);
+            result.setPromptCacheMissTokens(acc.realCacheMissTokens);
+        } else {
+            promptForAccounting = estimatedPrompt;
+            completionForAccounting = estimatedCompletion;
+        }
+        result.setPromptTokens(promptForAccounting);
+        result.setCompletionTokens(completionForAccounting);
+        aiAgentTokenBudgetService.recordUsage(promptForAccounting, completionForAccounting);
         intelligenceObservabilityOrchestrator.recordInvocation(scene, result, UserContext.tenantId(), UserContext.userId());
-        // D-700：流式路径同样要记账。注意这里记的是**估算值**（promptChars/4、responseChars/2），
-        // 流式响应的 usage 在 SSE 增量里拿不到准数，故成本表里的流式行天然是估算口径，
-        // 与非流式的真实 usage 口径不同 —— 分析时需按 engine 区分，不要直接相加当作精确账单。
+        // D-700：流式路径同样要记账。
+        // D-702 起：开了 stream_options.include_usage 后，流式也能拿到真实 usage 与缓存字段，
+        // 因此这里的行不再是纯估算口径 —— 但**仍须按 provider 是否回传 usage 区分**，
+        // 个别兼容网关（LiteLLM 等）可能不透传 usage，那种情况会回退估算。
+        // 分析缓存命中率时请只统计 usage 口径的行，不要把估算行当成「0 命中」。
         if (aiCostTrackingOrchestrator != null) {
             aiCostTrackingOrchestrator.recordAsync(new AiCostTrackingOrchestrator.InferenceCost(
                     result.getModel() != null ? result.getModel() : result.getProvider(),
                     scene,
-                    estimatedPrompt,
-                    estimatedCompletion,
+                    promptForAccounting,
+                    completionForAccounting,
                     result.getPromptCacheHitTokens(),
                     result.getPromptCacheMissTokens(),
                     (int) result.getLatencyMs(),
