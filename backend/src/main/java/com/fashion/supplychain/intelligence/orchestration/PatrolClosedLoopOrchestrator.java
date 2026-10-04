@@ -116,11 +116,12 @@ public class PatrolClosedLoopOrchestrator {
         Long tenantId = UserContext.tenantId();
         String effectiveRiskLevel = riskLevel == null ? "NEED_APPROVAL" : riskLevel;
 
-        // P0-2 修复：去重 — 同 tenantId + targetId + issueType：
-        // ① 存在 PENDING 工单（不限时长）→ 不重复创建。D-654 修复：原条件把 24h 窗口与 PENDING
-        //    状态 AND 在一起，PENDING 工单超过 24h 后不再拦截，同一未解决问题每天被重复建单
-        //    （生产实测 1181 条待审批去重后仅 71 个真问题）。
-        // ② APPROVED/AUTO_RUNNING 属于在途 → 保留 24 小时窗口，过期放行重新检测。
+        // P0-2 修复：去重 — 同 tenantId + targetId + issueType。
+        // D-744 升级（生产实证：同一订单 3 天堆 29 张卡，两种叠加成因）：
+        // ① Job 线程无租户上下文时本段整块被跳过 + 工单 tenant_id=NULL（三个巡检 Job 侧已包 withTenantContext）；
+        // ② DEADLINE_RISK 自动执行后卡片关闭，"只拦 PENDING"拦不住 → 24h 内同键非人为终态的卡复活复用，
+        //    并把最新结论（剩余天数/停滞小时数）刷进旧卡文案——一个异常一张活卡，直到人来处理。
+        // 人为 RESOLVED/REJECTED/撤销（cancelledBy=真实用户名）不受影响，处理后风险复现可正常建新卡。
         if (tenantId != null && targetId != null && !targetId.isBlank()
                 && issueType != null && !issueType.isBlank()) {
             LambdaQueryWrapper<AiPatrolAction> pendingDedup = new LambdaQueryWrapper<>();
@@ -131,22 +132,36 @@ public class PatrolClosedLoopOrchestrator {
                  .last("LIMIT 1");
             AiPatrolAction pendingExisting = actionMapper.selectOne(pendingDedup);
             if (pendingExisting != null) {
-                log.info("[PatrolClosedLoop] 工单去重命中(存在待处理工单)，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
+                refreshExistingIssue(pendingExisting, detectedIssue);
+                log.info("[PatrolClosedLoop] 工单去重命中(待处理工单更新文案)，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
                         tenantId, issueType, targetId, pendingExisting.getId());
                 return pendingExisting;
             }
-            LambdaQueryWrapper<AiPatrolAction> inflightDedup = new LambdaQueryWrapper<>();
-            inflightDedup.eq(AiPatrolAction::getTenantId, tenantId)
+            LambdaQueryWrapper<AiPatrolAction> recentDedup = new LambdaQueryWrapper<>();
+            recentDedup.eq(AiPatrolAction::getTenantId, tenantId)
                  .eq(AiPatrolAction::getTargetId, targetId)
                  .eq(AiPatrolAction::getIssueType, issueType)
-                 .in(AiPatrolAction::getStatus, "APPROVED", "AUTO_RUNNING")
+                 .in(AiPatrolAction::getStatus, "AUTO_EXECUTED", "CANCELLED", "APPROVED", "AUTO_RUNNING")
+                 .and(w -> w.isNull(AiPatrolAction::getCancelledBy).or().eq(AiPatrolAction::getCancelledBy, "system"))
                  .ge(AiPatrolAction::getCreateTime, LocalDateTime.now().minusHours(24))
+                 .orderByDesc(AiPatrolAction::getId)
                  .last("LIMIT 1");
-            AiPatrolAction inflightExisting = actionMapper.selectOne(inflightDedup);
-            if (inflightExisting != null) {
-                log.info("[PatrolClosedLoop] 工单去重命中(在途工单24h内)，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
-                        tenantId, issueType, targetId, inflightExisting.getId());
-                return inflightExisting;
+            AiPatrolAction recentExisting = actionMapper.selectOne(recentDedup);
+            if (recentExisting != null) {
+                refreshExistingIssue(recentExisting, detectedIssue);
+                boolean revived = "AUTO_EXECUTED".equals(recentExisting.getStatus())
+                        || "CANCELLED".equals(recentExisting.getStatus());
+                if (revived) {
+                    AiPatrolAction revive = new AiPatrolAction();
+                    revive.setId(recentExisting.getId());
+                    revive.setStatus("PENDING");
+                    revive.setUpdateTime(LocalDateTime.now());
+                    actionMapper.updateById(revive);
+                    recentExisting.setStatus("PENDING");
+                }
+                log.info("[PatrolClosedLoop] 工单去重命中(24h内自动流转工单复用{}): tenant={}, issueType={}, targetId={}, existingId={}",
+                        revived ? "并复活" : "", tenantId, issueType, targetId, recentExisting.getId());
+                return recentExisting;
             }
         }
 
@@ -173,6 +188,23 @@ public class PatrolClosedLoopOrchestrator {
             notifyRelevantMerchandiser(tenantId, a);
         }
         return a;
+    }
+
+    /**
+     * D-744：复用旧卡时把最新检测结论（剩余天数/停滞小时数）刷进文案，保证卡片信息不过期。
+     * 文案相同则跳过写库，避免每 4 小时一轮的无意义 UPDATE。
+     */
+    private void refreshExistingIssue(AiPatrolAction existing, String latestIssue) {
+        if (latestIssue == null || latestIssue.isBlank()
+                || latestIssue.equals(existing.getDetectedIssue())) {
+            return;
+        }
+        AiPatrolAction upd = new AiPatrolAction();
+        upd.setId(existing.getId());
+        upd.setDetectedIssue(latestIssue);
+        upd.setUpdateTime(LocalDateTime.now());
+        actionMapper.updateById(upd);
+        existing.setDetectedIssue(latestIssue);
     }
 
     /**

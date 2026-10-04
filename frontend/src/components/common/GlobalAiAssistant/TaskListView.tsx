@@ -114,6 +114,11 @@ export function statusBucket(s: TaskStatus): StatusTab {
   return STATUS_BUCKET[s] ?? 'pending';
 }
 
+/** 后台巡检 Job 的创建人上下文是内部标识 "system"，卡片上翻译成人话（D-744） */
+export function formatCreatorName(name: string): string {
+  return name === 'system' ? 'AI 巡检' : name;
+}
+
 const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, currentUserId, currentDisplayName, onClaim, onComplete, onClaimSystem, onEdit, onCreate, onNavigate }) => {
   const [categoryTab, setCategoryTab] = useState('all'); // all | __high__ | taskType
   const [scopeTab, setScopeTab] = useState('all');
@@ -363,7 +368,7 @@ const TaskCard: React.FC<{
           {task.assigneeName && <span>{task.assigneeName}{task.assigneeRole && !task.assigneeName.includes(task.assigneeRole) ? `（${task.assigneeRole}）` : ''}</span>}
           {/* D-612b 岗位池：无跟进人但有岗位标签的待办，显示岗位归属（对应岗位的所有人可见，谁领取算谁的） */}
           {!task.assigneeName && task.assigneeRole && <span>待领取 · {task.assigneeRole}</span>}
-          {task.creatorName && <span>创建 {task.creatorName}</span>}
+          {task.creatorName && <span>创建 {formatCreatorName(task.creatorName)}</span>}
           {task.status === 'completed'
             ? (task.endTime && <span>办结 {task.endTime.slice(0, 10)}</span>)
             : (task.endTime && <span>截止 {task.endTime.slice(0, 10)}</span>)}

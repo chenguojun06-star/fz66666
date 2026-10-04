@@ -66,10 +66,11 @@ public class AnomalyDetectorPatrolJob extends AbstractPatrolJob {
                             if (patrolEnabled) {
                                 String issue = String.format("异常检测：订单[%s]超过48小时未更新(进度%d%%)",
                                         o.getOrderNo(), o.getProductionProgress());
-                                patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "STAGNANT_ORDER",
+                                // D-744：包租户上下文，否则去重跳过 + 工单 tenant_id=NULL 每 4 小时叠卡
+                                withTenantContext(tenantId, () -> patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "STAGNANT_ORDER",
                                         "MEDIUM", "order", o.getOrderNo(),
                                         "{\"action\":\"stagnant_alert\"}",
-                                        BigDecimal.valueOf(0.7), "NEED_APPROVAL");
+                                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"));
                                 findings++;
                             }
                         }
@@ -116,10 +117,11 @@ public class AnomalyDetectorPatrolJob extends AbstractPatrolJob {
                             }
                             String issue = String.format("订单[%s] 生产中已 %d 小时无扫码（节点停滞）",
                                     o.getOrderNo(), hoursSinceScan);
-                            patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "NODE_STAGNANT",
+                            // D-744：同上，包租户上下文使去重生效
+                            withTenantContext(tenantId, () -> patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "NODE_STAGNANT",
                                     "MEDIUM", "order", o.getOrderNo(),
                                     "{\"action\":\"node_stagnant_alert\"}",
-                                    BigDecimal.valueOf(0.7), "NEED_APPROVAL");
+                                    BigDecimal.valueOf(0.7), "NEED_APPROVAL"));
                             nodeStagnantCount++;
                             findings++;
                         } catch (Exception ex) {

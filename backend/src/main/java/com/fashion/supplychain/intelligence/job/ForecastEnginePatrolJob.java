@@ -58,12 +58,14 @@ public class ForecastEnginePatrolJob extends AbstractPatrolJob {
                         if (dailyRateNeeded > 20 && patrolEnabled) {
                             String issue = String.format("预测引擎：订单[%s]交期预测不乐观(剩余%d天,进度%d%%,需日增%.1f%%)",
                                     o.getOrderNo(), daysLeft, progress, dailyRateNeeded);
-                            patrolOrchestrator.createAction("FORECAST_ENGINE_JOB", issue, "DELIVERY_UNLIKELY",
+                            // D-744：Job 线程无租户上下文 → createAction 里去重整段跳过（tenantId=null）
+                            // 且工单落库 tenant_id=NULL，同一订单每 4 小时叠一张卡。包上下文后去重生效。
+                            withTenantContext(tenantId, () -> patrolOrchestrator.createAction("FORECAST_ENGINE_JOB", issue, "DELIVERY_UNLIKELY",
                                     dailyRateNeeded > 30 ? "HIGH" : "MEDIUM",
                                     "order", o.getOrderNo(),
                                     "{\"action\":\"forecast_alert\"}",
                                     BigDecimal.valueOf(Math.min(0.95, dailyRateNeeded / 50.0)),
-                                    "NEED_APPROVAL");
+                                    "NEED_APPROVAL"));
                             findings++;
                         }
                     }
