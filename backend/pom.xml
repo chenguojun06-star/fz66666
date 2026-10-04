@@ -32,7 +32,8 @@
         <maven.compiler.version>3.13.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
-        <spring-ai.version>1.0.0</spring-ai.version>
+        <!-- D-743：Spring AI 2.0.0 GA（2026-06-12），专为 Boot 4 / Framework 7 构建；1.0 与 Framework 7 二进制不兼容（D-698） -->
+        <spring-ai.version>2.0.0</spring-ai.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -101,11 +102,6 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
 
         <dependency>

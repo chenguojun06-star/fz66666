@@ -11,21 +11,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
+/**
+ * Spring AI 2.0 推理适配器（D-743，自 1.0 范式重写）。
+ *
+ * <p>与 1.0 的关键差异：2.0 的 {@code ChatModel.call/stream} 只返回裸 tool_calls、
+ * 不再内置工具执行循环（执行已移交 ChatClient Advisor 层，而本项目不经 ChatClient），
+ * 与 AgentLoop 编排层「适配器回传 tool_calls → 编排层执行 → 回灌结果」的闭环天然一致，
+ * 因此 {@code internalToolExecutionEnabled=false} 这类 1.0 开关在 2.0 已无需存在。
+ */
 @Slf4j
 @Component
 @Lazy
@@ -35,11 +45,19 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
-    @Qualifier("springAiChatClient")
-    private ObjectProvider<ChatClient> chatClientProvider;
+    @Qualifier("springAiChatModel")
+    private ObjectProvider<OpenAiChatModel> chatModelProvider;
 
     @Autowired
     private AiAgentTokenBudgetService tokenBudgetService;
+
+    /**
+     * 2.0 每次调用的 options 必须显式带模型名：留空时请求会带上 OpenAI SDK 的默认模型
+     * （gpt-5-mini），DeepSeek 直接 400 "supported API model names are deepseek-flash,
+     * deepseek-v4-pro"——真机冒烟（D-743）实证，不能依赖 builder 默认值的合并语义。
+     */
+    @org.springframework.beans.factory.annotation.Value("${spring-ai.adapter.model:deepseek-flash}")
+    private String modelName;
 
     @Override
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
@@ -50,16 +68,16 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         Exception lastError = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                ChatClient chatClient = chatClientProvider.getIfAvailable();
-                if (chatClient == null) {
-                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+                if (chatModel == null) {
+                    return buildErrorResult(new IllegalStateException("ChatModel bean not available"), start);
                 }
-                ChatResponse response = chatClient.prompt()
-                        .system(systemPrompt)
-                        .user(userMessage)
-                        .options(buildOptions(scene))
-                        .call()
-                        .chatResponse();
+                List<Message> messages = new ArrayList<>();
+                if (systemPrompt != null && !systemPrompt.isBlank()) {
+                    messages.add(new SystemMessage(systemPrompt));
+                }
+                messages.add(new UserMessage(userMessage));
+                ChatResponse response = chatModel.call(new Prompt(messages, buildOptions(scene)));
                 IntelligenceInferenceResult result = convertResult(response, start);
                 recordTokenUsage(result);
                 return result;
@@ -87,30 +105,12 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         Exception lastError = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                ChatClient chatClient = chatClientProvider.getIfAvailable();
-                if (chatClient == null) {
-                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+                if (chatModel == null) {
+                    return buildErrorResult(new IllegalStateException("ChatModel bean not available"), start);
                 }
-                ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-                for (Message msg : convertMessages(messages)) {
-                    if (msg instanceof SystemMessage sm) {
-                        requestSpec = requestSpec.system(sm.getText());
-                    } else if (msg instanceof UserMessage um) {
-                        requestSpec = requestSpec.user(um.getText());
-                    }
-                }
-                OpenAiChatOptions options = buildOptions(scene);
-                if (tools != null && !tools.isEmpty()) {
-                    List<OpenAiApi.FunctionTool> functionTools = convertToOpenAiTools(tools);
-                    options = OpenAiChatOptions.builder()
-                            .model(options.getModel())
-                            .temperature(options.getTemperature())
-                            .maxTokens(options.getMaxTokens())
-                            .tools(functionTools)
-                            .build();
-                }
-                requestSpec = requestSpec.options(options);
-                ChatResponse response = requestSpec.call().chatResponse();
+                OpenAiChatOptions options = buildOptions(scene, tools);
+                ChatResponse response = chatModel.call(new Prompt(convertMessages(messages), options));
                 IntelligenceInferenceResult result = convertResult(response, start);
                 extractToolCalls(response, result);
                 recordTokenUsage(result);
@@ -152,24 +152,15 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
         if (budgetCheck != null) return budgetCheck;
 
-        ChatClient chatClient = chatClientProvider.getIfAvailable();
-        if (chatClient == null) {
-            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+        OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+        if (chatModel == null) {
+            return buildErrorResult(new IllegalStateException("ChatModel bean not available"), start);
         }
         try {
             StringBuilder contentBuilder = new StringBuilder();
             boolean[] streamError = {false};
-            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-            for (Message msg : convertMessages(messages)) {
-                if (msg instanceof SystemMessage sm) {
-                    requestSpec = requestSpec.system(sm.getText());
-                } else if (msg instanceof UserMessage um) {
-                    requestSpec = requestSpec.user(um.getText());
-                }
-            }
-            requestSpec = requestSpec.options(buildOptions(scene));
-            requestSpec.stream()
-                    .chatResponse()
+            // 流式路径不携带工具定义：流中工具调用交由编排层走非流式工具循环，与 1.0 行为一致
+            chatModel.stream(new Prompt(convertMessages(messages), buildOptions(scene, null)))
                     .doOnNext(resp -> {
                         if (resp.getResult() != null && resp.getResult().getOutput() != null) {
                             String chunk = resp.getResult().getOutput().getText();
@@ -216,8 +207,8 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
 
     @Override
     public boolean isAvailable() {
-        ChatClient chatClient = chatClientProvider.getIfAvailable();
-        return chatClient != null;
+        OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+        return chatModel != null;
     }
 
     @Override
@@ -239,25 +230,21 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         Exception lastError = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                ChatClient chatClient = chatClientProvider.getIfAvailable();
-                if (chatClient == null) {
-                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+                if (chatModel == null) {
+                    return buildErrorResult(new IllegalStateException("ChatModel bean not available"), start);
                 }
-                
-                // 暂时以文本方式处理图片，后续添加完整 Media 支持
+
+                // 视觉主路径走 legacy（deepseek-flash 原生 image_url 格式更可靠），此处仅兜底
                 String fullPrompt = userMessage + "\n\n[图片地址: " + imageUrl + "]";
 
-                ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
+                List<Message> messages = new ArrayList<>();
                 if (systemPrompt != null && !systemPrompt.isBlank()) {
-                    requestSpec = requestSpec.system(systemPrompt);
+                    messages.add(new SystemMessage(systemPrompt));
                 }
-                requestSpec = requestSpec.user(fullPrompt);
+                messages.add(new UserMessage(fullPrompt));
 
-                ChatResponse response = requestSpec
-                        .options(buildOptions(scene))
-                        .call()
-                        .chatResponse();
-
+                ChatResponse response = chatModel.call(new Prompt(messages, buildOptions(scene)));
                 IntelligenceInferenceResult result = convertResult(response, start);
                 recordTokenUsage(result);
                 return result;
@@ -300,8 +287,22 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         double temperature = resolveTemperature(scene);
         int maxTokens = resolveMaxTokens(scene);
         return OpenAiChatOptions.builder()
+                .model(modelName)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
+                .build();
+    }
+
+    private OpenAiChatOptions buildOptions(String scene, List<AiTool> tools) {
+        OpenAiChatOptions base = buildOptions(scene);
+        if (tools == null || tools.isEmpty()) {
+            return base;
+        }
+        return OpenAiChatOptions.builder()
+                .model(base.getModel())
+                .temperature(base.getTemperature())
+                .maxTokens(base.getMaxTokens())
+                .toolCallbacks(convertToolCallbacks(tools))
                 .build();
     }
 
@@ -315,11 +316,9 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         double temperature = resolveTemperature(scene);
         int maxTokens = resolveMaxTokens(scene);
         OpenAiChatOptions.Builder builder = OpenAiChatOptions.builder()
+                .model(modelId != null && !modelId.isBlank() ? modelId : modelName)
                 .temperature(temperature)
                 .maxTokens(maxTokens);
-        if (modelId != null && !modelId.isBlank()) {
-            builder.model(modelId);
-        }
         return builder.build();
     }
 
@@ -338,17 +337,14 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         Exception lastError = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                ChatClient chatClient = chatClientProvider.getIfAvailable();
-                if (chatClient == null) {
-                    log.warn("[SpringAiAdapter] chatWithModel: ChatClient bean not available, fallback to default");
+                OpenAiChatModel chatModel = chatModelProvider.getIfAvailable();
+                if (chatModel == null) {
+                    log.warn("[SpringAiAdapter] chatWithModel: ChatModel bean not available, fallback to default");
                     IntelligenceInferenceResult result = chat("model-selection", null, prompt);
                     return result != null ? result.getContent() : "";
                 }
-                ChatResponse response = chatClient.prompt()
-                        .user(prompt)
-                        .options(buildOptionsWithModel("model-selection", modelId))
-                        .call()
-                        .chatResponse();
+                ChatResponse response = chatModel.call(new Prompt(List.of(new UserMessage(prompt)),
+                        buildOptionsWithModel("model-selection", modelId)));
                 IntelligenceInferenceResult result = convertResult(response, start);
                 if (modelId != null && !modelId.isBlank()) {
                     result.setModel(modelId);
@@ -434,9 +430,10 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         }
         if (response != null && response.getMetadata() != null) {
             result.setModel(response.getMetadata().getModel());
-            if (response.getMetadata().getUsage() != null) {
-                result.setPromptTokens(Math.toIntExact(response.getMetadata().getUsage().getPromptTokens()));
-                result.setCompletionTokens(Math.toIntExact(response.getMetadata().getUsage().getCompletionTokens()));
+            var usage = response.getMetadata().getUsage();
+            if (usage != null && usage.getPromptTokens() != null && usage.getCompletionTokens() != null) {
+                result.setPromptTokens(Math.toIntExact(usage.getPromptTokens()));
+                result.setCompletionTokens(Math.toIntExact(usage.getCompletionTokens()));
             }
         }
         result.setTraceId(UUID.randomUUID().toString());
@@ -453,24 +450,45 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         return result;
     }
 
-    private List<OpenAiApi.FunctionTool> convertToOpenAiTools(List<AiTool> aiTools) {
-        List<OpenAiApi.FunctionTool> result = new ArrayList<>();
+    /**
+     * 工具定义转换。2.0 起请求侧只需 {@link ToolDefinition}（name/description/inputSchema），
+     * 执行闭环在 IntelligenceInferenceOrchestrator——回调体永远不会被调用，仅作防御。
+     */
+    private List<ToolCallback> convertToolCallbacks(List<AiTool> aiTools) {
+        List<ToolCallback> result = new ArrayList<>();
         for (AiTool tool : aiTools) {
             if (tool.getFunction() == null) continue;
             AiTool.AiFunction fn = tool.getFunction();
-            Map<String, Object> paramsMap = null;
-            if (fn.getParameters() != null) {
-                paramsMap = MAPPER.convertValue(fn.getParameters(), Map.class);
+            String inputSchema = "{}";
+            try {
+                if (fn.getParameters() != null) {
+                    inputSchema = MAPPER.writeValueAsString(fn.getParameters());
+                }
+            } catch (Exception e) {
+                log.warn("[SpringAiAdapter] tool {} schema serialization failed, fallback to empty schema: {}",
+                        fn.getName(), e.getMessage());
             }
-            OpenAiApi.FunctionTool.Function function = new OpenAiApi.FunctionTool.Function(
-                    fn.getDescription(),
-                    fn.getName(),
-                    paramsMap,
-                    null
-            );
-            result.add(new OpenAiApi.FunctionTool(function));
+            ToolDefinition definition = ToolDefinition.builder()
+                    .name(fn.getName())
+                    .description(fn.getDescription() != null ? fn.getDescription() : "")
+                    .inputSchema(inputSchema)
+                    .build();
+            result.add(new NonExecutableToolCallback(definition));
         }
         return result;
+    }
+
+    private record NonExecutableToolCallback(ToolDefinition definition) implements ToolCallback {
+
+        @Override
+        public ToolDefinition getToolDefinition() {
+            return definition;
+        }
+
+        @Override
+        public String call(String toolInput) {
+            throw new IllegalStateException("工具执行由编排层负责，推理适配器不执行工具: " + definition.name());
+        }
     }
 
     private void extractToolCalls(ChatResponse response, IntelligenceInferenceResult result) {
