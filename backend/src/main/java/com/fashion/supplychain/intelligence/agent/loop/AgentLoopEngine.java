@@ -1057,19 +1057,64 @@ public class AgentLoopEngine {
         return null;
     }
 
+/**
+     * D-702 P0：把任务提交到异步线程，并在其中恢复 UserContext。
+     *
+     * <p>{@code CompletableFuture.supplyAsync} 默认使用 {@code ForkJoinPool.commonPool()}，
+     * 该线程不继承请求线程的 ThreadLocal —— {@code UserContext.tenantId()} 会拿不到租户，
+     * 凡是内部依赖 {@code TenantAssert.assertTenantContext()} 的服务都会抛
+     * 「操作失败：缺少租户上下文」。
+     *
+     * <p>本项目这类写法出现过多次，每次都要手工 set/复原，极易漏（本次并行数据校验就漏了，
+     * 后果是四个防幻觉守卫全部静默失效）。故统一收敛到此方法。
+     */
+    private <T> java.util.concurrent.CompletableFuture<T> supplyAsyncWithUserContext(
+            AgentLoopContext ctx, java.util.function.Supplier<T> supplier) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            UserContext previous = UserContext.get();
+            try {
+                if (ctx.getTenantId() != null) {
+                    UserContext asyncCtx = new UserContext();
+                    asyncCtx.setTenantId(ctx.getTenantId());
+                    if (ctx.getUserId() != null) {
+                        asyncCtx.setUserId(ctx.getUserId());
+                    }
+                    UserContext.set(asyncCtx);
+                }
+                return supplier.get();
+            } finally {
+                UserContext.set(previous);
+            }
+        });
+    }
+
     private String runDataTruthGuards(AgentLoopContext ctx, String content) {
-        String toolEvidence = ctx.getToolEvidence();
-        StringBuilder warnings = new StringBuilder();
-        try {
-            java.util.concurrent.CompletableFuture<DataTruthGuard.TruthCheckResult> truthF = java.util.concurrent.CompletableFuture.supplyAsync(() -> dataTruthGuard.checkAiOutputTruth(content, toolEvidence));
-            java.util.concurrent.CompletableFuture<DataTruthGuard.NumericConsistencyResult> numF = java.util.concurrent.CompletableFuture.supplyAsync(() -> dataTruthGuard.checkNumericConsistency(content, toolEvidence));
-            java.util.concurrent.CompletableFuture<EntityFactChecker.FactCheckResult> factF = java.util.concurrent.CompletableFuture.supplyAsync(() -> entityFactChecker.verifyEntities(content));
-            java.util.concurrent.CompletableFuture<GroundedGenerationGuard.GroundingResult> groundF = java.util.concurrent.CompletableFuture.supplyAsync(() -> groundedGenerationGuard.verify(content, ctx.getAllExecRecords()));
-            java.util.concurrent.CompletableFuture.allOf(truthF, numF, factF, groundF).get(10, java.util.concurrent.TimeUnit.SECONDS);
-            DataTruthGuard.TruthCheckResult truthCheck = truthF.getNow(dataTruthGuard.checkAiOutputTruth(content, toolEvidence));
-            DataTruthGuard.NumericConsistencyResult numCheck = numF.getNow(dataTruthGuard.checkNumericConsistency(content, toolEvidence));
-            EntityFactChecker.FactCheckResult factCheck = factF.getNow(entityFactChecker.verifyEntities(content));
-            GroundedGenerationGuard.GroundingResult grounding = groundF.getNow(groundedGenerationGuard.verify(content, ctx.getAllExecRecords()));
+          String toolEvidence = ctx.getToolEvidence();
+          StringBuilder warnings = new StringBuilder();
+          try {
+              // D-702 P0：必须在异步线程内恢复 UserContext。
+              // 这四个守卫内部依赖 TenantAssert.assertTenantContext()，而 supplyAsync 默认跑在
+              // ForkJoinPool.commonPool —— 那里没有租户上下文，会抛「缺少租户上下文」。
+              // 线上症状：该异常被下面 catch 吞掉、回退串行，而串行仍在同一异步线程里跑，
+              // 于是四个守卫（数据真实性/数字一致性/实体事实/接地率）**全部失效** ——
+              // 等于防幻觉守卫形同虚设，AI 编造的数字可以直接推给用户。
+              // 范式与本文件 880 行「技能树自生长」一致。
+              java.util.concurrent.CompletableFuture<DataTruthGuard.TruthCheckResult> truthF =
+                      supplyAsyncWithUserContext(ctx, () -> dataTruthGuard.checkAiOutputTruth(content, toolEvidence));
+              java.util.concurrent.CompletableFuture<DataTruthGuard.NumericConsistencyResult> numF =
+                      supplyAsyncWithUserContext(ctx, () -> dataTruthGuard.checkNumericConsistency(content, toolEvidence));
+              java.util.concurrent.CompletableFuture<EntityFactChecker.FactCheckResult> factF =
+                      supplyAsyncWithUserContext(ctx, () -> entityFactChecker.verifyEntities(content));
+              java.util.concurrent.CompletableFuture<GroundedGenerationGuard.GroundingResult> groundF =
+                      supplyAsyncWithUserContext(ctx, () -> groundedGenerationGuard.verify(content, ctx.getAllExecRecords()));
+              java.util.concurrent.CompletableFuture.allOf(truthF, numF, factF, groundF).get(10, java.util.concurrent.TimeUnit.SECONDS);
+              // 用 join() 而非 getNow(默认值)：getNow 的默认参数是**eager 求值**，
+              // 写 getNow(check(...)) 等于每次校验跑两遍，且默认值里再抛一次租户异常。
+              // allOf 已确保四个 future 都完成，join 直接取结果即可。
+              DataTruthGuard.TruthCheckResult truthCheck = truthF.join();
+              DataTruthGuard.NumericConsistencyResult numCheck = numF.join();
+              EntityFactChecker.FactCheckResult factCheck = factF.join();
+              GroundedGenerationGuard.GroundingResult grounding = groundF.join();
             if (!truthCheck.isPassed()) {
                 log.warn("[AgentLoop] 数据真实性校验未通过: {}", truthCheck.getReason());
                 warnings.append("\n> ⚠️ 数据校验提示：").append(truthCheck.getReason());
@@ -1094,9 +1139,34 @@ public class AgentLoopEngine {
         return warnings.toString();
     }
 
+    /**
+     * D-702 P0：串行回退同样需要 UserContext。
+     *
+     * <p>本方法由 {@link #runDataTruthGuards} 的 catch 调用，位于调用方线程
+     * （async-post 线程池），那里也没有租户上下文 —— 所以不能靠"串行就不需要上下文"，
+     * 否则只是把失效从并行挪到串行。
+     */
     private String runDataTruthGuardsFallback(AgentLoopContext ctx, String content) {
         String toolEvidence = ctx.getToolEvidence();
         StringBuilder warnings = new StringBuilder();
+        UserContext fallbackPrevious = UserContext.get();
+        try {
+            if (ctx.getTenantId() != null) {
+                UserContext asyncCtx = new UserContext();
+                asyncCtx.setTenantId(ctx.getTenantId());
+                if (ctx.getUserId() != null) {
+                    asyncCtx.setUserId(ctx.getUserId());
+                }
+                UserContext.set(asyncCtx);
+            }
+            return runGuardsSerially(content, toolEvidence, ctx, warnings);
+        } finally {
+            UserContext.set(fallbackPrevious);
+        }
+    }
+
+    private String runGuardsSerially(String content, String toolEvidence,
+            AgentLoopContext ctx, StringBuilder warnings) {
         DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(content, toolEvidence);
         if (!truthCheck.isPassed()) {
             log.warn("[AgentLoop] 数据真实性校验未通过: {}", truthCheck.getReason());
