@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class AiAdvisorService {
 
+    /**
+     * 系统桶租户ID：用于归集「无租户上下文」的调用。
+     * 与 {@code AiAgentTokenBudgetService.SYSTEM_TENANT_ID} 保持一致（均为 0）。
+     */
+    private static final long SYSTEM_TENANT_ID = 0L;
+
     @Value("${ai.deepseek.api-key:}")
     private String apiKey;
 
@@ -66,22 +73,46 @@ public class AiAdvisorService {
     }
 
     /**
-     * 检查当前租户今日配额是否已用完
+     * 检查当前租户今日配额是否已用完（<b>不计数</b>）。
      *
-     * @param tenantId 租户ID（null 视为系统内部调用，不限制）
-     * @return true = 配额充足可以调用；false = 今日配额已用完
+     * <p>D-702：语义已由「检查并消费」改为「纯查询」。原因是配额计数必须与真实调用
+     * 1:1，否则会出现双重计数 —— 调用方先调本方法 +1，真正发请求时
+     * {@link #invoke} 再 +1，同一次逻辑被记两次，限额被凭空吃掉一半。
+     *
+     * <p>保留本方法的用途：让调用方在批量工作<b>开始前</b>先判断「值不值得做」，
+     * 避免明知超限还白跑一堆查库/组装。最终是否放行一律由 invoke 裁决。
+     *
+     * @param tenantId 租户ID（null 视为系统桶）
+     * @return true = 配额尚充足；false = 已达上限
      */
     public boolean checkAndConsumeQuota(Long tenantId) {
-        if (dailyQuotaPerTenant <= 0 || tenantId == null) return true;   // 0=不限
-        String key = tenantId + "_" + LocalDate.now();
+        if (dailyQuotaPerTenant <= 0) return true;   // 0=不限
+        long effective = tenantId != null ? tenantId : SYSTEM_TENANT_ID;
+        return isQuotaAvailable(effective);
+    }
+
+    /** 纯查询：不改变计数。供调用方在批量工作开始前判断"值不值得做"。 */
+    private boolean isQuotaAvailable(long effectiveTenantId) {
+        if (dailyQuotaPerTenant <= 0) return true;
+        String key = effectiveTenantId + "_" + LocalDate.now();
+        AtomicInteger count = dailyCounters.computeIfAbsent(key, k -> new AtomicInteger(0));
+        return count.get() < dailyQuotaPerTenant;
+    }
+
+    /**
+     * 计数 + 判断是否放行。这是<b>唯一</b>改变计数的地方。
+     * 超限时回滚计数，保证"被拒绝的请求不消耗额度"。
+     */
+    private boolean tryConsumeQuotaInternal(long effectiveTenantId) {
+        if (dailyQuotaPerTenant <= 0) return true;
+        String key = effectiveTenantId + "_" + LocalDate.now();
         AtomicInteger count = dailyCounters.computeIfAbsent(key, k -> new AtomicInteger(0));
         int used = count.incrementAndGet();
         if (used > dailyQuotaPerTenant) {
-            count.decrementAndGet();   // 回滚，不消耗
-            log.warn("[AiAdvisor] 租户 {} 今日AI调用已达配额上限 {}", tenantId, dailyQuotaPerTenant);
+            count.decrementAndGet();   // 回滚，被拒的请求不消耗额度
             return false;
         }
-        log.debug("[AiAdvisor] 租户 {} 今日AI调用 {}/{}", tenantId, used, dailyQuotaPerTenant);
+        log.debug("[AiAdvisor] 租户 {} 今日AI调用 {}/{}", effectiveTenantId, used, dailyQuotaPerTenant);
         return true;
     }
 
@@ -147,7 +178,36 @@ public class AiAdvisorService {
         return result.isSuccess() ? result.getContent() : null;
     }
 
+    /**
+     * D-702 P0：所有 AI 调用的唯一出口，配额在此收口。
+     *
+     * <p><b>修复前</b>：配额检查只在 {@link #checkAndConsumeQuota(Long)} 里，由调用方手动调用。
+     * 而 {@link #chat(String, String)} 等出口<b>完全不检查</b>。后果是
+     * 「检查」与「调用」彻底脱节——生产实测日配额 50，实际调用 209 次（超 4 倍），
+     * 配额形同虚设。最典型的是 {@code IntelligenceSignalOrchestrator}：
+     * 每半小时先 {@code checkAndConsumeQuota()} 一次（计数 +1），
+     * 随后 {@code enrichWithAiAnalysis} 内部用 {@code .limit(5)} 连发 5 次 chat，
+     * <b>5 次全部绕过配额</b>。重复调用方遍布 19 个 orchestrator/service。
+     *
+     * <p><b>为什么在 invoke 收口</b>：只有这里能保证「一次调用 = 一次计数」，
+     * 无论调用方是否记得先检查。宁可偶发多拒一次，也不能让限额失去意义——
+     * D-700 的教训正是「账单累计却说不清钱花在哪」。
+     */
     private IntelligenceInferenceResult invoke(String scene, String systemPrompt, String userMessage) {
+        // UserContext.tenantId() 无上下文时返回 null（不抛异常），故可直接判断。
+        // 无租户上下文归系统桶（tenant 0），与 AiAgentTokenBudgetService 口径一致：
+        // 不直接放行不计量，而是让它们至少可被总量限制（CLAUDE.md AI 成本章节约定）。
+        Long ctxTenantId = UserContext.tenantId();
+        long quotaTenantId = ctxTenantId != null ? ctxTenantId : SYSTEM_TENANT_ID;
+        if (!tryConsumeQuotaInternal(quotaTenantId)) {
+            IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+            result.setSuccess(false);
+            result.setProvider("quota-exceeded");
+            result.setErrorMessage("daily-quota-exceeded: tenant=" + quotaTenantId
+                    + " limit=" + dailyQuotaPerTenant);
+            log.warn("[AiAdvisor] 租户 {} 今日AI调用已达配额上限 {}，scene={} 请求被拦截", quotaTenantId, dailyQuotaPerTenant, scene);
+            return result;
+        }
         if (!isEnabled()) {
             IntelligenceInferenceResult result = new IntelligenceInferenceResult();
             result.setSuccess(false);
