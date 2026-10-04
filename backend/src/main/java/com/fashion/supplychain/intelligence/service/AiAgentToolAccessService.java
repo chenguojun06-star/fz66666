@@ -130,6 +130,40 @@ public class AiAgentToolAccessService {
         register("tool_quality_statistics", "质量统计：按工厂/类型统计质量缺陷分布与趋势", false, ToolDomain.WAREHOUSE);
         // ── 2026-07-22 新增：L4 程序性记忆自编辑工具 ──
         register("procedural_memory_tool", "SOP记忆编辑：AI自编辑SOP流程记忆，创建/更新/删除/启用/禁用/搜索SOP", false, ToolDomain.SYSTEM);
+
+        // ── D-702 补注册：15 个「已实现但未注册」的工具 ──
+        //
+        // 审计发现（生产实证）：这些工具都有 @Component + extends AbstractAgentTool，
+        // 会被 Spring 注入进 toolMap（生产日志「已注册工具」103 条印证），
+        // **执行能力是有的**；但没进 TOOL_RULES，导致：
+        //   · 权限：isWorkerVisible 返回 false（rule==null），工人永远看不到 —— 这项是安全的；
+        //   · 领域：getDomainForTool 回落 ToolDomain.GENERAL，而 GENERAL 在 filterByDomains 里
+        //     被显式豁免，所以不会被领域路由滤掉；
+        //   · **引导语**：resolveGuide 走 resolveFallbackDescription 截断到 100 字符，
+        //     system prompt 里拿到的是劣质描述。
+        // 真正的致命点在最后一关：它们既不在 INTENT_TOOLS 意图映射表里，
+        // 排序又是 TOOL_ORDER 的 MAX_VALUE（排最后），于是
+        //   · 意图匹配成功 → 被 filter(advisedToolNames) 滤掉；
+        //   · 意图匹配失败 → 领域集被 capTools 取 subList(0,12) 截断，它们排在最后仍被截掉。
+        // 结果：**63% 的工具（62/99）在正常提问时 LLM 永远看不到**，
+        // 用户问「有没有异常」「交期能不能赶上」时，模型想调也调不到。
+        // 本组注册解决元数据缺失；「同域补齐」逻辑在 AiAgentToolAdvisor#advise 中实现可达性。
+        register("tool_anomaly_detection", "异常检测：基于z-score检测产量飙升/质量异常/工人闲置/夜间扫码4类风险信号，适合「有没有异常」「今天有什么问题」「生产风险」", true, ToolDomain.ANALYSIS);
+        register("tool_delivery_prediction", "交期预测：基于历史进度预测订单完工/出货时间与延期风险，适合「能不能按时交」「什么时候能出货」「交期有风险吗」", true, ToolDomain.PRODUCTION);
+        register("tool_nl_query", "自然语言查询：把口语化问题翻译成结构化数据查询并返回真实数据，适合各类兜底式数据问答", true, ToolDomain.GENERAL);
+        register("tool_finance_anomaly", "财务异常检测：识别工资/费用/对账中的异常波动与可疑记录，适合「财务有没有问题」「哪笔费用异常」", false, ToolDomain.FINANCE);
+        register("tool_multi_agent_debate", "多智能体辩论：让 PMC/财务/品控/厂长四路视角就同一订单辩论并给结论，适合复杂订单的跨部门决策", false, ToolDomain.ANALYSIS);
+        register("tool_scheduling_suggestion", "排产建议：基于产能与订单交期给出排产调整建议", false, ToolDomain.PRODUCTION);
+        register("tool_standard_action", "标准动作：执行系统预定义的标准作业动作", false, ToolDomain.GENERAL);
+        register("tool_digital_employee", "数字员工：把重复作业交给数字员工自动执行", false, ToolDomain.GENERAL);
+        register("tool_visual_style_search", "以图搜款：上传款式图片，从向量库检索相似款，适合「找相似款」「这个款有没有近似的」", true, ToolDomain.STYLE);
+        register("tool_vision_analyze", "款式图像分析：识别款式图片的品类、颜色、细节特征", true, ToolDomain.STYLE);
+        register("tool_vision_style_identify", "款式识别：识别图片中的具体款号与款式归属", true, ToolDomain.STYLE);
+        register("tool_vision_defect_detect", "次品识别：从图片中识别缺陷/瑕疵，适合车间现场拍照质检", true, ToolDomain.STYLE);
+        register("tool_vision_color_check", "颜色核对：比对手工标注颜色与图片实际颜色的差异", true, ToolDomain.STYLE);
+        // 运维/开发类：仅超管可用。刻意不放 workerVisible，避免车间用户误触数据库结构检查
+        register("tool_db_health_check", "数据库健康检查：表膨胀、慢查询、连接数诊断（仅超管）", false, ToolDomain.SYSTEM);
+        register("tool_flyway_safety_check", "Flyway 迁移安全检查：校验数据库迁移脚本合规性（仅超管，开发诊断用）", false, ToolDomain.SYSTEM);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(

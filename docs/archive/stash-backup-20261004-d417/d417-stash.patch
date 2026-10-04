@@ -1,0 +1,946 @@
+diff --git a/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PendingTaskOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PendingTaskOrchestrator.java
+index 1fb84d8b5..23f8fd3ac 100644
+--- a/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PendingTaskOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PendingTaskOrchestrator.java
+@@ -424,9 +424,11 @@ public class PendingTaskOrchestrator {
+             dto.setOrderNo(r.getOrderNo());
+             // D-114：深链直达订单流程页（原只跳 /production 根路由）
+             // D-326：同逾期单，必须带 orderNo 否则 order-flow 渲染整页空白
++            // D-417：改为直达「生产异常」处理页 —— PC 端已补齐该页面，
++            //        原落 order-flow 时 PC 端没有异常处理按钮，会出现「手机能办、PC 只能看」的不对称
+             dto.setDeepLinkPath(StringUtils.hasText(r.getOrderNo())
+-                    ? "/production/order-flow?orderNo=" + pathSegment(r.getOrderNo())
+-                    : "/production/order-flow");
++                    ? "/production/exception-report?keyword=" + pathSegment(r.getOrderNo())
++                    : "/production/exception-report");
+             dto.setPriority("high");
+             dto.setCreatedAt(r.getCreateTime());
+             dto.setTaskStatus("pending");
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/controller/ProductionExceptionController.java b/backend/src/main/java/com/fashion/supplychain/production/controller/ProductionExceptionController.java
+index 36e181c0a..9b37008fb 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/controller/ProductionExceptionController.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/controller/ProductionExceptionController.java
+@@ -1,5 +1,6 @@
+ package com.fashion.supplychain.production.controller;
+ 
++import com.baomidou.mybatisplus.core.metadata.IPage;
+ import com.fashion.supplychain.common.Result;
+ import com.fashion.supplychain.production.dto.ExceptionReportRequest;
+ import com.fashion.supplychain.production.entity.ProductionExceptionReport;
+@@ -7,11 +8,16 @@ import com.fashion.supplychain.production.orchestration.ExceptionReportOrchestra
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.security.access.prepost.PreAuthorize;
+ import org.springframework.validation.annotation.Validated;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestBody;
+ import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
+ 
++import java.util.Map;
++
+ @RestController
+ @RequestMapping("/api/production/exception")
+ @PreAuthorize("isAuthenticated()")
+@@ -25,4 +31,33 @@ public class ProductionExceptionController {
+         ProductionExceptionReport result = exceptionReportOrchestrator.reportException(request);
+         return Result.success(result);
+     }
++
++    /**
++     * 异常报告分页列表（D-417：手机端独立处理页数据源）
++     * 支持 status / orderNo / keyword / page / pageSize；工厂账号仅返回本工厂订单的异常。
++     *
++     * @param params 查询参数
++     * @return 分页结果
++     */
++    @GetMapping("/list")
++    public Result<IPage<ProductionExceptionReport>> list(@RequestParam Map<String, Object> params) {
++        return Result.success(exceptionReportOrchestrator.list(params));
++    }
++
++    /**
++     * 处理异常报告（D-417）：action=resolve 标记已解决 / action=reopen 重新打开。
++     * 权限在 Orchestrator 内校验（仅主管及以上）。
++     *
++     * @param id     异常报告ID
++     * @param action 处理动作
++     * @param note   处理说明
++     * @return 更新后的记录
++     */
++    @PostMapping("/{id}/handle")
++    public Result<ProductionExceptionReport> handle(
++            @PathVariable Long id,
++            @RequestParam String action,
++            @RequestParam(required = false) String note) {
++        return Result.success(exceptionReportOrchestrator.handleException(id, action, note));
++    }
+ }
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/entity/ProductionExceptionReport.java b/backend/src/main/java/com/fashion/supplychain/production/entity/ProductionExceptionReport.java
+index 57899f92b..6d7545e58 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/entity/ProductionExceptionReport.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/entity/ProductionExceptionReport.java
+@@ -16,7 +16,16 @@ public class ProductionExceptionReport {
+     private String workerName;
+     private String exceptionType;
+     private String description;
++    /** 状态：PENDING=待处理, RESOLVED=已解决 */
+     private String status;
++    /** D-417 处理人 ID */
++    private String handlerId;
++    /** D-417 处理人姓名 */
++    private String handlerName;
++    /** D-417 处理说明 */
++    private String handleNote;
++    /** D-417 处理时间 */
++    private LocalDateTime handleTime;
+     private LocalDateTime createTime;
+     private LocalDateTime updateTime;
+     @TableLogic
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/orchestration/ExceptionReportOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/production/orchestration/ExceptionReportOrchestrator.java
+index 5e8af3d4d..2ed2f4f88 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/orchestration/ExceptionReportOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/orchestration/ExceptionReportOrchestrator.java
+@@ -1,6 +1,8 @@
+ package com.fashion.supplychain.production.orchestration;
+ 
+ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
++import com.baomidou.mybatisplus.core.metadata.IPage;
++import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+ import com.fashion.supplychain.common.UserContext;
+ import com.fashion.supplychain.production.dto.ExceptionReportRequest;
+ import com.fashion.supplychain.production.entity.ProductionExceptionReport;
+@@ -14,6 +16,12 @@ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.util.StringUtils;
+ 
++import java.time.LocalDateTime;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++
+ @Slf4j
+ @Service
+ public class ExceptionReportOrchestrator {
+@@ -90,4 +98,127 @@ public class ExceptionReportOrchestrator {
+         if ("NEED_HELP".equals(code)) return "需指导/协助";
+         return "未知异常";
+     }
++
++    /**
++     * 异常报告分页列表（D-417 手机端独立处理页 / PC 列表共用）
++     *
++     * 权限与数据范围：MyBatis-Plus 多租户插件按 tenantId 自动隔离，
++     * 工厂账号（UserContext.factoryId() 非空）额外按「本工厂订单」过滤，避免看到别家订单的异常。
++     *
++     * @param params 支持 status / orderNo / keyword / page / pageSize / size
++     * @return 分页结果
++     */
++    public IPage<ProductionExceptionReport> list(Map<String, Object> params) {
++        Map<String, Object> p = params == null ? new HashMap<>() : params;
++        long pageNo = parseLong(p.get("page"), 1L);
++        long pageSize = parseLong(p.get("pageSize") != null ? p.get("pageSize") : p.get("size"), 20L);
++        // 防御：限制单页上限，避免移动端一次拉爆
++        if (pageSize <= 0) pageSize = 20L;
++        if (pageSize > 200L) pageSize = 200L;
++
++        LambdaQueryWrapper<ProductionExceptionReport> wrapper = new LambdaQueryWrapper<>();
++        String status = str(p.get("status"));
++        if (StringUtils.hasText(status)) {
++            wrapper.eq(ProductionExceptionReport::getStatus, status.trim().toUpperCase());
++        }
++        String orderNo = str(p.get("orderNo"));
++        if (StringUtils.hasText(orderNo)) {
++            wrapper.eq(ProductionExceptionReport::getOrderNo, orderNo.trim());
++        }
++        String keyword = str(p.get("keyword"));
++        if (StringUtils.hasText(keyword)) {
++            String kw = keyword.trim();
++            wrapper.and(w -> w.like(ProductionExceptionReport::getOrderNo, kw)
++                    .or().like(ProductionExceptionReport::getProcessName, kw)
++                    .or().like(ProductionExceptionReport::getWorkerName, kw)
++                    .or().like(ProductionExceptionReport::getDescription, kw));
++        }
++
++        // 工厂账号只能看本工厂订单的异常（与上报时的校验口径一致）
++        String userFactoryId = UserContext.factoryId();
++        if (StringUtils.hasText(userFactoryId)) {
++            List<ProductionOrder> scoped = productionOrderService.list(
++                    new LambdaQueryWrapper<ProductionOrder>()
++                            .eq(ProductionOrder::getFactoryId, userFactoryId)
++                            .select(ProductionOrder::getOrderNo));
++            List<String> allowedOrderNos = scoped.stream()
++                    .map(ProductionOrder::getOrderNo)
++                    .filter(StringUtils::hasText)
++                    .collect(Collectors.toList());
++            if (allowedOrderNos.isEmpty()) {
++                // 无归属订单 → 返回空页，不泄露任何数据
++                return new Page<>(pageNo, pageSize, 0);
++            }
++            wrapper.in(ProductionExceptionReport::getOrderNo, allowedOrderNos);
++        }
++
++        // 未处理优先，其次按创建时间倒序（待处理顶上来）
++        wrapper.orderByAsc(ProductionExceptionReport::getStatus).orderByDesc(ProductionExceptionReport::getCreateTime);
++        return exceptionReportService.page(new Page<>(pageNo, pageSize), wrapper);
++    }
++
++    /**
++     * 处理异常报告（D-417）：标记已解决 / 重新打开
++     *
++     * 业务约定：异常一旦上报就永久挂 PENDING 是此前的问题，本方法提供闭环。
++     *   action = resolve → status=RESOLVED，写入处理人/说明/时间
++     *   action = reopen  → status=PENDING，清空处理信息（误点恢复）
++     *
++     * 权限：仅主管及以上可处理（前端手机端同样只对 isAdminOrSupervisor 显示按钮）。
++     *
++     * @param id     异常报告 id
++     * @param action resolve / reopen
++     * @param note   处理说明（resolve 时建议必填）
++     * @return 更新后的记录
++     */
++    @Transactional(rollbackFor = Exception.class)
++    public ProductionExceptionReport handleException(Long id, String action, String note) {
++        if (id == null) {
++            throw new IllegalArgumentException("异常报告ID不能为空");
++        }
++        if (!UserContext.isSupervisorOrAbove()) {
++            throw new AccessDeniedException("仅主管及以上可处理生产异常");
++        }
++        ProductionExceptionReport report = exceptionReportService.getById(id);
++        if (report == null) {
++            throw new IllegalArgumentException("异常报告不存在");
++        }
++        // 多租户保护：越租户直接拒绝（多租户插件通常已隔离，这里再加一道显式校验）
++        Long tenantId = UserContext.tenantId();
++        if (report.getTenantId() != null && tenantId != null && !tenantId.equals(report.getTenantId())) {
++            throw new AccessDeniedException("无权处理该异常报告");
++        }
++
++        String act = StringUtils.hasText(action) ? action.trim().toLowerCase() : "resolve";
++        if ("reopen".equals(act)) {
++            report.setStatus("PENDING");
++            report.setHandlerId(null);
++            report.setHandlerName(null);
++            report.setHandleNote(null);
++            report.setHandleTime(null);
++        } else {
++            report.setStatus("RESOLVED");
++            report.setHandlerId(UserContext.userId());
++            report.setHandlerName(UserContext.username());
++            report.setHandleNote(StringUtils.hasText(note) ? note.trim() : null);
++            report.setHandleTime(LocalDateTime.now());
++        }
++        exceptionReportService.updateById(report);
++        log.info("[D-417] 异常报告处理 id={} action={} status={} by={}",
++                id, act, report.getStatus(), UserContext.username());
++        return report;
++    }
++
++    private static String str(Object o) {
++        return o == null ? null : String.valueOf(o);
++    }
++
++    private static long parseLong(Object o, long def) {
++        if (o == null) return def;
++        try {
++            return Long.parseLong(String.valueOf(o).trim());
++        } catch (NumberFormatException e) {
++            return def;
++        }
++    }
+ }
+diff --git a/backend/src/main/java/com/fashion/supplychain/system/orchestration/TenantSmartFeatureOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/system/orchestration/TenantSmartFeatureOrchestrator.java
+index bbd6778c1..6e032d6c5 100644
+--- a/backend/src/main/java/com/fashion/supplychain/system/orchestration/TenantSmartFeatureOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/system/orchestration/TenantSmartFeatureOrchestrator.java
+@@ -75,7 +75,13 @@ public class TenantSmartFeatureOrchestrator {
+             "miniprogram.menu.salesOverview",
+             "miniprogram.menu.returnList",
+             "miniprogram.menu.userApproval",
+-            "miniprogram.menu.feedback"
++            "miniprogram.menu.feedback",
++            // D-417：手机端新增的 5 个「可办事」独立页（默认全员可见，租户可按职务关闭）
++            "miniprogram.menu.materialRecon",
++            "miniprogram.menu.expenseReimburse",
++            "miniprogram.menu.payrollApproval",
++            "miniprogram.menu.exceptionReport",
++            "miniprogram.menu.collabTask"
+     );
+ 
+     public static final List<String> MINIPROGRAM_MENU_ROLES = Arrays.asList(
+@@ -115,6 +121,12 @@ public class TenantSmartFeatureOrchestrator {
+         put("miniprogram.menu.returnList", "退货管理");
+         put("miniprogram.menu.userApproval", "用户审批");
+         put("miniprogram.menu.feedback", "意见反馈");
++        // D-417：财务审批 / 业务处理独立页
++        put("miniprogram.menu.materialRecon", "物料对账");
++        put("miniprogram.menu.expenseReimburse", "费用报销");
++        put("miniprogram.menu.payrollApproval", "工资结算审批");
++        put("miniprogram.menu.exceptionReport", "生产异常");
++        put("miniprogram.menu.collabTask", "协作任务");
+     }};
+ 
+     public static final List<String> ALL_FEATURE_KEYS;
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 36978dc4a..782462c6d 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -27,7 +27,7 @@ import { Dashboard } from './modules/dashboard';
+ import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
+ import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
+ import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
+-import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin } from './modules/production';
++import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport } from './modules/production';
+ 
+ const NotFound = React.lazy(() => import('./pages/NotFound'));
+ const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
+@@ -225,6 +225,7 @@ const AppRoutes: React.FC = () => {
+             }
+           />
+           <Route path={paths.orderFlow} element={<RouteErrorBoundary pageName="订单流程"><Suspense fallback={routeFallback}><OrderFlow /></Suspense></RouteErrorBoundary>} />
++          <Route path={paths.exceptionReport} element={<RouteErrorBoundary pageName="生产异常"><Suspense fallback={routeFallback}><ExceptionReport /></Suspense></RouteErrorBoundary>} />
+           <Route path={paths.materialReconciliation} element={<RouteErrorBoundary pageName="物料对账"><Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense></RouteErrorBoundary>} />
+           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
+           <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="外发结算"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
+diff --git a/frontend/src/modules/production/index.tsx b/frontend/src/modules/production/index.tsx
+index 6a6d8a935..b072c3863 100644
+--- a/frontend/src/modules/production/index.tsx
++++ b/frontend/src/modules/production/index.tsx
+@@ -14,3 +14,4 @@ export const ProgressDetail = React.lazy(() => import('./pages/Production/Progre
+ export const MaterialPicking = React.lazy(() => import('./pages/Production/MaterialPicking'));
+ export const ExternalFactory = React.lazy(() => import('./pages/Production/ExternalFactory'));
+ export const AttendanceAdmin = React.lazy(() => import('./pages/Production/AttendanceAdmin'));
++export const ExceptionReport = React.lazy(() => import('./pages/Production/ExceptionReport'));
+diff --git a/frontend/src/routeConfig.ts b/frontend/src/routeConfig.ts
+index b49a34b84..970d5f0e4 100644
+--- a/frontend/src/routeConfig.ts
++++ b/frontend/src/routeConfig.ts
+@@ -64,6 +64,7 @@ export const paths = {
+   warehousingInspect: '/production/warehousing/inspect/:orderId',
+   orderTransfer: '/production/transfer',
+   materialPicking: '/production/picking',
++  exceptionReport: '/production/exception-report',
+   attendanceAdmin: '/system/attendance',
+ 
+   materialReconciliation: '/finance/material-reconciliation',
+diff --git a/memory-bank/activeContext.md b/memory-bank/activeContext.md
+index a157dd2ad..6a4cafa80 100644
+--- a/memory-bank/activeContext.md
++++ b/memory-bank/activeContext.md
+@@ -1,7 +1,72 @@
+ # 活跃上下文 — 当前开发状态
+ 
+ > 本文件由 AI 助手在每次会话开始/结束时更新
+-> 最后更新：2026-09-14（D-408 图片上传控件原生 input 暴露修复：原子类隐藏回退内联）
++> 最后更新：2026-09-15（D-417 手机端财务三类独立处理页：物料对账/费用报销/工资结算审批）
++
++---
++
++## D-417 手机端「只能看不能办」待办补齐独立处理页（未提交）
++
++**用户诉求**：异常报告/样衣开发、工资结算、物料对账/费用报销、协作任务在手机端只能查看，
++要求各自建独立页面、各自有入口按钮、沿用现有手机卡片风格，并注意内外部账号差异。
++
++**已完成（财务三类，小程序分包 `pages/finance`）**：
++- [x] `pages/finance/reconciliation/index` 物料对账：列表 + 状态推进（核实→审批→付款）+ 退回
++- [x] `pages/finance/reimbursement/index` 费用报销：列表 + 批准/驳回 + 确认付款
++- [x] `pages/finance/payroll-approval/index` 工资结算：operator-summary 列表 + 单条/批量审核明细
++- [x] 接口封装 `utils/api-modules/finance.js`：新增 `materialReconciliation`、`expenseReimbursement`，
++      `payrollSettlement` 增 `approveDetail`；`utils/api.js` require/exports 同步
++- [x] 路由连通：`bellTaskActions.handleBusinessTask` 3 个 case 改指新页；`pages/todo-detail` 的
++      `HANDLE_ROUTE`/`HANDLE_LABEL` 同步
++- [x] 样衣开发：解析待办 `id`(`STY_{styleId}_{stage}`)/`deepLinkPath`(`/style-info/{styleId}`) → 直达
++      `sample-development/detail?styleId=`（原仅落列表）
++- [x] 内外部区分：财务三页对 `isFactoryAccount()` 直接拦截（工厂账号不参与租户财务）；
++      工资审批复刻 PC 端规则「外部工厂订单须进入终态才可审核」
++- [x] 验证：`node --check` 全通过、`app.json` JSON 合法、3 页 × 4 文件齐全
++- [x] 协作任务独立页：`pages/collab-task/detail/index`（挂新分包 `pages/collab-task`）+
++      `utils/api-modules/collaboration.js`；状态流 `PENDING→ACCEPTED→IN_PROGRESS→COMPLETED`（+CANCELLED）
++- [x] 异常报告：**后端补齐处理能力** —— 迁移 `V202709150400`（加 handler_id/handler_name/handle_note/
++      handle_time + idx_exception_status）、实体加字段、`ExceptionReportOrchestrator.list/handleException`、
++      Controller `GET /list` + `POST /{id}/handle?action=resolve|reopen&note=`
++- [x] 手机端异常处理页 `pages/smart-ops/exception-detail/index` +
++      `api.production.listExceptions/handleException`
++- [x] 验证：后端 `mvn -o compile` BUILD SUCCESS；11 个 JS 文件 `node --check` 全 OK；
++      `app.json` JSON 合法（分包 29→30）；5 个新页面 × 4 文件齐全
++- [x] **端到端同步核实（用户要求"手机端与 PC 端审核必须完全同步"）**：逐类比对两端调用路径 ↔ 状态落库表，
++      结论**五类全部天然同步**（同一套后端接口、单一数据源）；**修复唯一一处不对称** ——
++      `EXCEPTION_REPORT` 深链原指向 PC `/production/order-flow`（该页无异常处理入口），
++      已新建 PC 页 `Production/ExceptionReport` + `services/production/exceptionReportApi.ts` + 路由
++      `/production/exception-report`，并改后端深链为 `?keyword={orderNo}`
++- [x] 顺手修复 `pages/collab-task/detail` 只有 `onLoad` 无 `onShow` 的陈旧状态隐患
++- [ ] 全部改动仍在工作区未提交（D-408 图片上传回退 / D-410 到货小数化 / D-417 手机端页面 + PC 异常页）
++
++**同步性硬保障（已逐条验证，后续改动勿破坏）**：
++1. 工资审批 `approvalId` = `buildDetailApprovalId` 的**确定性 MD5**（`"PAY_" + md5(tenant|orderId|orderNo|styleNo|color|size|operatorId|processName|bundleNo)`），
++   不含时间戳/随机数 —— 两端算出的 key 必然一致，**切勿改成含时间/随机的 key**。
++2. `approvalStatus` 由 `PayrollSettlementController.getOperatorSummary` **每次从库注入**
++   （`approvalStatusService.getApprovalStatus`），**不是前端缓存**。
++3. 手机端 5 个新页均有 `onShow` 重新拉取；PC 端待办面板有轮询；`MaterialReconciliation` 用 `useSync` 跨端刷新。
++
++**★ 手机端「应用 / 职务 / 权限」三层体系（新增应用时的完整 checklist）**：
++1. **应用清单**：`pages/home/index.js` 与 `pages/more-apps/index.js` **两处 `ALL_APPS`**（7 分组，必须同步）。
++2. **菜单可见性（按职务）**：两文件各加 `APP_ID_TO_MENU_KEY` 映射；后端
++   `TenantSmartFeatureOrchestrator.MINIPROGRAM_MENU_KEYS` + `MENU_KEY_LABELS` 加 key；
++   角色 = `admin/supervisor/worker`（key 形如 `miniprogram.menu.xxx.role.worker`），**默认全员可见**，
++   租户在 PC 端按职务关闭；过滤规则 `flags[menuKey] !== false`。
++3. **功能权限（按钮级）**：`utils/permission.js` 的 `featurePermissions`（`hasFeaturePermission`）。
++- [x] D-417 补齐上述三层：后端加 5 个菜单 key；home + more-apps 各加 5 应用项与映射；
++      `permission.js` 加 `approve_reconciliation`/`approve_expense`/`approve_payroll`/`handle_exception`，
++      4 个页面改用 `hasFeaturePermission('...')`（与借支页 `approve_advance` 规范统一）
++- [x] 新增 `pages/collab-task/list/index`（协作任务列表）作为应用入口落地页（详情页需 taskId，不能直接作入口）
++- [x] 验证：8 个 JS `node --check` 全 OK；app.json 合法（分包 30）；后端 BUILD SUCCESS
++
++**后端能力约束（重要）**：
++- 异常报告（已解决）：原只有 `POST /report`、status 永远停在 PENDING；D-417 已补 `list` + `handle`
++- 统一待办：`IntelligenceController` 仅 `GET /pending-tasks/my|summary`，**仍无"标记完成"接口**
++- 协作任务：`IntelligenceTaskCenterController`（claim/status/my-tasks）接口齐全 —— 已用
++- 协作任务状态用 `CollaborationTask.TaskStatus.valueOf(toUpperCase())` 解析，**前端必须传大写**
++
++---
+ 
+ ---
+ 
+diff --git a/memory-bank/decisionLog.md b/memory-bank/decisionLog.md
+index c380657c4..a208d5bed 100644
+--- a/memory-bank/decisionLog.md
++++ b/memory-bank/decisionLog.md
+@@ -1,7 +1,71 @@
+ # 决策日志
+ 
+ > 记录重要的架构和实现决策，包括上下文、决策、理由
+-> 最后更新：2026-09-14（新增 D-408 图片上传控件原生 input 暴露修复：原子类隐藏回退内联）
++> 最后更新：2026-09-15（新增 D-417 手机端待办「只能看不能办」补齐五套独立处理页）
++
++---
++
++## D-417：手机端「只能看不能办」待办 —— 每类建独立处理页（2026-09-15）
++
++**现象**：铃铛待办点击后，异常报告/样衣开发只能看、工资结算无审批按钮、物料对账/费用报销基本无处理能力、
++协作任务与未识别类型纯只读。用户要求「各自独立的页面、对应自己的入口按钮、风格与现有手机卡片一致」。
++
++**核实结论**：**绝大多数是前端缺页面，后端接口早已就绪** —— 这是本次最大的认知纠正。
++- 对账 `POST /{id}/status-action?action=update|return`（只有 update/return 两种 action，update 配 status）
++- 报销 `POST /{id}/approve?action=approve|reject&remark=`、`POST /{id}/pay`
++- 工资 `POST /detail-approval/{approvalId}/approve`（+ batch/finalize/cancel/reverse-approve）
++- 协作 `POST /tasks/{id}/claim`、`PUT /tasks/{id}/status`（body `{status, note}`）
++- **唯一真缺的是异常报告**：`t_production_exception_report` 有 status（PENDING/RESOLVED）但无任何写接口
++
++**决策**：
++1. **方案 A：每类一个独立页面**（不做"待我审批"聚合页）——与 PC 端页面一一对应，便于维护。
++2. **内外部账号三层区分**：
++   - 工厂（外部）`isFactoryAccount()` → **财务三页直接拦截**（对账/报销/工资属租户财务数据，不露出）
++   - 管理员/主管 `isAdminOrSupervisor()` → 审批按钮可见可用
++   - 普通员工 → 可看列表、无操作按钮
++   - **例外**：协作任务是跨角色协同工作流，工厂账号同样可处理派给自己的任务，**不做拦截**
++3. **工资审批复刻 PC 端内外部规则**：内部工厂可直接审核；**外部工厂必须订单进入终态**
++   （`completed/closed/cancelled/scrapped/archived`）才允许审核，否则明确提示原因。手机端内置同一套
++   `isOrderFrozenByStatus` 判断，不依赖 PC。
++4. **异常报告补后端闭环**（唯一新增后端能力的场景）：新增迁移加处理人/说明/时间 4 字段，
++   `handle` 支持 `resolve`/`reopen`，**仅主管及以上可处理**，并加显式租户校验；工厂账号列表按本工厂订单过滤。
++   避免「异常报了就永久挂在 PENDING」的假闭环。
++5. **待办直达精确化**：顺带修好三处「点了只能落列表」的问题 ——
++   样衣开发（解析 `STY_{styleId}_{stage}` / `/style-info/{styleId}` → 直达款式详情）、
++   协作任务（解析 `COLLAB_{id}` / `?taskId=` → 直达任务页）、异常报告（带单号预置筛选）。
++
++**验证**：后端 `mvn -o compile` BUILD SUCCESS；`app.json` JSON 合法（分包 29→30）；
++5 个新页面 × 4 文件齐全；11 个 JS 文件 `node --check` 全 OK。
++
++**踩坑记录**：
++- 小程序页面注册在 `app.json` 的 **`subpackages`（全小写）**，按 `subPackages` 读会得到 0 个分包而误判结构。
++- 新增页面必须**同时**改两处入口：`bellTaskActions.js`（铃铛）+ `pages/todo-detail/index.js`（中转页 `HANDLE_ROUTE`），
++  漏一处就会出现「从这里点能进、从那里点只能看」。
++- 后端枚举状态用 `valueOf(newStatus.toUpperCase())` 解析时，**前端必须传大写**，否则 500/校验失败。
++
++**追加决策：端到端「一端处理、另一端立刻同步」的核实与收敛（同日）**
++
++用户要求「手机端审核了 PC 端就没有这个状态了，相反一样的逻辑，全部核实清楚」。
++核实方法：逐类比对「手机端调用路径 ↔ PC 端调用路径 ↔ 状态落库表 ↔ 列表查询是否回读该表」。
++
++**结论：五类全部天然同步** —— 因为两端调的是**同一套后端接口**，不存在两套写入口。三处硬保障：
++1. **`approvalId` 必须是确定性 key**：`buildDetailApprovalId` = `"PAY_" + md5(租户|orderId|orderNo|styleNo|color|size|operatorId|工序|菲号)`。
++   两端各自算 key，只有「不含时间戳/随机数」时才可能对上。**这是同步的前提，改动时不可破坏。**
++2. **列表必须回读库、不能只靠前端内存**：`getOperatorSummary` 每次用
++   `approvalStatusService.getApprovalStatus(approvalId, tenantId)` 从库注入 `approvalStatus`。
++   若哪天改成"前端本地 Set 记录已审核"，跨端就又不同步了。
++3. **进入页面必须重新拉取**：手机端各页 `onShow`；PC 端待办面板轮询；对账页 `useSync`。
++
++**发现并修复的唯一真实不对称**：`EXCEPTION_REPORT` 待办深链指向 PC `/production/order-flow`，
++而 order-flow 页**没有任何异常处理入口** → 手机端能"标记已解决"、PC 端只能看。
++修复：新建 PC 页 `Production/ExceptionReport`（+ `exceptionReportApi` + 路由 `/production/exception-report`），
++并把后端深链改为 `?keyword={orderNo}` 直达预筛选。
++（协作任务的 `xiaoyun://tasks` 深链看似"不跳转"，实为**设计如此** —— 任务已在 AI 助手面板列表中，
++且面板带 `claimTask/completeTask` 与轮询，故本身即同步。）
++
++---
++
++## D-408：图片上传控件原生 input 暴露 —— 「隐藏」一律回退内联样式（2026-09-14）
+ 
+ ---
+ 
+diff --git a/miniprogram/app.json b/miniprogram/app.json
+index 4248b9a22..f7ee54f1e 100644
+--- a/miniprogram/app.json
++++ b/miniprogram/app.json
+@@ -146,7 +146,8 @@
+       "root": "pages/smart-ops",
+       "name": "pkg-smart-ops",
+       "pages": [
+-        "index"
++        "index",
++        "exception-detail/index"
+       ]
+     },
+     {
+@@ -192,7 +193,10 @@
+       "root": "pages/finance",
+       "name": "pkg-finance",
+       "pages": [
+-        "payment/index"
++        "payment/index",
++        "reconciliation/index",
++        "reimbursement/index",
++        "payroll-approval/index"
+       ]
+     },
+     {
+@@ -233,6 +237,14 @@
+       "pages": [
+         "index"
+       ]
++    },
++    {
++      "root": "pages/collab-task",
++      "name": "pkg-collab-task",
++      "pages": [
++        "list/index",
++        "detail/index"
++      ]
+     }
+   ],
+   "preloadRule": {
+diff --git a/miniprogram/components/ai-assistant/bellTaskActions.js b/miniprogram/components/ai-assistant/bellTaskActions.js
+index f22f86dea..482a6a8e1 100644
+--- a/miniprogram/components/ai-assistant/bellTaskActions.js
++++ b/miniprogram/components/ai-assistant/bellTaskActions.js
+@@ -299,8 +299,22 @@ function handleShipmentTask(task) {
+  * @param {Object} _task - 任务对象
+  * @returns {void}
+  */
+-function handleStyleDevTask(_task) { // eslint-disable-line no-unused-vars
+-  safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
++function handleStyleDevTask(task) {
++  // D-416：样衣开发待办可解析出 styleId，改为直达详情页（原仅落列表，用户还要再找一遍）
++  //   id           = "STY_{styleId}_{stageKey}"
++  //   deepLinkPath = "/style-info/{styleId}?tab={tabKey}"
++  let styleId = '';
++  const dl = String((task && task.deepLinkPath) || '');
++  const m = dl.match(/\/style-info\/([^/?]+)/);
++  if (m) styleId = decodeURIComponent(m[1]);
++  if (!styleId && /^STY_/.test(String((task && task.id) || ''))) {
++    styleId = String(task.id).replace(/^STY_/, '').replace(/_[^_]*$/, '');
++  }
++  if (styleId) {
++    safeNavigate({ url: '/pages/sample-development/detail/index?styleId=' + encodeURIComponent(styleId) }, 'navigateTo').catch(() => {});
++  } else {
++    safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
++  }
+ }
+ 
+ /**
+@@ -345,19 +359,24 @@ function handleBusinessTask(task) {
+     // 缺口类型：点击直达最近真实业务页（与 PC 一致，不中转包装页）
+     // 只读展示逻辑已由后端按租户+角色过滤，这里仅做页面直达
+     case 'PAYROLL_SETTLEMENT':
+-      safeNavigate({ url: '/pages/payroll/payroll' }, 'navigateTo').catch(() => {});
++      // D-416：直达手机端独立审批页（此前落工资页，只能看不能办）
++      safeNavigate({ url: '/pages/finance/payroll-approval/index?status=pending' }, 'navigateTo').catch(() => {});
+       break;
+     case 'MATERIAL_RECON':
++      // D-416：直达物料对账处理页（此前落付款页，基本无处理能力）
++      safeNavigate({ url: '/pages/finance/reconciliation/index?status=pending' }, 'navigateTo').catch(() => {});
++      break;
+     case 'EXPENSE_REIMBURSE':
+-      safeNavigate({ url: '/pages/finance/payment/index' }, 'navigateTo').catch(() => {});
++      // D-416：直达费用报销审批页（此前与对账共用付款页）
++      safeNavigate({ url: '/pages/finance/reimbursement/index?status=pending' }, 'navigateTo').catch(() => {});
+       break;
+     case 'EXCEPTION_REPORT':
+-      // 订单级异常 → 订单详情页（按 orderNo/orderId 直达）
+-      if (task.orderNo) {
+-        safeNavigate({ url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(task.orderNo) }, 'navigateTo').catch(() => {});
+-      } else {
+-        safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
+-      }
++      // D-416：异常报告已建独立处理页（标记已解决/重新打开）。
++      // 带单号时预置筛选，直达待处理列表；无单号则看全部待处理。
++      safeNavigate({
++        url: '/pages/smart-ops/exception-detail/index?status=PENDING'
++          + (task.orderNo ? '&keyword=' + encodeURIComponent(task.orderNo) : ''),
++      }, 'navigateTo').catch(() => {});
+       break;
+     case 'SAMPLE_LOAN':
+       safeNavigate({ url: '/pages/warehouse/sample/scan-action/index' }, 'navigateTo').catch(() => {});
+@@ -366,8 +385,24 @@ function handleBusinessTask(task) {
+       safeNavigate({ url: '/pages/warehouse/material/scan/index' }, 'navigateTo').catch(() => {});
+       break;
+     case 'COLLAB_TASK':
++      // D-416：协作任务已建独立处理页（领取/开始/完成）。待办 id = "COLLAB_{taskId}"，
++      // deepLinkPath = "xiaoyun://tasks?taskId={id}"，两种方式都可解析出 taskId
++      var collabId = '';
++      var dlMatch = String(task.deepLinkPath || '').match(/taskId=(\d+)/);
++      if (dlMatch) collabId = dlMatch[1];
++      if (!collabId) {
++        var idMatch = String(task.id || '').match(/^COLLAB_(\d+)/);
++        if (idMatch) collabId = idMatch[1];
++      }
++      if (collabId) {
++        safeNavigate({ url: '/pages/collab-task/detail/index?taskId=' + encodeURIComponent(collabId) }, 'navigateTo').catch(() => {});
++      } else {
++        // 解析不出 taskId 时兜底到统一待办详情页，避免白屏
++        openUnifiedDetail(task);
++      }
++      break;
+     default:
+-      // 协作任务手机端无独立处理页，落到统一待办详情页提示
++      // 未识别类型 → 统一待办详情页（只读展示，不自造写操作）
+       openUnifiedDetail(task); break;
+   }
+ }
+diff --git a/miniprogram/pages/home/index.js b/miniprogram/pages/home/index.js
+index 63b66f03a..1b4a94229 100644
+--- a/miniprogram/pages/home/index.js
++++ b/miniprogram/pages/home/index.js
+@@ -30,6 +30,12 @@ const APP_ID_TO_MENU_KEY = {
+   'quality': 'miniprogram.menu.quality',
+   'production': 'miniprogram.menu.production',
+   'history': 'miniprogram.menu.history',
++  // D-417：手机端新增「可办事」独立页（按职务可控）
++  'materialRecon': 'miniprogram.menu.materialRecon',
++  'expenseReimburse': 'miniprogram.menu.expenseReimburse',
++  'payrollApproval': 'miniprogram.menu.payrollApproval',
++  'exceptionReport': 'miniprogram.menu.exceptionReport',
++  'collabTask': 'miniprogram.menu.collabTask',
+ };
+ 
+ const DAILY_TIPS = [
+@@ -61,6 +67,7 @@ const ALL_APPS = [
+     { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
+     { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
+     { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
++    { id: 'exceptionReport', name: '生产异常', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--orange', route: '/pages/smart-ops/exception-detail/index' },
+   ]},
+   { group: '物料', items: [
+     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
+@@ -73,7 +80,10 @@ const ALL_APPS = [
+   ]},
+   { group: '财务', items: [
+     { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
++    { id: 'payrollApproval', name: '工资审批', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/finance/payroll-approval/index' },
+     { id: 'financePayment', name: '财务付款', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
++    { id: 'materialRecon', name: '物料对账', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reconciliation/index' },
++    { id: 'expenseReimburse', name: '费用报销', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reimbursement/index' },
+     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
+     { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
+   ]},
+@@ -83,6 +93,7 @@ const ALL_APPS = [
+   ]},
+   { group: '其他', items: [
+     { id: 'smartOps', name: '智能运营', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
++    { id: 'collabTask', name: '协作任务', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--violet', route: '/pages/collab-task/list/index' },
+     { id: 'returnList', name: '退货管理', iconClass: 'icon-menu-return', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
+   ]},
+ ];
+diff --git a/miniprogram/pages/more-apps/index.js b/miniprogram/pages/more-apps/index.js
+index 1ad1820e4..68d7df73d 100644
+--- a/miniprogram/pages/more-apps/index.js
++++ b/miniprogram/pages/more-apps/index.js
+@@ -29,6 +29,12 @@ const APP_ID_TO_MENU_KEY = {
+   'quality': 'miniprogram.menu.quality',
+   'production': 'miniprogram.menu.production',
+   'history': 'miniprogram.menu.history',
++  // D-417：手机端新增「可办事」独立页（按职务可控）
++  'materialRecon': 'miniprogram.menu.materialRecon',
++  'expenseReimburse': 'miniprogram.menu.expenseReimburse',
++  'payrollApproval': 'miniprogram.menu.payrollApproval',
++  'exceptionReport': 'miniprogram.menu.exceptionReport',
++  'collabTask': 'miniprogram.menu.collabTask',
+ };
+ 
+ // 所有应用配置（7大分类：开发/生产/物料/成品/财务/系统/其他，分组对齐PC端菜单）
+@@ -44,6 +50,7 @@ const ALL_APPS = [
+     { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
+     { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
+     { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
++    { id: 'exceptionReport', name: '生产异常', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--orange', route: '/pages/smart-ops/exception-detail/index' },
+   ]},
+   { group: '物料', items: [
+     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
+@@ -56,7 +63,10 @@ const ALL_APPS = [
+   ]},
+   { group: '财务', items: [
+     { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
++    { id: 'payrollApproval', name: '工资审批', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/finance/payroll-approval/index' },
+     { id: 'financePayment', name: '财务付款', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
++    { id: 'materialRecon', name: '物料对账', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reconciliation/index' },
++    { id: 'expenseReimburse', name: '费用报销', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reimbursement/index' },
+     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
+     { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
+   ]},
+@@ -66,6 +76,7 @@ const ALL_APPS = [
+   ]},
+   { group: '其他', items: [
+     { id: 'smartOps', name: '智能运营', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
++    { id: 'collabTask', name: '协作任务', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--violet', route: '/pages/collab-task/list/index' },
+     { id: 'returnList', name: '退货管理', iconClass: 'icon-menu-return', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
+   ]},
+ ];
+diff --git a/miniprogram/pages/todo-detail/index.js b/miniprogram/pages/todo-detail/index.js
+index 29e4674c7..c6daa407b 100644
+--- a/miniprogram/pages/todo-detail/index.js
++++ b/miniprogram/pages/todo-detail/index.js
+@@ -6,12 +6,13 @@ const { safeNavigate } = require('../../utils/uiHelper');
+  * 缺口类型（工资结算/物料对账/费用报销/异常/协作/样衣借还/领料出库）的手机端承载页。
+  */
+ 
+-// 每种缺口类型「去处理」就近可达的页面；无对应页的类型(如协作任务)给空，改为提示
++// 每种缺口类型「去处理」就近可达的页面
++// D-417：财务三类已建独立处理页（原统一落 /pages/finance/payment/index，只能看不能办）
+ const HANDLE_ROUTE = {
+-  PAYROLL_SETTLEMENT: '/pages/payroll/payroll',
+-  MATERIAL_RECON: '/pages/finance/payment/index',
+-  EXPENSE_REIMBURSE: '/pages/finance/payment/index',
+-  EXCEPTION_REPORT: '/pages/smart-ops/index',
++  PAYROLL_SETTLEMENT: '/pages/finance/payroll-approval/index?status=pending',
++  MATERIAL_RECON: '/pages/finance/reconciliation/index?status=pending',
++  EXPENSE_REIMBURSE: '/pages/finance/reimbursement/index?status=pending',
++  EXCEPTION_REPORT: '/pages/smart-ops/exception-detail/index?status=PENDING',
+   SAMPLE_LOAN: '/pages/warehouse/sample/scan-action/index',
+   MATERIAL_PICKING: '/pages/warehouse/material/scan/index',
+   COLLAB_TASK: null, // 协作任务手机端无处理页，提示在 PC 端处理
+@@ -19,10 +20,10 @@ const HANDLE_ROUTE = {
+ 
+ // 处理按钮文案（就近页的入口语义）
+ const HANDLE_LABEL = {
+-  PAYROLL_SETTLEMENT: '去查看工资',
+-  MATERIAL_RECON: '去财务处理',
+-  EXPENSE_REIMBURSE: '去财务处理',
+-  EXCEPTION_REPORT: '去异常处理',
++  PAYROLL_SETTLEMENT: '去审核工资',
++  MATERIAL_RECON: '去处理对账',
++  EXPENSE_REIMBURSE: '去审批报销',
++  EXCEPTION_REPORT: '去处理异常',
+   SAMPLE_LOAN: '去样衣借还',
+   MATERIAL_PICKING: '去领料',
+   COLLAB_TASK: '', // 无入口，不给按钮
+diff --git a/miniprogram/utils/api-modules/finance.js b/miniprogram/utils/api-modules/finance.js
+index 8a639fde3..49aeb1cc2 100644
+--- a/miniprogram/utils/api-modules/finance.js
++++ b/miniprogram/utils/api-modules/finance.js
+@@ -75,10 +75,98 @@ const wagePayment = {
+   },
+ };
+ 
++/**
++ * GET 参数拼 query string（后端 @RequestParam Map 用 GET / list 接口）
++ * @param {Object} params - 查询参数
++ * @returns {string} 形如 a=1&b=2（空对象返回 ''）
++ */
++function toQuery(params) {
++  if (!params) return '';
++  const parts = [];
++  Object.keys(params).forEach(function (k) {
++    const v = params[k];
++    if (v === undefined || v === null || v === '') return;
++    parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
++  });
++  return parts.join('&');
++}
++
+ const payrollSettlement = {
+   operatorSummary: function (params) {
+     return ok('/api/finance/payroll-settlement/operator-summary', 'POST', params || {});
+   },
++  /**
++   * 审核工资明细（PC 端 PayrollOperatorSummary 同源接口）
++   * 后端限制：仅主管及以上；外部工厂订单需已关单
++   * @param {string} approvalId - 明细审批标识
++   * @returns {Promise} 成功返回 null
++   */
++  approveDetail: function (approvalId) {
++    return ok('/api/finance/payroll-settlement/detail-approval/' + encodeURIComponent(approvalId) + '/approve', 'POST', {});
++  },
++};
++
++/**
++ * 物料对账（D-417 手机端独立处理页）
++ * 后端：MaterialReconciliationController
++ * 金额口径：单价 × 对账数量（对账数量封顶到货量），与「按实际到货算钱」一致
++ */
++const materialReconciliation = {
++  list: function (params) {
++    return ok('/api/finance/material-reconciliation/list?' + toQuery(params), 'GET', {});
++  },
++  getById: function (id) {
++    return ok('/api/finance/material-reconciliation/' + encodeURIComponent(id), 'GET', {});
++  },
++  /**
++   * 状态流转（审核 / 驳回 / 结算）
++   * @param {string} id - 对账单 id
++   * @param {string} action - 动作（approve/reject/settle 等，后端解析）
++   * @param {string} [status] - 目标状态
++   * @param {string} [reason] - 原因（驳回时填）
++   * @returns {Promise}
++   */
++  statusAction: function (id, action, status, reason) {
++    let qs = 'action=' + encodeURIComponent(action || '');
++    if (status) qs += '&status=' + encodeURIComponent(status);
++    if (reason) qs += '&reason=' + encodeURIComponent(reason);
++    return ok('/api/finance/material-reconciliation/' + encodeURIComponent(id) + '/status-action?' + qs, 'POST', {});
++  },
++};
++
++/**
++ * 费用报销（D-417 手机端独立处理页）
++ * 后端：ExpenseReimbursementController
++ */
++const expenseReimbursement = {
++  list: function (params) {
++    return ok('/api/finance/expense-reimbursement/list?' + toQuery(params), 'GET', {});
++  },
++  getById: function (id) {
++    return ok('/api/finance/expense-reimbursement/' + encodeURIComponent(id), 'GET', {});
++  },
++  /**
++   * 审批（批准/驳回）
++   * @param {string} id - 报销单 id
++   * @param {string} action - approve=批准, reject=驳回
++   * @param {string} [remark] - 备注/驳回理由
++   * @returns {Promise}
++   */
++  approve: function (id, action, remark) {
++    let qs = 'action=' + encodeURIComponent(action || '');
++    if (remark) qs += '&remark=' + encodeURIComponent(remark);
++    return ok('/api/finance/expense-reimbursement/' + encodeURIComponent(id) + '/approve?' + qs, 'POST', {});
++  },
++  /**
++   * 确认付款（审批通过后的打款动作）
++   * @param {string} id - 报销单 id
++   * @param {string} [remark] - 备注
++   * @returns {Promise}
++   */
++  pay: function (id, remark) {
++    let qs = remark ? '?remark=' + encodeURIComponent(remark) : '';
++    return ok('/api/finance/expense-reimbursement/' + encodeURIComponent(id) + '/pay' + qs, 'POST', {});
++  },
+ };
+ 
+ const wageSettlementFeedback = {
+@@ -90,4 +178,12 @@ const wageSettlementFeedback = {
+   },
+ };
+ 
+-module.exports = { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback };
++module.exports = {
++  employeeAdvance,
++  factoryShipment,
++  wagePayment,
++  payrollSettlement,
++  wageSettlementFeedback,
++  materialReconciliation,
++  expenseReimbursement,
++};
+diff --git a/miniprogram/utils/api-modules/production.js b/miniprogram/utils/api-modules/production.js
+index a82d16825..91ffcff32 100644
+--- a/miniprogram/utils/api-modules/production.js
++++ b/miniprogram/utils/api-modules/production.js
+@@ -513,6 +513,40 @@ const production = {
+   cancelPickingPending(pickingId) {
+     return ok(`/api/production/picking/${pickingId}/cancel-pending`, 'POST', {});
+   },
++
++  /**
++   * 异常报告分页列表（D-417 手机端独立处理页）
++   * 后端：GET /api/production/exception/list?status&orderNo&keyword&page&pageSize
++   * 工厂账号后端自动只返回本工厂订单的异常。
++   * @param {Object} params - {status, orderNo, keyword, page, pageSize}
++   * @returns {Promise} 分页结果 {records, total, ...}
++   */
++  listExceptions(params) {
++    const p = params || {};
++    const qs = Object.keys(p)
++      .filter(function (k) {
++        const v = p[k];
++        return v !== undefined && v !== null && v !== '';
++      })
++      .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(p[k]); })
++      .join('&');
++    return ok('/api/production/exception/list' + (qs ? '?' + qs : ''), 'GET', {});
++  },
++
++  /**
++   * 处理异常报告（D-417）
++   * 后端：POST /api/production/exception/{id}/handle?action=resolve|reopen&note=
++   * 权限：仅主管及以上（后端校验）
++   * @param {number|string} id - 异常报告 id
++   * @param {string} action - resolve=标记已解决 / reopen=重新打开
++   * @param {string} [note] - 处理说明
++   * @returns {Promise}
++   */
++  handleException(id, action, note) {
++    let qs = 'action=' + encodeURIComponent(action || 'resolve');
++    if (note) qs += '&note=' + encodeURIComponent(note);
++    return ok(`/api/production/exception/${id}/handle?` + qs, 'POST', {});
++  },
+ };
+ 
+ // 注：factoryShipment 已统一收敛至 ./finance.js（避免与 finance.factoryShipment 重复定义）
+diff --git a/miniprogram/utils/api.js b/miniprogram/utils/api.js
+index 419a0ee2a..a31001063 100644
+--- a/miniprogram/utils/api.js
++++ b/miniprogram/utils/api.js
+@@ -12,8 +12,9 @@ const { system, serial, factory, factoryWorker, tenant } = require('./api-module
+ const { intelligence, notice } = require('./api-modules/intelligence');
+ const { style, warehouse, material, materialRoll, sampleStock, templateLibrary } = require('./api-modules/style-warehouse');
+ const { dashboard, wechat, common } = require('./api-modules/common');
+-const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
++const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback, materialReconciliation, expenseReimbursement } = require('./api-modules/finance');
+ const ecommerce = require('./api-modules/ecommerce');
++const { collaboration } = require('./api-modules/collaboration');
+ const { purchaseReturn, salesReturn } = require('./api-modules/return');
+ const attendance = require('./api-modules/attendance');
+ const crm = require('./api-modules/crm');
+@@ -69,7 +70,10 @@ module.exports.factoryShipment = factoryShipment;
+ module.exports.wagePayment = wagePayment;
+ module.exports.payrollSettlement = payrollSettlement;
+ module.exports.wageSettlementFeedback = wageSettlementFeedback;
++module.exports.materialReconciliation = materialReconciliation;
++module.exports.expenseReimbursement = expenseReimbursement;
+ module.exports.ecommerce = ecommerce;
++module.exports.collaboration = collaboration;
+ module.exports.purchaseReturn = purchaseReturn;
+ module.exports.salesReturn = salesReturn;
+ module.exports.attendance = attendance;
+diff --git a/miniprogram/utils/permission.js b/miniprogram/utils/permission.js
+index 096b92c60..70831bb9c 100644
+--- a/miniprogram/utils/permission.js
++++ b/miniprogram/utils/permission.js
+@@ -336,6 +336,14 @@ function hasFeaturePermission(feature) {
+     approve_advance: [ROLES.ADMIN, ROLES.SUPERVISOR],
+     // 收付款中心（仅管理员/主管）
+     finance_center: [ROLES.ADMIN, ROLES.SUPERVISOR],
++    // D-417：物料对账状态流转（仅管理员/主管）
++    approve_reconciliation: [ROLES.ADMIN, ROLES.SUPERVISOR],
++    // D-417：费用报销审批（仅管理员/主管）
++    approve_expense: [ROLES.ADMIN, ROLES.SUPERVISOR],
++    // D-417：工资结算审批（仅管理员/主管）
++    approve_payroll: [ROLES.ADMIN, ROLES.SUPERVISOR],
++    // D-417：生产异常处理（仅管理员/主管）
++    handle_exception: [ROLES.ADMIN, ROLES.SUPERVISOR],
+   };
+ 
+   const allowedRoles = featurePermissions[feature] || [];

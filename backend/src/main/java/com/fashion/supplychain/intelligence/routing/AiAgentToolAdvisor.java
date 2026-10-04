@@ -231,15 +231,55 @@ public class AiAgentToolAdvisor {
             return capTools(applyPrmBoost(domainFilteredTools));
         }
 
-        Set<String> finalNames = advisedToolNames;
-        List<AgentTool> advised = domainFilteredTools.stream()
-                .filter(t -> finalNames.contains(t.getName()))
-                .collect(Collectors.toList());
+Set<String> finalNames = advisedToolNames;
+          List<AgentTool> advised = domainFilteredTools.stream()
+                  .filter(t -> finalNames.contains(t.getName()))
+                  .collect(Collectors.toList());
 
-        if (advised.size() <= ALWAYS_INCLUDE.size()) {
-            log.debug("[ToolAdvisor] 预选工具过少({})，回退到领域工具集", advised.size());
-            return capTools(applyPrmBoost(domainFilteredTools));
-        }
+          // ── D-702 P0：同域补齐 ──
+          //
+          // 审计发现：84 个已注册工具里只有 37 个被 INTENT_TOOLS 引用，其余 47 个
+          // 加上 15 个未注册工具 = 63% 的工具在「意图匹配成功」时会被上面这行
+          // filter(advisedToolNames) 直接滤掉，LLM 根本看不到它们。
+          // 用户问「有没有异常」「交期能不能赶上」，模型手里只有该意图预设的 2–4 个工具，
+          // 想调也调不到 —— 这正是「工具建了却不联动」的真正机制。
+          //
+          // 为什么用「同域补齐」而不是给 62 个工具逐个补关键词：
+          //   · 不依赖关键词 → 零误触发风险，不会因为新写一批 pattern 把无关工具塞进 prompt；
+          //   · 不改 MAX_TOOLS_PER_CALL → 每次仍然最多 12 个工具，**prompt 体积与成本不变**；
+          //   · 意图优先级不受影响：意图命中的工具排在前面，补进来的同域工具排在后面。
+          //
+          // 同域工具本就与该意图高度相关（都在 PRODUCTION / FINANCE / WAREHOUSE 同一业务面），
+          // 让模型在同一域内自由选择，比死绑关键词更贴合「工具协助判断」的初衷。
+          if (advised.size() <= ALWAYS_INCLUDE.size()) {
+              log.debug("[ToolAdvisor] 预选工具过少({})，回退到领域工具集", advised.size());
+              return capTools(applyPrmBoost(domainFilteredTools));
+          }
+
+          Set<com.fashion.supplychain.intelligence.agent.tool.ToolDomain> intentDomains = advised.stream()
+                  .map(t -> com.fashion.supplychain.intelligence.service.AiAgentToolAccessService
+                          .getDomainForTool(t.getName()))
+                  .collect(Collectors.toCollection(LinkedHashSet::new));
+
+          int beforeDomainFill = advised.size();
+          for (AgentTool t : domainFilteredTools) {
+              if (advised.size() >= MAX_TOOLS_PER_CALL) break;
+              if (finalNames.contains(t.getName())) continue;
+              com.fashion.supplychain.intelligence.agent.tool.ToolDomain d =
+                      com.fashion.supplychain.intelligence.service.AiAgentToolAccessService
+                              .getDomainForTool(t.getName());
+              // ANALYSIS/GENERAL 是跨域工具，纳入任一意图都合理；其余要求严格同域
+              boolean sameDomain = intentDomains.contains(d)
+                      || d == com.fashion.supplychain.intelligence.agent.tool.ToolDomain.ANALYSIS
+                      || d == com.fashion.supplychain.intelligence.agent.tool.ToolDomain.GENERAL;
+              if (sameDomain) {
+                  advised.add(t);
+              }
+          }
+          if (advised.size() > beforeDomainFill) {
+              log.info("[ToolAdvisor] 同域补齐: {} → {} 个工具 (域 {})",
+                      beforeDomainFill, advised.size(), intentDomains);
+          }
 
         // ── P1: PRM 反馈闭环 ──
         // 用本租户过去 30 天的工具平均评分，将高分工具（avgScore > 0.5）提前到列表头部。
