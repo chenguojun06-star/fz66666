@@ -85,6 +85,16 @@ public class AiAgentOrchestrator {
      */
     @Value("${xiaoyun.agent.multi-agent-graph-streaming.enabled:false}")
     private boolean multiAgentGraphStreamingEnabled;
+
+    /**
+     * D-702 P0：同步侧多 Agent 图开关，默认 false。
+     *
+     * <p>与 {@link #multiAgentGraphStreamingEnabled} 对称。图编排里的 Specialist 用的是
+     * 三参数 {@code chat(scene, systemPrompt, prompt)}，<b>拿不到工具</b>、查询窗口硬编码，
+     * 故不能作为复杂业务问题的默认路径。
+     */
+    @Value("${xiaoyun.agent.multi-agent-graph-sync.enabled:false}")
+    private boolean multiAgentGraphSyncEnabled;
     private static final ObjectMapper SSE_MAPPER = new ObjectMapper();
 
     private final ExecutorService postTurnExecutor = new ThreadPoolExecutor(
@@ -302,6 +312,24 @@ public class AiAgentOrchestrator {
      * @return 非null表示已处理（成功或失败），返回Result；null表示继续走原有逻辑
      */
     private Result<String> tryRouteToMultiAgentGraph(String userMessage, String pageContext) {
+        // D-702 P0：同步版补开关，与流式版对齐。
+        //
+        // 修复前的不对称：流式侧 tryRouteToMultiAgentGraphStreaming 有
+        //   `if (!multiAgentGraphStreamingEnabled) return false;` 保护（开关默认 false），
+        // 而本方法**毫无开关**，无条件按 complexity/multiDomain 路由。
+        // 后果：所有走同步 executeAgent 的入口（飞书/钉钉 IM、微信公众号、
+        // OpenAI 兼容 /v1/chat/completions、场景工作流 safe-advisor）一旦命中
+        // COMPLEX 或多领域，就会被送进多 Agent 图 —— 而图里的 5 个 Specialist
+        // （ProductionSpecialistAgent 等）走的是三参数 chat(tools=null)，
+        // **拿不到工具**，且查询窗口是硬编码的 LIMIT 30/20。
+        // 也就是说：同一句业务问题，在 PC 上会查库拿工具，在 IM 上却只能拿固定窗口的快照。
+        //
+        // 默认关闭后，同步入口与流式入口能力一致：默认走 Agent 主循环（带工具）。
+        // 确实需要图编排时显式置 xiaoyun.agent.multi-agent-graph-sync.enabled=true。
+        if (!multiAgentGraphSyncEnabled) {
+            log.info("[MultiAgent路由-同步] 图路由开关已关闭（xiaoyun.agent.multi-agent-graph-sync.enabled=false），走 Agent 主循环");
+            return null;
+        }
         try {
             var router = componentRegistry.getSemanticDomainRouter();
             var multiAgentGraph = componentRegistry.getMultiAgentGraphOrchestrator();

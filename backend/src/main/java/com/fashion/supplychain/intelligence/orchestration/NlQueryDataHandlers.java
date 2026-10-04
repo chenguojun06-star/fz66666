@@ -38,6 +38,14 @@ public class NlQueryDataHandlers {
     @Autowired private ScanRecordService scanRecordService;
     @Autowired private DashboardQueryService dashboardQueryService;
     @Autowired private AiAdvisorService aiAdvisorService;
+    /**
+     * D-702 P0：AI 深度兜底改走带工具的 Agent 主循环。
+     *
+     * <p>用 {@code @Lazy} 打断潜在循环依赖（项目内已有同范式，如 TeamDispatchTool）。
+     */
+    @org.springframework.context.annotation.Lazy
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
     @Autowired private NlQuerySmartHandlers smartHandlers;
     @Autowired private MaterialShortageOrchestrator materialShortageOrchestrator;
     @Autowired private com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator receivableOrchestrator;
@@ -607,6 +615,41 @@ public class NlQueryDataHandlers {
 
     public NlQueryResponse handleAiDeepFallback(String question, Long tenantId, String factoryId) {
         NlQueryResponse ctx = handleSummaryQuery(tenantId, factoryId);
+
+        // ── D-702 P0：首选带工具的 Agent 主循环 ──
+        //
+        // 走到这里说明**所有本地 handler 都没匹配上**，用户问的东西系统并不掌握。
+        // 原实现把 handleSummaryQuery 的概况（逾期数/今日扫码/今日入库共几个数字）
+        // 塞给无工具的 aiAdvisorService，让它据此作答 —— 但用户问的往往是
+        // 「上周哪个工厂产量最高」「这批面料成本多少」这类**概况里根本没有的数据**。
+        // 无工具 + 无对应数据 = 模型只能编，违反 CLAUDE.md 铁律 7（禁止伪造业务数据）。
+        //
+        // 故改为走 Agent 循环：工具可用时模型自己查库，查不到就会明说查不到，
+        // 而不是编一个看似合理的数字出来。
+        if (aiAgentOrchestrator != null && aiAdvisorService.isEnabled()
+                && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
+            try {
+                com.fashion.supplychain.common.Result<String> agentResult =
+                        aiAgentOrchestrator.executeAgent(question, null);
+                String answer = (agentResult != null
+                        && agentResult.getCode() != null
+                        && agentResult.getCode() == 200)
+                        ? agentResult.getData() : null;
+                if (answer != null && !answer.isBlank()) {
+                    NlQueryResponse r = new NlQueryResponse();
+                    r.setIntent("agent_tool_grounded");
+                    r.setAnswer(answer);
+                    r.setConfidence(90);
+                    r.setData(ctx.getData());
+                    r.setAiInsight(answer);
+                    r.setSuggestions(ctx.getSuggestions());
+                    return r;
+                }
+            } catch (Exception e) {
+                log.warn("[NlQuery] Agent 工具链兜底失败，回退到概况 AI 兜底: {}", e.getMessage());
+            }
+        }
+
         if (aiAdvisorService.isEnabled() && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
             try {
                 String ctxStr = buildBriefContext(ctx.getData(), ctx.getAnswer());

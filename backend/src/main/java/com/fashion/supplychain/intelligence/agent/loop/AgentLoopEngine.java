@@ -1041,9 +1041,17 @@ public class AgentLoopEngine {
             String feedbackPrompt = "你之前的回答存在以下质量问题，请修正后重新回答：\n"
                     + String.join("\n", issues)
                     + "\n\n请基于已有的工具执行结果重新组织回答，确保数据准确、逻辑清晰。";
-            // 用 inferenceGateway 调用 LLM 重试
+            // D-702 P0：scene 必须用**固定可聚合的名字**。
+            // 原实现传的是 ctx.getCommandId() —— 那是 16 位随机 UUID，
+            // 于是每一次质量重试都会在 t_ai_cost_tracking 里写出一条全新的"场景"，
+            // 成本归因按 scene 聚合时彻底失真（一个会话一个场景，报表上全是随机串）。
+            // 命名风格对齐既有约定（参考 complex-analysis:got-expand、agent-high-risk）。
+            //
+            // 刻意不传工具：本轮反馈语义是「基于**已有的**工具执行结果重新组织回答」，
+            // 工具证据已由下方 ctx.getToolEvidence() 以文本形式注入；
+            // 若允许再调工具，会在质量门已 HARD_FAIL 的前提下放大副作用与成本。
             com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result = inferenceGateway.chat(
-                    ctx.getCommandId(),
+                    "agent-loop:quality-retry",
                     "你是服装供应链AI助手。请根据质量反馈修正回答。",
                     feedbackPrompt + "\n\n用户原始问题: " + ctx.getUserMessage()
                     + "\n\n你之前的回答: " + originalContent
