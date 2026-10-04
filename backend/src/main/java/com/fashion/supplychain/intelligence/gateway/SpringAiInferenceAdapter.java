@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -509,10 +510,48 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             } else if ("user".equals(role)) {
                 result.add(new UserMessage(content));
             } else if ("assistant".equals(role)) {
-                result.add(new AssistantMessage(content));
+                result.add(convertAssistantMessage(msg));
+            } else if ("tool".equals(role)) {
+                // 工具结果消息：必须与 assistant 的 tool_calls 一一对应，缺失/错位都会被 API 拒收
+                result.add(ToolResponseMessage.builder()
+                        .responses(List.of(new ToolResponseMessage.ToolResponse(
+                                msg.getTool_call_id(), msg.getName(), content == null ? "" : content)))
+                        .build());
             }
         }
         return result;
+    }
+
+    /**
+     * assistant 历史重建必须完整保真（D-745 追加，生产实证 20:06）：
+     * ① DeepSeek thinking 模式要求上一轮 reasoning_content 原样回传，缺失直接 400
+     *    "must be passed back to the API"；② tool_calls 要随历史回传才能与 tool 结果配对。
+     * Spring AI 从 AssistantMessage metadata 的 "reasoningContent" 键读取并回填到请求。
+     */
+    private AssistantMessage convertAssistantMessage(AiMessage msg) {
+        Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+        if (msg.getReasoning_content() != null && !msg.getReasoning_content().isBlank()) {
+            metadata.put("reasoningContent", msg.getReasoning_content());
+        }
+        List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
+        if (msg.getTool_calls() != null) {
+            for (AiToolCall tc : msg.getTool_calls()) {
+                if (tc == null || tc.getFunction() == null) continue;
+                toolCalls.add(new AssistantMessage.ToolCall(tc.getId(), tc.getType(),
+                        tc.getFunction().getName(), tc.getFunction().getArguments()));
+            }
+        }
+        if (metadata.isEmpty() && toolCalls.isEmpty()) {
+            return new AssistantMessage(msg.getContent());
+        }
+        return new AssistantHistoryMessage(msg.getContent(), metadata, toolCalls);
+    }
+
+    /** AssistantMessage 的四参构造是 protected——用子类在适配器内重建带工具调用/思考链的历史消息 */
+    private static final class AssistantHistoryMessage extends AssistantMessage {
+        AssistantHistoryMessage(String content, Map<String, Object> metadata, List<AssistantMessage.ToolCall> toolCalls) {
+            super(content, metadata, toolCalls, List.of());
+        }
     }
 
     private IntelligenceInferenceResult convertResult(ChatResponse response, long startMs) {
