@@ -31,7 +31,7 @@ const CORE_MODULES: Array<{ code: string; name: string; icon: React.ReactNode; d
   { code: 'CRM',          name: '客户管理', icon: <TeamOutlined />, desc: '客户档案、订单进度、应收账款' },
   { code: 'PROCUREMENT',  name: '供应商管理', icon: <ShoppingCartOutlined />, desc: '供应商档案、采购协同' },
   { code: 'SYSTEM',       name: '系统设置', icon: <SettingOutlined />, desc: '人员管理、岗位权限、组织架构、数据导入' },
-  { code: 'DASHBOARD',    name: '仪表盘',   icon: <DashboardOutlined />, desc: '经营概览、数据统计、智能日报' },
+  { code: 'DASHBOARD',    name: '首页',     icon: <DashboardOutlined />, desc: '经营概览、数据统计、智能日报' },
   { code: 'INTELLIGENCE', name: '智能运营', icon: <RobotOutlined />, desc: '智能驾驶舱、AI助手、智能预警' },
 ];
 

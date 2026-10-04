@@ -6,7 +6,7 @@ export const BASIC_PRESET_MODULES = [
 ];
 
 export const MODULE_SECTIONS = [
-  { key: 'dashboard', title: '仪表盘', paths: [{ path: '/dashboard', label: '仪表盘' }] },
+  { key: 'dashboard', title: '首页', paths: [{ path: '/dashboard', label: '首页' }] },
   { key: 'selection', title: '选品中心', paths: [{ path: '/selection', label: '选品批次' }] },
   { key: 'basic', title: '样衣管理', paths: [
     { path: '/style-info', label: '样衣开发' },

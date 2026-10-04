@@ -325,7 +325,7 @@
   },
   "menu": {
     "sections": {
-      "dashboard": "Dashboard",
+      "dashboard": "Home",
       "basic": "Sample Management",
       "procurement": "Material Management",
       "production": "Production",
@@ -342,7 +342,7 @@
       "basic": "Sample",
       "crm": "Client",
       "customer": "Tenant",
-      "dashboard": "Dash",
+      "dashboard": "Home",
       "ecommerce": "E-com",
       "finance": "Finance",
       "intelligenceCenter": "AI",

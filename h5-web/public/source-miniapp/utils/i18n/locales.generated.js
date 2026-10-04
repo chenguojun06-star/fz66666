@@ -332,7 +332,7 @@ module.exports = {
     },
     "menu": {
       "sections": {
-        "dashboard": "仪表盘",
+        "dashboard": "首页",
         "basic": "样衣管理",
         "procurement": "物料管理",
         "production": "生产管理",
@@ -349,7 +349,7 @@ module.exports = {
         "basic": "样衣",
         "crm": "客户",
         "customer": "租户",
-        "dashboard": "仪表",
+        "dashboard": "首页",
         "ecommerce": "电商",
         "finance": "财务",
         "intelligenceCenter": "智能",
@@ -4480,7 +4480,7 @@ module.exports = {
     },
     "menu": {
       "sections": {
-        "dashboard": "Dashboard",
+        "dashboard": "Home",
         "basic": "Sample Management",
         "procurement": "Material Management",
         "production": "Production",
@@ -4497,7 +4497,7 @@ module.exports = {
         "basic": "Sample",
         "crm": "Client",
         "customer": "Tenant",
-        "dashboard": "Dash",
+        "dashboard": "Home",
         "ecommerce": "E-com",
         "finance": "Finance",
         "intelligenceCenter": "AI",
@@ -8628,7 +8628,7 @@ module.exports = {
     },
     "menu": {
       "sections": {
-        "dashboard": "Bảng điều khiển",
+        "dashboard": "Trang chủ",
         "basic": "Quản lý mẫu",
         "procurement": "Quản lý vật tư",
         "production": "Quản lý sản xuất",
@@ -8645,7 +8645,7 @@ module.exports = {
         "basic": "Mẫu",
         "crm": "KH",
         "customer": "Tenant",
-        "dashboard": "Bảng",
+        "dashboard": "Trang chủ",
         "ecommerce": "TMĐT",
         "finance": "TC",
         "intelligenceCenter": "AI",
@@ -12776,7 +12776,7 @@ module.exports = {
     },
     "menu": {
       "sections": {
-        "dashboard": "ផ្ទាំងស្ថានភាព",
+        "dashboard": "ទំព័រដើម",
         "basic": "គ្រប់គ្រងគំរូ",
         "procurement": "Material Management",
         "production": "គ្រប់គ្រងផលិតកម្ម",
@@ -12793,7 +12793,7 @@ module.exports = {
         "basic": "គំរូ",
         "crm": "អតិថិជន",
         "customer": "Tenant",
-        "dashboard": "ផ្ទាំង",
+        "dashboard": "ទំព័រដើម",
         "ecommerce": "អូនឡាញ",
         "finance": "ហិរញ្ញ",
         "intelligenceCenter": "ឆ្លាតវៃ",

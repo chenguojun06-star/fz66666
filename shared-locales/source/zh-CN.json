@@ -325,7 +325,7 @@
   },
   "menu": {
     "sections": {
-      "dashboard": "仪表盘",
+      "dashboard": "首页",
       "basic": "样衣管理",
       "procurement": "物料管理",
       "production": "生产管理",
@@ -342,7 +342,7 @@
       "basic": "样衣",
       "crm": "客户",
       "customer": "租户",
-      "dashboard": "仪表",
+      "dashboard": "首页",
       "ecommerce": "电商",
       "finance": "财务",
       "intelligenceCenter": "智能",

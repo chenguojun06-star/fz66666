@@ -325,7 +325,7 @@
   },
   "menu": {
     "sections": {
-      "dashboard": "Bảng điều khiển",
+      "dashboard": "Trang chủ",
       "basic": "Quản lý mẫu",
       "procurement": "Quản lý vật tư",
       "production": "Quản lý sản xuất",
@@ -342,7 +342,7 @@
       "basic": "Mẫu",
       "crm": "KH",
       "customer": "Tenant",
-      "dashboard": "Bảng",
+      "dashboard": "Trang chủ",
       "ecommerce": "TMĐT",
       "finance": "TC",
       "intelligenceCenter": "AI",

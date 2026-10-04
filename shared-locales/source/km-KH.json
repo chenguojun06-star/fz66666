@@ -325,7 +325,7 @@
   },
   "menu": {
     "sections": {
-      "dashboard": "ផ្ទាំងស្ថានភាព",
+      "dashboard": "ទំព័រដើម",
       "basic": "គ្រប់គ្រងគំរូ",
       "procurement": "Material Management",
       "production": "គ្រប់គ្រងផលិតកម្ម",
@@ -342,7 +342,7 @@
       "basic": "គំរូ",
       "crm": "អតិថិជន",
       "customer": "Tenant",
-      "dashboard": "ផ្ទាំង",
+      "dashboard": "ទំព័រដើម",
       "ecommerce": "អូនឡាញ",
       "finance": "ហិរញ្ញ",
       "intelligenceCenter": "ឆ្លាតវៃ",
