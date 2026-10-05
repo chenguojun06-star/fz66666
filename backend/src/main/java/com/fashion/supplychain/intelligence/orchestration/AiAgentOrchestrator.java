@@ -70,6 +70,20 @@ public class AiAgentOrchestrator {
 
     @Value("${xiaoyun.agent.timeout-ms:180000}")
     private long agentTimeoutMs;
+    /**
+     * D-702：高级推理提示（GoT/ToT/DAG）的**总时间预算**（毫秒）。
+     *
+     * <p>这三者都是"锦上添花"的提示，只影响回答丰富度，
+     * 不影响工具选择与数据准确性，因此必须有硬上限：
+     * 生产实测它们串行阻塞了 13.2s，而同一次 AgentLoop 自身仅 4.8s ——
+     * 用户等待的一大半花在了等提示。
+     *
+     * <p>默认 4s：GoT/ToT 内部多次 LLM 往返很难在 4s 内完成，
+     * 超时即降级为不用提示，主链路立刻继续。这是刻意的取舍 ——
+     * 用户宁可少一段推理参考，也不要多等十几秒。
+     */
+    @Value("${xiaoyun.agent.reasoning-hint-budget-ms:4000}")
+    private long reasoningBudgetMs;
     @Value("${xiaoyun.agent.context-refresh-ms:600000}")
     private long contextRefreshMs;
     @Value("${xiaoyun.agent.quick-path-timeout-ms:15000}")
@@ -660,18 +674,61 @@ public class AiAgentOrchestrator {
             if (keywordHint != null && !keywordHint.isBlank()) {
                 augmentedPageContext = "[关键词识别提示]\n" + keywordHint + "\n\n" + augmentedPageContext;
             }
-            String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
+            // ── D-702 感知提速 + 真提速 ──
+            //
+            // 用户反馈「回答太慢，人员点击就能看」。用生产日志量化一次真实提问：
+            //   20:34:17 → 20:34:20  工具预选等前置（+2.8s）
+            //   20:34:20 → 20:34:31  规划注入（+10.4s）
+            //   20:34:32 → 20:35:03  iter=1 + iter=2（+31s）
+            //   全程 66s，而 AgentLoop 自身记录的 latency_ms 仅 4.8s。
+            //
+            // 关键问题不只是慢，而是**慢得没有反馈**：下面这两行在做 2~3 次同步 LLM 调用，
+            // 而在此之前**没有发过任何 SSE 事件** —— 用户按下回车后只能盯着空白屏幕十几秒，
+            // 完全无法判断系统是在工作还是卡死。
+            //
+            // 【改动 1】先发 thinking 事件，让前端立即有"已收到、正在处理"的反馈。
+            //         感知延迟从 13s 降到 <100ms，即便总时长没变，体感改善极大。
+            emitSse(emitter, "thinking", java.util.Map.of("stage", "planning"));
+
+            // 【改动 2】并行 + 限时：GoT/ToT 与 DAG 是**可选提示**，互不依赖，
+            //         原先是串行三次 LLM。并行后从 3 次串行降到 1 次等待，
+            //         配合超时护栏，最坏情况不再无限拖慢主链路。
+            String reasoningHint = null;
+            String dagHint = null;
+            // lambda 只能捕获"实际 final"的局部变量，故先用 final 副本持有入参
+            final String msgForReasoning = userMessage;
+            final String pageForReasoning = pageContext;
+            java.util.concurrent.CompletableFuture<String> reasoningFuture =
+                    java.util.concurrent.CompletableFuture.supplyAsync(
+                            () -> safeAdvancedReasoning(msgForReasoning, pageForReasoning));
+            java.util.concurrent.CompletableFuture<String> dagFuture =
+                    java.util.concurrent.CompletableFuture.supplyAsync(
+                            () -> safeIntentDrivenDag(msgForReasoning, pageForReasoning));
+            try {
+                long remaining = Math.max(0, reasoningBudgetMs - (System.currentTimeMillis() - requestStartAt));
+                reasoningHint = reasoningFuture.get(Math.min(remaining, reasoningBudgetMs),
+                        java.util.concurrent.TimeUnit.MILLISECONDS);
+                remaining = Math.max(0, reasoningBudgetMs - (System.currentTimeMillis() - requestStartAt));
+                dagHint = dagFuture.get(Math.min(remaining, reasoningBudgetMs),
+                        java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                // 超时或异常：一律降级为「不用这些提示」，主链路照常继续。
+                // 这些提示只影响回答的丰富度，不影响工具选择与数据准确性。
+                log.info("[AiAgent-Stream] 高级推理提示未在 {}ms 内就绪，降级跳过: {}",
+                        reasoningBudgetMs, e.getClass().getSimpleName());
+                reasoningFuture.cancel(true);
+                dagFuture.cancel(true);
+            }
             if (reasoningHint != null && !reasoningHint.isBlank()) {
                 augmentedPageContext = "[高级推理参考]\n" + reasoningHint + "\n\n" + augmentedPageContext;
                 log.info("[AiAgent-Stream] 高级推理引擎产出推理提示，注入AgentLoop上下文");
             }
-
-            // P1升级: 尝试意图驱动DAG规划，结果注入上下文
-            String dagHint = tryIntentDrivenDag(userMessage, pageContext);
             if (dagHint != null && !dagHint.isBlank()) {
                 augmentedPageContext = dagHint + "\n\n" + augmentedPageContext;
                 log.info("[AiAgent-Stream] 意图驱动DAG产出规划提示，注入AgentLoop上下文");
             }
+
+            emitSse(emitter, "thinking", java.util.Map.of("stage", "querying"));
 
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
             ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
@@ -1588,6 +1645,30 @@ public class AiAgentOrchestrator {
             log.debug("[AdvancedReasoning] 高级推理跳过: {}", e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * D-702：高级推理提示的安全包装（供异步调用使用）。
+     *
+     * <p>{@code CompletableFuture} 里任何未捕获异常都会被吞成"结果为 null"，
+     * 但为了让降级原因可观测，这里显式捕获并记录 —— 这些提示失败不应影响主链路。
+     */
+    private String safeAdvancedReasoning(String userMessage, String pageContext) {
+        try {
+            return tryAdvancedReasoning(userMessage, pageContext);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Stream] 高级推理提示异常，跳过: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String safeIntentDrivenDag(String userMessage, String pageContext) {
+        try {
+            return tryIntentDrivenDag(userMessage, pageContext);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Stream] DAG 规划提示异常，跳过: {}", e.getMessage());
+            return null;
+        }
     }
 
     private String tryIntentDrivenDag(String userMessage, String pageContext) {
