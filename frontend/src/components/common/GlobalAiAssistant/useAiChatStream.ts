@@ -146,6 +146,45 @@ export function useAiChatStream(config: StreamConfig) {
       onXiaoyunMood: (e) => updateLiveStatus({ mood: e.mood }),
       onTimeBudget: (e) => updateLiveStatus({ elapsedMs: e.elapsedMs }),
       onProgress: (e) => updateLiveStatus({ progress: { percent: e.percent, message: e.message } }),
+      /**
+       * D-702：接收后端直查产生的数据卡片（订单进度等**直接查库**的结果）。
+       *
+       * <p>此前这个回调**从未注册**：后端 {@code AiAgentOrchestrator} 直查命中时
+       * 会发 {@code data_card} 事件，{@code xiaoyunUnifiedHandler} 也有对应 case，
+       * 但可选链 {@code callbacks.onDataCard?.()} 因为没有实现而短路 ——
+       * 结果「20 秒降到 0.5 秒」的直查快路径在 PC 上只剩一句话，**卡片完全显示不出来**。
+       * H5 反而支持（{@code useAiChatStream.js} 有该分支），三端不一致。
+       *
+       * <p>这里把卡片挂到<b>当前这条 AI 消息</b>上（而非 LiveStatus），
+       * 因为它是要随对话保留下来的业务内容，不是"正在思考"的瞬时状态。
+       * 渲染由 {@code MessageBubble} 里既有的 {@code msg.cards} 分支负责，
+       * 组件 {@code XiaoyunInsightCard} 现成，无需新造 UI。
+       */
+      onDataCard: (e) => {
+        safeSetMessages((prev) => prev.map((m) => {
+          if (m.id !== aiMsgId) return m;
+          const data = (e.data ?? {}) as Record<string, unknown>;
+          // 只展示后端确认过的字段；未知的键一律忽略，避免渲染出含义不明的数字
+          const summaryParts: string[] = [];
+          if (data.overallProgress) summaryParts.push(`完成 ${data.overallProgress}`);
+          if (data.orderQuantity != null) summaryParts.push(`订单 ${data.orderQuantity} 件`);
+          if (data.completedQuantity != null) summaryParts.push(`已裁 ${data.completedQuantity} 件`);
+          if (data.factoryName) summaryParts.push(`工厂 ${data.factoryName}`);
+          if (data.expectedShipDate) summaryParts.push(`预计出货 ${data.expectedShipDate}`);
+          return {
+            ...m,
+            cards: [
+              ...(m.cards ?? []),
+              {
+                type: 'insight_card',
+                title: e.title || '实时数据',
+                summary: summaryParts.join(' · ') || '来自系统实时数据（直接查库，未经 AI 生成）',
+                severity: 'info',
+              } as unknown as NonNullable<typeof m.cards>[number],
+            ],
+          };
+        }));
+      },
       onHeartbeat: () => resetInactivityTimer(),
       onThinking: () => updateLiveStatus({ mood: 'thinking' }),
       onToolCall: (tool) => updateLiveStatus({ mood: 'searching', toolExecuting: { tool } }),

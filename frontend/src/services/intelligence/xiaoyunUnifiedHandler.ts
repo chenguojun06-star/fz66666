@@ -33,7 +33,13 @@ export interface ToolExecutingEvent {
 }
 
 export interface DataCardEvent {
-  type: 'chart' | 'action_card' | 'insight_card' | 'step_wizard' | 'report' | 'order_card' | 'factory_card';
+  /**
+   * 卡片类型。D-702 新增 `order_progress`（订单进度，来自 DirectQueryRouter 直查）。
+   *
+   * <p>前端 {@code useAiChatStream#onDataCard} 会把任意类型统一渲染为
+   * {@code insight_card} 展示，因此这里主要是类型声明对齐后端实际发送值。
+   */
+  type: 'chart' | 'action_card' | 'insight_card' | 'step_wizard' | 'report' | 'order_card' | 'factory_card' | 'order_progress';
   title: string;
   data: any;
   elapsedMs: number;
