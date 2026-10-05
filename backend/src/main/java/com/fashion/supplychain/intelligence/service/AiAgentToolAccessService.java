@@ -164,6 +164,18 @@ public class AiAgentToolAccessService {
         // 运维/开发类：仅超管可用。刻意不放 workerVisible，避免车间用户误触数据库结构检查
         register("tool_db_health_check", "数据库健康检查：表膨胀、慢查询、连接数诊断（仅超管）", false, ToolDomain.SYSTEM);
         register("tool_flyway_safety_check", "Flyway 迁移安全检查：校验数据库迁移脚本合规性（仅超管，开发诊断用）", false, ToolDomain.SYSTEM);
+
+        // ── D-702：补登记两个由 McpToolScanner 扫描注册、但未进本表的能力 ──
+        //
+        // 二者都会进 toolMap（具备执行能力），但不登记就没有引导语与领域标签：
+        // 引导语走 resolveFallbackDescription 截断到 100 字符，领域回落 GENERAL。
+        // 结果是管理员能用但描述劣质、工人永远不可见，属于「半接入」状态。
+        // 与其靠"漏登记"让它处于半接入，不如显式登记并给出正确定义。
+        register("external_search", "外部信息搜索：检索行业政策、市场行情、原料价格等外部资料，"
+                + "适合「查一下最新棉价」「有什么新政策」这类需要外部信息的问题", true, ToolDomain.GENERAL);
+        // 代码图谱检索：与业务数据无关，只对管理员开放，避免业务用户误用它查业务问题
+        register("code_index_search", "代码图谱检索：查询代码结构与依赖关系（仅管理侧，开发诊断用）",
+                false, ToolDomain.SYSTEM);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
@@ -284,6 +296,22 @@ public class AiAgentToolAccessService {
     public static ToolDomain getDomainForTool(String toolName) {
         ToolRule rule = TOOL_RULES.get(toolName);
         return rule != null ? rule.domain : ToolDomain.GENERAL;
+    }
+
+    /**
+     * D-702：该工具是否已登记（用于验收与自检）。
+     *
+     * <p>未登记的��具仍会被 Spring 注入 {@code toolMap}（具备执行能力），
+     * 但拿不到引导语与领域标签，且不会被纳入任何意图映射 ——
+     * 属于「建了却选不到」。运维/测试需要能主动查出这类工具，故公开此查询。
+     */
+    public static boolean isRegistered(String toolName) {
+        return TOOL_RULES.containsKey(toolName);
+    }
+
+    /** D-702：已登记的工具名集合（只读副本）。 */
+    public static Set<String> registeredToolNames() {
+        return java.util.Collections.unmodifiableSet(TOOL_RULES.keySet());
     }
 
     public List<AgentTool> filterByDomains(List<AgentTool> tools, Set<ToolDomain> domains) {

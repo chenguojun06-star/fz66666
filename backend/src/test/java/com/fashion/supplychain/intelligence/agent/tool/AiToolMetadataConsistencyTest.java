@@ -191,4 +191,108 @@ class AiToolMetadataConsistencyTest {
         }
         return "无 execute";
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    //  D-702：注解元数据 ≠ 模型实际收到的 schema
+    //
+    //  上面所有断言校验的都是 @AgentToolDef 注解，而模型真正读到的是
+    //  getToolDefinition() 返回的 AiTool 对象（function.description / parameters）。
+    //  两者由不同代码路径产生（注解 vs buildToolDef/setDescription + props.put），
+    //  注解正确完全不代表 schema 正确 —— 参数没描述、required 指向不存在的字段，
+    //  都会让模型填错参数甚至陷入校验死循环，而代码编译期毫无察觉。
+    //
+    //  本次审计已实测确认：99 个工具的 description 全部非空（此前用文本匹配
+    //  得出「56 个无描述」是误报 —— 那些工具用 buildToolDef 而非 setDescription）。
+    //  正因如此，这里改为实际调用 getToolDefinition() 校验，不用源码 grep。
+    // ────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("模型实际收到的 function.name / description 必须与注解一致且非空")
+    void runtimeToolDefinitionMatchesAnnotation() {
+        List<String> problems = new ArrayList<>();
+        for (AgentTool tool : registeredTools()) {
+            AiTool def;
+            try {
+                def = tool.getToolDefinition();
+            } catch (Exception e) {
+                problems.add(tool.getName() + ": getToolDefinition() 抛异常 " + e.getMessage());
+                continue;
+            }
+            if (def == null || def.getFunction() == null) {
+                problems.add(tool.getName() + ": getToolDefinition() 返回空 function");
+                continue;
+            }
+            AiTool.AiFunction fn = def.getFunction();
+            if (fn.getName() == null || fn.getName().isBlank()) {
+                problems.add(tool.getName() + ": function.name 为空");
+            } else if (!fn.getName().equals(tool.getName())) {
+                problems.add(tool.getName() + ": function.name=" + fn.getName() + " 与 getName() 不一致，模型会调不到");
+            }
+            if (fn.getDescription() == null || fn.getDescription().isBlank()) {
+                problems.add(tool.getName() + ": function.description 为空（模型无法判断何时调用）");
+            }
+        }
+        assertThat(problems).as("schema 缺陷（模型看不到或调不到）：\n" + String.join("\n", problems)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("参数必须带 description、required 必须指向真实存在的参数")
+    void parameterSchemaIsUsableByModel() {
+        List<String> noParamDesc = new ArrayList<>();
+        List<String> badRequired = new ArrayList<>();
+        for (AgentTool tool : registeredTools()) {
+            AiTool def;
+            try {
+                def = tool.getToolDefinition();
+            } catch (Exception e) {
+                continue; // 已由上一条断言报告
+            }
+            if (def == null || def.getFunction() == null) {
+                continue;
+            }
+            AiTool.AiParameters params = def.getFunction().getParameters();
+            if (params == null) {
+                continue; // 无参工具合法
+            }
+            var props = params.getProperties();
+            if (props != null) {
+                props.forEach((k, v) -> {
+                    String d = (v instanceof java.util.Map<?, ?> map) && map.get("description") != null
+                            ? String.valueOf(map.get("description")) : null;
+                    if (d == null || d.isBlank()) {
+                        noParamDesc.add(tool.getName() + "." + k);
+                    }
+                });
+            }
+            List<String> required = params.getRequired();
+            if (required != null) {
+                for (String r : required) {
+                    if (props == null || !props.containsKey(r)) {
+                        badRequired.add(tool.getName() + " required[" + r + "] 不在 properties 中");
+                    }
+                }
+            }
+        }
+        assertThat(noParamDesc)
+                .as("参数无说明，模型只能靠猜（例如把日期填成时间戳）：\n" + String.join("\n", noParamDesc))
+                .isEmpty();
+        assertThat(badRequired)
+                .as("required 指向不存在的参数，模型会陷入无法满足的校验死循环：\n" + String.join("\n", badRequired))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("每个工具都必须登记进权限/领域注册表：未登记者拿不到引导语与领域标签")
+    void everyToolIsRegisteredInAccessService() {
+        List<String> unregistered = new ArrayList<>();
+        for (AgentTool tool : registeredTools()) {
+            if (!com.fashion.supplychain.intelligence.service.AiAgentToolAccessService.isRegistered(tool.getName())) {
+                unregistered.add(tool.getName());
+            }
+        }
+        assertThat(unregistered)
+                .as("未登记工具有执行能力（已进 toolMap）但工人永远不可见、描述走劣质 fallback：\n"
+                        + String.join("\n", unregistered))
+                .isEmpty();
+    }
 }
