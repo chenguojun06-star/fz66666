@@ -49,6 +49,14 @@ public class AiAgentOrchestrator {
 
     @Autowired private AgentLoopContextBuilder contextBuilder;
     @Autowired private AgentLoopEngine loopEngine;
+    /**
+     * D-702：确定性查询直查分流器。
+     *
+     * <p>用 {@code required = false}：这是**性能优化**而非功能依赖，
+     * Bean 缺失时应退化为主链路照常工作，而不是让整个小云不可用。
+     */
+    @Autowired(required = false)
+    private DirectQueryRouter directQueryRouter;
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
@@ -652,6 +660,40 @@ public class AiAgentOrchestrator {
             boolean quickAnswerHit = tryQuickAnswerCache(userMessage, emitter);
             if (quickAnswerHit) {
                 return;
+            }
+
+            // ── D-702: 确定性查询直查（不进 LLM 循环）──
+            // 用户反馈：「太慢，人员点击就可以看」。对于「PO20260706155257 进度到哪了」
+            // 这类问题，走 Agent 循环要两轮同步 LLM 往返（iter=1 发起工具 ~2.4s
+            // + iter=2 生成答案 ~20.8s），最快也要 20 秒；而查表只需 0.5 秒。
+            //
+            // 放在 QuickPath 之后、Agent 循环之前：QuickPath 负责闲聊/知识问答，
+            // 直查负责"给定标识符查数据"，Agent 循环留给需要推理的综合分析。
+            //
+            // 安全性：DirectQueryRouter 内部会校验工具权限（canUseTool），
+            // 且未命中/参数不足/工具失败一律返回 null 交回 Agent 循环，绝不猜参数。
+            if (directQueryRouter != null) {
+                try {
+                    DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(userMessage);
+                    if (direct != null) {
+                        long costMs = System.currentTimeMillis() - requestStartAt;
+                        log.info("[DirectQuery] 命中直查，耗时 {}ms（未经 LLM）", costMs);
+                        emitSse(emitter, "data_card", java.util.Map.of(
+                                "type", direct.cardType(),
+                                "title", direct.cardTitle(),
+                                "data", direct.cardData(),
+                                "elapsedMs", costMs));
+                        emitSse(emitter, "answer", java.util.Map.of(
+                                "content", direct.text(),
+                                "commandId", "direct-" + costMs));
+                        emitSse(emitter, "done", java.util.Map.of());
+                        emitter.complete();
+                        return;
+                    }
+                } catch (Exception e) {
+                    // 直查是优化，不是主链路；任何异常都不能影响正常回答
+                    log.warn("[DirectQuery] 直查异常，交回 Agent 循环: {}", e.getMessage());
+                }
             }
 
             if (isQuickPathEligible(userMessage)) {
