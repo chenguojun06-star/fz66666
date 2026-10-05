@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,7 +46,15 @@ public class AgentLoopContextBuilder {
     @Value("${xiaoyun.agent.token-budget:30000}")
     private int tokenBudget;
 
-    @Value("${xiaoyun.agent.max-iterations-hard-limit:10}")
+    /**
+     * D-702：迭代轮数硬上限，由 10 收敛到 5。
+     *
+     * <p>每一轮都是一次**同步** LLM 往返（实测 iter=2 达 20.8s），
+     * 且工具调用收敛通常在 iter=2~3 就完成（toolCalls 归零即出答案）。
+     * 上限 10 意味着最坏情况要把同样的流程跑10 遍，对交互式问答是不可接受的等待。
+     * 5 轮足以覆盖「规划→取数→分析→复核」，同时把最坏等待压到可接受范围。
+     */
+    @Value("${xiaoyun.agent.max-iterations-hard-limit:5}")
     private int maxIterationsHardLimit;
 
     public AgentLoopContext build(String userMessage, String pageContext) {
@@ -62,9 +71,22 @@ public class AgentLoopContextBuilder {
         }
 
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
-        Set<ToolDomain> domains = domainRouter.route(userMessage);
+        // ── D-702 性能修复：领域路由只算一次，其余从同一结果派生 ──
+        //
+        // 修复前是三行连续调用：route(...) → 内部再调 routeMulti(...)，
+        // 然后 routeMulti(...)、isMultiDomain(...) 又各取一次。
+        // 新问题缓存必然 miss，于是首个请求要把领域判定重复跑多遍。
+        //
+        // 现在：只调一次 routeMulti，其余从同一结果派生。
+        // domains 取首个域 —— 与原 route() 的语义完全一致
+        //（原实现就是 multi.domains.get(0)），isMultiDomain 即 domains.size() > 1。
+        // 领域判定结果**逐项等价**，只是不再重复计算。
         List<ToolDomain> multiDomains = domainRouter.routeMulti(userMessage);
-        boolean isMultiDomain = domainRouter.isMultiDomain(userMessage);
+        Set<ToolDomain> domains = new LinkedHashSet<>();
+        if (multiDomains != null && !multiDomains.isEmpty()) {
+            domains.add(multiDomains.get(0));
+        }
+        boolean isMultiDomain = multiDomains != null && multiDomains.size() > 1;
         if (!domains.isEmpty()) {
             visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
             log.info("[ContextBuilder] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
@@ -105,9 +127,22 @@ public class AgentLoopContextBuilder {
 
         int maxIterations = promptHelper.estimateMaxIterations(userMessage);
         if (isMultiDomain) {
-            int extraIterations = Math.max(0, multiDomains.size() - 1) * 2;
+            // ── D-702 性能修复：提升幅度与硬上限一并收敛 ──
+            //
+            // 修复前：每多一个域 +2 轮，且 extraIterations 可把 3 轮推到 5 轮甚至 7 轮。
+            // 问题有二：
+            //  1. **轮数上限越高，模型"可能多跑一轮"的代价越大**。实测一次提问在
+            //     iter=2 就已 toolCalls=0 出答案（收敛完成），多给的轮次并未用到，
+            //     但每轮都是一次同步 LLM 往返（iter=2 耗时 20.8s）。
+            //  2. 多域判定来自领域路由，而 D-702 优化后关键词命中即判多域，
+            //     会让"成本+订单"这类**两个词就能确定**的问题也被提升轮数。
+            //
+            // 现在：每域只 +1 轮，并把硬上限从「无约束」收敛到明确值，
+            // 保证极端多域问题也不会把等待时间放大到不可接受。
+            int extraIterations = Math.max(0, multiDomains.size() - 1);
             maxIterations = maxIterations + extraIterations;
-            log.info("[ContextBuilder] 多域查询提升maxIterations: {} → {}", maxIterations - extraIterations, maxIterations);
+            log.info("[ContextBuilder] 多域查询提升maxIterations: {} → {} (域数={})",
+                    maxIterations - extraIterations, maxIterations, multiDomains.size());
         }
         if (maxIterations > maxIterationsHardLimit) {
             log.warn("[ContextBuilder] maxIterations({})超过硬上限({})，已截断", maxIterations, maxIterationsHardLimit);

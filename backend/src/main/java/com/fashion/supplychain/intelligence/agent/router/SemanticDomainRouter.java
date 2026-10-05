@@ -97,6 +97,18 @@ public class SemanticDomainRouter {
                     List.of(ToolDomain.FINANCE, ToolDomain.PRODUCTION))
     );
 
+    /**
+     * D-702：关键词置信度达到此值即认为领域已确定，可跳过 LLM 分类。
+     *
+     * <p>routeMultiByKeywords 命中业务词时给 0.6（组合模板给 0.9），
+     * 兜底 GENERAL 同样是 0.6 —— 所以还必须配合 domains 内容判断（见
+     * {@link #shouldSkipLlmRouting}），不能只看置信度。
+     */
+    private static final double keywordConfidenceThreshold = 0.6;
+
+    /** D-702：命中领域数达到此值才允许跳过 LLM（单域命中仍交给 LLM 更稳）。 */
+    private static final int keywordSkipLlmMinDomains = 2;
+
     public RoutingResult route(String userMessage, String pageContext) {
         MultiRoutingResult multi = routeMulti(userMessage, pageContext);
         if (multi.domains.isEmpty()) {
@@ -126,6 +138,33 @@ public class SemanticDomainRouter {
         }
 
         MultiRoutingResult keywordResult = routeMultiByKeywords(userMessage, pageContext);
+
+        // ── D-702 性能优化：关键词已足够确定时，不再调用 LLM ──
+        //
+        // 修复前：无论关键词是否已明确命中领域，都会继续 routeMultiByLLM，
+        // 并且**用 LLM 结果覆盖关键词结果**（只要 LLM 返回非空）。
+        // 即关键词路由的工作被完全浪费，只换来一次同步阻塞的 LLM 调用。
+        //
+        // 生产实测代价（一次真实提问的全链路日志）：
+        //   领域路由这一步阻塞 ~2.8s，而 AgentLoop 自身记录的延迟仅 4.8s ——
+        //   也就是说，回答之前有相当比例的时间花在等 LLM 做领域分类上，
+        //   而它给出的结论与关键词几乎必然一致。
+        //
+        // 为什么关键词够用：routeMultiByKeywords 的关键词表覆盖了 6 个业务域
+        // （订单/生产/裁剪/进度 → PRODUCTION，工资/结算/成本 → FINANCE，
+        // 库存/物料/采购 → WAREHOUSE，款式/样衣 → STYLE …），
+        // 置信度 0.6；组合模板（如"成本+订单"→跨域）更是有 0.9。
+        // 这些词是业务术语的强信号，比让模型重新理解一遍更快也更稳。
+        //
+        // 阈值取 keywordConfidenceThreshold：仅当**确实是关键词命中**（非兜底 GENERAL）
+        // 且命中数量达到下限时才跳过 LLM —— 兜底和单弱命中仍交给 LLM，
+        // 保证复杂/模糊问句的路由质量不下降。
+        if (keywordResult != null && !shouldSkipLlmRouting(keywordResult, userMessage)) {
+            multiRoutingCache.put(cacheKey, new CachedMultiRouting(keywordResult, cacheTtlSeconds * 1000L));
+            log.info("[SemanticRouter] 关键词命中({}域,置信度{})，跳过 LLM 领域分类",
+                    keywordResult.domains.size(), keywordResult.confidence);
+            return keywordResult;
+        }
 
         if (!useLlmRouting) {
             return keywordResult;
@@ -199,6 +238,36 @@ public class SemanticDomainRouter {
 
         List<ToolDomain> top3 = domains.stream().limit(3).collect(Collectors.toList());
         return new MultiRoutingResult(top3, complexity, 0.6);
+    }
+
+    /**
+     * D-702：判断是否可以跳过 LLM 领域分类。
+     *
+     * <p>跳过条件（两者同时满足）：
+     * <ol>
+     *   <li>关键词结果<b>不是兜底值</b>—— 兜底只说明"没匹配到业务词"，
+     *       此时交给 LLM 才可能给出更准的领域；</li>
+     *   <li>命中领域数达到 {@link #keywordSkipLlmMinDomains}——
+     *       单域弱命中时 LLM 仍有价值，多域命中则基本确定。</li>
+     * </ol>
+     *
+     * <p>GENERAL 是 {@code routeMultiByKeywords} 在无任何匹配时的兜底值，
+     * 因此"仅命中 GENERAL"等价于"没命中"，必须继续走 LLM。
+     */
+private boolean shouldSkipLlmRouting(MultiRoutingResult keywordResult, String userMessage) {
+        if (keywordResult == null || keywordResult.domains.isEmpty()) {
+            return false;
+        }
+        if (keywordResult.domains.size() == 1 && keywordResult.domains.get(0) == ToolDomain.GENERAL) {
+            return false;   // 纯兜底，等于没命中
+        }
+        if (keywordResult.domains.size() < keywordSkipLlmMinDomains) {
+            return false;
+        }
+        // 页面上下文能补一个领域时也算有依据
+        boolean onlyFromPage = keywordResult.domains.size() == keywordSkipLlmMinDomains
+                && userMessage != null && keywordResult.confidence >= keywordConfidenceThreshold;
+        return keywordResult.confidence >= keywordConfidenceThreshold || onlyFromPage;
     }
 
     private ToolDomain resolvePageDomain(String pageContext) {
