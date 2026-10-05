@@ -25,17 +25,26 @@ export const STATUS_LABEL_ZH: Record<string, string> = {
   returned:   '已退回',
 };
 
-export function buildMenuIndex(): MenuEntry[] {
+/**
+ * 构建菜单索引。
+ *
+ * D-748：`includeSuperAdminOnly=false` 时剔除超管专属菜单项 ——
+ * 否则非超管在命令面板里搜得到、点进去却被 PrivateRoute 弹回首页，体验割裂。
+ */
+export function buildMenuIndex(includeSuperAdminOnly = true): MenuEntry[] {
   const entries: MenuEntry[] = [];
   for (const section of menuConfig) {
+    if (section.superAdminOnly && !includeSuperAdminOnly) continue;
     if (section.items) {
       for (const item of section.items) {
+        if (item.superAdminOnly && !includeSuperAdminOnly) continue;
         entries.push({
           label: item.label,
           path: item.path,
           section: section.title,
           icon: item.icon,
           keywords: [item.label, section.title, item.path].filter(Boolean),
+          superAdminOnly: item.superAdminOnly,
         });
       }
     } else if (section.path) {
@@ -45,10 +54,12 @@ export function buildMenuIndex(): MenuEntry[] {
         section: section.title,
         icon: section.icon,
         keywords: [section.title, section.path].filter(Boolean),
+        superAdminOnly: section.superAdminOnly,
       });
     }
   }
   return entries;
 }
 
-export const MENU_INDEX = buildMenuIndex();
+/** 全量菜单索引（含超管专属项）；按用户权限过滤请用 buildMenuIndex(isSuperAdmin) */
+export const MENU_INDEX = buildMenuIndex(true);

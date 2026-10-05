@@ -18,6 +18,8 @@ export interface MenuEntry {
   section: string;
   icon?: React.ReactNode;
   keywords: string[];
+  /** D-748：仅超级管理员可见的菜单项，命令面板需据此对非超管过滤 */
+  superAdminOnly?: boolean;
 }
 
 export type SearchTab = 'all' | 'menu' | 'image';

@@ -667,7 +667,10 @@ export const menuConfig: MenuSection[] = [
       { label: '字段配置', path: paths.fieldConfig, icon: React.createElement(SettingOutlined) },
       { label: '打印模板', path: paths.printTemplate, icon: React.createElement(PrinterOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
-      { label: '定时任务运行记录', path: paths.jobRunLog, icon: React.createElement(FieldTimeOutlined) },
+      // D-748：后端 /intelligence/jobs/* 仅限 ROLE_SUPER_ADMIN（D-542 的原设计），
+      // 而本项此前复用 MENU_LOGIN_LOG 权限码 → 租户管理员看得见菜单、点开却全是 403。
+      // 标为超管专属后：菜单对非超管隐藏（SideMenu.isItemVisible），手输 URL 被 PrivateRoute 挡回首页。
+      { label: '定时任务运行记录', path: paths.jobRunLog, icon: React.createElement(FieldTimeOutlined), superAdminOnly: true },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '异常数据清理', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
     ],
@@ -792,9 +795,16 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.orphanData]: permissionCodes.systemIssues,
 };
 
-/** 仅超级管理员可见/可访问的路径集合 */
+/** 仅超级管理员可见/可访问的路径集合（section 级 + 菜单项级） */
 export const superAdminOnlyPaths = new Set(
-  (menuConfig.filter((s) => s.superAdminOnly).map((s) => s.path).filter(Boolean) as string[])
+  menuConfig
+    .flatMap((s) => [
+      // section 级：整个分组仅超管可见
+      ...(s.superAdminOnly && s.path ? [s.path] : []),
+      // 菜单项级（D-748 补齐）：此前只收集 section 级，导致 item 上标了 superAdminOnly 时
+      // 只有菜单被隐藏、路由守卫不生效 —— 手输 URL 仍能进入超管专属页面并打出一片 403。
+      ...(s.items || []).filter((it) => it.superAdminOnly && it.path).map((it) => it.path),
+    ])
     // P0-1: AiAgentTraceCenter 含原始工具名/JSON/错误栈等技术细节，仅超管可访问
     .concat([paths.cockpitTrace])
 );

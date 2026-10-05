@@ -20,7 +20,6 @@ import {
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { MENU_INDEX } from './helpers';
 import { BrandLoader } from '@/components/common/loading';
 import { useCommandPaletteData } from './useCommandPaletteData';
 import ResultList from './ResultList';
@@ -48,6 +47,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     navigateTo,
     askAiAssistant,
     handleImageSearch,
+    menuIndex,
   } = useCommandPaletteData(open, onClose);
 
   if (!open) return null;
@@ -109,7 +109,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         {!query.trim() && !imageSearchMode && (
           <div className="cp-quick-tags">
             <span className="cp-quick-label">快速跳转</span>
-            {MENU_INDEX.slice(0, 10).map((entry, i) => (
+            {menuIndex.slice(0, 10).map((entry, i) => (
               <button
                 key={i}
                 className="cp-quick-tag"

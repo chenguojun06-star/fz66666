@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { globalSearchApi } from '@/services/production/productionApi';
@@ -8,7 +8,8 @@ import type {
   GlobalSearchWorkerItem,
 } from '@/services/production/productionApi';
 import api from '@/utils/api';
-import { MENU_INDEX } from './helpers';
+import { useUser } from '@/utils/AuthContext';
+import { buildMenuIndex } from './helpers';
 import type { ResultItem, SearchTab } from './types';
 
 /**
@@ -18,6 +19,11 @@ import type { ResultItem, SearchTab } from './types';
  */
 export function useCommandPaletteData(open: boolean, onClose: () => void) {
   const navigate  = useNavigate();
+  const { user } = useUser();
+  // D-748：命令面板不应搜到超管专属菜单 —— 否则非超管搜得到、点进去却被
+  // PrivateRoute 弹回首页，体验割裂。索引按当前用户是否超管构建。
+  const isSuperAdmin = user?.isSuperAdmin === true;
+  const menuIndex = useMemo(() => buildMenuIndex(isSuperAdmin), [isSuperAdmin]);
   const inputRef  = useRef<HTMLInputElement>(null);
   const listRef   = useRef<HTMLDivElement>(null);
 
@@ -51,11 +57,11 @@ export function useCommandPaletteData(open: boolean, onClose: () => void) {
   const searchMenu = useCallback((q: string): ResultItem[] => {
     if (!q.trim()) return [];
     const lower = q.toLowerCase();
-    return MENU_INDEX
+    return menuIndex
       .filter(entry => entry.keywords.some(kw => kw.toLowerCase().includes(lower)))
       .slice(0, 8)
       .map(entry => ({ kind: 'menu' as const, data: entry }));
-  }, []);
+  }, [menuIndex]);
 
   // 搜索（防抖 250ms）
   const doSearch = useCallback(async (q: string) => {
@@ -292,5 +298,6 @@ export function useCommandPaletteData(open: boolean, onClose: () => void) {
     navigateTo,
     askAiAssistant,
     handleImageSearch,
+    menuIndex,
   };
 }
