@@ -7,11 +7,13 @@
  * 路由挂载：intelligence/patrol-action-center
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Rate, Space, Tabs, Tag, message } from 'antd';
+import { Card, Form, Input, Modal, Rate, Tabs, Tag, message } from 'antd';
 import { BrandLoading } from '@/components/common/loading';
-import { CheckOutlined, CloseOutlined, PlayCircleOutlined, UndoOutlined, MessageOutlined, StopOutlined, RobotOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
+// D-748：操作列改用项目标准行操作组件（AP-FE-03）——主操作常驻，其余自动折叠进「更多」
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PatrolAction, PatrolSummary } from '@/services/intelligence/intelligenceApi';
@@ -23,6 +25,31 @@ import './index.css';
 
 // 可触发智能采购生成的异常类型
 const SMART_SOURCING_ISSUE_TYPES = ['MATERIAL_GAP', 'SOURCING_SPECIALIST_JOB'];
+
+/**
+ * D-748：列宽集中定义。
+ *
+ * 背景：ResizableTable 对「未显式指定 width」的列，会按表头文字长度兜底出一个 60~200px 的固定宽
+ * （见 components/common/ResizableTable/utils.ts 的 computeAdaptiveWidth）。
+ * 「描述」列原先没写 width，于是被按表头「描述」两个字算成 60px，
+ * 而写了固定宽的列即使没内容也占着大片空白 —— 这正是「内容多的列窄、没内容的列宽」的根因。
+ *
+ * 现在每列宽度集中声明，且 scroll.x 由求和得出，
+ * 避免「改了列宽忘了改 scroll.x」导致表格总宽小于列宽之和、列被二次压缩。
+ */
+const COL_WIDTH = {
+  issueType: 96,
+  severity: 76,
+  description: 420,
+  target: 168,
+  remediation: 88,
+  status: 96,
+  executor: 104,
+  createTime: 148,
+  action: 160,
+} as const;
+
+const TABLE_SCROLL_X = Object.values(COL_WIDTH).reduce((sum, w) => sum + w, 0);
 
 const SEVERITY_TAG: Record<string, { color: string; text: string }> = {
   // D-513：补 CRITICAL——数据库实有 118 条，原先缺映射直接显示英文「CRITICAL」
@@ -59,7 +86,8 @@ const PatrolActionCenter: React.FC = () => {
   const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'PENDING');
   const [modalState, setModalState] = useState<ModalState>({ type: null, action: null });
   const [submitting, setSubmitting] = useState(false);
-  const [smartSourcingLoading, setSmartSourcingLoading] = useState(false);
+  // D-748：记录「哪一行」正在生成智能采购——原先的全局 loading 会让所有行的该按钮一起转圈
+  const [smartSourcingId, setSmartSourcingId] = useState<number | null>(null);
   const [form] = Form.useForm();
 
   const loadList = useCallback(async (status?: string) => {
@@ -164,7 +192,7 @@ const PatrolActionCenter: React.FC = () => {
       message.warning('工单缺少目标订单号，无法生成采购建议');
       return;
     }
-    setSmartSourcingLoading(true);
+    setSmartSourcingId(action.id);
     try {
       await purchaseCartApi.generateSmartSourcing(orderNo);
       message.success('智能采购建议已生成，已加入购物车草稿');
@@ -172,35 +200,75 @@ const PatrolActionCenter: React.FC = () => {
     } catch (e) {
       message.error(e instanceof Error ? e.message : '智能采购生成失败');
     } finally {
-      setSmartSourcingLoading(false);
+      setSmartSourcingId(null);
     }
   }, [refreshAll]);
+
+  /**
+   * D-748：构造行操作项（交给 RowActions 渲染）。
+   *
+   * 原实现直接往操作列塞 5~6 个 Button，把列宽撑到 280px；
+   * 且 EXECUTED 分支已 push「反馈」后，函数末尾又无条件 push 一次 —— 同一行会出现两个「反馈」按钮。
+   */
+  const buildRowActions = useCallback((r: PatrolAction): RowAction[] => {
+    const actions: RowAction[] = [];
+    if (r.status === 'PENDING') {
+      actions.push({ key: 'approve', label: '审批', primary: true, onClick: () => openModal('approve', r) });
+      actions.push({ key: 'execute', label: '执行', primary: true, onClick: () => openModal('execute', r) });
+      actions.push({ key: 'reject', label: '拒绝', danger: true, onClick: () => openModal('reject', r) });
+      actions.push({ key: 'cancel', label: '撤销', onClick: () => openModal('cancel', r) });
+    } else if (r.status === 'APPROVED') {
+      actions.push({ key: 'execute', label: '执行', primary: true, onClick: () => openModal('execute', r) });
+      actions.push({ key: 'cancel', label: '撤销', onClick: () => openModal('cancel', r) });
+    } else if (r.status === 'EXECUTED' || r.status === 'AUTO_EXECUTED') {
+      actions.push({ key: 'close', label: '关闭', primary: true, onClick: () => handleQuickAction('close', r) });
+    } else if (r.status === 'FAILED') {
+      actions.push({ key: 'execute', label: '重新执行', primary: true, onClick: () => openModal('execute', r) });
+      actions.push({ key: 'cancel', label: '撤销', onClick: () => openModal('cancel', r) });
+    }
+    // 物料缺口/采购专家类工单：增加一键生成智能采购建议
+    if (SMART_SOURCING_ISSUE_TYPES.includes(r.issueType)) {
+      actions.push({
+        key: 'smartSourcing',
+        label: '一键生成智能采购',
+        loading: smartSourcingId === r.id,
+        onClick: () => handleGenerateSmartSourcing(r),
+      });
+    }
+    // 所有状态都保留「反馈」入口，但避免与上面的分支重复
+    if (!actions.some((a) => a.key === 'feedback')) {
+      actions.push({ key: 'feedback', label: '反馈', onClick: () => openModal('feedback', r) });
+    }
+    return actions;
+  }, [openModal, handleQuickAction, handleGenerateSmartSourcing, smartSourcingId]);
 
   const columns = useMemo<ColumnsType<PatrolAction>>(() => [
     {
       title: '异常类型',
       dataIndex: 'issueType',
-      width: 110,
+      width: COL_WIDTH.issueType,
       render: (v: string) => ISSUE_TYPE_LABELS[v] || v || '-',
     },
     {
       title: '严重度',
       dataIndex: 'issueSeverity',
-      width: 90,
+      width: COL_WIDTH.severity,
       render: (v: string) => {
         const cfg = SEVERITY_TAG[v] || { color: 'default', text: v };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
     {
+      // D-748：全表唯一的长文本列，给足宽度；此前因未声明 width 被兜底成 60px
       title: '描述',
       dataIndex: 'detectedIssue',
+      width: COL_WIDTH.description,
       ellipsis: true,
       render: (v: string) => <span title={v}>{v || '-'}</span>,
     },
     {
       title: '目标',
-      width: 180,
+      width: COL_WIDTH.target,
       // D-513：原直接拼 `${targetType}: ${targetId}`，用户看到「order: UNKNOWN」看不懂。
       // 现：targetType 转中文；D-626 起后端富化 targetLabel（订单→订单号、样衣→款号），
       //     富化失败回落原始 ID；targetId 为空或 UNKNOWN 时显示「未关联」。
@@ -214,7 +282,7 @@ const PatrolActionCenter: React.FC = () => {
     {
       title: '自愈类型',
       dataIndex: 'remediationType',
-      width: 100,
+      width: COL_WIDTH.remediation,
       render: (v?: string) => {
         if (v === 'AUTO') return <Tag color="cyan">自动修复</Tag>;
         if (v === 'SUGGESTION') return <Tag color="blue">建议</Tag>;
@@ -224,7 +292,7 @@ const PatrolActionCenter: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 110,
+      width: COL_WIDTH.status,
       render: (v: string) => {
         const cfg = STATUS_TAG[v] || { color: 'default', text: v };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
@@ -233,46 +301,23 @@ const PatrolActionCenter: React.FC = () => {
     {
       title: '执行人',
       dataIndex: 'executedByName',
-      width: 120,
+      width: COL_WIDTH.executor,
       render: (v: string, r) => r.autoExecuted === 1 ? 'AI自愈引擎' : (v || '-'),
     },
     {
       title: '创建时间',
       dataIndex: 'createTime',
-      width: 160,
+      width: COL_WIDTH.createTime,
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '操作',
       key: 'action',
-      width: 280,
+      width: COL_WIDTH.action,
       fixed: 'right',
-      render: (_, r) => {
-        const btns: React.ReactNode[] = [];
-        if (r.status === 'PENDING') {
-          btns.push(<Button size="small" type="link" icon={<CheckOutlined />} onClick={() => openModal('approve', r)}>审批</Button>);
-          btns.push(<Button size="small" type="link" danger icon={<CloseOutlined />} onClick={() => openModal('reject', r)}>拒绝</Button>);
-          btns.push(<Button size="small" type="link" icon={<PlayCircleOutlined />} onClick={() => openModal('execute', r)}>执行</Button>);
-          btns.push(<Button size="small" type="link" icon={<UndoOutlined />} onClick={() => openModal('cancel', r)}>撤销</Button>);
-        } else if (r.status === 'APPROVED') {
-          btns.push(<Button size="small" type="link" icon={<PlayCircleOutlined />} onClick={() => openModal('execute', r)}>执行</Button>);
-          btns.push(<Button size="small" type="link" icon={<UndoOutlined />} onClick={() => openModal('cancel', r)}>撤销</Button>);
-        } else if (r.status === 'EXECUTED' || r.status === 'AUTO_EXECUTED') {
-          btns.push(<Button size="small" type="link" icon={<MessageOutlined />} onClick={() => openModal('feedback', r)}>反馈</Button>);
-          btns.push(<Button size="small" type="link" icon={<StopOutlined />} onClick={() => handleQuickAction('close', r)}>关闭</Button>);
-        } else if (r.status === 'FAILED') {
-          btns.push(<Button size="small" type="link" icon={<PlayCircleOutlined />} onClick={() => openModal('execute', r)}>重新执行</Button>);
-          btns.push(<Button size="small" type="link" icon={<UndoOutlined />} onClick={() => openModal('cancel', r)}>撤销</Button>);
-        }
-        // 物料缺口/采购专家类工单：增加一键生成智能采购建议按钮
-        if (SMART_SOURCING_ISSUE_TYPES.includes(r.issueType)) {
-          btns.push(<Button size="small" type="link" icon={<RobotOutlined />} loading={smartSourcingLoading} onClick={() => handleGenerateSmartSourcing(r)}>一键生成智能采购</Button>);
-        }
-        btns.push(<Button size="small" type="link" icon={<MessageOutlined />} onClick={() => openModal('feedback', r)}>反馈</Button>);
-        return <Space size={0} wrap>{btns}</Space>;
-      },
+      render: (_, r) => <RowActions actions={buildRowActions(r)} maxInline={2} />,
     },
-  ], [openModal, handleQuickAction, handleGenerateSmartSourcing, smartSourcingLoading]);
+  ], [buildRowActions]);
 
   const modalTitle = useMemo(() => {
     switch (modalState.type) {
@@ -341,7 +386,7 @@ const PatrolActionCenter: React.FC = () => {
           rowKey="id"
           columns={columns}
           dataSource={list}
-          scroll={{ x: 1200 }}
+          scroll={{ x: TABLE_SCROLL_X }}
           showIndex={false}
           storageKey="patrol-action-center-table"
         />
