@@ -185,7 +185,18 @@ public class RedisConfig implements CachingConfigurer {
         configMap.put("style", defaultConfig.entryTtl(Duration.ofMinutes(10)));  // 款式缓存10分钟
         configMap.put("order", defaultConfig.entryTtl(Duration.ofMinutes(5)));  // 订单缓存5分钟
         configMap.put("permission", defaultConfig.entryTtl(Duration.ofHours(1)));  // 权限缓存1小时
-        configMap.put("daily-brief", defaultConfig.entryTtl(Duration.ofMinutes(5)));  // AI日报建议缓存5分钟
+        // D-702：日报 AI 建议缓存改为「当天剩余时间」。
+        //
+        // 原为固定 5 分钟，而看板一天会被刷几十次 → 缓存几乎每次都失效，
+        // 每次都重新调 DeepSeek，实测一天 98 次调用并把租户日配额(50)刷爆，
+        // 结果 AI 建议反而是空的（见 AiAdvisorService#getDailyAdvice 的事故说明）。
+        //
+        // key 里本就带 LocalDate.now()，设计意图就是「每天一份」；
+        // TTL 设为当天剩余秒数，让缓存自然在午夜失效，无需手工失效。
+        //
+        // 只影响 AI 建议**文案**；日报的业务数据（逾期数/高风险订单/扫码入库量）
+        // 在 DailyBriefOrchestrator#getBrief 每次请求都重新查库，不走本缓存。
+        configMap.put("daily-brief", defaultConfig.entryTtl(remainingToday()));
         // templateProgressNodes 已迁移为 Caffeine 本地缓存（避免 Redis DefaultTyping 模式下 List<Map> 反序列化失败），无需 Redis TTL 注册
 
         return RedisCacheManager.builder(connectionFactory)
@@ -193,6 +204,21 @@ public class RedisConfig implements CachingConfigurer {
                 .withInitialCacheConfigurations(configMap)
                 .transactionAware()
                 .build();
+    }
+
+    /**
+     * D-702：当天剩余时长（至少 1 分钟，最多 24 小时）。
+     *
+     * <p>用于「每天一份」的缓存（如日报 AI 建议），使其在午夜自然失效，
+     * 既避免重复调用 AI，又保证隔天一定能拿到新数据。
+     */
+private static Duration remainingToday() {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.Duration untilMidnight = java.time.Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay());
+        Duration ttl = untilMidnight.isNegative() || untilMidnight.isZero()
+                ? Duration.ofMinutes(1)
+                : untilMidnight;
+        return ttl.compareTo(Duration.ofHours(24)) > 0 ? Duration.ofHours(24) : ttl;
     }
 
     /**

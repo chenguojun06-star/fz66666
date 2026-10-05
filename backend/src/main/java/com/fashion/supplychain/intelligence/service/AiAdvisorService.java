@@ -142,17 +142,46 @@ public class AiAdvisorService {
         return result.getContent();
     }
 
-    /**
+/**
      * 智能建议：给定业务数据摘要，返回简短建议文案（用于运营日报）
      *
-     * <p>结果按 contextSummary 内容缓存 5 分钟，相同摘要（同一租户当日数据未变化）
-     * 直接返回缓存值，避免重复调用 DeepSeek API（每次约 2~3 秒延迟）。
-     * Redis 不可用时自动降级为直接调用 AI（见 RedisConfig.errorHandler）。</p>
+     * <p><b>D-702 修复一：{@code unless = "#result == null"} —— 修复缓存写入异常导致的死循环。</b>
+     *
+     * <p><b>事故现象</b>（生产实测）：{@code daily-brief} 一天被调用 98 次，且每次都走到
+     * DeepSeek 调用、日志刷满
+     * {@code [Cache] Redis 写入失败，跳过缓存 cache=daily-brief err=Cache 'daily-brief' does not allow 'null' values}。
+     *
+     * <p><b>根因链条</b>：
+     * <ol>
+     *   <li>{@code RedisCacheManager} 全局配置了 {@code disableCachingNullValues()}（这是好实践，
+     *       不该为此改成允许缓存 null，否则全站缓存都会去存 null）；</li>
+     *   <li>AI 不可用 / 未启用 / 被配额拦截 / 调用失败时，本方法返回 {@code null}；</li>
+     *   <li>{@code @Cacheable} 仍会尝试写入 null → RedisCache 抛 IllegalArgumentException；</li>
+     *   <li>异常被 {@code handleCachePutError} 吞掉降级 → <b>缓存永远写不进去</b>；</li>
+     *   <li>于是每次请求都会重新调用 AI → 再次失败 → 再次抛异常 → <b>死循环</b>。</li>
+     * </ol>
+     * 这就是「配额被日报刷爆、AI 建议却始终为空」的原因。
+     *
+     * <p><b>修法</b>：用 {@code unless} 让null 结果<b>不入缓存</b>，恢复
+     * 「成功才缓存」的语义。失败路径本来也不该被缓存 —— 缓存一个失败状态
+     * 会让配额恢复后仍然返回空内容，把故障固化一整天。
+     *
+     * <p><b>修复二：TTL 改为当天剩余时间。</b>
+     * 缓存 key 本就带 {@code LocalDate.now()}（设计意图是「每天一份」），
+     * 但 TTL 只有 5 分钟，而看板一天被刷几十次 → 缓存形同虚设。
+     * TTL 已调整为当天剩余（见 {@code RedisConfig} 的 daily-brief 配置）。
+     *
+     * <p>注意：日报的<b>业务数据</b>（逾期数、高风险订单、今日扫码、昨日入库）
+     * 在 {@code DailyBriefOrchestrator#getBrief} 里每次请求都重新查库，
+     * 不走本缓存 —— 因此延长 TTL 不会让数据变陈旧，
+     * 只有 AI 建议文案固定为当天首次生成的那份。
      *
      * @param contextSummary 业务摘要（如：今日逾期3单，高风险2单，停滞1单）
      * @return 1~3句建议文案，未启用时返回 null
      */
-    @Cacheable(value = "daily-brief", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + T(java.time.LocalDate).now()")
+    @Cacheable(value = "daily-brief",
+            key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + T(java.time.LocalDate).now()",
+            unless = "#result == null")
     public String getDailyAdvice(String contextSummary) {
         String systemPrompt = "你是一名服装供应链管理顾问，根据工厂今日生产数据，" +
                 "用简洁中文给出1~3条可执行的管理建议。每条建议一行，不超过30字。不要废话。";
