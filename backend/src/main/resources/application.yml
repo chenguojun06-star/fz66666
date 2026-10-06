@@ -217,15 +217,6 @@ fashion:
     # 模板价格自动同步配置（2026-02-08 新增）
     auto-sync-price-enabled: ${FASHION_TEMPLATE_AUTO_SYNC_PRICE_ENABLED:true}  # 是否启用自动同步（默认：true）
     auto-sync-timeout: ${FASHION_TEMPLATE_AUTO_SYNC_TIMEOUT:30}  # 同步超时时间（秒，默认：30）
-  risk-monitor:
-    # 供应链风险监控定时任务（P2 特性，每天早上 7:00 执行）。
-    # 【为何默认 false】该任务依赖 ExternalDataService，而后者当前是桩实现，
-    #   返回 Math.random() 生成的模拟数据（面料价格指数/汇率/天气/风险评分）。
-    #   开启的实际效果只是每天产生十几条"⚠️ 价格波动超过10%"式的假预警日志；
-    #   且 logRiskAdvice 一旦接上真实推送通道（见该方法内【待集成】注释），
-    #   这些随机预警会直接推送给用户，属误导性信息。
-    #   待 ExternalDataService 接入真实数据源后，再置 true 启用。
-    enabled: ${FASHION_RISK_MONITOR_ENABLED:false}
 
 app:
   # 公网基础URL：Agnes视觉模型需要用完整HTTP URL拉取图片，相对路径(/files/xx.jpg)会拼接此base
@@ -425,7 +416,7 @@ ai:
   # 原因：它是**死配置** —— 全仓无任何代码读取 ai.spring-ai.* 路径（已 grep 确认），
   # 且其 enabled 默认 true 与真实生效值相反，极易误导后人以为 Spring AI 处于开启状态。
   # 真正生效的是文件末尾的**顶层** spring-ai: 块（SpringAiAdapterConfig 的
-  # @ConditionalOnProperty(name="spring-ai.adapter.enabled") 读的就是它，当前默认 false）。
+  # @ConditionalOnProperty(name="spring-ai.adapter.enabled") 读的就是它，当前默认 true（D-743）。
   gateway:
     routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:failover}   # legacy / spring-ai / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
