@@ -231,7 +231,10 @@ export function useAiChatStream(config: StreamConfig) {
     };
 
     const fetchAndSetAnswer = async (fallbackText: string, extraOpts: BuildMessageDataOptions = {}) => {
-      const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
+      // D-755：把「用户原话」(text) 一并传给后端 —— contextualText 里混着页面快捷建议
+      // 与历史摘要，后端直查若在这整段上匹配关键词，会出现
+      // 「停在生产管理页 → 任何问题都被异常检测劫持」。
+      const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText, text));
       const rawAnswer = payload?.answer || fallbackText;
       const displayAnswer = payload?.displayAnswer || rawAnswer;
       const parsed = parseAiResponse(rawAnswer);
@@ -398,7 +401,7 @@ export function useAiChatStream(config: StreamConfig) {
       const pageContext = location.pathname + location.search;
       resetInactivityTimer();
       const ctrl = intelligenceApi.aiAdvisorChatStream(
-        contextualText, pageContext, handleStreamEvent, onDone, onError, imageUrl,
+        contextualText, pageContext, handleStreamEvent, onDone, onError, imageUrl, text,
       );
       streamAbortRef.current = ctrl;
     } catch (_error) {

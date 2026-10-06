@@ -48,6 +48,17 @@ public class DirectQueryRouter {
     /** 款号：6~20 位字母数字组合，避开纯数字以免误匹配订单号 */
     private static final Pattern STYLE_NO = Pattern.compile("(?i)\\b([A-Za-z][A-Za-z0-9]{4,19})\\b");
 
+    /**
+     * D-755：前端追加在 question 末尾的机器生成提示段
+     * （见 {@code GlobalAiAssistant/helpers.ts#buildContextualText}）。
+     * 直查判定前必须先把它们连同前置的页面/工厂前缀一起剥掉。
+     */
+    private static final String[] TAIL_HINTS = {
+            "\n[页面快捷操作建议：",
+            "\n[历史对话摘要：",
+            "\n[系统提示：",
+    };
+
     /** 直查命中时返回；否则返回 null 表示"交回 Agent 循环" */
     public record DirectAnswer(String text, String cardType, String cardTitle, Map<String, Object> cardData) {
     }
@@ -60,26 +71,29 @@ public class DirectQueryRouter {
     /**
      * 尝试直接查库回答。
      *
-     * @param userMessage 用户原话
+     * @param userMessage 用户原话（D-755：调用方应传「原话」，而非含页面建议/历史摘要的 question）
      * @return 命中则返回直查结果；未命中/参数不足返回 {@code null}
      */
     public DirectAnswer tryDirectAnswer(String userMessage) {
-        if (userMessage == null || userMessage.isBlank()) {
+        // D-755：先把「用户原话」从 question 里还原出来再判定。
+        // 调用方正常会传 rawQuestion；这里是兜底，防止任何调用方把整段上下文塞进来。
+        String q = extractUserQuestion(userMessage);
+        if (q == null || q.isBlank()) {
             return null;
         }
         // D-702：先试【无参直查】——异常检测 / 财务异常。
         // 这两个工具内部是纯统计计算（z-score / 金额聚合），不调 LLM，
         // 因此问「有没有异常」本就不需要任何模型推理，走 Agent 循环纯属浪费
         // （实测两轮 LLM 往返约 20 秒，而统计本身亚秒级）。
-        DirectAnswer noArg = tryNoArgDirect(userMessage);
+        DirectAnswer noArg = tryNoArgDirect(q);
         if (noArg != null) {
             return noArg;
         }
         // 只有明确在问进度时才直查；其余问法交给 Agent（分析类需要推理）
-        if (!asksAboutProgress(userMessage)) {
+        if (!asksAboutProgress(q)) {
             return null;
         }
-        String orderNo = extract(ORDER_NO, userMessage);
+        String orderNo = extract(ORDER_NO, q);
         if (orderNo == null) {
             // 没有明确订单号就不猜：宁可退回 Agent 也不能用错误参数查库
             log.debug("[DirectQuery] 问题未含订单号，跳过直查（交回 Agent 循环）");
@@ -114,26 +128,16 @@ public class DirectQueryRouter {
      * @return 命中则返回；未命中或执行失败返回 {@code null}（交回 Agent）
      */
     private DirectAnswer tryNoArgDirect(String msg) {
-        final String toolName;
-        final String cardType;
-        final String cardTitle;
-        if (msg.matches("(?s).*(有没有异常|有什么异常|有异常吗|生产异常|风险检测|风险信号|"
-                + "今天有什么问题|异常检测|有没有问题|哪些异常).*")) {
-            toolName = "tool_anomaly_detection";
-            cardType = "anomaly_list";
-            cardTitle = "今日生产异常检测";
-        } else if (msg.matches("(?s).*(财务.{0,4}异常|异常.{0,4}财务|财务有没有问题|"
-                + "费用异常|收付款.{0,4}问题|有没有对不上的|财务风险).*")) {
-            toolName = "tool_finance_anomaly";
-            cardType = "anomaly_list";
-            cardTitle = "财务异常检测";
-        } else {
+        java.util.List<String> candidates = detectNoArgTools(msg);
+        if (candidates.isEmpty()) {
             return null;
         }
-
+        // 只取最具体的那个候选；它不可用就交回 Agent，<b>不换工具</b> ——
+        // 换工具会让用户拿到与问题无关的另一类数据（问财务却看到生产异常）。
+        final String toolName = candidates.get(0);
         // 权限先行：直查绕过 Agent 循环，必须显式校验，否则等于给无权角色开旁路
         if (!toolAccessService.canUseTool(toolName)) {
-            log.debug("[DirectQuery] 当前用户无权使用 {}，跳过直查", toolName);
+            log.debug("[DirectQuery] 当前用户无权使用 {}，跳过直查（交回 Agent 循环）", toolName);
             return null;
         }
         AgentTool tool = toolExecHelper.getToolMap().get(toolName);
@@ -141,6 +145,14 @@ public class DirectQueryRouter {
             log.warn("[DirectQuery] 未注册工具 {}，跳过直查", toolName);
             return null;
         }
+        return executeNoArgTool(toolName, tool);
+    }
+
+    /** 执行选定的无参工具并渲染；失败返回 {@code null}（交回 Agent 循环） */
+    private DirectAnswer executeNoArgTool(String toolName, AgentTool tool) {
+        final String cardType = "anomaly_list";
+        final String cardTitle = "tool_anomaly_detection".equals(toolName)
+                ? "今日生产异常检测" : "财务异常检测";
         try {
             String result = tool.execute("{}");
             if (result == null || result.isBlank()) {
@@ -159,6 +171,84 @@ public class DirectQueryRouter {
             log.warn("[DirectQuery] {} 执行失败，交回 Agent 循环: {}", toolName, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * D-755：无参直查的候选工具，按「越具体越靠前」排序（纯函数、无依赖，
+     * 便于用<b>真实输入</b>做行为回归）。
+     *
+     * <p>抽出来的原因：这段正则此前内联在 {@link #tryNoArgDirect} 里，测试只能靠
+     * 「读源码断言 contains(...)」——<b>结构上测不出「给定这个输入会不会误命中」</b>，
+     * 这正是 D-755 事故（停在生产管理页时任何问题都被异常直查劫持）漏网的原因。
+     * 现在可以直接喂真实 question 断言。
+     *
+     * @return 命中的工具名（可能为空列表）；调用方按顺序取第一个可用的
+     */
+    static java.util.List<String> detectNoArgTools(String msg) {
+        if (msg == null || msg.isBlank()) {
+            return java.util.List.of();
+        }
+        java.util.List<String> tools = new java.util.ArrayList<>(2);
+        // 顺序 = 具体度：财务异常的正则更具体，必须先判。
+        // 此前生产异常在前，它的「有没有问题」会抢先命中「财务有没有问题」，
+        // 导致用户问财务却拿到「今日生产异常检测」卡片。
+        if (msg.matches("(?s).*(财务.{0,4}异常|异常.{0,4}财务|财务有没有问题|"
+                + "费用异常|收付款.{0,4}问题|有没有对不上的|财务风险).*")) {
+            tools.add("tool_finance_anomaly");
+        }
+        if (msg.matches("(?s).*(有没有异常|有什么异常|有异常吗|生产异常|风险检测|风险信号|"
+                + "今天有什么问题|异常检测|有没有问题|哪些异常).*")) {
+            tools.add("tool_anomaly_detection");
+        }
+        return tools;
+    }
+
+    /** 供测试：命中的首选工具；未命中返回 {@code null} */
+    static String detectNoArgTool(String msg) {
+        java.util.List<String> tools = detectNoArgTools(msg);
+        return tools.isEmpty() ? null : tools.get(0);
+    }
+
+    /**
+     * D-755：从 question 里还原「用户原话」。
+     *
+     * <p><b>要解决的问题</b>：前端 {@code buildContextualText()} 把<b>两件不同的事</b>
+     * 塞进了同一个 question —— 用户原话，以及给 LLM 看的提示：
+     * <pre>
+     *   [当前页面:生产管理模块|orderNo:PO…][工厂ID:…] 用户原话
+     *     \n[页面快捷操作建议：…；检测生产异常]
+     *     \n[历史对话摘要：最近 5 条用户消息]
+     * </pre>
+     * 直查判定是「包含某关键词」的松散正则，在这整段上匹配的后果是：
+     * <b>停在生产管理页时，无论问什么（连订单号都算）都返回异常检测卡片</b>——
+     * 因为该页前 3 条快捷建议含「检测生产异常」，而前端只取 {@code slice(0,3)}。
+     *
+     * <p><b>为什么按标记截断，而不是剥离方括号</b>：
+     * {@code [历史对话摘要：…]} 的内容是用户历史原话，本身可能含 {@code ]}，
+     * 按方括号配对剥离会在错误位置截断。这几个提示段由机器生成且<b>永远追加在末尾</b>，
+     * 所以「从第一个标记处截断」是稳的。
+     *
+     * <p><b>两道防线</b>：① 正路是前端用 rawQuestion 单独传原话，直查只看它；
+     * ② 本方法是兜底，供未升级的老客户端与未来新增的调用方。
+     */
+    static String extractUserQuestion(String msg) {
+        if (msg == null) {
+            return null;
+        }
+        String s = msg;
+        int cut = -1;
+        for (String marker : TAIL_HINTS) {
+            int i = s.indexOf(marker);
+            if (i >= 0 && (cut < 0 || i < cut)) {
+                cut = i;
+            }
+        }
+        if (cut >= 0) {
+            s = s.substring(0, cut);
+        }
+        s = s.replaceFirst("^\\s*\\[当前页面:[^\\]]*\\]", "");
+        s = s.replaceFirst("^\\s*\\[工厂ID:[^\\]]*\\]", "");
+        return s.trim();
     }
 
     /**

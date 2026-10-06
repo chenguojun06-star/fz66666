@@ -508,7 +508,14 @@ export const intelligenceApi = {
     api.get<{ code: number; data: { enabled: boolean; message: string } }>('/intelligence/ai-advisor/status'),
 
   /** AI顾问问答 — 优先本地规则引擎，无法回答时走 DeepSeek */
-  aiAdvisorChat: (question: string) =>
+  /**
+   * D-755：rawQuestion 是「用户原话」。
+   *
+   * question 里同时含页面快捷建议与历史对话摘要（buildContextualText 拼接），
+   * 后端直查判定是「包含关键词」的松散正则 —— 只看原话才能避免
+   * 「停在生产管理页 → 任何问题（连订单号）都被异常检测直查劫持」。
+   */
+  aiAdvisorChat: (question: string, rawQuestion?: string) =>
     api.post<{ code: number; data: {
       answer: string;
       displayAnswer?: string;
@@ -518,7 +525,7 @@ export const intelligenceApi = {
       cards?: Array<Record<string, unknown>>;
     } }>(
       '/intelligence/ai-advisor/chat',
-      { question },
+      { question, rawQuestion },
       { timeout: 90000 },
     ),
 
@@ -565,11 +572,14 @@ export const intelligenceApi = {
     onDone: () => void,
     onError: (err: string) => void,
     imageUrl?: string,
+    /** D-755：用户原话。后端直查判定只看它，不看含页面建议/历史摘要的 question */
+    rawQuestion?: string,
   ) => {
     const token = localStorage.getItem('authToken') || '';
     let url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}`;
     if (pageContext) url += `&pageContext=${encodeURIComponent(pageContext)}`;
     if (imageUrl && imageUrl.startsWith('http')) url += `&imageUrl=${encodeURIComponent(imageUrl)}`;
+    if (rawQuestion && rawQuestion.trim()) url += `&rawQuestion=${encodeURIComponent(rawQuestion)}`;
     const ctrl = new AbortController();
     fetch(url, {
       headers: { Authorization: token ? `Bearer ${token}` : '' },

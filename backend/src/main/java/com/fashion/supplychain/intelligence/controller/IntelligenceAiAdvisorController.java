@@ -116,7 +116,10 @@ public class IntelligenceAiAdvisorController {
         String pageContext = body.get("pageContext");
         String conversationId = body.get("conversationId");
         AgentMode agentMode = AgentMode.fromString(body.get("mode"));
-        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, pageContext, agentMode);
+        // D-755：question 里含页面快捷建议与历史摘要（前端 buildContextualText 拼接），
+        // 直查判定必须只看用户原话，否则「停在生产管理页」= 「任何问题都被异常检测劫持」。
+        String rawQuestion = body.get("rawQuestion");
+        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, pageContext, agentMode, rawQuestion);
         String commandId = aiAgentOrchestrator.consumeLastCommandId();
         var toolRecords = aiAgentOrchestrator.consumeLastToolRecords();
         AiAdvisorChatResponse resp = aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult, toolRecords);
@@ -135,6 +138,7 @@ public class IntelligenceAiAdvisorController {
                                           @RequestParam(required = false) String processName,
                                           @RequestParam(required = false) String stage,
                                           @RequestParam(required = false) String mode,
+                                          @RequestParam(required = false) String rawQuestion,
                                           jakarta.servlet.http.HttpServletResponse response) {
         response.setHeader("X-Accel-Buffering", "no");
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -171,7 +175,8 @@ public class IntelligenceAiAdvisorController {
         Thread.startVirtualThread(() -> {
             try {
                 UserContext.set(snapshot);
-                aiAgentOrchestrator.executeAgentStreaming(question, effectivePageContext, AgentMode.fromString(mode), emitter);
+                aiAgentOrchestrator.executeAgentStreaming(question, effectivePageContext,
+                        AgentMode.fromString(mode), emitter, rawQuestion);
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));

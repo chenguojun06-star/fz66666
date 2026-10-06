@@ -239,10 +239,26 @@ public class AiAgentOrchestrator {
 
     /** v2: 三参数版本（mode 暂未用到，保持与 controller 签名兼容） */
     public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode) {
-        return executeAgent(userMessage, pageContext);
+        return executeAgent(userMessage, pageContext, mode, null);
+    }
+
+    /**
+     * D-755：四参数版本 —— {@code rawQuestion} 是<b>用户原话</b>。
+     *
+     * <p>PC 端的 {@code question} 里同时含页面快捷建议与历史对话摘要
+     * （前端 {@code buildContextualText} 拼接），而直查判定是「包含关键词」的松散正则。
+     * 只看原话，才能避免「停在生产管理页 → 任何问题（连订单号）都被异常检测直查劫持」。
+     * 传 {@code null} 时退回旧行为（供 IM / 公众号 / OpenAI 兼容等本就是原始文本的入口）。
+     */
+    public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode, String rawQuestion) {
+        return executeAgentInternal(userMessage, pageContext, rawQuestion);
     }
 
     public Result<String> executeAgent(String userMessage, String pageContext) {
+        return executeAgentInternal(userMessage, pageContext, null);
+    }
+
+    private Result<String> executeAgentInternal(String userMessage, String pageContext, String rawQuestion) {
         // 【P0安全升级】输入侧三层防护：越狱检测 + PII脱敏 + 注入清洗
         userMessage = applyInputSecurityGuard(userMessage);
         if (userMessage == null) {
@@ -259,9 +275,12 @@ public class AiAgentOrchestrator {
         // 参数不足/未查到/执行失败一律返回 null 继续走原流程。
         if (directQueryRouter != null) {
             try {
-                DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(userMessage);
+                // D-755：直查只看用户原话。question 里含页面快捷建议与历史摘要，
+                // 在其中匹配关键词会让「停在某页」变成「任何问题都被劫持」。
+                String directInput = (rawQuestion != null && !rawQuestion.isBlank()) ? rawQuestion : userMessage;
+                DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(directInput);
                 if (direct != null && direct.text() != null && !direct.text().isBlank()) {
-                    log.info("[AiAgent] 同步链路直查命中，跳过 Agent 循环: {}", userMessage);
+                    log.info("[AiAgent] 同步链路直查命中，跳过 Agent 循环: {}", directInput);
                     return Result.success(direct.text());
                 }
             } catch (Exception e) {
@@ -647,10 +666,24 @@ public class AiAgentOrchestrator {
 
     /** 流式对话中同样反转优先级（四参数版本，兼容流式接口） */
     public void executeAgentStreaming(String userMessage, String pageContext, AgentMode mode, SseEmitter emitter) {
-        executeAgentStreaming(userMessage, pageContext, emitter);
+        executeAgentStreaming(userMessage, pageContext, emitter, null);
+    }
+
+    /**
+     * D-755：五参数版本 —— {@code rawQuestion} 是<b>用户原话</b>，直查判定只看它。
+     * 理由同 {@link #executeAgent(String, String, AgentMode, String)}。
+     */
+    public void executeAgentStreaming(String userMessage, String pageContext, AgentMode mode,
+            SseEmitter emitter, String rawQuestion) {
+        executeAgentStreaming(userMessage, pageContext, emitter, rawQuestion);
     }
 
     public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
+        executeAgentStreaming(userMessage, pageContext, emitter, null);
+    }
+
+    public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter,
+            String rawQuestion) {
         long requestStartAt = System.currentTimeMillis();
         ScheduledFuture<?> heartbeatFuture = null;
         AtomicBoolean cancelled = new AtomicBoolean(false);
@@ -715,10 +748,15 @@ public class AiAgentOrchestrator {
             // 且未命中/参数不足/工具失败一律返回 null 交回 Agent 循环，绝不猜参数。
             if (directQueryRouter != null) {
                 try {
-                    DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(userMessage);
+                    // D-755：直查只看用户原话。question 里含页面快捷建议（如生产管理页的
+                    // 「检测生产异常」）与历史摘要，在其中匹配关键词会让
+                    // 「停在某页」直接变成「任何问题都被异常检测劫持」。
+                    String directInput = (rawQuestion != null && !rawQuestion.isBlank())
+                            ? rawQuestion : userMessage;
+                    DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(directInput);
                     if (direct != null) {
                         long costMs = System.currentTimeMillis() - requestStartAt;
-                        log.info("[DirectQuery] 命中直查，耗时 {}ms（未经 LLM）", costMs);
+                        log.info("[DirectQuery] 命中直查，耗时 {}ms（未经 LLM）: {}", costMs, directInput);
                         emitSse(emitter, "data_card", java.util.Map.of(
                                 "type", direct.cardType(),
                                 "title", direct.cardTitle(),
