@@ -12,11 +12,36 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    /**
+     * D-702：后处理最长等待时间。
+     *
+     * <p>实测 Critic 3~8s、InsightCard 1~3s、SelfCritiqueGate 1~2s
+     * （含低分重试会更久），留 25s 余量。取 25s 而非更长有两个原因：
+     * <ul>
+     *   <li>前端 {@code SSE_INACTIVITY_TIMEOUT_MS} 是 30s，超出会显得「卡住」；</li>
+     *   <li>SSE 连接期间占用容器异步上下文，越短越省资源。</li>
+     * </ul>
+     * 超时即强制收尾——补发是「锦上添花」，绝不能让用户为了等它而干等。
+     */
+    private static final long POST_PROCESS_MAX_WAIT_MS = 25_000L;
+
+    /** 守护线程，避免阻止 JVM 退出。 */
+    private static final ScheduledExecutorService POST_PROCESS_SCHEDULER =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "ai-postprocess-closer");
+                t.setDaemon(true);
+                return t;
+            });
 
     private final SseEmitter emitter;
     private final AgentLoopContext ctx;
@@ -29,6 +54,8 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     private String finalContent;
     private List<AiAgentToolExecHelper.ToolExecRecord> execRecords;
     private volatile boolean emitterClosed = false;
+    /** 后处理兜底收尾定时器（D-702） */
+    private volatile ScheduledFuture<?> postProcessTimer;
 
     public StreamingAgentLoopCallback(SseEmitter emitter,
                                        AgentLoopContext ctx,
@@ -75,13 +102,100 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
         memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
 
-        // 幂等关闭：只有未关闭时才关闭SSE（异步后处理可能重复调用onAnswer）
-        if (!emitterClosed) {
-            emitterClosed = true;
-            emitSse("done", Map.of());
-            try { emitter.complete(); } catch (Exception e) {
-                log.debug("[StreamCallback] SSE complete异常(answer): {}", e.getMessage());
-            }
+        // D-702：这里**不再立即关闭 SSE**。
+        // 关闭后异步后处理算出的改进版（Critic / SelfCritiqueGate / 数据真实性守卫）
+        // 就再也发不出去了——用户永远看不到自己那份已经算好的结果，守卫等于白跑。
+        // 因此改为：发出答案后留一条通道，由 onRefinedAnswer 补发，
+        // 最后由 onPostProcessFinished 收尾；同时挂一个安全兜底定时器，
+        // 防止后处理异常/线程池拒绝导致连接悬挂到 SSE 超时。
+        armPostProcessSafetyTimer();
+    }
+
+    /**
+     * D-702：补发审查改进后的答案（第二个 {@code answer} 事件）。
+     *
+     * <p>前端对 {@code answer} 是整段替换，因此气泡会直接升级为改进版。
+     * 必须在 {@code follow_up_actions} 之前发出，否则前端合并消息时
+     * 可能用空值覆盖掉已收到的后续建议。
+     */
+    @Override
+    public void onRefinedAnswer(String content, String commandId) {
+        if (emitterClosed || content == null || content.isBlank()) {
+            return;
+        }
+        String sanitized = sanitize(deduplicateAnswer(content));
+        if (sanitized.equals(finalContent)) {
+            // 与已发出的完全一致，没必要让气泡闪一次
+            return;
+        }
+        emitSse("answer", Map.of("content", sanitized, "commandId", commandId));
+        // 同步更新 finalContent：getFinalContent() 的调用方应拿到最终版
+        this.finalContent = sanitized;
+        memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
+    }
+
+    @Override
+    public void onPostProcessFinished() {
+        cancelPostProcessSafetyTimer();
+        closeEmitter();
+    }
+
+    /**
+     * 安全兜底：后处理若因线程池拒绝或未走到收尾而永不调用
+     * {@link #onPostProcessFinished()}，连接会悬挂到 SSE 超时（300s）。
+     * 这里做一次强制收尾，保证「最多多挂 {@code POST_PROCESS_MAX_WAIT_MS}」。
+     */
+    private void armPostProcessSafetyTimer() {
+        cancelPostProcessSafetyTimer();
+        try {
+            postProcessTimer = POST_PROCESS_SCHEDULER.schedule(() -> {
+                if (!emitterClosed) {
+                    log.info("[StreamCallback] 后处理兜底收尾（{}ms 内未收到 onPostProcessFinished）",
+                            POST_PROCESS_MAX_WAIT_MS);
+                    closeEmitter();
+                }
+            }, POST_PROCESS_MAX_WAIT_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.debug("[StreamCallback] 兜底定时器启动失败: {}", e.getMessage());
+        }
+    }
+
+    private void cancelPostProcessSafetyTimer() {
+        if (postProcessTimer != null) {
+            postProcessTimer.cancel(false);
+            postProcessTimer = null;
+        }
+    }
+
+    /** 先发出 error/answer 等终止事件，再幂等关闭（含取消兜底定时器）。 */
+    private void closeEmitterWithDone() {
+        emitSse("done", Map.of());
+        emitterClosed = true;
+        cancelPostProcessSafetyTimer();
+        try { emitter.complete(); } catch (Exception e) {
+            log.debug("[StreamCallback] SSE异常", e);
+        }
+    }
+
+    /** 幂等关闭 SSE。 */
+    private void closeEmitter() {
+        cancelPostProcessSafetyTimer();
+        if (emitterClosed) {
+            return;
+        }
+        emitterClosed = true;
+        emitSseRaw("done");
+        try { emitter.complete(); } catch (Exception e) {
+            log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
+        }
+    }
+
+    /** 已置 emitterClosed 时仍要发出 done，故不走 emitSse 的短路判断。 */
+    private void emitSseRaw(String eventName) {
+        try {
+            emitter.send(SseEmitter.event().name(eventName).data(JSON.writeValueAsString(Map.of())));
+        } catch (Exception e) {
+            log.debug("[StreamCallback] 发送 {} 失败: {}", eventName, e.getMessage());
         }
     }
 
@@ -104,13 +218,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     @Override
     public void onDone() {
-        if (!emitterClosed) {
-            emitterClosed = true;
-            emitSse("done", Map.of());
-            try { emitter.complete(); } catch (Exception e) {
-                log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
-            }
-        }
+        closeEmitter();
     }
 
     @Override
@@ -118,10 +226,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         if (!emitterClosed) {
             emitterClosed = true;
             emitSse("error", Map.of("message", message));
-            emitSse("done", Map.of());
-            try { emitter.complete(); } catch (Exception e) {
-                log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
-            }
+            closeEmitter();
         }
     }
 
@@ -129,17 +234,13 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     public void onStuckDetected() {
         String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
         emitSse("answer", Map.of("content", stuckMsg, "commandId", ctx.getCommandId()));
-        emitSse("done", Map.of());
-        emitterClosed = true;
-        try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
+        closeEmitterWithDone();
     }
 
     @Override
     public void onTokenBudgetExceeded(String message, String commandId) {
         emitSse("answer", Map.of("content", message, "commandId", commandId));
-        emitSse("done", Map.of());
-        emitterClosed = true;
-        try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
+        closeEmitterWithDone();
     }
 
     @Override
@@ -147,17 +248,13 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         String planDesc = buildPlanDescription(toolCalls, iteration);
         String planContent = (content != null && !content.isBlank() ? content + "\n\n" : "") + planDesc;
         emitSse("answer", Map.of("content", planContent, "commandId", ctx.getCommandId()));
-        emitSse("done", Map.of());
-        emitterClosed = true;
-        try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
+        closeEmitterWithDone();
     }
 
     @Override
     public void onMaxIterationsExceeded() {
         emitSse("error", Map.of("message", "对话轮数超过限制"));
-        emitSse("done", Map.of());
-        emitterClosed = true;
-        try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
+        closeEmitterWithDone();
     }
 
     @Override

@@ -734,13 +734,20 @@ public class AgentLoopEngine {
         // ★ 全部异步后处理：Critic审查 + Insight卡 + SelfCritiqueGate + 自我一致性 + 建议 + 记忆
         final String finalFastContent = fastContent;
         final AgentLoopCallback finalCb = cb;
-        ForkJoinPool.commonPool().execute(() -> {
-            try {
-                asyncPostProcess(ctx, finalFastContent, finalCb);
-            } catch (Exception ex) {
-                log.debug("[AgentLoop] 异步后处理异常（不影响用户）: {}", ex.getMessage());
-            }
-        });
+        try {
+            ForkJoinPool.commonPool().execute(() -> {
+                try {
+                    asyncPostProcess(ctx, finalFastContent, finalCb);
+                } catch (Exception ex) {
+                    log.debug("[AgentLoop] 异步后处理异常（不影响用户）: {}", ex.getMessage());
+                }
+            });
+        } catch (Exception scheduleEx) {
+            // D-702：线程池饱和/拒绝时任务根本不会执行，后处理收尾也不会被调用。
+            // 首次回答已不再关闭 SSE，因此这里必须显式收尾，否则连接会悬挂到 SSE 超时。
+            log.warn("[AgentLoop] 异步后处理调度失败，直接收尾 SSE: {}", scheduleEx.getMessage());
+            finalCb.onPostProcessFinished();
+        }
 
         return fastContent;
     }
@@ -750,6 +757,56 @@ public class AgentLoopEngine {
      * 包含：Critic审查(LLM) + Insight卡(LLM) + SelfCritiqueGate(LLM) + 自我一致性 + 后续建议 + 记忆
      */
     private void asyncPostProcess(AgentLoopContext ctx, String fastContent, AgentLoopCallback cb) {
+        // 用数组持有以便 lambda 回写（局部变量需 effectively final）
+        final String[] refinedHolder = new String[1];
+        try {
+            doAsyncPostProcess(ctx, fastContent, cb, r -> refinedHolder[0] = r);
+            String refined = refinedHolder[0];
+            // D-702：把审查改进后的内容补发给用户。
+            // 此前改进结果只写进会话历史，用户永远看不到自己那份已经算好的答案，
+            // 数据真实性守卫的警告也同样看不到——等于白花 5~30 秒。
+            if (shouldRefinedAnswerBeSent(fastContent, refined)) {
+                cb.onRefinedAnswer(refined, ctx.getCommandId());
+            }
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 异步后处理异常（不影响用户）: {}", e.getMessage());
+        } finally {
+            // 首次回答后 SSE 不再立即关闭（要给补发留通道），必须在此收尾，
+            // 否则连接会悬挂到 SSE 超时。
+            cb.onPostProcessFinished();
+        }
+    }
+
+    /**
+     * D-702：补发前的一道闸，避免把「更好」变成「更差」。
+     *
+     * <p>补发的内容来自 LLM 改写（Critic / SelfCritiqueGate）与守卫追加的警告，
+     * 都是未经二次校验的，因此必须拒绝这几种退化情况：
+     * <ul>
+     *   <li>空内容 —— 会把用户已经看到的答案抹成空白；</li>
+     *   <li>与已发出内容相同 —— 让气泡无意义地闪一次；</li>
+     *   <li><b>长度不足原文一半</b> —— 多半是截断或改写时丢了工具数据，
+     *       这类「改进」会让答案看起来更完整、实际信息更少，是最危险的一种。</li>
+     * </ul>
+     */
+    private boolean shouldRefinedAnswerBeSent(String fastContent, String refined) {
+        if (refined == null || refined.isBlank() || fastContent == null) {
+            return false;
+        }
+        if (refined.trim().equals(fastContent.trim())) {
+            return false;
+        }
+        int originalLen = fastContent.length();
+        if (refined.length() * 2 < originalLen) {
+            log.info("[AgentLoop] 拒绝补发：改写后长度 {}/{}，疑似丢失数据", refined.length(), originalLen);
+            return false;
+        }
+        return true;
+    }
+
+    /** 后处理主体；通过 refinedConsumer 回传「实际参与后续动作的最终内容」。 */
+    private String doAsyncPostProcess(AgentLoopContext ctx, String fastContent,
+            AgentLoopCallback cb, java.util.function.Consumer<String> refinedConsumer) {
         String content = fastContent;
 
         // ★ Critic审查：最大延迟源（LLM调用约3-8秒），异步执行
@@ -919,7 +976,9 @@ public class AgentLoopEngine {
             }
         }
 
+        refinedConsumer.accept(content);
         completeSession(ctx, content);
+        return content;
     }
 
     private String enrichWithRiskDetection(AgentLoopContext ctx, String content) {

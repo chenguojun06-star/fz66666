@@ -352,7 +352,14 @@ export function useAiChatStream(config: StreamConfig) {
           const parsed = parseAiResponse(rawContent);
           let displayText = parsed.displayText || '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
           accumulatedText = displayText;
-          setFullMessage(aiMsgId, buildMessageData(displayText, parsed, { commandId, reportTypeToDownload }));
+          // D-702：后端会在审查完成后补发第二个 answer（整段替换）。
+          // buildMessageData 总是带回 cards/followUpActions 键，合并时会覆盖已有值 ——
+          // 若补发内容里没带卡片/建议，就会把先前已收到的抹掉（气泡只剩文字、建议消失）。
+          // 故此处保留「已经收到过的非空值」，只让新内容真正提供的字段生效。
+          setFullMessage(aiMsgId, buildMessageData(displayText, parsed, { commandId, reportTypeToDownload }, {
+            keepExistingCards: true,
+            keepExistingFollowUpActions: true,
+          }));
           if (!answerReceived) {
             answerReceived = true;
             if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
