@@ -147,7 +147,7 @@ export async function prepareBatchDocs(opts: {
   const printDate = new Date().toLocaleString('zh-CN');
   let done = 0;
 
-  const runOne = async (item: StyleBatchPrintItem) => {
+  const runOne = async (item: StyleBatchPrintItem, _index: number): Promise<PreparedBatchDoc | null> => {
     try {
       const bundle = await fetchStylePrintData({
         styleId: item.styleId,
@@ -183,26 +183,54 @@ export async function prepareBatchDocs(opts: {
           user={user}
         />,
       );
-      docs.push({
-        styleNo: item.styleNo || '',
-        pageTitle: getModePageTitle(item.mode),
-        bodyHtml,
-        printerInfo,
-        printDate,
-      });
-    } catch (e) {
-      console.error('[批量打印] 单据准备失败:', item.styleNo || item.key, e);
-      failed.push(item.styleNo || String(item.key));
-    } finally {
-      done += 1;
-      onProgress?.(done, total, item.styleNo || '');
-    }
-  };
+return {
+          styleNo: item.styleNo || '',
+          pageTitle: getModePageTitle(item.mode),
+          bodyHtml,
+          printerInfo,
+          printDate,
+        };
+      } catch (e) {
+        console.error('[批量打印] 单据准备失败:', item.styleNo || item.key, e);
+        failed.push(item.styleNo || String(item.key));
+        return null;
+      } finally {
+        done += 1;
+        onProgress?.(done, total, item.styleNo || '');
+      }
+    };
 
-  // 简易并发池：按 BATCH_CONCURRENCY 分批跑，批间串行
-  for (let i = 0; i < items.length; i += BATCH_CONCURRENCY) {
-    await Promise.all(items.slice(i, i + BATCH_CONCURRENCY).map(runOne));
-  }
+    // 简易并发池：按 BATCH_CONCURRENCY 分批跑，批间串行
+    //
+    // 【D-702 顺序修复】原实现是在 runOne 内直接 docs.push(...)，
+    // 而 runOne 是通过 Promise.all 并发执行的 —— 于是 docs 的顺序取决于
+    // **各单据网络请求的返回先后**，而不是用户勾选的顺序。
+    //
+    // 后果（真实用户可见，非测试问题）：批量打印 D-611b 的「每单独立页码」会与
+    // 用户的选择错位 —— 勾选 A/B/C 却可能打成 B/A/C，页码与款式对不上。
+    // 该缺陷在本地 mock 立即返回时不易复现，一旦网络有抖动/慢请求就暴露
+    // （CI 上 batchStylePrint 的顺序断言偶发失败正是它）。
+    //
+    // 修法：runOne 返回结果、由原始下标归位，保证 docs 与 items 严格同序。
+    const results: Array<PreparedBatchDoc | null> = new Array(items.length).fill(null);
+    for (let i = 0; i < items.length; i += BATCH_CONCURRENCY) {
+      const chunkIndexes = items
+        .map((_, idx) => idx)
+        .slice(i, i + BATCH_CONCURRENCY);
+      const chunk = await Promise.all(chunkIndexes.map((idx) => runOne(items[idx], idx)));
+      chunk.forEach((doc, k) => { results[chunkIndexes[k]] = doc; });
+    }
+    // 按原始顺序收集，并保持 failed 的出现顺序与 items 一致
+    for (const doc of results) {
+      if (doc) docs.push(doc);
+    }
+    if (failed.length > 1) {
+      failed.sort((a, b) => {
+        const ia = items.findIndex((it) => (it.styleNo || String(it.key)) === a);
+        const ib = items.findIndex((it) => (it.styleNo || String(it.key)) === b);
+        return (ia < 0 ? Number.MAX_SAFE_INTEGER : ia) - (ib < 0 ? Number.MAX_SAFE_INTEGER : ib);
+      });
+    }
 
   return { docs, failed, total };
 }
