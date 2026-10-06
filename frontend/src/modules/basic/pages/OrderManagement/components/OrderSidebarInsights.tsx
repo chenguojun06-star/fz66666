@@ -3,6 +3,7 @@ import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import type { SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import SmartStyleInsightCard from './SmartStyleInsightCard';
 import OrderSchedulingInsights from './OrderSchedulingInsights';
+import type { SchedulingInsightItem } from './orderSchedulingInsightsOrchestrator';
 
 interface OrderSidebarInsightsProps {
   styleNo?: string;
@@ -13,6 +14,7 @@ interface OrderSidebarInsightsProps {
   selectedFactoryId?: string;
   factories: Array<{ id?: string | number; factoryName: string }>;
   onSelectFactory: (factoryId: string) => void;
+  onAdoptPlan?: (item: SchedulingInsightItem) => void;
 }
 
 const OrderSidebarInsights: React.FC<OrderSidebarInsightsProps> = ({
@@ -24,6 +26,7 @@ const OrderSidebarInsights: React.FC<OrderSidebarInsightsProps> = ({
   selectedFactoryId,
   factories,
   onSelectFactory,
+  onAdoptPlan,
 }) => {
   if (!styleNo) {
     return null;
@@ -42,6 +45,7 @@ const OrderSidebarInsights: React.FC<OrderSidebarInsightsProps> = ({
         selectedFactoryId={selectedFactoryId}
         factories={factories}
         onSelectFactory={onSelectFactory}
+        onAdoptPlan={onAdoptPlan}
       />
     </>
   );

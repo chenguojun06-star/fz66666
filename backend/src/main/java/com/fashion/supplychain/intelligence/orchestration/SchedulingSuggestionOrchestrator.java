@@ -1,26 +1,32 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.intelligence.dto.SchedulingAdoptionRequest;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionRequest;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse.GanttItem;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse.SchedulePlan;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * 自动排产建议编排器 — 根据工厂真实历史数据建议排产方案
@@ -50,6 +56,13 @@ public class SchedulingSuggestionOrchestrator {
 
     @Autowired(required = false)
     private OptimizationSolverOrchestrator optimizationSolverOrchestrator;
+
+    /** 采纳留痕：写订单操作日志（自动带操作人/时间） */
+    @Autowired
+    private ProductionOrderLogAppendHelper productionOrderLogAppendHelper;
+
+    /** 采纳入参日期格式 */
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /** 标准工序及时间占比 */
     private static final LinkedHashMap<String, Double> STAGE_RATIO = new LinkedHashMap<>() {{
@@ -101,6 +114,110 @@ public class SchedulingSuggestionOrchestrator {
             log.error("[排产建议] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
         }
         return resp;
+    }
+
+    /**
+     * D-754 P4：采纳排产建议 — 把推荐方案写回订单，形成「建议 → 决策 → 落地」闭环。
+     *
+     * <p>写回字段：{@code factoryName} / {@code factoryId} / {@code plannedStartDate} / {@code plannedEndDate}；
+     * 并在订单操作日志追加一条「采纳排产建议」，自动记录操作人、时间与采纳的方案要点。
+     *
+     * <p>幂等性：同订单可反复采纳（换方案时覆盖），每次均留一条痕迹，便于追溯决策变更。
+     *
+     * @param req 采纳入参（orderId / factoryName 必填）
+     * @return 采纳结果摘要（订单号、写回后的工厂与计划日期、操作人）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adopt(SchedulingAdoptionRequest req) {
+        TenantAssert.assertTenantContext();
+        if (req == null || !StringUtils.hasText(req.getOrderId())) {
+            throw new BusinessException("采纳失败：订单ID不能为空");
+        }
+        if (!StringUtils.hasText(req.getFactoryName())) {
+            throw new BusinessException("采纳失败：方案缺少工厂信息");
+        }
+
+        ProductionOrder order = productionOrderService.getById(req.getOrderId().trim());
+        if (order == null) {
+            throw new BusinessException("采纳失败：订单不存在或已删除");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+
+        String beforeFactory = order.getFactoryName();
+        LocalDateTime beforeStart = order.getPlannedStartDate();
+        LocalDateTime beforeEnd = order.getPlannedEndDate();
+
+        order.setFactoryName(req.getFactoryName().trim());
+        if (StringUtils.hasText(req.getFactoryId())) {
+            order.setFactoryId(req.getFactoryId().trim());
+        }
+        LocalDateTime newStart = parseDate(req.getPlannedStartDate(), true);
+        LocalDateTime newEnd = parseDate(req.getPlannedEndDate(), false);
+        if (newStart != null) {
+            order.setPlannedStartDate(newStart);
+        }
+        if (newEnd != null) {
+            order.setPlannedEndDate(newEnd);
+        }
+        productionOrderService.updateById(order);
+
+        productionOrderLogAppendHelper.appendOperation(
+                order.getId(), "采纳排产建议", buildAdoptionDetail(
+                        beforeFactory, beforeStart, beforeEnd, order, newStart, newEnd, req));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("orderId", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("factoryName", order.getFactoryName());
+        result.put("plannedStartDate", formatDate(order.getPlannedStartDate()));
+        result.put("plannedEndDate", formatDate(order.getPlannedEndDate()));
+        result.put("operator", UserContext.username());
+        result.put("adopted", true);
+        log.info("[排产采纳] 租户={} 订单={} 工厂={}({}) 计划={} → {} 操作人={}",
+                UserContext.tenantId(), order.getOrderNo(), order.getFactoryName(), order.getFactoryId(),
+                formatDate(order.getPlannedStartDate()), formatDate(order.getPlannedEndDate()), UserContext.username());
+        return result;
+    }
+
+    private String buildAdoptionDetail(String beforeFactory, LocalDateTime beforeStart, LocalDateTime beforeEnd,
+                                       ProductionOrder after, LocalDateTime newStart, LocalDateTime newEnd,
+                                       SchedulingAdoptionRequest req) {
+        StringBuilder detail = new StringBuilder();
+        detail.append("工厂：").append(blankToDash(beforeFactory)).append(" → ").append(after.getFactoryName());
+        if (newStart != null) {
+            detail.append("；计划开始：").append(formatDate(beforeStart)).append(" → ").append(formatDate(newStart));
+        }
+        if (newEnd != null) {
+            detail.append("；计划完成：").append(formatDate(beforeEnd)).append(" → ").append(formatDate(newEnd));
+        }
+        if (req.getMatchScore() != null) {
+            detail.append("；匹配分：").append(req.getMatchScore());
+        }
+        if (StringUtils.hasText(req.getReason())) {
+            detail.append("；依据：").append(req.getReason().trim());
+        }
+        return detail.toString();
+    }
+
+    /** @param startOfDay true 解析为当日 00:00:00，false 解析为当日 23:59:59 */
+    private LocalDateTime parseDate(String raw, boolean startOfDay) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        try {
+            LocalDate date = LocalDate.parse(raw.trim(), DATE_FMT);
+            return startOfDay ? date.atStartOfDay() : date.atTime(23, 59, 59);
+        } catch (Exception e) {
+            throw new BusinessException("采纳失败：日期格式应为 yyyy-MM-dd，实际为 " + raw);
+        }
+    }
+
+    private String formatDate(LocalDateTime time) {
+        return time == null ? "-" : time.toLocalDate().format(DATE_FMT);
+    }
+
+    private String blankToDash(String value) {
+        return StringUtils.hasText(value) ? value : "-";
     }
 
     private List<Factory> listFactories(Long tenantId) {

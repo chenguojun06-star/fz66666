@@ -3,6 +3,7 @@ import { Button, Tag } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import type { SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import { buildSchedulingInsightItems } from './orderSchedulingInsightsOrchestrator';
+import type { SchedulingInsightItem } from './orderSchedulingInsightsOrchestrator';
 
 interface OrderSchedulingInsightsProps {
   loading: boolean;
@@ -10,6 +11,8 @@ interface OrderSchedulingInsightsProps {
   selectedFactoryId?: string;
   factories: Array<{ id?: string | number; factoryName: string }>;
   onSelectFactory: (factoryId: string) => void;
+  /** D-754 P4：一键采纳方案 —— 回填工厂 + 计划开始/完成日期 */
+  onAdoptPlan?: (item: SchedulingInsightItem) => void;
 }
 
 const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
@@ -18,6 +21,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
   selectedFactoryId,
   factories,
   onSelectFactory,
+  onAdoptPlan,
 }) => {
   const [visible, setVisible] = useState(false);
   const items = useMemo(
@@ -103,9 +107,8 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                 {item.dataNote ? (
                   <div className="u-mt-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.dataNote}</div>
                 ) : null}
-                <div className="u-mt-8">
+                <div className="u-mt-8 u-d-flex u-gap-8">
                   <Button
-                   
                     type={item.selected ? 'primary' : 'default'}
                     onClick={() => {
                       if (item.factoryId) {
@@ -116,6 +119,21 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                   >
                     {item.selected ? '已选中' : '选这个'}
                   </Button>
+                  {onAdoptPlan ? (
+                    <Button
+                      type="primary"
+                      ghost={item.selected}
+                      title="采纳后自动填入工厂与计划开始/完成日期"
+                      onClick={() => {
+                        if (item.factoryId) {
+                          onAdoptPlan(item);
+                        }
+                      }}
+                      disabled={!item.factoryId}
+                    >
+                      采纳
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ))

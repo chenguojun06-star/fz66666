@@ -20,6 +20,9 @@ export interface SchedulingInsightItem {
   dataNote?: string;
   selected: boolean;
   pinned: boolean;
+  /** 采纳回填用：方案建议开始/完成日期（yyyy-MM-dd） */
+  suggestedStart?: string;
+  estimatedEnd?: string;
 }
 
 const formatInt = (value: unknown) => {
@@ -65,6 +68,8 @@ export const buildSchedulingInsightItems = (
       dataNote: plan.dataNote || undefined,
       selected,
       pinned: selected,
+      suggestedStart: plan.suggestedStart || undefined,
+      estimatedEnd: plan.estimatedEnd || undefined,
     };
   });
 

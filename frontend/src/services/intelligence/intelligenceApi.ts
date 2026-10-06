@@ -66,6 +66,7 @@ import type {
   ProcessTemplateResponse,
   ProfitEstimationResponse,
   RhythmDnaResponse,
+  SchedulingAdoptionResult,
   SchedulingSuggestionResponse,
   SelfHealingResponse,
   SmartAssignmentResponse,
@@ -425,6 +426,18 @@ export const intelligenceApi = {
   /** ⑪ 自动排产建议 */
   suggestScheduling: (payload: { styleNo: string; quantity: number; deadline: string; productCategory?: string }) =>
     api.post<{ code: number; data: SchedulingSuggestionResponse }>('/intelligence/scheduling-suggestion', payload),
+
+  /** ⑪-2 采纳排产建议（D-754 P4）：写回订单工厂/计划起止并留采纳痕迹 */
+  adoptScheduling: (payload: {
+    orderId: string;
+    factoryName: string;
+    factoryId?: string;
+    plannedStartDate?: string;
+    plannedEndDate?: string;
+    matchScore?: number;
+    reason?: string;
+  }) =>
+    api.post<{ code: number; data: SchedulingAdoptionResult }>('/intelligence/scheduling-suggestion/adopt', payload),
 
   /** ⑫ 质量缺陷热力图 */
   getDefectHeatmap: () =>

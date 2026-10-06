@@ -1,5 +1,6 @@
 import React from 'react';
-import type { FormInstance } from 'antd';
+import { message, type FormInstance } from 'antd';
+import dayjs from 'dayjs';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import StyleQuotePopover from '../StyleQuotePopover';
@@ -73,6 +74,18 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
         onSelectFactory={(factoryId) => {
           setFactoryMode('EXTERNAL');
           form.setFieldValue('factoryId', factoryId);
+        }}
+        onAdoptPlan={(plan) => {
+          // D-754 P4：一键采纳 —— 工厂 + 计划开始/完成日期一并回填，下单即落地
+          setFactoryMode('EXTERNAL');
+          const patch: Record<string, unknown> = { factoryId: plan.factoryId };
+          if (plan.suggestedStart) patch.plannedStartDate = dayjs(plan.suggestedStart);
+          if (plan.estimatedEnd) patch.plannedEndDate = dayjs(plan.estimatedEnd);
+          form.setFieldsValue(patch);
+          const range = plan.suggestedStart && plan.estimatedEnd
+            ? `，计划 ${plan.suggestedStart} → ${plan.estimatedEnd}`
+            : '';
+          message.success(`已采纳「${plan.factoryName}」方案${range}`);
         }}
       />
     </div>

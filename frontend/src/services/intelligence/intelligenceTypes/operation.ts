@@ -290,6 +290,16 @@ export interface SchedulePlan {
 export interface SchedulingSuggestionResponse {
   plans: SchedulePlan[];
 }
+/** 采纳排产建议的写回结果（D-754 P4） */
+export interface SchedulingAdoptionResult {
+  orderId: string;
+  orderNo?: string;
+  factoryName: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  operator?: string;
+  adopted: boolean;
+}
 
 export interface HeatCell { process: string; factory: string; defectCount: number; intensity: number; }
 export interface DefectHeatmapResponse {

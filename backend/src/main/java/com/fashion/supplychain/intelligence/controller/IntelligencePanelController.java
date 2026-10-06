@@ -96,6 +96,13 @@ public class IntelligencePanelController {
         return Result.success(schedulingSuggestionOrchestrator.suggest(request));
     }
 
+    /** D-754 P4：采纳排产建议 — 写回订单工厂/计划起止，并在订单操作日志留采纳痕迹 */
+    @PostMapping("/scheduling-suggestion/adopt")
+    @DataTruth(source = DataTruth.Source.REAL_DATA, description = "采纳排产建议写回生产订单并留痕")
+    public Result<java.util.Map<String, Object>> adoptScheduling(@RequestBody SchedulingAdoptionRequest request) {
+        return Result.success(schedulingSuggestionOrchestrator.adopt(request));
+    }
+
     @PostMapping("/defect-heatmap")
     public Result<DefectHeatmapResponse> defectHeatmap() {
         return Result.success(defectHeatmapOrchestrator.analyze());
