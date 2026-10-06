@@ -26,8 +26,19 @@ public class RootCauseAnalysisOrchestrator {
 
     private static final int MAX_WHY_DEPTH = 5;
 
+    /** D-754：巡检自动触发 RCA 的每日上限（LLM 成本保护），超过则跳过并留待人工 */
+    public static final int AUTO_RCA_DAILY_LIMIT = 5;
+
     @Autowired private RootCauseAnalysisMapper rcaMapper;
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    /** 今日巡检自动 RCA 已用次数（成本限额用） */
+    public long countAutoRcaToday(Long tenantId) {
+        return rcaMapper.selectCount(new QueryWrapper<RootCauseAnalysis>()
+                .eq("tenant_id", tenantId)
+                .eq("trigger_type", "patrol_auto")
+                .ge("create_time", LocalDateTime.now().toLocalDate().atStartOfDay()));
+    }
 
     /**
      * 发起5-Why根因分析 — AI递归追问至根因。

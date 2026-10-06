@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.BusinessException;
 
 /**
@@ -38,6 +39,16 @@ public class PatrolClosedLoopOrchestrator {
     @Autowired
     @Lazy
     private SysNoticeService sysNoticeService;
+
+    /** D-754 P1：工单证据包富化（订单类告警自动带「卡在哪/停多久/物料到货率」） */
+    @Autowired
+    @Lazy
+    private com.fashion.supplychain.intelligence.helper.PatrolEvidenceEnricher evidenceEnricher;
+
+    /** D-754 P1：HIGH 级订单工单自动触发 5-Why 根因分析（异步+每日限额） */
+    @Autowired
+    @Lazy
+    private RootCauseAnalysisOrchestrator rootCauseAnalysisOrchestrator;
 
     // ── 自适应 MTTR 学习（v2 新增） ──
     /** EWMA 平滑系数（越接近 1，越重视新样本） */
@@ -169,7 +180,7 @@ public class PatrolClosedLoopOrchestrator {
         a.setActionUid(UUID.randomUUID().toString().replace("-", ""));
         a.setTenantId(tenantId);
         a.setPatrolSource(patrolSource);
-        a.setDetectedIssue(detectedIssue);
+        a.setDetectedIssue(attachEvidencePack(issueType, targetId, detectedIssue));
         a.setIssueType(issueType);
         a.setIssueSeverity(issueSeverity);
         a.setTargetType(targetType);
@@ -187,7 +198,66 @@ public class PatrolClosedLoopOrchestrator {
         if ("NEED_APPROVAL".equals(effectiveRiskLevel)) {
             notifyRelevantMerchandiser(tenantId, a);
         }
+
+        // D-754 P1：HIGH 级订单工单自动跑 5-Why 根因（异步，不拖慢工单创建；每日限额控 LLM 成本）
+        if ("HIGH".equals(issueSeverity) && evidenceEnricher.isOrderIssueType(issueType)) {
+            triggerAutoRcaAsync(tenantId, a);
+        }
         return a;
+    }
+
+    /** 订单类工单文案自动附加证据包（卡在哪/停多久/物料到货率/环节积压），失败静默保留原文 */
+    private String attachEvidencePack(String issueType, String targetId, String detectedIssue) {
+        try {
+            if (!evidenceEnricher.isOrderIssueType(issueType)) {
+                return detectedIssue;
+            }
+            String evidence = evidenceEnricher.buildEvidencePack(targetId);
+            return StringUtils.hasText(evidence) ? detectedIssue + "\n" + evidence : detectedIssue;
+        } catch (Exception e) {
+            log.debug("[PatrolClosedLoop] 证据包附加失败，保留原文: {}", e.getMessage());
+            return detectedIssue;
+        }
+    }
+
+    /**
+     * HIGH 级订单工单异步自动 RCA：5-Why + 鱼骨图落库（t_root_cause_analysis, trigger_type=patrol_auto）。
+     * 每租户每日限 {@link RootCauseAnalysisOrchestrator#AUTO_RCA_DAILY_LIMIT} 次，控 LLM 成本；
+     * 线程内重建租户上下文（RCA 内部有 TenantAssert）。
+     */
+    private void triggerAutoRcaAsync(Long tenantId, AiPatrolAction a) {
+        try {
+            if (rootCauseAnalysisOrchestrator.countAutoRcaToday(tenantId)
+                    >= RootCauseAnalysisOrchestrator.AUTO_RCA_DAILY_LIMIT) {
+                log.info("[PatrolClosedLoop] 自动RCA已达每日限额，跳过: tenant={}, order={}", tenantId, a.getTargetId());
+                return;
+            }
+            Long actionId = a.getId();
+            String issue = a.getDetectedIssue();
+            String targetId = a.getTargetId();
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                UserContext previous = UserContext.get();
+                try {
+                    UserContext ctx = new UserContext();
+                    ctx.setTenantId(tenantId);
+                    ctx.setUserId("system");
+                    ctx.setUsername("system");
+                    UserContext.set(ctx);
+                    rootCauseAnalysisOrchestrator.analyze("patrol_auto", issue, targetId);
+                    log.info("[PatrolClosedLoop] 工单{} 自动RCA完成: tenant={}, order={}", actionId, tenantId, targetId);
+                } catch (Exception e) {
+                    log.warn("[PatrolClosedLoop] 自动RCA失败（不影响工单）: tenant={}, err={}", tenantId, e.getMessage());
+                } finally {
+                    if (previous != null) {
+                        UserContext.set(previous);
+                    } else {
+                        UserContext.clear();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[PatrolClosedLoop] 自动RCA调度失败（不影响工单）: {}", e.getMessage());
+        }
     }
 
     /**
