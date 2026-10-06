@@ -62,25 +62,28 @@ SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=tru
 SPRING_REDIS_PASSWORD=
 ```
 
-### 🔴 必须改的第 3 行：SPRING_AI_ADAPTER_ENABLED=false
+### ⚠️ 不要动这行：SPRING_AI_ADAPTER_ENABLED=true（D-743 起）
 
 ```
-# 改这行（或直接删掉整行）：Spring Boot 4.1 下 Spring AI 必须关闭
-SPRING_AI_ADAPTER_ENABLED=false
+# 保持 true（或整行删除——application.yml 默认即 true）
+SPRING_AI_ADAPTER_ENABLED=true
 ```
 
-**为什么这一步不能漏**（D-698 / D-700，已真实发生过一次）：
+**背景**（D-698 → 743，两个方向都真实发生过）：
 
-- 本项目自 Spring Boot **4.1.1** 起，`application.yml` 里 `spring-ai.adapter.enabled` 的默认值已改为 `false`。
-- 但 `docker-compose.yml` 用的是 `env_file: .env.backend`，
-  **环境变量优先级高于 yml** —— 只要 `.env.backend` 里存在
-  `SPRING_AI_ADAPTER_ENABLED=true`，yml 的 `false` 就会被无声覆盖。
-- Spring AI 1.0.0 与 Spring Framework 7 **二进制不兼容**：
-  `OpenAiApi` 内部调用 `HttpHeaders.addAll(MultiValueMap)`，而 Spring 7 只剩
+- **D-698**（2026-10-01）：Boot 升到 **4.1.1** 后，旧版 Spring AI **1.0.0** 与
+  Spring Framework 7 **二进制不兼容** —— `OpenAiApi` 内部调用
+  `HttpHeaders.addAll(MultiValueMap)`，而 Spring 7 只剩
   `addAll(String,List)` 与 `addAll(HttpHeaders)` → `NoSuchMethodError`
   → `BeanCreationException` → **容器起不来 → 全站 502**。
-- AI 能力由 `LegacyInferenceAdapter → IntelligenceInferenceOrchestrator` 承担，
-  关闭 Spring AI **不影响** AI 功能，只是不走 Spring AI 那条实现。
+  当时的兜底是把本行设成 `false` 关闭 Spring AI，AI 走
+  `LegacyInferenceAdapter → IntelligenceInferenceOrchestrator`。
+- **D-743**（2026-10-04）：Spring AI 已升级 **2.0.0 GA**（专为 Boot 4 / Framework 7 构建），
+  `application.yml` 里 `spring-ai.adapter.enabled` 的默认值**改回 `true`**，
+  2.0 成为**默认主路径**，legacy 退为 failover 熔断后的兜底。
+  真机冒烟（生产 key 直打 api.deepseek.com）已过：对话 / 裸 tool_calls / 流式三连全绿。
+- ⚠️ **本行若被旧值 `false` 压住**（`env_file` 优先级高于 yml），生产会**静默退回 legacy**，
+  2.0 迁移等于没生效。
 
 **为什么特别容易踩**：`.env.backend` 被 `.gitignore` 排除、不入库，
 所以「代码里默认值是安全的」这个结论在服务器上**不成立**。
@@ -92,8 +95,11 @@ SPRING_AI_ADAPTER_ENABLED=false
 ```bash
 cd /opt/fz66666/deploy/lighthouse
 docker compose up -d --force-recreate backend     # 重建容器才会读到新值
-docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望输出 false
+docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望输出 true
 ```
+
+**临时回滚到 legacy**（2.0 若出问题）：把本行改成 `false`，
+再 `docker compose up -d --force-recreate backend` 即可，**无需改代码**。
 
 > 不用改的：SPRING_REDIS_HOST 和 QDRANT_URL 会被 docker-compose 自动覆盖成容器地址，改了也白改。
 

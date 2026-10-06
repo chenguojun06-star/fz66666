@@ -608,17 +608,18 @@ if (!UserContext.isSupervisorOrAbove()) {
 
 ### AP-FW-02: 环境变量被不入库的 .env 文件无声覆盖（env_file 优先级高于 yml）
 **识别信号**：yml 里默认值安全，但服务器行为相反；改完配置 `restart` 后不生效；容器起不来导致**全站 502**。典型场景：`docker-compose.yml` 用了 `env_file: .env.backend`，而该文件被 `.gitignore` 排除、**不入库**。
-**错误做法**：`application.yml` 里 `spring-ai.adapter.enabled` 默认已是 `false`，但 `deploy/lighthouse/docker-compose.yml` 用 `env_file: .env.backend`，**环境变量优先级高于 yml** —— 所以「代码里默认值是安全的」这个结论在服务器上**不成立**。一旦该文件含 `SPRING_AI_ADAPTER_ENABLED=true`，Spring AI 1.0.0 就被启用 → 与 Spring Framework 7 二进制不兼容（`NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)`）→ 容器起不来 → **全站 502**。且每次从云托管控制台「整份复制」重新覆盖 `.env.backend` 都会把旧值带回来。
+**错误做法**：`application.yml` 里 `spring-ai.adapter.enabled` 默认已是 `true`（D-743，Spring AI 2.0.0 GA），但 `deploy/lighthouse/docker-compose.yml` 用 `env_file: .env.backend`，**环境变量优先级高于 yml** —— 所以「代码里默认值是安全的」这个结论在服务器上**不成立**。若该文件残留 D-698 时代的 `SPRING_AI_ADAPTER_ENABLED=false`，生产会**静默退回 legacy**，2.0 迁移等于没生效。反向也踩过一次更狠的：D-698 时旧版 Spring AI 1.0.0 被 `true` 启用 → 与 Spring Framework 7 二进制不兼容（`NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)`）→ 容器起不来 → **全站 502**。且每次从云托管控制台「整份复制」重新覆盖 `.env.backend` 都会把旧值带回来。
 **正确做法**：
 - 改服务器配置前先读 `deploy/lighthouse/README.md` 对应章节。
+- 当前正确值：`SPRING_AI_ADAPTER_ENABLED=true`（或整行删除——yml 默认即 true）。
 - **验证必须用 `--force-recreate`**（`env_file` 只在创建时读取、**不热更新**，`restart` 无效）：
 ```bash
 cd /opt/fz66666/deploy/lighthouse
 docker compose up -d --force-recreate backend
-docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 false
+docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 true
 ```
 **触发P0铁律**：#17 部署探针/环境一致性（部署类）
-**历史教训**：2026-10-01 D-698/D-700 升级后，`.env.backend` 里残留旧值即可无声覆盖代码默认值 → 全站 502。
+**历史教训**：2026-10-01 D-698/D-700 —— `.env.backend` 残留 `true` 启用 1.0.0 → 全站 502；2026-10-04 D-743 升级 2.0.0 GA 后该开关默认 `true`，残留 `false` 则静默退回 legacy。
 
 ---
 

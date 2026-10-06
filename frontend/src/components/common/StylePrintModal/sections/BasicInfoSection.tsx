@@ -47,14 +47,17 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
   return (
     <div className="print-section">
-      {/* 打印头部：顶部文字信息（款号+款名）左对齐 */}
-      <div style={{ marginBottom: 10, breakInside: 'avoid' }}>
+      {/* 打印头部：单据标题（款号+款名）在左，打印时间在行最右 */}
+      <div style={{ marginBottom: 10, breakInside: 'avoid', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-gray-900)', lineHeight: '24px' }}>
           {mode === 'sample' ? '样衣资料单' : mode === 'order' ? '下单资料单' : '生产制单'}
           <span style={{ marginLeft: 12, fontSize: 14, fontWeight: 500, color: 'var(--color-gray-600)' }}>
             {styleNo}{styleName ? ` · ${styleName}` : ''}
           </span>
         </div>
+        <span style={{ fontSize: 13, color: 'var(--color-gray-label)', whiteSpace: 'nowrap' }}>
+          打印时间：{formatDateTime(new Date())}
+        </span>
       </div>
       {/* 主体：左列（图片+二维码） + 右列（信息表格） */}
       <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #666', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
@@ -229,10 +232,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             );
           })()}
         </div>
-      </div>
-
-      <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-gray-label)', fontSize: 13 }}>
-        打印时间：{formatDateTime(new Date())}
       </div>
     </div>
   );
