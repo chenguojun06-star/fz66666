@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -31,23 +32,57 @@ public class MaterialRollController {
     /**
      * 为入库单批量生成料卷 QR 标签
      *
-     * Body: { "inboundId": "xxx", "rollCount": 5, "quantityPerRoll": 30.5, "unit": "米" }
+     * <p>两种入参模式，二选一：</p>
+     * <ul>
+     *   <li>逐卷明细（推荐，各卷数量可不同）：
+     *       { "inboundId":"xxx", "rolls":[{"quantity":50},{"quantity":48.5},{"quantity":52}], "unit":"米" }</li>
+     *   <li>快捷平均（所有卷数量相同）：
+     *       { "inboundId":"xxx", "rollCount":5, "quantityPerRoll":30.5, "unit":"米" }</li>
+     * </ul>
      */
     @PostMapping("/generate")
     public Result<?> generateRolls(@RequestBody Map<String, Object> params) {
         try {
             String inboundId = (String) params.get("inboundId");
-            int rollCount = ((Number) params.getOrDefault("rollCount", 1)).intValue();
-            double quantityPerRoll = ((Number) params.getOrDefault("quantityPerRoll", 1.0)).doubleValue();
             String unit = (String) params.getOrDefault("unit", "件");
 
-            List<Map<String, Object>> rolls = materialRollOrchestrator.generateRolls(
-                    inboundId, rollCount, quantityPerRoll, unit);
+            List<BigDecimal> rollQuantities = parseRollQuantities(params.get("rolls"));
+            List<Map<String, Object>> rolls;
+            if (rollQuantities != null && !rollQuantities.isEmpty()) {
+                // 逐卷明细模式
+                rolls = materialRollOrchestrator.generateRollsDetailed(inboundId, rollQuantities, unit);
+            } else {
+                // 快捷平均模式（向后兼容）
+                int rollCount = ((Number) params.getOrDefault("rollCount", 1)).intValue();
+                double quantityPerRoll = ((Number) params.getOrDefault("quantityPerRoll", 1.0)).doubleValue();
+                rolls = materialRollOrchestrator.generateRolls(inboundId, rollCount, quantityPerRoll, unit);
+            }
             return Result.success(rolls);
         } catch (Exception e) {
             log.error("生成料卷标签失败", e);
             return Result.fail(e.getMessage());
         }
+    }
+
+    /** 解析逐卷明细入参：[{quantity:50},{quantity:48.5}] → [50, 48.5] */
+    private List<BigDecimal> parseRollQuantities(Object rollsObj) {
+        if (!(rollsObj instanceof List)) {
+            return null;
+        }
+        List<BigDecimal> quantities = new java.util.ArrayList<>();
+        for (Object item : (List<?>) rollsObj) {
+            BigDecimal qty = null;
+            if (item instanceof Map) {
+                Object q = ((Map<?, ?>) item).get("quantity");
+                if (q != null) {
+                    qty = new BigDecimal(String.valueOf(q));
+                }
+            } else if (item != null) {
+                qty = new BigDecimal(String.valueOf(item));
+            }
+            quantities.add(qty);
+        }
+        return quantities;
     }
 
     /**

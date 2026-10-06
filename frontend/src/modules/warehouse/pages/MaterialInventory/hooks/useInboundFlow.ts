@@ -19,7 +19,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
   const [inboundForm] = Form.useForm();
   const [rollForm] = Form.useForm();
   const inboundModal = useModal<MaterialInventory>();
-  const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string }>();
+  const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number }>();
   const [inboundSubmitting, setInboundSubmitting] = useState(false);
   const inboundSubmittingRef = useRef(false);
 
@@ -70,11 +70,18 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
           // 事件派发失败不影响业务
         }
         const mat = inboundModal.data;
-        rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: values.quantity, unit: '件' });
+        // 默认预置 1 卷，数量 = 本次入库总量；用户可「填充」或逐行按各卷实际米数修改
+        rollForm.setFieldsValue({
+          rollCount: 1,
+          quantityPerRoll: values.quantity,
+          unit: '件',
+          rolls: [{ quantity: values.quantity }],
+        });
         rollModal.open({
           inboundId: inboundId || '',
           materialCode: mat?.materialCode || values.materialCode || '',
           materialName: mat?.materialName || values.materialName || '',
+          expectedQuantity: values.quantity,
         });
         message.success(`入库成功！单号：${inboundNo}，请在弹窗中生成料卷标签`);
       } else {
@@ -120,17 +127,18 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
       setGeneratingRolls(true);
       const values: any = await rollForm.validateFields();
       const { inboundId } = rollModal.data!;
+      // 逐卷明细：每卷数量可各不相同
+      const rolls = (values.rolls || []).map((r: { quantity: number }) => ({ quantity: r.quantity }));
       const res = await materialInventoryApi.generateRolls({
         inboundId: inboundId || undefined,
-        rollCount: values.rollCount,
-        quantityPerRoll: values.quantityPerRoll,
+        rolls,
         unit: values.unit,
       });
       if (res?.code === 200 && Array.isArray(res.data)) {
         rollModal.close();
         rollForm.resetFields();
         void printRollQrLabels(res.data);
-        message.success(`已生成 ${values.rollCount} 张料卷标签！`);
+        message.success(`已生成 ${rolls.length} 张料卷标签！`);
       } else {
         message.error(res?.message || '生成失败');
       }

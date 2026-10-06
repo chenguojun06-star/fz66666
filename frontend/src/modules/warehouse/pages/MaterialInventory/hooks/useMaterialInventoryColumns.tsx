@@ -17,7 +17,7 @@ interface UseMaterialInventoryColumnsProps {
   openInstructionFromRecord: (record: MaterialInventory) => void;
   handleInbound: (record: MaterialInventory) => void;
   rollForm: FormInstance;
-  rollModal: { open: (data: { inboundId: string; materialCode: string; materialName: string }) => void };
+  rollModal: { open: (data: { inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number }) => void };
   handleOutbound: (record: MaterialInventory) => void;
   handleToggleDisabled: (record: MaterialInventory) => void;
   handleViewDetail: (record: MaterialInventory) => void;
@@ -327,7 +327,7 @@ export function useMaterialInventoryColumns({
                 onClick: () => {
                   rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
                   requestAnimationFrame(() => {
-                    rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
+                    rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件', rolls: [{ quantity: undefined }] });
                   });
                 }
               },

@@ -594,6 +594,16 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-06 面料料卷「多卷 · 逐卷米数」录入修复（未提交）
+
+- [x] **现象/根因**：`t_material_roll` 数据模型本已支持「一卷一行、各卷 `quantity` 独立」，但录入/生成层只支持"每卷数量相同"——`RollLabelModal` 只有 `rollCount + quantityPerRoll` 两个框，`MaterialRollOrchestrator.generateRolls` 循环里每卷塞同一个值。现实中一批面料必然多卷且各卷米数不同（如 50/48.5/52 米），平均值摊派 → 账面与实际必然对不上
+- [x] **后端**：`MaterialRollOrchestrator` 新增 `generateRollsDetailed(inboundId, List<BigDecimal> rollQuantities, unit)`（逐卷明细，校验每卷 >0）；原 `generateRolls` 降级为快捷模式（内部展开为 N 条相同明细后委托）→ 向后兼容
+- [x] **后端**：`MaterialRollController.generateRolls` 解析 `rolls:[{quantity}]` 数组，有则走明细模式、无则回退旧的平均模式
+- [x] **前端**：`RollLabelModal` 改为 `Form.List` 逐卷可编辑表格（第 N 卷 → 该卷真实数量），含「卷数×每卷」一键填充、逐行删除、添加一卷、合计 N 卷/合计数量展示，以及与入库总量不一致的 warning 提示（只提示不拦截）
+- [x] **前端**：`RollGenerateRequest` 增加 `rolls?`；`useInboundFlow` 提交 `rolls` 数组并把 `expectedQuantity` 传入弹窗；打印标签按每卷真实 `quantity` 输出（原有逻辑天然兼容）
+- [x] 校验：`mvn -o compile` 通过；`npx tsc --noEmit` 0 错误（本会话未挂载 test-runner-mcp，按 P0 #23 降级用原生命令）
+- [ ] 未提交；待用户真机走一遍「入库 → 生成料卷标签 → 打印 → 小程序扫码发料」确认
+
 ### 2026-09-14 D-408 图片上传控件「选择文件 未选择任何文件」暴露修复（未提交）
 > ⚠️ 原拟编号 D-407 已被并行会话的 /actuator/health 修复（`5208a7db2`）占用，故改用 D-408。
 

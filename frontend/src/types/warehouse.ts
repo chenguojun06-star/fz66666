@@ -139,8 +139,12 @@ export interface ManualInboundResponse {
 
 export interface RollGenerateRequest {
   inboundId?: string;
-  rollCount: number;
-  quantityPerRoll: number;
+  /** 逐卷明细模式（推荐）：每卷数量可各不相同 */
+  rolls?: { quantity: number }[];
+  /** 快捷平均模式：卷数（与 rolls 二选一） */
+  rollCount?: number;
+  /** 快捷平均模式：每卷数量（与 rolls 二选一） */
+  quantityPerRoll?: number;
   unit?: string;
 }
 

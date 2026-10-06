@@ -52,7 +52,7 @@ public class MaterialRollOrchestrator {
     // ----------------------------------------------------------------
 
     /**
-     * 为某入库单批量生成料卷记录
+     * 为某入库单批量生成料卷记录（快捷模式：所有卷数量相同）
      *
      * @param inboundId       入库单ID
      * @param rollCount       料卷/箱数量（贴多少张标签）
@@ -67,6 +67,34 @@ public class MaterialRollOrchestrator {
             double quantityPerRoll,
             String unit) {
 
+        if (rollCount <= 0 || rollCount > 500) {
+            throw new RuntimeException("料卷数量必须在 1~500 之间");
+        }
+        java.math.BigDecimal qty = new java.math.BigDecimal(String.valueOf(quantityPerRoll));
+        List<java.math.BigDecimal> quantities = new ArrayList<>();
+        for (int i = 0; i < rollCount; i++) {
+            quantities.add(qty);
+        }
+        return generateRollsDetailed(inboundId, quantities, unit);
+    }
+
+    /**
+     * 为某入库单批量生成料卷记录（逐卷明细模式：每卷数量可各不相同）
+     *
+     * <p>现实场景中一批面料必然多卷，且每卷米数各不相同（如 50 / 48.5 / 52 米），
+     * 因此按「卷」逐条录入真实数量，一卷一行、各卷 quantity 独立。</p>
+     *
+     * @param inboundId      入库单ID
+     * @param rollQuantities 逐卷数量列表（长度 = 卷数，元素 = 该卷真实数量）
+     * @param unit           单位（米/件/kg）
+     * @return 生成的料卷列表（含 rollCode = 二维码内容）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<Map<String, Object>> generateRollsDetailed(
+            String inboundId,
+            List<java.math.BigDecimal> rollQuantities,
+            String unit) {
+
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
@@ -78,13 +106,18 @@ public class MaterialRollOrchestrator {
         if (inbound == null) {
             throw new RuntimeException("入库单不存在: " + inboundId);
         }
-        if (rollCount <= 0 || rollCount > 500) {
+        if (rollQuantities == null || rollQuantities.isEmpty() || rollQuantities.size() > 500) {
             throw new RuntimeException("料卷数量必须在 1~500 之间");
+        }
+        for (java.math.BigDecimal q : rollQuantities) {
+            if (q == null || q.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("每卷数量必须大于 0");
+            }
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        for (int i = 0; i < rollCount; i++) {
+        for (java.math.BigDecimal rollQty : rollQuantities) {
             String rollCode = materialRollService.generateRollCode();
 
             MaterialRoll roll = new MaterialRoll();
@@ -97,7 +130,7 @@ public class MaterialRollOrchestrator {
             roll.setColor(inbound.getColor());
             roll.setSpecifications(inbound.getSize());
             roll.setUnit(unit != null ? unit : "件");
-            roll.setQuantity(new java.math.BigDecimal(String.valueOf(quantityPerRoll)));
+            roll.setQuantity(rollQty);
             roll.setWarehouseLocation(inbound.getWarehouseLocation());
             roll.setStatus("IN_STOCK");
             roll.setSupplierName(inbound.getSupplierName());
@@ -120,7 +153,7 @@ public class MaterialRollOrchestrator {
             result.add(item);
         }
 
-        log.info("为入库单 {} 生成了 {} 张料卷标签", inbound.getInboundNo(), rollCount);
+        log.info("为入库单 {} 生成了 {} 张料卷标签（逐卷明细）", inbound.getInboundNo(), rollQuantities.size());
         return result;
     }
 
