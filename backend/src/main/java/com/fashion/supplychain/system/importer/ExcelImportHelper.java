@@ -72,8 +72,102 @@ public class ExcelImportHelper {
         }
     }
 
-    public void buildNoteSheet(XSSFWorkbook workbook, String[] notes) {
-        Sheet noteSheet = workbook.createSheet("填写说明");
+    /**
+     * 用「归一化后的行」构建标准模板工作簿（D-751 智能映射导入专用）：
+     * 首行 = 模板表头，随后为数据行，供既有导入器 parseExcel 直接消费。
+     * mapping 后缺列的格子留空，由导入器逐行校验报错。
+     */
+    public byte[] buildWorkbookFromRows(TemplateConfig config, List<Map<String, String>> canonicalRows) {
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet(config.sheetName);
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < config.headers.length; i++) {
+                headerRow.createCell(i).setCellValue(config.headers[i]);
+                sheet.setColumnWidth(i, 5000);
+            }
+            int rowIdx = 1;
+            for (Map<String, String> rowData : canonicalRows) {
+                Row row = sheet.createRow(rowIdx++);
+                for (int i = 0; i < config.headers.length; i++) {
+                    String value = rowData.get(config.headers[i]);
+                    if (value != null) {
+                        row.createCell(i).setCellValue(value);
+                    }
+                }
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("构建归一化工作簿失败: " + e.getMessage(), e);
+        }
+    }
+
+    /** 松散解析结果：源表头 + 按源表头取值的行（智能映射导入用，不校验模板） */
+    public static class LooseSheet {
+        public List<String> headers = new ArrayList<>();
+        public List<Map<String, String>> rows = new ArrayList<>();
+    }
+
+    /**
+     * 不按模板校验地解析首个 Sheet（D-751 智能映射导入入口）：
+     * 任意表头都能读，行以「源表头→值」返回，空行跳过。
+     */
+    public LooseSheet parseSheetLoose(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请选择要上传的文件");
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+            throw new IllegalArgumentException("仅支持 .xlsx 或 .xls 格式的Excel文件");
+        }
+        try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet == null || sheet.getPhysicalNumberOfRows() < 1) {
+                throw new IllegalArgumentException("Excel文件为空");
+            }
+            LooseSheet result = new LooseSheet();
+            Row headerRow = sheet.getRow(0);
+            if (headerRow != null) {
+                for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                    Cell cell = headerRow.getCell(i);
+                    if (cell != null) {
+                        String v = getCellStringValue(cell).trim();
+                        if (StringUtils.hasText(v)) {
+                            result.headers.add(v);
+                        }
+                    }
+                }
+            }
+            if (result.headers.isEmpty()) {
+                throw new IllegalArgumentException("Excel首行没有表头");
+            }
+            for (int rowIdx = 1; rowIdx <= sheet.getLastRowNum(); rowIdx++) {
+                Row row = sheet.getRow(rowIdx);
+                if (row == null) continue;
+                Map<String, String> rowData = new LinkedHashMap<>();
+                boolean hasData = false;
+                for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                    Cell headerCell = headerRow.getCell(i);
+                    if (headerCell == null) continue;
+                    String headerValue = getCellStringValue(headerCell).trim();
+                    if (!StringUtils.hasText(headerValue)) continue;
+                    Cell cell = row.getCell(i);
+                    String value = cell != null ? getCellStringValue(cell).trim() : "";
+                    rowData.put(headerValue, value);
+                    if (StringUtils.hasText(value)) hasData = true;
+                }
+                if (hasData) result.rows.add(rowData);
+            }
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("解析Excel文件失败: " + e.getMessage(), e);
+        }
+    }
+
+    public void buildNoteSheet(XSSFWorkbook workbook, String[] notes) {        Sheet noteSheet = workbook.createSheet("填写说明");
         CellStyle noteHeaderStyle = workbook.createCellStyle();
         Font noteHeaderFont = workbook.createFont();
         noteHeaderFont.setBold(true);

@@ -3,6 +3,10 @@ import {
   TeamOutlined,
   ToolOutlined,
   ShopOutlined,
+  UserOutlined,
+  DatabaseOutlined,
+  InboxOutlined,
+  DropboxOutlined,
 } from '@ant-design/icons';
 import type { TabConfig } from './types';
 
@@ -28,6 +32,61 @@ export const TAB_CONFIGS: TabConfig[] = [
     tips: [
       '供应商名称必须唯一',
       '导入后默认为"启用"状态',
+      '单次最多导入 500 条',
+    ],
+  },
+  {
+    key: 'customer',
+    label: '客户',
+    icon: <UserOutlined />,
+    description: '导入客户（品牌方/贸易公司）档案，下单与 CRM 共用',
+    requiredFields: '客户名称（必填）',
+    failedColumns: [{ title: '客户名称', dataIndex: 'companyName', width: 180 }],
+    tips: [
+      '客户名称必须唯一',
+      '客户编号由系统自动生成，等级不填默认 3 级',
+      '单次最多导入 500 条',
+    ],
+  },
+  {
+    key: 'material',
+    label: '物料主档',
+    icon: <DatabaseOutlined />,
+    description: '导入面辅料数据库主档（编码、类型、成分、供应商等）',
+    requiredFields: '物料编码 + 物料名称（必填）',
+    failedColumns: [{ title: '物料编码', dataIndex: 'materialCode', width: 130 }],
+    tips: [
+      '物料编码必须唯一——后续「物料期初库存」导入靠它对应物料',
+      '供应商名称必须是系统中已存在的供应商（先导入供应商）',
+      '导入后即为「完善」状态，BOM / 采购立即可选',
+      '单次最多导入 500 条',
+    ],
+  },
+  {
+    key: 'material-stock',
+    label: '物料期初库存',
+    icon: <InboxOutlined />,
+    description: '把现有面料/辅料库存搬进系统，每行落一条入库台账（可审计）',
+    requiredFields: '物料编码 + 数量（必填）',
+    failedColumns: [{ title: '物料编码', dataIndex: 'materialCode', width: 130 }],
+    tips: [
+      '物料编码必须是「物料主档」中已存在的（推荐顺序：物料主档 → 期初库存）',
+      '数量支持小数（面料按米/公斤），为累加语义，与页面「手动入库」一致',
+      '同一物料不同颜色/规格/仓位拆多行填',
+      '单次最多导入 500 条',
+    ],
+  },
+  {
+    key: 'product-stock',
+    label: '成品期初库存',
+    icon: <DropboxOutlined />,
+    description: '把现有成品库存搬进系统（按款号+颜色+码数），每行落一条入库台账',
+    requiredFields: '款号 + 数量（必填）',
+    failedColumns: [{ title: '款号', dataIndex: 'styleNo', width: 130 }],
+    tips: [
+      '款号必须是系统中已导入的款式（推荐顺序：款式 → 成品期初库存）',
+      '数量为正整数，累加语义，与成品仓储页「自由入库」一致',
+      '同一款号多颜色多码数拆多行填',
       '单次最多导入 500 条',
     ],
   },

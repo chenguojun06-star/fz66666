@@ -1,22 +1,45 @@
-import React, { useRef } from 'react';
-import { Card, Button, Alert, Space, Typography, Tag, Result as AntResult } from 'antd';
+import React, { useRef, useState } from 'react';
+import { Card, Button, Alert, Space, Typography, Tag, Result as AntResult, Segmented } from 'antd';
 import {
   DownloadOutlined,
   UploadOutlined,
   FileExcelOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  ThunderboltOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import { useImportPanel } from './useImportPanel';
 import { validateExcelFile, toUploadFile } from './helpers';
+import SmartImportPanel from './SmartImportPanel';
 import type { TabConfig } from './types';
 
 const { Text, Paragraph } = Typography;
 
+const errorCellRender = (text: string) => <Text type="danger">{text}</Text>;
+
+/** 旧四类页签的失败定位列（key 约定不变） */
+const legacyFailedColumns = (key: TabConfig['key']) => [
+  { title: '行号', dataIndex: 'row', key: 'row', width: 80 },
+  ...(key === 'style'
+    ? [{ title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 }]
+    : key === 'factory'
+    ? [{ title: '供应商名称', dataIndex: 'factoryName', key: 'factoryName', width: 150 }]
+    : key === 'employee'
+    ? [{ title: '姓名', dataIndex: 'name', key: 'name', width: 100 }]
+    : [
+        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
+        { title: '工序名', dataIndex: 'processName', key: 'processName', width: 120 },
+      ]),
+  { title: '错误原因', dataIndex: 'error', key: 'error', render: errorCellRender },
+];
+
 const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   const excelInputRef = useRef<HTMLInputElement | null>(null);
+  // D-751 二期：同一页签两种导入方式——按模板（默认）或智能识别任意格式
+  const [mode, setMode] = useState<'template' | 'smart'>('template');
   const {
     fileList,
     uploading,
@@ -28,29 +51,35 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
     handleReset,
   } = useImportPanel(config);
 
-  // 失败记录表格列
-  const failedColumns = [
-    { title: '行号', dataIndex: 'row', key: 'row', width: 80 },
-    ...(config.key === 'style'
-      ? [{ title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 }]
-      : config.key === 'factory'
-      ? [{ title: '供应商名称', dataIndex: 'factoryName', key: 'factoryName', width: 150 }]
-      : config.key === 'employee'
-      ? [{ title: '姓名', dataIndex: 'name', key: 'name', width: 100 }]
-      : [
-          { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
-          { title: '工序名', dataIndex: 'processName', key: 'processName', width: 120 },
-        ]),
-    {
-      title: '错误原因',
-      dataIndex: 'error',
-      key: 'error',
-      render: (text: string) => <Text type="danger">{text}</Text>,
-    },
-  ];
+  // 失败记录表格列：配置了 failedColumns 用之，否则按旧 key 约定兜底
+  const failedColumns = config.failedColumns
+    ? [
+        { title: '行号', dataIndex: 'row', key: 'row', width: 80 },
+        ...config.failedColumns,
+        {
+          title: '错误原因',
+          dataIndex: 'error',
+          key: 'error',
+          render: (text: string) => <Text type="danger">{text}</Text>,
+        },
+      ]
+    : legacyFailedColumns(config.key);
 
   return (
     <div>
+      <div style={{ marginBottom: 16 }}>
+        <Segmented
+          value={mode}
+          onChange={(v) => setMode(v as 'template' | 'smart')}
+          options={[
+            { value: 'template', label: <span><FileTextOutlined className="u-mr-6" />按模板导入</span> },
+            { value: 'smart', label: <span><ThunderboltOutlined className="u-mr-6" />智能识别（任意格式）</span> },
+          ]}
+        />
+      </div>
+      {mode === 'smart' && <SmartImportPanel config={config} />}
+      {mode === 'template' && (
+      <>
       {/* 说明区域 */}
       <Card style={{ marginBottom: 16, background: 'var(--color-slate-50)' }}>
         <Paragraph style={{ marginBottom: 8 }}>
@@ -187,6 +216,8 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
           </Card>
         )}
       </Space>
+      </>
+      )}
     </div>
   );
 };
