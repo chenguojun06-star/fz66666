@@ -52,7 +52,7 @@ export const TAB_CONFIGS: TabConfig[] = [
     key: 'material',
     label: '物料主档',
     icon: <DatabaseOutlined />,
-    description: '导入面辅料数据库主档（编码、类型、成分、供应商等）',
+    description: '导入物料资料主档（编码、类型、成分、供应商等）',
     requiredFields: '物料编码 + 物料名称（必填）',
     failedColumns: [{ title: '物料编码', dataIndex: 'materialCode', width: 130 }],
     tips: [

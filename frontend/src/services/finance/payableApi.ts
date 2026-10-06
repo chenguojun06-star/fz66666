@@ -74,6 +74,12 @@ const payableApi = {
       : `/finance/payable/${id}/mark-paid`;
     return api.post<void>(url);
   },
+
+  /**
+   * 补填/修改到期日（D-752）。付款计划页到期日列行内编辑用。
+   */
+  updateDueDate: (id: string, dueDate: string) =>
+    api.post<Payable>(`/finance/payable/${id}/due-date?dueDate=${dueDate}`),
 };
 
 export default payableApi;

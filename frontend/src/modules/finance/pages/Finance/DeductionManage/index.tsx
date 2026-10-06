@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table, Tabs, Tag } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 
 /**
@@ -33,6 +34,8 @@ const DeductionManagePage: React.FC = () => {
   // D-474：扣谁（员工/工厂）的下拉选项
   const [userOpts, setUserOpts] = useState<{ value: string; label: string; raw?: unknown }[]>([]);
   const [factoryOpts, setFactoryOpts] = useState<{ value: string; label: string; raw?: unknown }[]>([]);
+  // D-752：受控页签——录入页的扣款类型空时，齿轮一键跳「扣款类型」页签维护
+  const [activeTab, setActiveTab] = useState('types');
 
   const fetchTypes = useCallback(async () => {
     setLoading(true);
@@ -40,7 +43,9 @@ const DeductionManagePage: React.FC = () => {
       const res: any = await api.get('/finance/deduction/types');
       setTypes(res?.data ?? []);
     } catch {
+      // D-752：不再静默吞错——空下拉让用户无从排查
       setTypes([]);
+      message.warning('扣款类型加载失败，请稍后重试或到「扣款类型」页签手动添加');
     } finally {
       setLoading(false);
     }
@@ -124,6 +129,8 @@ const DeductionManagePage: React.FC = () => {
   return (
     <Card title="扣款管理">
       <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: 'types',
@@ -233,7 +240,27 @@ const DeductionManagePage: React.FC = () => {
                 <Form.Item name="orderNo" label="关联订单号（可选）" tooltip="比如这次扣款是哪笔订单的次品，填上后对账单能看到">
                   <Input placeholder="如 PO20260901172615" />
                 </Form.Item>
-                <Form.Item name="typeCode" label="扣款类型" rules={[{ required: true }]}>
+                <Form.Item
+                  name="typeCode"
+                  label={
+                    <Space size={2}>
+                      扣款类型
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<SettingOutlined />}
+                        title="维护扣款类型"
+                        onClick={() => setActiveTab('types')}
+                      />
+                    </Space>
+                  }
+                  rules={[{ required: true }]}
+                  extra={
+                    types.length === 0
+                      ? '还没有扣款类型：点标签旁的齿轮图标，到「扣款类型」页签添加'
+                      : undefined
+                  }
+                >
                   <Select
                     placeholder="选择扣款类型"
                     options={types.map((t) => ({ label: t.typeName, value: t.typeCode }))}

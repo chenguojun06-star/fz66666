@@ -274,6 +274,31 @@ public class PayableOrchestrator {
                 .one();
     }
 
+    /**
+     * 补填/修改应付单到期日（D-752）。
+     * 背景：应付单由账单聚合自动派生，生成链路不携带到期日，且此前全系统没有编辑入口，
+     * 导致付款计划的 7/14/30 天到期预测算不了。付款计划页到期日列行内编辑走本方法。
+     */
+    public Payable updateDueDate(String id, LocalDate dueDate) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        Payable payable = payableService.lambdaQuery()
+                .eq(Payable::getId, id)
+                .eq(Payable::getTenantId, tenantId)
+                .eq(Payable::getDeleteFlag, 0)
+                .one();
+        if (payable == null) {
+            throw new IllegalArgumentException("应付单不存在或无权操作");
+        }
+        Payable patch = new Payable();
+        patch.setId(id);
+        patch.setDueDate(dueDate);
+        patch.setUpdateTime(LocalDateTime.now());
+        payableService.updateById(patch);
+        payable.setDueDate(dueDate);
+        return payable;
+    }
+
     public Payable findByBillAggregationId(String billAggregationId) {
         if (!StringUtils.hasText(billAggregationId)) {
             return null;

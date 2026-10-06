@@ -105,7 +105,7 @@ export interface MaterialQueryParams {
   pageSize: number;
 }
 
-// 面辅料数据库类型
+// 物料资料类型
 export interface MaterialDatabase extends Record<string, unknown> {
   id?: string;
   materialCode: string;
@@ -149,7 +149,7 @@ export interface MaterialDatabase extends Record<string, unknown> {
   updateTime?: string;
 }
 
-// 面辅料数据库查询参数
+// 物料资料查询参数
 export interface MaterialDatabaseQueryParams {
   keyword?: string;
   materialCode?: string;

@@ -3,7 +3,7 @@ import type { Tutorial } from '../types';
 export const tutorialsBasicWarehouse: Tutorial[] = [
     {
       id: 'material-in-out',
-      title: '面辅料出入库管理',
+      title: '物料仓储管理',
       category: 'warehouse',
       difficulty: 'beginner',
       duration: '6分钟',
@@ -111,7 +111,7 @@ export const tutorialsBasicWarehouse: Tutorial[] = [
     },
     {
       id: 'material-database',
-      title: '物料资料库管理',
+      title: '物料资料管理',
       category: 'warehouse',
       difficulty: 'beginner',
       duration: '5分钟',

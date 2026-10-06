@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,13 +27,56 @@ public class DeductionService extends ServiceImpl<DeductionTypeConfigMapper, Ded
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
-    /** 扣款类型列表 */
+    /** 内置扣款类型（D-752）：建表迁移只建表无种子，新租户列表恒空导致录入下拉「暂无数据」 */
+    private static final String[][] BUILTIN_TYPES = {
+            {"QUALITY", "质量扣款", "10"},
+            {"DELAY", "延期扣款", "20"},
+            {"DEFECT", "次品扣款", "30"},
+            {"OTHER", "其他扣款", "40"},
+    };
+
+    /** 扣款类型列表（首次访问为空时懒初始化内置四类，之后租户可自由增删改） */
     public List<DeductionTypeConfig> listTypes(Long tenantId) {
-        return this.lambdaQuery()
+        List<DeductionTypeConfig> types = this.lambdaQuery()
                 .eq(DeductionTypeConfig::getTenantId, tenantId)
                 .eq(DeductionTypeConfig::getDeleteFlag, 0)
                 .orderByAsc(DeductionTypeConfig::getSortOrder)
                 .list();
+        if (types.isEmpty()) {
+            types = seedBuiltinTypes(tenantId);
+        }
+        return types;
+    }
+
+    private List<DeductionTypeConfig> seedBuiltinTypes(Long tenantId) {
+        List<DeductionTypeConfig> seeded = new ArrayList<>();
+        for (String[] builtin : BUILTIN_TYPES) {
+            DeductionTypeConfig t = new DeductionTypeConfig();
+            t.setId(UUID.randomUUID().toString().replace("-", ""));
+            t.setTenantId(tenantId);
+            t.setTypeCode(builtin[0]);
+            t.setTypeName(builtin[1]);
+            t.setApplyTarget("BOTH");
+            t.setDefaultAmount(BigDecimal.ZERO);
+            t.setDeductRatio(BigDecimal.ZERO);
+            t.setSortOrder(Integer.parseInt(builtin[2]));
+            t.setStatus("ACTIVE");
+            t.setDeleteFlag(0);
+            t.setCreateTime(LocalDateTime.now());
+            t.setUpdateTime(LocalDateTime.now());
+            try {
+                this.save(t);
+                seeded.add(t);
+            } catch (Exception e) {
+                // 并发首次访问撞唯一键时忽略，读回已存在的
+                DeductionTypeConfig exist = this.lambdaQuery()
+                        .eq(DeductionTypeConfig::getTenantId, tenantId)
+                        .eq(DeductionTypeConfig::getTypeCode, builtin[0])
+                        .last("LIMIT 1").one();
+                if (exist != null) seeded.add(exist);
+            }
+        }
+        return seeded;
     }
 
     /** 新增/更新扣款类型 */

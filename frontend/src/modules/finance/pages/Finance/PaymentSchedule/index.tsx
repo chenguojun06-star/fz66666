@@ -49,6 +49,8 @@ const PaymentSchedule: React.FC = () => {
   // D-468：供应商往来明细抽屉
   const [payeeDetailOpen, setPayeeDetailOpen] = useState(false);
   const [payeeTarget, setPayeeTarget] = useState<{ id: string; name?: string } | null>(null);
+  // D-752：到期日行内编辑（应付单派生时无到期日来源，此前全系统无补填入口）
+  const [editingDueId, setEditingDueId] = useState<string | null>(null);
 
   const fetchPayables = useCallback(async () => {
     setLoading(true);
@@ -105,6 +107,18 @@ const PaymentSchedule: React.FC = () => {
 
   useEffect(() => {
     fetchPayables();
+  }, [fetchPayables]);
+
+  const handleDueDateSave = useCallback(async (id: string, value: Dayjs | null) => {
+    if (!value) return;
+    try {
+      await payableApi.updateDueDate(id, value.format('YYYY-MM-DD'));
+      message.success('到期日已更新，付款预测已刷新');
+      setEditingDueId(null);
+      await fetchPayables();
+    } catch {
+      message.error('到期日保存失败，请重试');
+    }
   }, [fetchPayables]);
 
   const now = new Date();
@@ -165,12 +179,47 @@ const PaymentSchedule: React.FC = () => {
       },
     },
     {
-      title: '到期日', dataIndex: 'dueDate', width: 110,
-      render: v => {
-        if (!v) return <Tag>未设置</Tag>;
+      title: '到期日', dataIndex: 'dueDate', width: 150,
+      render: (v: string | undefined, r: Payable) => {
+        if (editingDueId === r.id) {
+          return (
+            <DatePicker
+              autoFocus
+              open
+              size="small"
+              style={{ width: 130 }}
+              defaultValue={v ? dayjs(v) : dayjs()}
+              onOpenChange={(open) => { if (!open) setEditingDueId(null); }}
+              onChange={(d) => { void handleDueDateSave(r.id as string, d); }}
+              allowClear={false}
+            />
+          );
+        }
+        if (!v) {
+          return (
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0, height: 'auto' }}
+              onClick={() => setEditingDueId(r.id as string)}
+            >
+              <Tag color="warning" style={{ margin: 0 }}>补填到期日</Tag>
+            </Button>
+          );
+        }
         const days = getRemainingDays(v);
         const color = getRemainingDaysColor(days);
-        return <Text type={color as any}>{v}</Text>;
+        return (
+          <Button
+            type="text"
+            size="small"
+            style={{ padding: 0, height: 'auto' }}
+            title="点击修改到期日"
+            onClick={() => setEditingDueId(r.id as string)}
+          >
+            <Text type={color as any}>{v}</Text>
+          </Button>
+        );
       },
     },
     {
@@ -230,14 +279,14 @@ const PaymentSchedule: React.FC = () => {
         </div>
       </Card>
 
-      {/* D-243：未填到期日的应付单已计入待付总额，但无法归入 7/14/30 天预测 */}
+      {/* D-243：未填到期日的应付单已计入待付总额，但无法归入 7/14/30 天预测；D-752 起可在下方表格行内直接补填 */}
       {noDueDateAll > 0 && (
         <Alert
           type="warning"
           showIcon
           style={{ marginBottom: 12 }}
           message={`有 ${noDueDateAll} 笔应付单未填写到期日`}
-          description="这些单据已计入「待付总额」，但因缺少到期日无法归入 7 / 14 / 30 天到期预测。建议补填到期日，付款计划才准确。"
+          description="这些单据已计入「待付总额」，但因缺少到期日无法归入 7 / 14 / 30 天到期预测。点击下方表格里的「补填到期日」即可补上，付款预测会立即刷新。"
         />
       )}
       <Row gutter={16} style={{ marginBottom: 12 }}>

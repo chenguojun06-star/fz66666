@@ -18,6 +18,7 @@ import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -460,9 +461,14 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
     }
 
+    /**
+     * 无入库台账的库存行（调拨生成/历史/导入数据）的批次兜底展示。
+     * D-752：原样把库存表主键（32位UUID）当批次号展示，用户看到的是一串编码；
+     * 改为「期初-建账日期」友好标签。批次号仅用于展示与打印，出库扣减按 stockId 走，不受影响。
+     */
     private MaterialBatchDetailDto buildFallbackBatchDetail(MaterialStock currentStock) {
         MaterialBatchDetailDto dto = new MaterialBatchDetailDto();
-        dto.setBatchNo(currentStock.getId());
+        dto.setBatchNo(buildFriendlyFallbackBatchNo(currentStock));
         dto.setWarehouseLocation(StringUtils.hasText(currentStock.getLocation())
                 ? currentStock.getLocation() : "默认仓");
         dto.setColor(currentStock.getColor());
@@ -476,6 +482,13 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         dto.setOutboundQty(0);
         dto.setExpiryDate(null);
         return dto;
+    }
+
+    private String buildFriendlyFallbackBatchNo(MaterialStock stock) {
+        LocalDateTime anchor = stock.getCreateTime() != null ? stock.getCreateTime() : stock.getUpdateTime();
+        return "期初-" + (anchor != null
+                ? anchor.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                : stock.getId().substring(0, 8));
     }
 
     @Override

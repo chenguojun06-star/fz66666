@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -69,6 +70,21 @@ public class PayableController {
     public Result<Payable> markPaid(@PathVariable String id,
                                     @RequestParam(required = false) BigDecimal amount) {
         return Result.success(payableOrchestrator.markPaid(id, amount));
+    }
+
+    /**
+     * 补填/修改到期日（D-752）：付款计划页到期日列行内编辑入口。
+     * 应付单由账单聚合派生时无到期日来源，此前全系统无任何入口可补填。
+     */
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
+    @PostMapping("/{id}/due-date")
+    public Result<Payable> updateDueDate(@PathVariable String id,
+                                         @RequestParam("dueDate") String dueDate) {
+        try {
+            return Result.success(payableOrchestrator.updateDueDate(id, LocalDate.parse(dueDate)));
+        } catch (java.time.format.DateTimeParseException e) {
+            return Result.fail("到期日格式错误，应为 yyyy-MM-dd");
+        }
     }
 
     @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")

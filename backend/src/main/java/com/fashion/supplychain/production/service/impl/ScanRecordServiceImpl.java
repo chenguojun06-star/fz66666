@@ -111,13 +111,15 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                         }
                 }
 
-                // 外发工厂扫码明细（财务中心-扫码明细Tab）：只看外发厂（factory_type=OUTSOURCE）的记录。
+                // 外发工厂扫码明细（财务中心-扫码明细Tab）：只看外发厂的记录。
                 // D-300：写入端已兜底回填订单承做工厂，内部厂订单也会写 factory_id，
-                // 故不能用 isNotNull（会把内部厂混进来），必须按 OUTSOURCE 类型过滤。
+                // 故不能用 isNotNull（会把内部厂混进来），必须按外发类型过滤。
+                // D-752：外发判定全系统统一走 supplier_type='OUTSOURCE'（D-218 口径）；
+                // 原条件误用 factory_type（只存 INTERNAL/EXTERNAL，无 OUTSOURCE）→ 子查询恒空集，Tab 永远查不出数据。
                 String externalOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "externalOnly"));
                 if ("true".equalsIgnoreCase(externalOnly)) {
                         wrapper.inSql(ScanRecord::getFactoryId,
-                                "SELECT id FROM t_factory WHERE factory_type = 'OUTSOURCE' AND delete_flag = 0");
+                                "SELECT id FROM t_factory WHERE supplier_type = 'OUTSOURCE' AND delete_flag = 0");
                 }
 
                 // 工序名模糊过滤
