@@ -26,7 +26,10 @@ import java.util.Map;
  *   - 区域销量热力预测智能体
  *   - 运输成本优化智能体
  *   - 业务指标健康度诊断智能体
- *   - 外协工厂动态评分与推荐智能体
+ *
+ *   <p>D-754 移除「外协工厂动态评分与推荐智能体」：其数据源为硬编码虚构工厂
+ *   （非真实 t_factory 数据），且四个端点无任何前端/AI 工具消费。
+ *   工厂评分推荐的正主是 {@code SupplierScorecardOrchestrator}（真实数据）。</p>
  */
 @RestController
 @RequestMapping("/api/intelligence/advanced")
@@ -47,7 +50,6 @@ public class IntelligenceAdvancedController {
     private final RegionalSalesPredictor regionalSalesPredictor;
     private final TransportationCostOptimizer transportationCostOptimizer;
     private final BusinessHealthDiagnostic businessHealthDiagnostic;
-    private final OutsourcingFactoryRecommender outsourcingFactoryRecommender;
 
     // ==================== P1-1: 退货预测与归因智能体 ====================
 
@@ -271,31 +273,6 @@ public class IntelligenceAdvancedController {
         return Result.success(response);
     }
 
-    // ==================== P2-5: 外协工厂动态评分与推荐智能体 ====================
-
-    @GetMapping("/factory/performance")
-    public Result<?> evaluateFactoryPerformance() {
-        var response = outsourcingFactoryRecommender.evaluateFactoryPerformance();
-        return Result.success(response);
-    }
-
-    @GetMapping("/factory/recommend")
-    public Result<?> recommendFactories(@RequestParam(required = false) String criteria) {
-        var response = outsourcingFactoryRecommender.recommendFactories(criteria);
-        return Result.success(response);
-    }
-
-    @PostMapping("/factory/compare")
-    public Result<?> compareFactories(@RequestBody Map<String, Object> request) {
-        @SuppressWarnings("unchecked")
-        List<String> factoryIds = (List<String>) request.get("factoryIds");
-        var response = outsourcingFactoryRecommender.compareFactories(factoryIds);
-        return Result.success(response);
-    }
-
-    @GetMapping("/factory/capability-matrix")
-    public Result<?> getCapabilityMatrix() {
-        var response = outsourcingFactoryRecommender.getCapabilityMatrix();
-        return Result.success(response);
-    }
+    // ==================== P2-5: 外协工厂评分与推荐（D-754 已移除假数据实现） ====================
+    // 工厂评分/推荐请用 GET /api/intelligence/supplier-scorecard（SupplierScorecardOrchestrator，真实数据）
 }

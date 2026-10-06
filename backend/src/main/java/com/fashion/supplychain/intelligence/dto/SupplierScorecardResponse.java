@@ -11,6 +11,8 @@ public class SupplierScorecardResponse {
 
     @Data
     public static class SupplierScore {
+        /** 工厂ID（D-754：分组与回写主键，按 factoryName 分组会在工厂改名后断裂） */
+        private String factoryId;
         private String factoryName;
         private int totalOrders;
         private int completedOrders;

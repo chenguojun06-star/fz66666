@@ -76,10 +76,11 @@ public class SupplierScorecardOrchestrator {
                 return resp;
             }
 
-            // 按工厂分组
+            // 按工厂分组（D-754：优先按 factoryId——按名字分组会在工厂改名后把同一家的历史订单拆成两份；
+            // 历史订单无 factoryId 的才回落按名字）
             Map<String, List<ProductionOrder>> byFactory =
-                    orders.stream().collect(Collectors.groupingBy(o ->
-                            o.getFactoryName() == null ? "未知工厂" : o.getFactoryName()));
+                    orders.stream().collect(Collectors.groupingBy(
+                            SupplierScorecardOrchestrator::groupKeyOf));
 
             // 加载扫码记录用于质量分
             Set<String> orderIdSet = orders.stream()
@@ -113,10 +114,25 @@ public class SupplierScorecardOrchestrator {
         return resp;
     }
 
-    private SupplierScore calcScore(String factoryName, List<ProductionOrder> list,
+    /** 分组键：有 factoryId 用 "ID:<id>"，否则 "NAME:<厂名>"（calcScore 内解析回显） */
+    private static String groupKeyOf(ProductionOrder o) {
+        return StringUtils.hasText(o.getFactoryId())
+                ? "ID:" + o.getFactoryId()
+                : "NAME:" + (o.getFactoryName() == null ? "未知工厂" : o.getFactoryName());
+    }
+
+    private SupplierScore calcScore(String groupKey, List<ProductionOrder> list,
                                     Map<String, long[]> scanStats) {
         SupplierScore s = new SupplierScore();
-        s.setFactoryName(factoryName);
+        if (groupKey.startsWith("ID:")) {
+            s.setFactoryId(groupKey.substring(3));
+        }
+        String displayName = list.stream()
+                .map(ProductionOrder::getFactoryName)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse("未知工厂");
+        s.setFactoryName(displayName);
         s.setTotalOrders(list.size());
 
         int completed = 0, overdue = 0;
@@ -192,12 +208,14 @@ public class SupplierScorecardOrchestrator {
     }
 
     private void persistScoresToFactory(List<SupplierScore> scores, List<ProductionOrder> orders) {
+        // D-754：优先用评分自带的 factoryId（分组已改主键）；历史数据无 id 的才走名字映射兜底
         Map<String, String> factoryNameToId = orders.stream()
                 .filter(o -> StringUtils.hasText(o.getFactoryId()) && StringUtils.hasText(o.getFactoryName()))
                 .collect(Collectors.toMap(ProductionOrder::getFactoryName, ProductionOrder::getFactoryId, (a, b) -> a));
 
         for (SupplierScore s : scores) {
-            String fid = factoryNameToId.get(s.getFactoryName());
+            String fid = StringUtils.hasText(s.getFactoryId())
+                    ? s.getFactoryId() : factoryNameToId.get(s.getFactoryName());
             if (fid == null) continue;
             try {
                 Factory f = factoryMapper.selectById(fid);
