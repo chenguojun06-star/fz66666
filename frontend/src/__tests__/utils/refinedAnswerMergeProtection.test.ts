@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { buildMessageData, upsertMessage } from '../../components/common/GlobalAiAssistant/utils';
 
 /**
@@ -55,5 +57,28 @@ describe('buildMessageData 合并保护（D-702 补发 answer）', () => {
   it('未开启保护时保持原行为（首次回答仍要写入 cards 键）', () => {
     const data = buildMessageData('首版', parsedEmpty, {});
     expect('cards' in data).toBe(true);
+  });
+});
+
+/**
+ * D-702 线上故障：问「你会什么啊」后显示「小云暂时无法给出回答」。
+ * 后端补发了清洗后为空的 answer，前端用兜底文案覆盖了正常答案。
+ * 这里守护前端那道防线：已显示过有效答案时，空内容不得覆盖。
+ */
+describe('空 answer 不得覆盖已显示答案（D-702 线上故障回归）', () => {
+  it('前端源码必须保留已显示答案，而不是用兜底文案覆盖', () => {
+    const src = readFileSync(
+      resolve(process.cwd(), 'src/components/common/GlobalAiAssistant/useAiChatStream.ts'),
+      'utf-8',
+    );
+    const guard = src.indexOf('if (!parsed.displayText && answerReceived && accumulatedText)');
+    expect(guard).toBeGreaterThan(-1);
+    // 防线必须在兜底文案赋值之后、写入消息之前
+    const fallback = src.indexOf('小云暂时无法给出回答');
+    // setFullMessage(aiMsgId 在重试循环里也有，必须取防线之后的那个
+    const setMsg = src.indexOf('setFullMessage(aiMsgId', guard);
+    expect(guard).toBeGreaterThan(fallback);
+    expect(setMsg).toBeGreaterThan(guard);
+    expect(src).toContain('收到空的 answer 内容，保留已显示的答案');
   });
 });

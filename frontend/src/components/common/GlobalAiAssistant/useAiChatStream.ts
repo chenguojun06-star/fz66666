@@ -351,6 +351,14 @@ export function useAiChatStream(config: StreamConfig) {
           const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
           const parsed = parseAiResponse(rawContent);
           let displayText = parsed.displayText || '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
+          // D-702 防线：后端会补发第二个 answer。若这次内容清洗后为空，
+          // 用兜底文案覆盖会把用户已经看到的正常答案抹掉 —— 线上曾因此
+          // 把「你会什么啊」的回答变成「小云暂时无法给出回答」。
+          // 已收到过有效答案时，空内容一律不覆盖，保持原答案。
+          if (!parsed.displayText && answerReceived && accumulatedText) {
+            console.warn('[useAiChatStream] 收到空的 answer 内容，保留已显示的答案');
+            break;
+          }
           accumulatedText = displayText;
           // D-702：后端会在审查完成后补发第二个 answer（整段替换）。
           // buildMessageData 总是带回 cards/followUpActions 键，合并时会覆盖已有值 ——

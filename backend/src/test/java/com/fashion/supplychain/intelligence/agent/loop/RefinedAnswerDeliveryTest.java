@@ -125,6 +125,38 @@ class RefinedAnswerDeliveryTest {
         assertThat(s).contains("cancelPostProcessSafetyTimer()");
     }
 
+    /**
+     * 线上真实故障（D-702 回归）：问「你会什么啊」后，回答变成
+     * 「小云暂时无法给出回答，请稍后再试」。
+     *
+     * <p>根因是本轮补发逻辑自己的漏洞：空判断写在 {@code sanitize/deduplicate} <b>之前</b>。
+     * 清洗会剥离 prompt 内部标记与敏感内容，<b>原始非空不代表清洗后非空</b>；
+     * 空串被当 answer 发出后，前端 {@code parseAiResponse} 得到空 displayText，
+     * 于是用兜底文案把用户已经看到的正常答案覆盖掉。
+     */
+    @Test
+    @DisplayName("⑧ 清洗后为空必须放弃补发，且不得覆盖已发出的答案（线上故障回归）")
+    void blankAfterSanitizeMustNotOverwrite() throws Exception {
+        String s = read("StreamingAgentLoopCallback.java");
+        int start = s.indexOf("public void onRefinedAnswer(String content, String commandId)");
+        String body = s.substring(start, s.indexOf("\n    }", start));
+
+        int sanitize = body.indexOf("String sanitized = sanitize(");
+        int blankGuard = body.indexOf("sanitized.isBlank()");
+        int emit = body.indexOf("emitSse(\"answer\"");
+        assertThat(sanitize).as("应存在清洗步骤").isGreaterThan(0);
+        assertThat(blankGuard).as("必须对清洗后的结果判空").isGreaterThan(0);
+        assertThat(emit).as("应存在补发动作").isGreaterThan(0);
+        assertThat(blankGuard)
+                .as("判空必须发生在清洗之后、发送之前 —— 否则空串会覆盖用户已看到的答案")
+                .isGreaterThan(sanitize)
+                .isLessThan(emit);
+        // 且必须在 emit 之前 return
+        assertThat(body.indexOf("return;", blankGuard))
+                .as("清洗后为空必须直接放弃")
+                .isLessThan(emit);
+    }
+
     @Test
     @DisplayName("⑦ 同步回调保持原行为（无 SSE 可补发）")
     void syncCallbackUnaffected() throws Exception {

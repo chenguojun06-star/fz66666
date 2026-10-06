@@ -124,6 +124,15 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
             return;
         }
         String sanitized = sanitize(deduplicateAnswer(content));
+        // 关键：空判断必须放在 sanitize/deduplicate **之后**。
+        // 清洗会剥离 prompt 内部标记与敏感内容，原始非空不代表清洗后非空——
+        // 若把空串当 answer 发出去，前端 parseAiResponse 得到空 displayText，
+        // 会用「小云暂时无法给出回答」把用户已经看到的正常答案覆盖掉。
+        if (sanitized == null || sanitized.isBlank()) {
+            log.warn("[StreamCallback] 审查后内容清洗为空，保留已发出的答案（原始长度={}）",
+                    content == null ? 0 : content.length());
+            return;
+        }
         if (sanitized.equals(finalContent)) {
             // 与已发出的完全一致，没必要让气泡闪一次
             return;
