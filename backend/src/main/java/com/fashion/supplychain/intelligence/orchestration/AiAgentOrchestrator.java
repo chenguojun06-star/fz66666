@@ -57,6 +57,20 @@ public class AiAgentOrchestrator {
      */
     @Autowired(required = false)
     private DirectQueryRouter directQueryRouter;
+
+    /**
+     * D-702：GoT/ToT 高级推理的墙钟预算（毫秒）。
+     *
+     * <p>生产实测单次 GoT expand 平均 <b>8.5s</b>（最高 11.2s），而 GoT 最多跑
+     * {@code ai.got.max-iterations:4} 轮、每轮 expand + merge，失败还要再串行跑一轮 ToT。
+     * 最坏情况下首字要等 30s 以上，而它产出的只是注入上下文的<b>提示</b>——
+     * Agent 循环本身仍会带工具正常作答。同步链路（IM / 公众号 / OpenAI 兼容）尤其致命。
+     *
+     * <p>超时即放弃提示：宁可少一条参考，也别让用户干等。
+     */
+    @Value("${ai.advanced-reasoning.budget-ms:12000}")
+    private long advancedReasoningBudgetMs;
+
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
@@ -236,6 +250,26 @@ public class AiAgentOrchestrator {
             return Result.fail("[安全拦截] 检测到 prompt injection 尝试，请求已被阻止");
         }
 
+        // D-702：直查前置到同步链路。
+        // 直查此前只接在 executeAgentStreaming（PC 端），而 IM / 公众号 / OpenAI 兼容
+        // 全部走本方法，导致「订单进度」「有没有异常」这类确定性查询在手机上
+        // 要等 20 秒，PC 上只要 0.5 秒 —— 同一套数据两个入口体验差 40 倍。
+        // 放在多Agent图路由之前：无参数歧义的确定性问题不该先付编排与推理的代价。
+        // 安全性不变：DirectQueryRouter 内部先校验工具权限（canUseTool），
+        // 参数不足/未查到/执行失败一律返回 null 继续走原流程。
+        if (directQueryRouter != null) {
+            try {
+                DirectQueryRouter.DirectAnswer direct = directQueryRouter.tryDirectAnswer(userMessage);
+                if (direct != null && direct.text() != null && !direct.text().isBlank()) {
+                    log.info("[AiAgent] 同步链路直查命中，跳过 Agent 循环: {}", userMessage);
+                    return Result.success(direct.text());
+                }
+            } catch (Exception e) {
+                // 直查是优化，异常绝不能影响正常问答
+                log.warn("[AiAgent] 直查异常，继续走 Agent 循环: {}", e.getMessage());
+            }
+        }
+
         // 【P0升级】多Agent图编排路由决策：复杂/多领域问题路由到专家Agent协作
         Result<String> multiAgentResult = tryRouteToMultiAgentGraph(userMessage, pageContext);
         if (multiAgentResult != null) {
@@ -262,7 +296,14 @@ public class AiAgentOrchestrator {
         // P1升级: 复杂问题先用ToT/GoT生成推理摘要，注入到AgentLoop上下文中（不直接返回，确保工具正常执行）
         String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
         if (reasoningHint != null && !reasoningHint.isBlank()) {
-            augmentedPageContext = "[高级推理参考]\n" + reasoningHint + "\n\n" + augmentedPageContext;
+            // D-702：明确标注「未经工具核实」。
+            // GoT/ToT 是以 context=[]、tools=[] 调用的（见 tryAdvancedReasoning），
+            // 它们**没有查过任何业务数据**，结论纯属模型推理。若不加标注，
+            // Agent 循环会把它当成已核实的事实照抄，用户就看到了「看起来有依据、
+            // 实际是凭空推断」的答案 —— 违反铁律：业务数据必须来自工具。
+            augmentedPageContext = "[高级推理参考｜以下为模型推理思路，未经工具查询业务数据核实，"
+                    + "其中任何单号/数量/日期/结论都必须以工具查询结果为准]\n"
+                    + reasoningHint + "\n\n" + augmentedPageContext;
             log.info("[AiAgent] 高级推理引擎产出推理提示，注入AgentLoop上下文");
         }
 
@@ -1663,6 +1704,8 @@ public class AiAgentOrchestrator {
             if (!isComplexQuestion(userMessage)) {
                 return null;
             }
+            final long deadlineNanos = System.nanoTime()
+                    + TimeUnit.MILLISECONDS.toNanos(advancedReasoningBudgetMs);
 
             com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine gotEngine = componentRegistry.getGraphOfThoughtsEngine();
             if (gotEngine != null) {
@@ -1672,6 +1715,17 @@ public class AiAgentOrchestrator {
                     log.info("[AdvancedReasoning] GoT推理成功，score={}", gotResult.getScore());
                     return gotResult.getConclusion();
                 }
+            }
+
+            // D-702：GoT 失败后才跑 ToT，两者串行。若不看预算，最坏情况是
+            // GoT 跑满 4 轮（生产实测单次 expand 平均 8.5s）再叠加一整轮 ToT，
+            // 同步链路（IM/公众号/OpenAI 兼容）首字要等 30s+ —— 而这里产出的
+            // 只是注入上下文的**提示**，不是答案，Agent 循环本身仍会带工具作答。
+            // 因此超时即放弃提示：宁可少一条参考，也别让用户干等。
+            if (System.nanoTime() > deadlineNanos) {
+                log.info("[AdvancedReasoning] 已超预算 {}ms，跳过 ToT（仅放弃提示，不影响回答）",
+                        advancedReasoningBudgetMs);
+                return null;
             }
 
             com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine totEngine = componentRegistry.getTreeOfThoughtsEngine();
