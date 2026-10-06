@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { message, type FormInstance } from 'antd';
 import dayjs from 'dayjs';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { SchedulingInsightItem } from './orderSchedulingInsightsOrchestrator';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import StyleQuotePopover from '../StyleQuotePopover';
@@ -19,13 +21,38 @@ interface Props {
   selectedFactoryStat: any;
   schedulingLoading: boolean;
   schedulingPlans: any;
+  /** 下单成功后返回的订单（用于 P4 采纳痕迹写回） */
+  createdOrder?: { id?: string; factoryId?: string; factoryName?: string } | null;
 }
 
 const OrderCreateModalSidebar: React.FC<Props> = ({
   isMobile, form, selectedStyle, factoryMode, setFactoryMode,
   factories, departments, watchedFactoryId, watchedOrgUnitId,
-  selectedFactoryStat, schedulingLoading, schedulingPlans,
+  selectedFactoryStat, schedulingLoading, schedulingPlans, createdOrder,
 }) => {
+  // D-754 P4：采纳的方案先暂存，待下单成功拿到 orderId 后写回订单并留采纳痕迹
+  const adoptedPlanRef = useRef<SchedulingInsightItem | null>(null);
+
+  useEffect(() => {
+    const plan = adoptedPlanRef.current;
+    const orderId = createdOrder?.id;
+    if (!plan || !orderId) return;
+    adoptedPlanRef.current = null;
+    // 仅当最终落地的工厂正是被采纳方案的工厂时才留痕；否则视为用户改选，不覆盖订单
+    const sameFactory = (plan.factoryId && createdOrder?.factoryId)
+      ? String(createdOrder.factoryId) === String(plan.factoryId)
+      : (!!createdOrder?.factoryName && createdOrder.factoryName === plan.factoryName);
+    if (!sameFactory) return;
+    void intelligenceApi.adoptScheduling({
+      orderId,
+      factoryName: plan.factoryName,
+      factoryId: plan.factoryId == null ? undefined : String(plan.factoryId),
+      plannedStartDate: plan.suggestedStart,
+      plannedEndDate: plan.estimatedEnd,
+      matchScore: typeof plan.score === 'number' ? plan.score : undefined,
+    }).catch(() => undefined);
+  }, [createdOrder]);
+
   const factoryName = factoryMode === 'EXTERNAL'
     ? factories.find(f => String(f.id) === String(watchedFactoryId))?.factoryName
     : departments.find(d => d.id === watchedOrgUnitId)?.nodeName
@@ -76,7 +103,8 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
           form.setFieldValue('factoryId', factoryId);
         }}
         onAdoptPlan={(plan) => {
-          // D-754 P4：一键采纳 —— 工厂 + 计划开始/完成日期一并回填，下单即落地
+          // D-754 P4：一键采纳 —— 工厂 + 计划开始/完成日期一并回填；下单成功后写回订单并留痕
+          adoptedPlanRef.current = plan;
           setFactoryMode('EXTERNAL');
           const patch: Record<string, unknown> = { factoryId: plan.factoryId };
           if (plan.suggestedStart) patch.plannedStartDate = dayjs(plan.suggestedStart);

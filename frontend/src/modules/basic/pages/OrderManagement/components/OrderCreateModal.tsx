@@ -113,6 +113,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             selectedFactoryStat={selectedFactoryStat}
             schedulingLoading={schedulingLoading}
             schedulingPlans={schedulingPlans}
+            createdOrder={createdOrder}
           />
 
           <div
