@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,34 @@ public class ProactivePatrolAgent {
 
     @Autowired
     private ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
+
+    /**
+     * D-702：巡检会诊去重用的 Redis（{@code required=false}，Redis 不可用时退化为「不去重」，
+     * 即回到旧行为，不会因去重组件故障导致巡检停摆）。
+     */
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate patrolDedupRedis;
+
+    /**
+     * D-702：同一订单「状态未变」时的去重窗口（小时）。
+     *
+     * <p><b>为什么必须去重</b>（生产实测）：
+     * <pre>
+     *   巡检 4 个部门 agent（pmc/qc/finance/ceo）= 今日 35.9 万 tokens
+     *   占全部 AI 消耗的 95%，而 t_ai_decision_card 近 7 天只新增 2 条
+     * </pre>
+     * 根因：{@code isAtRisk} 只看<b>当前</b>的 plannedEndDate 与 productionProgress，
+     * <b>不与上次诊断结果比较</b>。已逾期订单（{@code daysToDeadline < 0}）会<b>永远</b>返回 true，
+     * 于是每 6 小时对同一批订单重跑一次 4 路多智能体辩论 ——
+     * 同样输入必然得到同样结论，纯重复消耗；且订单越多越贵（此处无 LIMIT 上限）。
+     *
+     * <p><b>为什么用「状态指纹」而非单纯时间窗</b>：单纯 24h 跳过会让
+     * 「状态明显恶化」的订单也漏掉。指纹取 {@code 进度档位 + 距截止天数档位}，
+     * 状态一变指纹就变 → 自动重新会诊，<b>不损失发现能力</b>，
+     * 只是不再对同一个问题反复重判。
+     */
+    @Value("${ai.proactive-patrol.dedup-hours:24}")
+    private int patrolDedupHours;
 
     /**
      * D-700：由「每小时」降为「每 6 小时」。
@@ -113,8 +142,15 @@ public class ProactivePatrolAgent {
                 for (ProductionOrder order : tenantOrders) {
                     try {
                         String context = buildOrderGlobalContext(order);
-                        if (isAtRisk(order, context)) {
-                            log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
+if (isAtRisk(order, context)) {
+                              // D-702：状态指纹去重 —— 同一订单状态未变则不重复会诊。
+                              // 见 patrolDedupHours 字段注释（巡检占今日 95% token 的根因）。
+                              if (shouldSkipDuplicatedDiagnosis(tenantId, order)) {
+                                  log.debug("[ProactivePatrol] 订单 {} 状态未变且已在去重窗口内诊断过，跳过重复会诊",
+                                          order.getOrderNo());
+                                  continue;
+                              }
+                              log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
                             SmartNotification notification = debateOrchestrator.diagnoseOrderWithMultiAgent(order, context);
                             diagnosed++;
                             // 记录主动洞察，让用户在AI助手中能看到
@@ -175,6 +211,49 @@ public class ProactivePatrolAgent {
             if (daysToDeadline <= 7 && order.getProductionProgress() < 20) return true;
         }
         return false;
+    }
+
+    /**
+     * D-702：巡检会诊去重 —— 同一订单「状态指纹未变」且仍在去重窗口内则跳过。
+     *
+     * <p><b>指纹构成</b>：{@code 进度档位(10%一档) + 距截止天数档位(2天一档)}。
+     * 刻意取「档位」而非精确值 —— 进度从 31% 变成 32% 属于噪声，不该触发重判；
+     * 而从 55% 掉到 35%（跨档）说明真实恶化，必须重新会诊。
+     *
+     * <p><b>安全兜底</b>：Redis 不可用 / 未注入 / 去重开关为 0 时，
+     * 一律返回 {@code false}（不去重），行为退回 D-700 之前的原样，
+     * <b>绝不因为去重组件故障而漏掉高危订单</b>。
+     *
+     * @return true = 应跳过（刚诊断过且状态未变）
+     */
+    private boolean shouldSkipDuplicatedDiagnosis(Long tenantId, ProductionOrder order) {
+        if (patrolDedupHours <= 0 || patrolDedupRedis == null) {
+            return false;   // 去重关闭或 Redis 不可用 → 不去重，保证不漏检
+        }
+        String key = "patrol:dedup:" + (tenantId == null ? 0 : tenantId) + ":"
+                + order.getOrderNo() + ":" + fingerprint(order);
+        try {
+            // SETNX 语义：首次诊断成功后写入窗口；窗口内重复则跳过
+            Boolean exists = patrolDedupRedis.hasKey(key);
+            if (Boolean.TRUE.equals(exists)) {
+                return true;
+            }
+            patrolDedupRedis.opsForValue().set(key, "1", patrolDedupHours, TimeUnit.HOURS);
+            return false;
+        } catch (Exception e) {
+            // Redis 出错时不去重：宁可多花 token，也不能漏掉高危订单
+            log.warn("[ProactivePatrol] 去重判断失败，按未诊断处理: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /** 状态指纹：进度档位 + 距截止天数档位（变化才重新会诊） */
+    private String fingerprint(ProductionOrder order) {
+        int progressBucket = (order.getProductionProgress() == null ? 0 : order.getProductionProgress()) / 10;
+        long days = order.getPlannedEndDate() == null ? 999
+                : ChronoUnit.DAYS.between(LocalDateTime.now(), order.getPlannedEndDate());
+        long daysBucket = days <= 0 ? -1 : days / 2;   // 逾期统一归 -1（档位即可，具体天数变化不重复判）
+        return "p" + progressBucket + "d" + daysBucket;
     }
 
     private void recordRiskInsight(Long tenantId, ProductionOrder order, String context) {
