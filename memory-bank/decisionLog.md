@@ -2,8 +2,140 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-01（①归档 08-31 及以前内容；②补齐 09-29 ~ 10-01 共 88 个决策编号：D-698 Boot 3.4.5→4.1.1 升级 / D-699 SSE 截断 / D-700 AI 成本归因 / D-618 待办已完成维度 / D-632~D-653 架构违规收敛 33→0 / D-677~D-711 any-lines 3204→2661；含多处撞号标注，检索请用「编号+日期+主题」三元组）
-> 上一版：2026-09-28（新增 D-617 岗位池任务面板内直接领取——原编号 D-613 与 i18n 批次撞号，勘误为 D-617，commit 15ed4b015 的 message 保持误号不重写）
+> 最后更新：2026-10-06（D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳；每批独立提交并推送，CI 全绿）
+> 上一版：2026-10-05（**补记** 2026-10-04~10-05 的 D-702 小云工具调用链路全面失效修复 + D-743~D-747：Spring AI 2.0 GA 迁移 / 流式带工具与 Handoff / 巡检交付风险卡去重 / PREMIUM 分级接工具 / 语义缓存拒缓存坏答案 / 适配器消息保真；代码已推 CI 全绿，本条为事后补记）
+
+---
+
+## D-754：智能化落地 5 批（2026-10-06，P0~P4 均已推 CI 全绿）
+
+**主旨**：把「看着像智能、实际喂假数据 / 只有建议没有闭环」的模块逐批改成真数据 + 真闭环。按 P0 → P4 顺序推进，**每批独立提交验收**。
+
+**P0 清淤（commit 6b64b740d，删 962 行假代码）**
+- 下线三处假数据（含假工厂推荐器，已确认前端零消费）与两个空壳 Job；
+- `SupplierScorecardOrchestrator` 评分卡改按真实 `factoryId` 分组 + 持久化，新增 4 个真数据 Job 常态化刷新；
+- 结论：**「零消费 + 假数据」的模块直接删，不留桩**。
+
+**P1 巡检→根因自动串联（commit 422425ba9）**
+- 新增证据包富化器（纯 SQL、订单级），让工单自带证据；HIGH 级工单自动触发 5-Why 根因（异步 + 每日上限）；
+- 挂载进 `PatrolClosedLoopOrchestrator.createAction`；
+- 踩坑：状态值是 `scanned` 不是 `DONE`（引用前必须核实真实状态枚举）。
+
+**P2 环节瓶颈热力看板（commit 185286571）**
+- `StageBottleneckHeatmapOrchestrator`：工厂 × 环节积压量 + 人力折算消化天数；复用 P2 已确认的真实数据源（扫码 + 工序配置）。
+
+**P3 交期偏差回扫自校准（commit 5b111aeb4，7 files / +712）**
+- 迁移 `V202610060001__create_delivery_calibration_stat.sql`（`CREATE TABLE IF NOT EXISTS`，唯一键 `(tenant_id, dimension_type, dimension_key)`）；
+- `DeliveryCalibrationOrchestrator`：回扫近 180 天完工订单（`planned_end_date` vs `actual_end_date`），按 工厂 / 品类 / 工厂×品类 三维度算准交率 + 偏差天数 + 偏差倍数，`INSERT ... ON DUPLICATE KEY UPDATE` 幂等 upsert；
+- 反哺：`DeliveryDateSuggestionOrchestrator.suggest` 末尾接 `applyCalibration`——偏差倍数拉伸建议天数（准交率 <70% 再 ×1.15），夹取 `[max(MIN_DAYS, base), base*2]`，样本 <2 不生效；响应 DTO 补 4 个校准字段；
+- `DeliveryCalibrationJob` 每日 03:20 全租户刷新；控制器 `/intelligence/delivery-calibration`；
+- 单测 10 例全绿（偏差口径 / 倍数 / 准交 / clamp / 优先级 / 样本不足 / 异常降级 / 空订单）。
+
+**P4 排产建议一键采纳（commit ba651b450，10 files / +431）**
+- `SchedulingAdoptionRequest` + `SchedulingSuggestionOrchestrator.adopt(@Transactional)`：校验租户归属后写回 `factoryName` / `factoryId` / `plannedStartDate`(00:00:00) / `plannedEndDate`(23:59:59)，经 `ProductionOrderLogAppendHelper` 追加「采纳排产建议」操作日志（自动含操作人/时间/采纳要点）→ 形成 建议→决策→落地 闭环；
+- 控制器 `POST /intelligence/scheduling-suggestion/adopt`（`DataTruth=REAL_DATA`）；
+- 前端：`intelligenceApi.adoptScheduling` + 排产建议卡片新增「采纳」按钮；**创建场景无 orderId**，故采纳=一键回填工厂 + 计划起止（下单即落地），写库采纳留给已有订单/AI 工具调用；
+- 单测 7 例全绿（写回 / 不改日期 / 跨租户拦截 / 订单不存在 / 必填 / 日期格式 / 租户上下文）。
+
+**关键教训**
+- **不新建同用途编排器**：交期/排产已有 13 个编排器，本批只做「串联 + 闭环 + 反哺」，不改架构；
+- **时区/口径要在测试里钉死**：P3 偏差方向（负=提前）、P4 起止时刻（00:00:00 / 23:59:59）都写进断言，避免口径漂移；
+- **场景缺口要如实暴露**：P4 前端入口在「订单创建」弹窗（尚无 orderId），因此 UI 只能做回填，后端写库端口作为既有订单/工具调用的能力保留。
+
+---
+
+## D-702：小云工具调用链路全面失效修复（2026-10-04 ~ 10-05，P0）
+
+> ⚠️ **编号复用**：D-702 在本项目另有历史用途（Prompt 缓存可观测等）；本条目为 10-04~10-05 的「工具调用链路」大修，含 9 个提交：52677c17a / 7c6da86a8 / 523909b71 / 00fc50ecb / f962ed6ba / 8bc339e0a / 3dc098fb2 / 9ebb54db9 / 0262c684b。
+
+**背景**：生产实测（非推断）发现小云 86 个工具**一次都没被真实流量调用过**——成本表唯一会传工具的推理路径 `scene='agent-loop'` 记录数为 0，而 `ai-advisor` 有 1345 次；`AiAgentToolExecHelper` 全部「执行」类日志为 0（同文件「已注册工具: tool_xxx」却有 104 条）。工具体系注册健全（104 实现类、103 真实现、0 桩），但用户问业务数据时模型在**编造答案**，违反铁律 7（禁止伪造业务数据）。
+
+**根因（多层叠加，逐层修）**：
+1. **快速通道吞掉业务问**：流式小云先试 QuickPath，调 `chatStream("ai-advisor", msgs, List.of())` —— 第三参是**空工具列表**；闸门 `isQuickPathEligible` 兜底 `length()<=100`，且 `COMPLEX_ANALYSIS` 直接放行，而「查一下…」恰好命中 → 「查一下BR24001的进度」等全走空工具通道。
+2. **63% 工具静默不可达**：99 个工具里 62 个在正常提问时 LLM 选不到——15 个完全没进 TOOL_RULES（领域回落 GENERAL、引导语截断到 100 字符），47 个已注册但不被任何意图引用；致命点在 `AiAgentToolAdvisor.advise` 末关：意图命中只留预设 2~4 个、意图失败 `capTools` 取 subList(0,12) 截断。
+3. **四个防幻觉守卫集体静默失效**：`runDataTruthGuards` 用 `supplyAsync` 跑在 `ForkJoinPool.commonPool()`，不继承请求线程 ThreadLocal → `TenantAssert` 抛「缺少租户上下文」被 catch 吞掉「回退串行」，串行仍无租户 → 数据真实性/数字一致性/实体事实/接地率**四个守卫全部失效**，接口照样 200；且 `getNow(默认值)` 默认参数 eager 求值导致每个守卫跑两遍。
+4. **配额形同虚设 + 信号表膨胀**：日配额 50 实际 209 次（超 4 倍），根因配额检查只在独立 `checkAndConsumeQuota()`、真正出口 `invoke()` 不检查（IntelligenceSignalOrchestrator 先 check 再 `.limit(5)` 连发 5 次全绕过）；`t_intelligence_signal` 15.5 万行中真实信号仅 129 条（stock_below_safety 重复 41,588 次 / order_delay_risk 24,378 次，全 open 7 个月无 resolve），根因 `persistSignals` 无条件 insert 且每半小时跑一次。
+5. **三处静默失真**：成本归因被随机 UUID 污染（`AgentLoopEngine:1045` 把随机 commandId 当 scene 写成本表）；同步/流式入口能力不对称（同步 `tryRouteToMultiAgentGraph` 无开关，IM/微信/OpenAI 兼容入口命中 COMPLEX 就进多 Agent 图，5 个 Specialist 三参 chat 无工具 + 硬编码 LIMIT 30/20）；NLQuery 兜底把概况数字喂给无工具 advisor → 编数据。
+
+**处置**：
+- QuickPath 加「数据可信性闸门」：`SMALL_TALK` 先于业务词闸门、`isKnowledgeOnlyQuestion()`（只认知识名词：流程/步骤/方法/教程/指南/说明/含义/是什么，**刻意排除「怎么/如何/怎样/怎么样」**）先于业务词闸门，命中业务词一律 `return false` 进 Agent 循环查库，新增 `DATA_REQUEST_PATTERN` 反向兜住模糊问法。
+- 补注册 15 个工具（运维类 `tool_db_health_check` / `tool_flyway_safety_check` 保持 workerVisible=false）；`advise` 增加「**同域补齐**」——意图命中工具排前，再补同域工具到 `MAX_TOOLS_PER_CALL`（**不改上限 12**，prompt 体积与成本不变），ANALYSIS/GENERAL 跨域可参与任何意图的补齐。
+- 四个守卫改走 `supplyAsyncWithUserContext(ctx, supplier)`（进入异步线程 set UserContext、`finally` 复原 previous），串行回退也补上下文恢复；取值 `getNow` → `join()`。
+- 配额检查**下沉到 `invoke()`**（所有 AI 调用唯一出口），保证「一次调用 = 一次计数」；`checkAndConsumeQuota()` 语义从「检查并消费」改为**纯查询**，全类只保留一处 `incrementAndGet`，超限回滚、被拒不消耗；无租户归系统桶 tenant 0（与 AiAgentTokenBudgetService 口径一致）。
+- `persistSignals` 改幂等 upsert（已存在只刷 detail/level/priority，**保留原 AI 分析**），`enrichWithAiAnalysis` 先查已有分析命中则复用；去重键 `(tenant_id, signal_code, source_id, status, delete_flag)`（**必须含 source_id**，同一 code 会对多个业务对象产生）。
+- 成本 scene 改固定名 `agent-loop:quality-retry`（对齐 `complex-analysis:got-expand` 命名），刻意不传工具；新增 `xiaoyun.agent.multi-agent-graph-sync.enabled`（默认 false，同步入口默认走带工具的 Agent 主循环）；NLQuery 兜底优先走 `AiAgentOrchestrator.executeAgent`（带工具，`@Lazy` 打断循环依赖），三级降级不变。
+
+**迁移**：V202610040002 给 `t_ai_cost_tracking` 加 `prompt_cache_hit_tokens`/`prompt_cache_miss_tokens` + (created_at, hit_tokens) 索引；V202610050001 做信号表备份→去重→生成列唯一约束（备份表 `t_intelligence_signal_bak_d702`，155,318 行）。**V202610050001 首版两处致命错误已修**（9ebb54db9）：① `DELETE ... JOIN ... ON t.id <> k.keep_id` 在派生表多行时会跨组匹配、**删空整表**（实测 3 行剩 0），改 `LEFT JOIN ... WHERE keep_id IS NULL`；② 动态 SQL 内单引号未成对转义（`IFNULL(''0'')`）导致语法中断（步骤 2 就报 syntax error）。
+
+**Prompt 缓存可观测（52677c17a / 7c6da86a8）**：此前三缺陷叠加导致命中率不可见（只累计内存 AtomicLong / 出口被门控 / 打印行被 `observability.enabled=false` 门控）；补列 + record 化 `InferenceCost` 参数对象（7 位置参数 → 单参数对象）+ 按天趋势/按场景分布查询 + `/ai-cost/summary`、`/ai-cost/cache-hit` 两个管理端接口（判读口径 good≥60%/fair≥25%/poor<25%）；顺带修 `sumCostSince` 查错列名 `estimated_cost_usd`（应 `estimated_cost`）的「一调必 500」死代码。流式补采真实 usage 修复「采到的全是 0」——需请求体加 `stream_options.include_usage`，且 usage chunk 的 `choices` 是空数组，**usage 提取必须移到 choices 判空之前**。
+
+**验证**：`ToolReachabilityTest`（99 已注册 / 37 意图直接映射 / 62 同域补齐）、`DataTruthGuardUserContextTest`、`QuickPathToolGateTest`、`AiQuotaAndSignalDedupTest`、`AgentLoopCostAndEntryPointTest`、`PromptCacheObservabilityTest`、`StreamingUsageCollectionTest`、`AiToolMetadataConsistencyTest`（补 3 条 runtime schema 验收，校验 `getToolDefinition()` 实调而非注解）。测试规模 366 → 404 全绿。收尾新增 `AiAgentToolAccessService.isRegistered()/registeredToolNames()` 自检；顺带补登记 `external_search`（workerVisible=true）、`code_index_search`（管理侧）两个半接入工具。
+
+**关键教训**：
+- **代码质量断言必须用反射/实际调用，不能靠 grep 源码**——本次文本匹配连续产生两次假阳性（按 `setDescription(` 报 56/99 无描述，实际用 `buildToolDef(...)`；按 `props.put(` 报 50/99 无参数，实际变量名是 `properties`），若贸然去改会把正确代码改坏。
+- 「注解正确 ≠ 模型实际收到的 schema 正确」，两者由不同代码路径产生。
+- 异步任务必须恢复 UserContext（commonPool 线程复用，不复原会污染后续任务）——本文件 880 行早有同样 set/复原写法，本次收敛到统一方法。
+- 迁移「临时表跑一下无报错」不够，必须**核对行数是否符合预期**；改为端到端演练（复制真实表结构 + 灌 500 真实数据 + 复制一遍造重复）。
+- SelfCritic 32~33 分**不改阈值**（PASS≥75 / SOFT_FAIL≥60 / HARD_FAIL<60 属合理区间）；低分会话日志明确 `tools=0`，是工具从未被调用的真实反映，在拿到修复后真实数据前调阈值等于用放宽标准掩盖质量问题。
+
+---
+
+## D-743：Spring AI 1.0 → 2.0.0 GA 迁移（2026-10-04）
+
+**背景**：承接 D-698 阻断点（Spring AI 1.0.0 与 Spring Framework 7 二进制不兼容 → `NoSuchMethodError: HttpHeaders.addAll`），AI 当时由 LegacyInferenceAdapter 兜底。
+**决策与实现**：
+- pom：`spring-ai-bom` 1.0.0 → **2.0.0**（GA 2026-06-12，专为 Boot4/Framework7 构建）；删 `spring-ai-client-chat`（不再经 ChatClient）。
+- 2.0 范式重写：自研 OpenAiApi 移除，底层换 **OpenAI 官方 Java SDK**（openai-java-core 4.39.1）；`ChatModel.call/stream` 只回裸 tool_calls、不再内置工具执行循环，与编排层「回传→执行→回灌」闭环天然一致，1.0 的 `internalToolExecutionEnabled` 开关不再需要。
+- `SpringAiAdapterConfig`：OpenAiSetup 显式构建 sync+async 两个 SDK client（漏 async = build() 空凭据启动即炸，冒烟实证）；baseUrl 裸域名自动补 `/v1`；`SpringAiInferenceAdapter` 工具走 `ToolDefinition` + `NonExecutableToolCallback`，每次调用 options 显式带模型名（留空会带 SDK 默认 gpt-5-mini → DeepSeek 400，冒烟实证）。
+- yml 默认引擎 `enabled:true`；回滚=服务器 `SPRING_AI_ADAPTER_ENABLED=false` 重建 backend 容器，另 failover 熔断 3 次失败 30s 自动降级 legacy 双保险。
+**顺带收获**：DeepSeek 在售模型实为 `deepseek-flash` / `deepseek-v4-pro`（chatWithModel 的 PREMIUM 档从此有真模型可配）。
+**验证**：真机冒烟（生产 key 直打 api.deepseek.com）——对话 1.9s / usage 精确回传 38/161、裸 tool_calls `query_order_progress` 正确回传、流式 84 chunks 无粘连；DSML 自研协议解析不再是工具调用链路的一环（D-699 那类拆行泄漏整类消除）；366 测试全绿。
+**教训**：这个 bean 的构造/请求路径单测全绿也拦不住两颗雷，**真机冒烟 2 分钟各排一颗——AI 链路改动必须真机验证**。
+
+---
+
+## D-743b：流式路径带工具 + Handoff 专家答案不再顶替工具核实（2026-10-04）
+
+**背景**：D-743 上线后生产首单实证（李老板问 PO20260930163102，17:45）仍「拿不到数据」。查明：①AgentLoop 流式走 `chatStream`，适配器流式**不带工具**（迁移沿袭 1.0 写法）→ 模型无工具可调；②Handoff 关键词命中交期风控 Agent（触发词「进度」来自意图文本）→ 专家 3 参 chat 不带工具 → 无数据答案直接当终稿，主循环一次没跑。另查明 `t_ai_cost_tracking` 里 agent-loop 场景 10-01~10-03（legacy 时期）也是 0 次——工具循环被短路早于本次迁移，非引擎切换引入。
+**修法**：`SpringAiInferenceAdapter.chatStream` 工具定义随流式请求下发、按 id 聚合流式 tool_calls 分片（2.0 ChunkMerger 已合并，此处兜底）、顺路接 `reasoning_content` 提取（与 legacy 对齐）；`AgentLoopEngine` Handoff 命中但已预选数据工具时，专家答案降级为「参考初判」注入上下文，继续主循环**强制工具核实**，无工具预选（纯知识问答）保持原快速路径不受影响。
+**验证**：真机冒烟 SMOKE4 全绿（流式发起 query_order_progress、参数无损聚合）；371 测试全绿。
+**协作记录**：提交前工作树一度被并行会话用旧版文件覆盖（已恢复）——改同一文件前请先对齐 git。
+
+---
+
+## D-744：交期风险卡按单堆叠根治（2026-10-04，patrol）
+
+**现象**：用户实证 PO20260930163102 一个订单 3 天堆 29 张卡（4 小时一轮 × 3 个检测器），卡面「创建 system」。
+**根因一（去重失效）**：`ForecastEnginePatrolJob` / `AnomalyDetectorPatrolJob` / `AiPatrolJob` 部分调用点裸调 `createAction`（D-719 只包了另外两个 Job）→ Job 线程 `UserContext.tenantId()=null` → createAction 去重块第一条件不满足整段跳过 + 工单 tenant_id=NULL 落库（生产实查 215 张 NULL 租户 PENDING）。修=ForecastEngine/AnomalyDetector 两 Job 的 createAction 包 `withTenantContext`（基类现成方法）。
+**根因二（自动执行后重建）**：`DEADLINE_RISK` 走 AUTO_EXECUTE 自动关闭后，「只拦 PENDING」的去重拦不住 → 每 4 小时新建。修=createAction 去重升级：24h 内同键**非人为终态**（AUTO_EXECUTED / CANCELLED(system) / APPROVED / AUTO_RUNNING）→ 复用旧卡并复活为 PENDING；PENDING 命中时同步刷新文案（剩余天数/停滞小时不过期）。人为 RESOLVED/REJECTED/撤销（cancelledBy=真实用户名）不受影响，风险复现可正常建新卡。
+**前端**：`TaskListView` 卡面创建人 `system` → 「AI 巡检」（`formatCreatorName`）。
+**验证**：371 测试全绿 + tsc 干净。
+
+---
+
+## D-745：PREMIUM 分级路径接入工具调用（2026-10-04）
+
+**背景**：生产第二次实证（19:09 同一订单提问）——D-743b 的 Handoff 注入已生效（专家答案进主循环），但分级路径 iter=1/2 仍 `toolCalls=0` 且 `provider=model-selection`：`performInferenceWithModel` 把消息列表**拍平成纯文本 prompt** 调 `chatWithModel(prompt,...)`，工具定义从这条路传不进去 → 模型被强制指令要求查库却根本没有工具可调（防幻觉守卫再次如实示警）。该缺陷与引擎无关（legacy 的 chatWithModel 同样无工具），是分级功能上线以来就存在的断点。
+**修法**：`AiInferenceGateway` 新增 `default chatWithModel(scene, messages, tools, modelId)` 重载（默认实现降级到标准 chat，向后兼容，既有实现类零改动）；SpringAi / Legacy 两个适配器实现重载（options 同时带模型覆盖 + 工具定义，返回原生 toolCalls）；`AiInferenceRouter` 重载走同套熔断/降级/记账；`AgentLoopEngine.performInferenceWithModel` 不再拍平消息改走新重载，token 用量从估算变为真实回传。
+**验证**：371 测试全绿。
+
+---
+
+## D-746：语义缓存禁止缓存「未查实时数据」类回答（2026-10-04）
+
+**背景**：第三次生产实证（19:35 同一订单提问）——D-745 已上线但回答依旧，日志「语义缓存命中，跳过Agent循环」。根因不是工具链路，而是 19:09 修复前的**坏答案被语义缓存存了下来**（Redis 精确键 + Qdrant 语义向量），一模一样的提问直接回放缓存，修复代码根本没机会执行。属「坏答案回放」第三层断点。
+**修法**：`SemanticCacheService.store` —— 响应含防幻觉守卫标记「未查询系统实时数据」时**拒绝入缓存**（单点拦截，覆盖 Handoff/分级/主循环所有产出路径）。存量清理（生产已执行）：Redis `semantic:llm:2:*` 删 1 键；Qdrant `fashion_memory` 按 payload 过滤（type=semantic_cache + tenant_id=2）删除，复查 count=0。
+**验证**：371 测试全绿。
+
+---
+
+## D-747：适配器消息历史保真——思考链回传 + 工具调用/结果配对（2026-10-04）
+
+**现象**：生产第三次实证（20:06）——iter=1 toolCalls=1 且 `tool_query_production_progress` 真实执行（[Audit] AI操作完成 实锤，工具链路已全通），但 iter=2 把历史发回时 **400**：`The reasoning_content in the thinking mode must be passed back to the API`。
+**根因**：DeepSeek thinking 模式要求上一轮思考链原样回传，而 `convertMessages` 重建 assistant 消息时只保留 content，**思考链 / 工具调用 / 工具结果消息三类全部丢失** → 第 2 轮必 400 → 循环报废空回答。
+**修法**：`convertAssistantMessage` 让 assistant 历史带 `reasoning_content`（metadata "reasoningContent"，Spring AI 请求侧自动回填）+ `tool_calls`（与 tool 结果配对）；`tool` 角色 AiMessage 映射为 `ToolResponseMessage`（此前直接被丢弃）；新增 `AssistantHistoryMessage` 子类绕过 AssistantMessage 的 protected 四参构造。
+**验证**：371 测试全绿。
+**协作警告**：本文件（`SpringAiInferenceAdapter.java`）被并行会话用 D-743 时代旧版覆盖**第三次**，提交前已恢复——改同一文件前请先对齐 git。
 
 ---
 

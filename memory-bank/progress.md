@@ -2,9 +2,38 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-03（D-719 巡检审批通知空租户根治 + D-720 402 余额熔断 + D-472 遗留数据治理：往来ID回填22行/映射去重602行）
+> 最后更新：2026-10-06（D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳，每批独立提交并推送，CI 全绿）
 
 ## 已完成
+
+### 2026-10-06 D-754 智能化落地 5 批（已推 CI 全绿）
+
+- [x] P0 清淤（6b64b740d，删 962 行）：下线三处假数据（含零前端消费的假工厂推荐器）+ 两个空壳 Job；`SupplierScorecardOrchestrator` 改按真实 `factoryId` 分组并持久化；新增 4 个真数据 Job
+- [x] P1 巡检→根因串联（422425ba9）：工单自带证据包（纯 SQL、订单级）+ HIGH 级自动 5-Why 根因（异步 + 每日上限），挂进 `PatrolClosedLoopOrchestrator.createAction`（踩坑：状态值是 `scanned` 不是 `DONE`）
+- [x] P2 环节瓶颈热力（185286571）：`StageBottleneckHeatmapOrchestrator` 工厂×环节积压量 + 人力折算消化天数
+- [x] P3 交期偏差回扫自校准（5b111aeb4，+712）：新表 `t_delivery_calibration_stat`（V202610060001）+ `DeliveryCalibrationOrchestrator`（工厂/品类/工厂×品类 准交率+偏差倍数）+ 反哺 `DeliveryDateSuggestionOrchestrator`（倍数拉伸，样本<2 不生效）+ 每日 03:20 Job + 控制器端点 + 10 例单测
+- [x] P4 排产建议一键采纳（ba651b450，+431）：`SchedulingSuggestionOrchestrator.adopt(@Transactional)` 写回工厂+计划起止 + `ProductionOrderLogAppendHelper` 留「采纳排产建议」痕迹 + `POST /scheduling-suggestion/adopt` + 前端「采纳」按钮（创建场景一键回填）+ 7 例单测
+- [x] 验证：P3 单测 10 例 / P4 单测 7 例全绿；checkstyle 0 违规；前端 tsc 0 错误；每批独立提交并推送，pre-push 11 项检查全过
+
+### 2026-10-05 D-702 小云工具调用链路 P0 大修（+D-743~747，已推 CI 全绿）
+
+- [x] D-702 小云 86 个工具全部未被调用 → 修复：流式 QuickPath 传空工具列表吞掉业务问，加「数据可信性闸门」（SMALL_TALK → 知识问 → 业务词分级判定，命中业务词强制进 Agent 循环查库）
+- [x] D-702 63% 工具 LLM 永远看不到（15 个未注册 + 47 个无意图引用）→ 补注册 15 个 + `advise` 同域补齐（不改 MAX_TOOLS_PER_CALL=12，prompt 成本不变）
+- [x] D-702 四个防幻觉守卫集体静默失效（commonPool 缺租户上下文）→ 统一走 `supplyAsyncWithUserContext`（set+finally 复原）+ 串行回退补上下文 + `getNow`→`join`
+- [x] D-702 配额形同虚设（限 50 实调 209）+ 信号表膨胀 15.5 万行（真实信号仅 129）→ 配额下沉 `invoke()` 出口 + 信号表幂等 upsert + 生成列唯一约束（V202610050001）
+- [x] D-702 收尾三处静默失真 → 成本 scene 去随机 UUID / 同步入口加多 Agent 图开关（默认 false）/ NLQuery 兜底改走带工具 executeAgent
+- [x] D-702 修复迁移 V202610050001 两处致命错误 → DELETE-JOIN 会删空整表（改 LEFT JOIN ... IS NULL）+ 动态 SQL 单引号未转义（改 `''0''`）
+- [x] D-702 Prompt 缓存命中率可观测 → t_ai_cost_tracking 补缓存列 + `/ai-cost/cache-hit`（判读 good≥60%/fair≥25%/poor<25%）+ 流式补采真实 usage（include_usage + usage 提取移到 choices 判空之前）
+- [x] D-702 工具契约验收 → getToolDefinition() 实调校验 runtime schema（非注解），补登记 external_search / code_index_search
+- [x] D-743 Spring AI 1.0 → 2.0.0 GA 迁移 → 官方引擎切回主路径（OpenAI 官方 Java SDK），legacy 熔断兜底；真机冒烟 1.9s / usage 精确回传 / 裸 tool_calls 正确
+- [x] D-743b 流式路径带工具 + Handoff 专家答案不再顶替工具核实 → chatStream 下发工具定义 + 按 id 聚合 tool_calls 分片；专家答案降级为「参考初判」，主循环强制工具核实
+- [x] D-744 交期风险卡按单堆叠根治（3 天 29 张）→ 两巡检 Job 补租户上下文使去重生效 + 24h 内非人为终态复用旧卡刷新文案 + 前端创建人「system」→「AI 巡检」
+- [x] D-745 PREMIUM 分级路径接入工具调用 → `chatWithModel(scene,messages,tools,modelId)` 重载（messages+tools+模型覆盖）替代拍平 prompt
+- [x] D-746 语义缓存禁止缓存「未查实时数据」类回答 → store 拒缓存坏答案 + 生产存量清理（Redis 1 键/Qdrant count=0）
+- [x] D-747 适配器消息历史保真（DeepSeek thinking 400 根治）→ 思考链回传 + tool_calls/tool 结果配对，新增 AssistantHistoryMessage
+- [x] 验证：测试 366 → 404 全绿（新增 8 个测试类：ToolReachabilityTest / DataTruthGuardUserContextTest / QuickPathToolGateTest / AiQuotaAndSignalDedupTest / AgentLoopCostAndEntryPointTest / PromptCacheObservabilityTest / StreamingUsageCollectionTest / AiToolMetadataConsistencyTest）
+- [ ] 教训入档：代码质量断言必须用反射/实际调用（grep 源码出现 2 次假阳性）；AI 链路改动必须真机验证；异步任务必须恢复 UserContext
+- [ ] 遗留：86 个工具**逐个**端到端验收（本次仅保证「可达」，≠ 每个都能跑对）；SelfCritic 长期低分未追查（保持不调阈值）
 
 ### 2026-10-03 D-719/D-720/D-472 数据治理：用户四项拍板执行（已推，CI 绿）
 
