@@ -85,7 +85,7 @@ export const useIntelligenceCenterData = () => {
 
   const {
     pulse, health, notify, workers, heatmap, ranking, shortage, healing,
-    bottleneck: _bottleneck, orders, factoryCapacity,
+    bottleneck: _bottleneck, stageBottleneck, orders, factoryCapacity,
   } = data;
 
   const {
@@ -151,6 +151,7 @@ export const useIntelligenceCenterData = () => {
     overdueRisk,
     orderStats,
     factoryBottleneck,
+    stageBottleneck,
     totalWarn,
     tickerItems,
     handleTickerClick,

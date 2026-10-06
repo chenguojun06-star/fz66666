@@ -300,3 +300,23 @@ export interface DefectHeatmapResponse {
   worstProcess: string;
   worstFactory: string;
 }
+
+/** 环节瓶颈热力：单个「工厂 × 环节」的积压与消化预测（D-754 P2） */
+export interface StageBottleneckRow {
+  factoryName: string;
+  stage: string;
+  upstreamStage: string;
+  backlogQty: number;
+  workers: number;
+  avgMinutesPerUnit: number | null;
+  capacityPerDay: number | null;
+  estClearDays: number | null;
+  level: 'CRITICAL' | 'WARNING' | 'OK';
+  hint: string;
+}
+export interface StageBottleneckHeatmapResponse {
+  rows: StageBottleneckRow[];
+  orderCount?: number;
+  summary: string;
+  generatedAt?: string;
+}

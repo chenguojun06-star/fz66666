@@ -50,6 +50,14 @@ public class IntelligenceAdvancedController {
     private final RegionalSalesPredictor regionalSalesPredictor;
     private final TransportationCostOptimizer transportationCostOptimizer;
     private final BusinessHealthDiagnostic businessHealthDiagnostic;
+    private final StageBottleneckHeatmapOrchestrator stageBottleneckHeatmapOrchestrator;
+
+    // ==================== D-754 P2: 瓶颈热力看板 ====================
+
+    @GetMapping("/stage-bottleneck/heatmap")
+    public Result<?> stageBottleneckHeatmap() {
+        return Result.success(stageBottleneckHeatmapOrchestrator.heatmap());
+    }
 
     // ==================== P1-1: 退货预测与归因智能体 ====================
 

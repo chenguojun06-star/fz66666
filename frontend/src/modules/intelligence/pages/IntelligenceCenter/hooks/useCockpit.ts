@@ -6,6 +6,7 @@ import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
+  StageBottleneckHeatmapResponse,
 } from '@/services/intelligence/intelligenceApi';
 import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
@@ -24,6 +25,7 @@ export interface CockpitData {
   shortage:     MaterialShortageResult | null;
   healing:      SelfHealingResponse | null;
   bottleneck:   FactoryBottleneckItem[] | null;
+  stageBottleneck: StageBottleneckHeatmapResponse | null;
   orders:       ProductionOrder[];
   factoryCapacity: FactoryCapacityItem[];
   productionStats: ProductionOrderStats | null;
@@ -34,7 +36,7 @@ export interface CockpitData {
 const INITIAL: CockpitData = {
   pulse: null, health: null, notify: null, workers: null,
   heatmap: null, ranking: null, shortage: null, healing: null,
-  bottleneck: null, orders: [], factoryCapacity: [], productionStats: null, loading: true, ts: 0,
+  bottleneck: null, stageBottleneck: null, orders: [], factoryCapacity: [], productionStats: null, loading: true, ts: 0,
 };
 
 export function useCockpit() {
@@ -75,7 +77,7 @@ export function useCockpit() {
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: null, ranking: null, shortage: null, healing: null,
-      bottleneck: null,
+      bottleneck: null, stageBottleneck: null,
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped', 'archived', 'closed'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       productionStats: productionStatsResult,
@@ -83,18 +85,20 @@ export function useCockpit() {
     });
     loadingRef.current = false;
 
-    const [rHeatmap, rRanking, rShortage, rHealing, rBottleneck] =
+    const [rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rStageBottleneck] =
       await Promise.allSettled([
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
         intelligenceApi.getMaterialShortage(),
         intelligenceApi.runSelfHealing(),
         intelligenceApi.getFactoryBottleneck(),
+        intelligenceApi.getStageBottleneckHeatmap(),
       ]);
 
     setData(prev => ({
       ...prev,
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage),
       healing: v(rHealing), bottleneck: v(rBottleneck),
+      stageBottleneck: v(rStageBottleneck),
     }));
   }, []);
 

@@ -11,6 +11,7 @@ import CockpitTicker from './components/CockpitTicker';
 import PulsePanel from './components/PulsePanel';
 import WorkerEfficiencyPanel from './components/WorkerEfficiencyPanel';
 import BottleneckPanel from './components/BottleneckPanel';
+import StageBottleneckPanel from './components/StageBottleneckPanel';
 import ShortagePanel from './components/ShortagePanel';
 import HeatmapPanel from './components/HeatmapPanel';
 import HealingPanel from './components/HealingPanel';
@@ -142,6 +143,14 @@ const IntelligenceCenter: React.FC = () => {
             collapsedPanels={d.collapsedPanels}
             toggleCollapse={d.toggleCollapse}
             isLowEnd={d.isLowEnd}
+          />
+        </div>
+
+        <div style={{ padding: '0 20px 12px' }}>
+          <StageBottleneckPanel
+            stageBottleneck={d.stageBottleneck}
+            collapsedPanels={d.collapsedPanels}
+            toggleCollapse={d.toggleCollapse}
           />
         </div>
 

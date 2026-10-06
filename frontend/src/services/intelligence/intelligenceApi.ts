@@ -41,6 +41,7 @@ import type {
   ExecutionConfig,
   ExecutionStats,
   FactoryBottleneckItem,
+  StageBottleneckHeatmapResponse,
   FactoryLeaderboardResponse,
   FeedbackData,
   FeedbackReasonRecord,
@@ -478,6 +479,10 @@ export const intelligenceApi = {
   /** 工厂工序瓶颈分析 — 基于真实扫码数据 */
   getFactoryBottleneck: () =>
     api.get<{ code: number; data: FactoryBottleneckItem[] }>('/intelligence/factory-bottleneck'),
+
+  /** 环节瓶颈热力看板 — 工厂×环节积压量 + 按在岗人力折算的消化天数（D-754 P2） */
+  getStageBottleneckHeatmap: () =>
+    api.get<{ code: number; data: StageBottleneckHeatmapResponse }>('/intelligence/advanced/stage-bottleneck/heatmap'),
 
   /** 最近智能建议反馈原因 */
   listFeedbackReasons: (limit = 20) =>
