@@ -332,6 +332,7 @@
       "warehouse": "Warehouse",
       "finance": "Finance",
       "system": "System",
+      "tools": "Tool Management",
       "appStore": "App Store",
       "customer": "Tenant management",
       "tenant": "API Integration",

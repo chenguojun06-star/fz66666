@@ -30,7 +30,6 @@ import {
   TagOutlined,
   ProfileOutlined,
   ClockCircleOutlined,
-  PrinterOutlined,
   FieldTimeOutlined,
 } from '@ant-design/icons';
 
@@ -657,7 +656,7 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
-    title: '工具',
+    title: '工具管理',
     shortTitle: '工具',
     key: 'tools',
     icon: React.createElement(SettingOutlined),
@@ -665,14 +664,18 @@ export const menuConfig: MenuSection[] = [
       { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '字段配置', path: paths.fieldConfig, icon: React.createElement(SettingOutlined) },
-      { label: '打印模板', path: paths.printTemplate, icon: React.createElement(PrinterOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       // D-748：后端 /intelligence/jobs/* 仅限 ROLE_SUPER_ADMIN（D-542 的原设计），
       // 而本项此前复用 MENU_LOGIN_LOG 权限码 → 租户管理员看得见菜单、点开却全是 403。
       // 标为超管专属后：菜单对非超管隐藏（SideMenu.isItemVisible），手输 URL 被 PrivateRoute 挡回首页。
       { label: '定时任务运行记录', path: paths.jobRunLog, icon: React.createElement(FieldTimeOutlined), superAdminOnly: true },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
-      { label: '异常数据清理', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
+      // D-750：删除链路对租户管理员 403（后端 ROLE_SUPER_ADMIN），且纯平台超管又缺租户上下文
+      // 被 TenantAssert 拦 → 两类主角都删不掉，先对非超管隐藏（同上：菜单隐藏+PrivateRoute 挡 URL）。
+      { label: '异常数据清理', path: paths.orphanData, icon: React.createElement(DeleteOutlined), superAdminOnly: true },
+      // 「打印模板」已从菜单移除（路由与页面保留）：设计器产出的 LABEL/SHIPPING/PURCHASE/INBOUND
+      // 模板无任何打印链路消费（实际打印=硬编码模板+safePrint），且与吊牌页同表混类型、
+      // 在此编辑会把吊牌设置快照覆盖成设计器 schema。真模板体系立项前不再暴露入口。
     ],
   },
   {

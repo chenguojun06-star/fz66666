@@ -88,6 +88,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
     warehouse: 'menu.sections.warehouse',
     finance: 'menu.sections.finance',
     system: 'menu.sections.system',
+    tools: 'menu.sections.tools',
     appStore: 'menu.sections.appStore',
     customer: 'menu.sections.customer',
     tenant: 'menu.sections.tenant',

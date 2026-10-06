@@ -332,6 +332,7 @@
       "warehouse": "仓库管理",
       "finance": "财务管理",
       "system": "系统设置",
+      "tools": "工具管理",
       "appStore": "应用商店",
       "customer": "租户管理",
       "tenant": "API对接管理",

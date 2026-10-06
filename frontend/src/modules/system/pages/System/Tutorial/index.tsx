@@ -30,7 +30,6 @@ import {
 } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import './style.css';
-import type { Dayjs } from 'dayjs';
 import type { Tutorial } from './types';
 import { tutorials } from './tutorialData';
 import { printUserManual } from './userManual';
@@ -116,7 +115,6 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
 const SystemTutorial: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [filteredTutorials, setFilteredTutorials] = useState<Tutorial[]>([]);
 
   // D-655：底部帮助区两个按钮此前是无 onClick 的死按钮——手册由教程数据一键生成（userManual.ts），
@@ -261,8 +259,6 @@ const SystemTutorial: React.FC = () => {
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="搜索教程标题、标签或步骤"
-            dateValue={dateRange}
-            onDateChange={setDateRange}
             statusValue={activeCategory}
             onStatusChange={setActiveCategory}
             statusOptions={categories.map((cat) => ({

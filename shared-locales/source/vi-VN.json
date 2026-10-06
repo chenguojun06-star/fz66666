@@ -332,6 +332,7 @@
       "warehouse": "Quản lý kho",
       "finance": "Quản lý tài chính",
       "system": "Cài đặt hệ thống",
+      "tools": "Quản lý công cụ",
       "appStore": "Cửa hàng ứng dụng",
       "customer": "Quản lý người thuê",
       "tenant": "Tích hợp API",
