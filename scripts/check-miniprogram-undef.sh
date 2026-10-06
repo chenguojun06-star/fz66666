@@ -15,7 +15,7 @@ ESLINT="$MINI_DIR/node_modules/.bin/eslint"
 FAIL=0
 
 if [[ ! -x "$ESLINT" ]]; then
-  echo "[mp-undef] ⚠️ 未找到 $ESLINT，跳过扫描"
+  echo "[mp-undef] ⚠️ 未找到 ${ESLINT}，跳过扫描"
   exit 0
 fi
 
