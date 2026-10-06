@@ -47,12 +47,19 @@ class SyncPathOptimizationTest {
         // 到下一个 public 方法为止
         int end = s.indexOf("public Result<String> executeAgent", start + 10);
         String body = s.substring(start, end > 0 ? end : start + 4000);
+        // D-755：直查入参由 userMessage 改为 directInput（rawQuestion 优先、缺失时回退原话）。
+        // 这里只锁「确实调用了直查」这个行为，不再锁具体变量名 —— 否则任何一次入参收敛都会假红。
         assertThat(body)
                 .as("同步路径必须调用直查")
-                .contains("directQueryRouter.tryDirectAnswer(userMessage)");
+                .contains("directQueryRouter.tryDirectAnswer(");
         assertThat(body)
                 .as("命中后应直接返回，跳过 Agent 循环")
                 .contains("Result.success(direct.text())");
+        // D-755：入口把方法体委托给 executeAgentInternal，必须确认委托真实存在，
+        // 否则上面的断言可能落在「4000 字符兜底窗口」里而不是真正的同步路径上
+        assertThat(s.substring(start, Math.min(start + 220, s.length())))
+                .as("同步入口必须委托到带 rawQuestion 的实现体")
+                .contains("executeAgentInternal(");
     }
 
     @Test
