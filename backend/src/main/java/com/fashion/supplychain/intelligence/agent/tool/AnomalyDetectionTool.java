@@ -69,6 +69,8 @@ public class AnomalyDetectionTool extends AbstractAgentTool {
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("totalChecked", resp.getTotalChecked());
+            // 数据覆盖度：无数据时不能报「无异常」，那会把缺失当成正常结果
+            result.put("todaySampleCount", resp.getTodaySampleCount());
             result.put("anomalyCount", anomalyList.size());
             result.put("anomalies", anomalyList);
 

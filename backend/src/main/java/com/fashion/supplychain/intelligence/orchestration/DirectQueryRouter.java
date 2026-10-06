@@ -175,31 +175,83 @@ public class DirectQueryRouter {
             log.debug("[DirectQuery] {} 返回结构中无 anomalies，交回 Agent", toolName);
             return null;
         }
+        int count = list.size();
+
+        // 铁律 9：没有数据 ≠ 一切正常。
+        // 规则即使一条记录都没有也会跑完并返回「无异常」，
+        // 若照搬，用户会把「今天没扫码/没单据」误读成「生产正常」——
+        // 0 和「无数据」在业务上是两回事，这里必须区分。
+        int samples = intOf(parsed.get("todaySampleCount"));
+        int sampleKey = sampleKeyFor(toolName);
+        boolean noData = sampleKey >= 0 && samples <= 0;
+
         Map<String, Object> card = new LinkedHashMap<>();
         card.put("tool", toolName);
         copyIfPresent(parsed, card, "totalChecked");
         copyIfPresent(parsed, card, "anomalyCount");
+        copyIfPresent(parsed, card, "todaySampleCount");
         copyIfPresent(parsed, card, "alert");
         copyIfPresent(parsed, card, "summary");
         card.put("anomalies", list);
+        card.put("dataSufficient", !noData);
 
-        int count = list.size();
         StringBuilder sb = new StringBuilder();
-        Object alert = parsed.get("alert");
-        Object summary = parsed.get("summary");
-        if (alert != null) {
-            sb.append(String.valueOf(alert)).append("。");
-        } else if (summary != null) {
-            sb.append(String.valueOf(summary)).append("。");
-        } else if (count > 0) {
-            sb.append("发现 ").append(count).append(" 项异常。");
+        if (noData) {
+            // 有异常照样要报——不能因为样本少就把已发现的异常吞掉
+            if (count > 0) {
+                sb.append("今日样本不足（").append(samples).append(" 条），但仍发现 ")
+                        .append(count).append(" 项异常，请优先核查：");
+            } else {
+                sb.append("今日暂无可供分析的").append(sampleKey == 0 ? "扫码" : "单据")
+                        .append("数据（0 条），因此**无法判断**是否存在异常。");
+                sb.append("这不代表生产正常，只代表没有数据可分析。");
+            }
         } else {
-            sb.append("未检测到异常。");
+            Object alert = parsed.get("alert");
+            Object summary = parsed.get("summary");
+            if (alert != null) {
+                sb.append(String.valueOf(alert)).append("。");
+            } else if (summary != null) {
+                sb.append(String.valueOf(summary)).append("。");
+            } else if (count > 0) {
+                sb.append("发现 ").append(count).append(" 项异常。");
+            } else {
+                sb.append("已分析 ").append(samples).append(" 条记录，未检测到异常。");
+            }
         }
         sb.append("以上为系统规则实时统计（直接查库，未经 AI 生成）。");
         sb.append("如需分析原因或给出处理建议，可以继续问我。");
 
         return new DirectAnswer(sb.toString(), cardType, cardTitle, card);
+    }
+
+    /**
+     * 该工具用哪个字段表示「今日样本量」。
+     *
+     * @return 字段名；该工具不提供样本量时返回 -1（不做无数据判断）
+     */
+    private static int sampleKeyFor(String toolName) {
+        if ("tool_anomaly_detection".equals(toolName)) {
+            return 0;   // todaySampleCount：今日扫码条数
+        }
+        if ("tool_finance_anomaly".equals(toolName)) {
+            return 1;   // totalChecked：待核对单据数
+        }
+        return -1;
+    }
+
+    private static int intOf(Object v) {
+        if (v instanceof Number n) {
+            return n.intValue();
+        }
+        if (v instanceof String s) {
+            try {
+                return Integer.parseInt(s.trim());
+            } catch (NumberFormatException ignored) {
+                return -1;
+            }
+        }
+        return -1;
     }
 
     private static void copyIfPresent(Map<String, Object> src, Map<String, Object> dst, String key) {

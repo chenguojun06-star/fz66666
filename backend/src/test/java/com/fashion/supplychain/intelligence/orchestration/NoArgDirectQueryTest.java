@@ -124,6 +124,67 @@ class NoArgDirectQueryTest {
                 .contains("系统规则实时统计");
     }
 
+    /**
+     * 铁律 9 回归：0 与「无数据」在业务上是两回事。
+     *
+     * <p>实测生产近 7 天仅 9 条扫码（09-30，1 人），今天 0 条。
+     * 此时规则仍会跑完并返回「无异常」——若照搬，用户会把
+     * 「今天没扫码」误读成「生产正常」。这正是铁律 9 禁止的兜底。
+     */
+    @Test
+    @DisplayName("⑦ 无数据时必须说「无法判断」，不得报「无异常」（铁律 9）")
+    void noDataMustNotReportHealthy() throws Exception {
+        String s = read();
+        assertThat(s)
+                .as("必须显式判断样本量为 0 的情形")
+                .contains("todaySampleCount")
+                .contains("noData");
+        assertThat(s)
+                .as("必须说明「无法判断」且澄清不等于正常")
+                .contains("无法判断")
+                .contains("这不代表生产正常");
+        assertThat(s)
+                .as("样本不足但已发现异常时，仍必须报出异常")
+                .contains("但仍发现");
+        assertThat(s)
+                .as("卡片需带 dataSufficient 供前端区分「无数据」与「真正常」")
+                .contains("dataSufficient");
+    }
+
+    /**
+     * {@code totalChecked} 是「跑了多少条规则」，无论有无数据都 &gt; 0，
+     * 绝不能被当作「有没有数据」来判断。
+     */
+    @Test
+    @DisplayName("⑧ 异常检测的样本量必须来自 todaySampleCount，而非 totalChecked")
+    void anomalySampleCountMustNotComeFromTotalChecked() throws Exception {
+        String s = read();
+        // 关键不变量：renderAnomaly 取样本量只能读 todaySampleCount
+        int r = s.indexOf("private DirectAnswer renderAnomaly");
+        String body = s.substring(r, Math.min(r + 1800, s.length()));
+        assertThat(body)
+                .as("样本量必须取自 todaySampleCount")
+                .contains("intOf(parsed.get(\"todaySampleCount\"))");
+        assertThat(body)
+                .as("绝不能用 totalChecked 当样本量——它是「跑了多少条规则」，恒大于 0")
+                .doesNotContain("intOf(parsed.get(\"totalChecked\"))");
+
+        // 财务工具例外且合法：它的 totalChecked 就是 bills.size()，本来就是样本数
+        String orch = Files.readString(Path.of(
+                "src/main/java/com/fashion/supplychain/intelligence/orchestration/AnomalyDetectionOrchestrator.java"),
+                StandardCharsets.UTF_8);
+        assertThat(orch)
+                .as("异常检测 orchestrator 必须把今日记录数写进 todaySampleCount")
+                .contains("setTodaySampleCount(todayRecords == null ? 0 : todayRecords.size())");
+
+        String tool = Files.readString(Path.of(
+                "src/main/java/com/fashion/supplychain/intelligence/agent/tool/AnomalyDetectionTool.java"),
+                StandardCharsets.UTF_8);
+        assertThat(tool)
+                .as("工具必须把 todaySampleCount 透传给调用方，否则直查无从判断有无数据")
+                .contains("result.put(\"todaySampleCount\", resp.getTodaySampleCount())");
+    }
+
     @Test
     @DisplayName("⑥ 不得误伤需要推理的问法：原因分析/建议类必须交回 Agent")
     void reasoningQuestionsStillGoToAgent() throws Exception {

@@ -59,6 +59,9 @@ public class AnomalyDetectionOrchestrator {
         checked += detectIdleWorkers(tenantId, today, histRecords, todayRecords, response);
 
         response.setTotalChecked(checked);
+        // 数据覆盖度：今天实际有多少条扫码可供判断。
+        // totalChecked 是「跑了多少条规则」，无论有无数据都 >0，不能用它判断有无数据
+        response.setTodaySampleCount(todayRecords == null ? 0 : todayRecords.size());
         response.getAnomalies().sort(Comparator.comparing(
                 a -> "critical".equals(a.getSeverity()) ? 0
                    : "warning".equals(a.getSeverity()) ? 1 : 2));
