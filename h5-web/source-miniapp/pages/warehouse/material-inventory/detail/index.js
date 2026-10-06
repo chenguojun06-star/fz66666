@@ -85,7 +85,8 @@ Page({
       materialName: decodeParam(opt.materialName),
       image: decodeParam(opt.image),
       materialType: type,
-      isFabric: /^fabric/i.test(String(type || '')),
+      // 里料同属面料类（无服装码数），只有辅料才显示「规格」
+      isFabric: !/^accessory/i.test(String(type || '')),
       unit: decodeParam(opt.unit),
       warehouseAreaName: decodeParam(opt.warehouseAreaName),
       supplierName: decodeParam(opt.supplierName),
@@ -177,8 +178,8 @@ Page({
         materialName: info.materialName || this.data.materialName || this.data.materialCode,
         typeLabel: meta.labelKey ? i18n.t(meta.labelKey, this._lang) : this.data.typeLabel,
         typeColor: meta.color || this.data.typeColor,
-        // 快照接口返回的类型更准（fabricA/B/C 等业务编码也按前缀识别）
-        isFabric: /^fabric/i.test(String(info.materialType || this.data.materialType || '')),
+        // 快照接口返回的类型更准（fabricA/B/C 等业务编码也按前缀识别）；里料同属面料类
+        isFabric: !/^accessory/i.test(String(info.materialType || this.data.materialType || '')),
         unit: info.unit || this.data.unit,
         color: info.color || '',
         size: info.size || '',

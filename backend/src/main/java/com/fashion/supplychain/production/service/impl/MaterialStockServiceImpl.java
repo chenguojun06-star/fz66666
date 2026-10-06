@@ -332,6 +332,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                 new LambdaQueryWrapper<MaterialDatabase>()
                         .in(MaterialDatabase::getMaterialCode, codes)
                         .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode, MaterialDatabase::getDisabled,
+                                MaterialDatabase::getMaterialName, MaterialDatabase::getMaterialType,
+                                MaterialDatabase::getSpecifications, MaterialDatabase::getUnit,
                                 MaterialDatabase::getConversionRate,
                                 MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
                                 MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
@@ -358,6 +360,13 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             if (!StringUtils.hasText(record.getFabricComposition())) record.setFabricComposition(db.getFabricComposition());
             if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
             if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
+            // 2026-10-06：物料仓库详情「面料属性/分类/单位」以前只读库存表自身字段，
+            // 自动建的库存行这些字段为空 → 显示 "-"。这里按编码从「物料资料」补空值，
+            // 不覆盖库存表已有数据（面料属性 gate 也已放宽到「里料同属面料类」）。
+            if (!StringUtils.hasText(record.getMaterialName())) record.setMaterialName(db.getMaterialName());
+            if (!StringUtils.hasText(record.getMaterialType())) record.setMaterialType(db.getMaterialType());
+            if (!StringUtils.hasText(record.getSpecifications())) record.setSpecifications(db.getSpecifications());
+            if (!StringUtils.hasText(record.getUnit())) record.setUnit(db.getUnit());
         }
     }
 

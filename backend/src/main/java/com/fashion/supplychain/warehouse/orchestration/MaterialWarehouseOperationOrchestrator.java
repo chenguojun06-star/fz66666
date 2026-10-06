@@ -3,11 +3,13 @@ package com.fashion.supplychain.warehouse.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.warehouse.entity.StockChangeLog;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
@@ -31,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MaterialWarehouseOperationOrchestrator {
 
     private final MaterialStockService materialStockService;
+    private final MaterialDatabaseService materialDatabaseService;
     private final MaterialInboundMapper materialInboundMapper;
     private final MaterialOutboundLogMapper materialOutboundLogMapper;
     private final StockChangeLogService stockChangeLogService;
@@ -600,9 +603,51 @@ public class MaterialWarehouseOperationOrchestrator {
         stock.setCreateTime(LocalDateTime.now());
         stock.setUpdateTime(LocalDateTime.now());
         stock.setTenantId(tenantId);
+        // 同步「物料资料」：否则新自动建的行会缺 物料类型/单位/幅宽/克重/成分，
+        // 详情面板「面料属性」就显示 "-"（2026-10-06 用户反馈）。
+        enrichFromMaterialDatabase(stock, materialCode);
+        // 单位兜底：物料资料/参数都没有时，按物料类型给默认值（面料/里料=米，辅料=件）
+        if (!StringUtils.hasText(stock.getUnit())) {
+            String mtype = stock.getMaterialType();
+            boolean accessory = mtype != null && mtype.toLowerCase(Locale.ROOT).startsWith("accessory");
+            stock.setUnit(accessory ? "件" : "米");
+        }
         materialStockService.save(stock);
         log.info("[物料入库] 自动创建库存记录: materialCode={}", materialCode);
         return stock;
+    }
+
+    /**
+     * 从「物料资料」按编码回填物料仓库行缺失的字段。
+     *
+     * 为什么必须回填：物料仓库详情面板的「面料属性」（幅宽/克重/成分）和「单位」
+     * 以前只读 MaterialStock 自身字段，而自动建的库存行这些字段是空的 →
+     * 用户看到「面料属性 -」，误以为资料丢失（2026-10-06 反馈）。
+     * 只填空值，不覆盖已有数据（与 MaterialStockServiceImpl.enrichConversionRate 同口径）。
+     */
+    private void enrichFromMaterialDatabase(MaterialStock stock, String materialCode) {
+        if (stock == null || !StringUtils.hasText(materialCode)) {
+            return;
+        }
+        MaterialDatabase db = materialDatabaseService.getOne(
+                new LambdaQueryWrapper<MaterialDatabase>()
+                        .eq(MaterialDatabase::getMaterialCode, materialCode)
+                        .eq(MaterialDatabase::getDeleteFlag, 0)
+                        .orderByAsc(MaterialDatabase::getId)
+                        .last("LIMIT 1"), false);
+        if (db == null) {
+            return;
+        }
+        if (!StringUtils.hasText(stock.getMaterialName())) stock.setMaterialName(db.getMaterialName());
+        if (!StringUtils.hasText(stock.getMaterialType())) stock.setMaterialType(db.getMaterialType());
+        if (!StringUtils.hasText(stock.getSpecifications())) stock.setSpecifications(db.getSpecifications());
+        if (!StringUtils.hasText(stock.getFabricWidth())) stock.setFabricWidth(db.getFabricWidth());
+        if (!StringUtils.hasText(stock.getFabricWeight())) stock.setFabricWeight(db.getFabricWeight());
+        if (!StringUtils.hasText(stock.getFabricComposition())) stock.setFabricComposition(db.getFabricComposition());
+        if (!StringUtils.hasText(stock.getUnit())) stock.setUnit(db.getUnit());
+        if (!StringUtils.hasText(stock.getSupplierName())) stock.setSupplierName(db.getSupplierName());
+        if (stock.getUnitPrice() == null && db.getUnitPrice() != null) stock.setUnitPrice(db.getUnitPrice());
+        if (stock.getConversionRate() == null && db.getConversionRate() != null) stock.setConversionRate(db.getConversionRate());
     }
 
     private String buildNo(String prefix, LocalDateTime now) {

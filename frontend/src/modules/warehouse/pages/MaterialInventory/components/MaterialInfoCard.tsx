@@ -30,7 +30,8 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
     unitPrice,
   } = props;
 
-  const isFabric = getMaterialTypeCategory(materialType) === 'fabric';
+  // 里料同属面料类（有幅宽/克重/成分），只有辅料无面料属性
+  const isFabric = getMaterialTypeCategory(materialType) !== 'accessory';
   const typeCategory = getMaterialTypeCategory(materialType);
   const typeTagColor = typeCategory === 'fabric' ? 'blue' : typeCategory === 'lining' ? 'cyan' : 'green';
 

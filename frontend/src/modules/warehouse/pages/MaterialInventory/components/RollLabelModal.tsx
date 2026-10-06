@@ -130,7 +130,7 @@ const RollLabelModal: React.FC<RollLabelModalProps> = ({
               <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                 共 <strong>{(rolls || []).length}</strong> 卷，合计 <strong>{total}</strong> {unit || ''}
               </span>
-              <Form.Item name="unit" label="单位" initialValue="件" style={{ marginBottom: 0, minWidth: 120 }}>
+              <Form.Item name="unit" label="单位" initialValue={rollModal.data?.unit || '米'} style={{ marginBottom: 0, minWidth: 120 }}>
                 <Select style={{ width: 120 }}>
                   <Select.Option value="件">件</Select.Option>
                   <Select.Option value="米">米</Select.Option>

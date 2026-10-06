@@ -17,7 +17,7 @@ interface UseMaterialInventoryColumnsProps {
   openInstructionFromRecord: (record: MaterialInventory) => void;
   handleInbound: (record: MaterialInventory) => void;
   rollForm: FormInstance;
-  rollModal: { open: (data: { inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number }) => void };
+  rollModal: { open: (data: { inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number; unit?: string }) => void };
   handleOutbound: (record: MaterialInventory) => void;
   handleToggleDisabled: (record: MaterialInventory) => void;
   handleViewDetail: (record: MaterialInventory) => void;
@@ -117,7 +117,8 @@ export function useMaterialInventoryColumns({
       key: 'fabricProperties',
       width: 200,
       render: (_, record) => {
-        if (getMaterialTypeCategory(record.materialType) !== 'fabric') {
+        // 里料同属面料类（有幅宽/克重/成分），只有辅料无面料属性
+        if (getMaterialTypeCategory(record.materialType) === 'accessory') {
           return (
             <div className="u-ta-center u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-disabled)' }}>
               -
@@ -325,9 +326,12 @@ export function useMaterialInventoryColumns({
                 disabled: isDisabledMaterial,
                 title: isDisabledMaterial ? disabledHint : undefined,
                 onClick: () => {
-                  rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
+                  // 默认单位取物料自身单位；辅料兜底「件」，面料/里料兜底「米」
+                  const defaultUnit = record.unit
+                    || (getMaterialTypeCategory(record.materialType) === 'accessory' ? '件' : '米');
+                  rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName, unit: defaultUnit });
                   requestAnimationFrame(() => {
-                    rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件', rolls: [{ quantity: undefined }] });
+                    rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: defaultUnit, rolls: [{ quantity: undefined }] });
                   });
                 }
               },

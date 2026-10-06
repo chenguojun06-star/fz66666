@@ -7,6 +7,7 @@ import { message } from '@/utils/antdStatic';
 import { safePrint } from '@/utils/safePrint';
 import QRCode from 'qrcode';
 import type { MaterialInventory } from '../types';
+import { getMaterialTypeCategory } from '@/utils/materialType';
 
 interface InboundFlowDeps {
   user: { name?: string; username?: string; id?: string } | null | undefined;
@@ -19,7 +20,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
   const [inboundForm] = Form.useForm();
   const [rollForm] = Form.useForm();
   const inboundModal = useModal<MaterialInventory>();
-  const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number }>();
+  const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string; expectedQuantity?: number; unit?: string }>();
   const [inboundSubmitting, setInboundSubmitting] = useState(false);
   const inboundSubmittingRef = useRef(false);
 
@@ -70,11 +71,14 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
           // 事件派发失败不影响业务
         }
         const mat = inboundModal.data;
+        // 默认单位：物料自身单位 → 面料/里料兜底「米」，辅料兜底「件」
+        const defaultUnit = mat?.unit
+          || (getMaterialTypeCategory(values.materialType) === 'accessory' ? '件' : '米');
         // 默认预置 1 卷，数量 = 本次入库总量；用户可「填充」或逐行按各卷实际米数修改
         rollForm.setFieldsValue({
           rollCount: 1,
           quantityPerRoll: values.quantity,
-          unit: '件',
+          unit: defaultUnit,
           rolls: [{ quantity: values.quantity }],
         });
         rollModal.open({
@@ -82,6 +86,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
           materialCode: mat?.materialCode || values.materialCode || '',
           materialName: mat?.materialName || values.materialName || '',
           expectedQuantity: values.quantity,
+          unit: defaultUnit,
         });
         message.success(`入库成功！单号：${inboundNo}，请在弹窗中生成料卷标签`);
       } else {

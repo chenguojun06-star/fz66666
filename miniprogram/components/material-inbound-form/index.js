@@ -275,17 +275,19 @@ Component({
         // res 可能直接是对象，也可能包一层
         var info = res && res.data ? res.data : res;
         var mtype = (info && info.materialType) || '';
+        // 里料同属面料类（有幅宽/克重/成分），只有辅料无面料属性
+        var isAccessory = /^accessory/i.test(mtype) || mtype === '辅料';
         this.setData({
           materialInfo: info || null,
           unit: (info && (info.unit || info.materialUnit)) || '',
-          // 面料不显示服装码数（PC 端面料走「幅宽/克重/成分」，不问码数）
-          isFabric: mtype === 'fabric',
+          // 面料不显示服装码数（PC 端面料走「幅宽/克重/成分」，不问码数）；里料同属面料类
+          isFabric: !isAccessory,
           typeLabel: TYPE_LABEL_KEYS[mtype] ? i18n.t(TYPE_LABEL_KEYS[mtype], this._lang) : (mtype || ''),
           queried: true,
           loading: false,
         });
-        // 面料额外读「物料资料」的幅宽/克重/成分（只读展示，手机端不需要填）
-        if (mtype === 'fabric') {
+        // 面料/里料额外读「物料资料」的幅宽/克重/成分（只读展示，手机端不需要填）
+        if (!isAccessory) {
           this.loadFabricInfo(this.data.inputCode);
         } else {
           this.setData({ fabricWidth: '', fabricWeight: '', fabricComposition: '' });

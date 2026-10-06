@@ -2,8 +2,67 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-06（✅D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳；每批独立提交并推送，CI 全绿）
-> 上一版：2026-10-05（✅D-702 小云工具调用链路 P0 大修 + D-743~D-747 Spring AI 2.0 GA 迁移/流式带工具与 Handoff/巡检去重/PREMIUM 分级接工具/语义缓存拒坏答案/适配器消息保真，已推 CI 全绿，本条为事后补记）
+> 最后更新：2026-10-06（✅ D-755 小云直查被上下文劫持 + D-756 物料仓库「面料属性」补齐落地）
+> 上一版：2026-10-06（✅ 物料仓库「面料属性 -」修复 + 单位默认米；面料料卷逐卷米数录入）
+> 再上一版：2026-10-06（✅D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳；每批独立提交并推送，CI 全绿）
+
+## ✅ D-755 小云直查被上下文劫持（2026-10-06，已上线 37af931）
+
+**现象**：PC 端停在「生产管理模块」页时，任意问题（订单号、`什么情况`、快捷按钮）全部返回同一条异常检测卡片。
+
+**根因**：`question` 同时承载了两件事 —— 用户原话，以及给 LLM 的提示。前端 `buildContextualText()` 把「页面快捷操作建议（前 3 条）」与「历史对话摘要（最近 5 条用户消息）」拼进同一个 question，而 `DirectQueryRouter` 的直查判定是「包含关键词」的松散正则，在这整段上匹配。生产管理页前 3 条建议含「检测生产异常」→「停在哪个页面」直接决定「问什么都被劫持」；订单号也被吃掉（无参直查先于订单进度分支判定）。
+
+**被污染页面恰好 3 个**（词表是窄固定词，不是裸「异常」）：生产管理模块「检测生产异常」/ 成品入库「入库异常检测」/ 财务管理「对账异常检测」。
+
+**修法（两道防线）**：① 前端新增 `rawQuestion` 单独传原话，后端直查判定只看它；② `DirectQueryRouter.extractUserQuestion()` 按机器生成标记做**前缀截断**兜底（**不按方括号配对** —— 历史摘要是用户原话，可能含 `]`）。顺带修：订单号取用户原话而非 URL 里的；财务问法不再被生产异常抢先命中。
+
+**测试教训（重要）**：`NoArgDirectQueryTest` 全是**源码字符串断言**、`DirectQueryRouterTest` 只喂干净短句 —— 断言的是「代码里有没有这行」，不是「给定这个输入会不会命中」，**结构上测不出这类回归**。新增 `DirectQueryContextIsolationTest` 用**真实 blob** 做行为断言。
+
+**⚠️ 已知未修**：GENERAL 建议「🔍 检测今日异常」不匹配现有词表 → 点该按钮走不到快路径（仍可用，只是要等 Agent 循环）。
+
+## ✅ D-756 物料仓库「面料属性 -」修复 + 单位默认米 + 料卷逐卷米数（2026-10-06）
+
+> ⚠️ **本条此前被记为「已推 CI 绿」但实际未提交**，代码一直躺在工作区。本次补齐提交与推送。
+
+**用户反馈**：物料资料（规格/幅宽 110、克重 80、成分 100%桑蚕丝、单位 米）齐全，但物料仓库详情面板「面料属性」显示 `-`。
+
+**根因（前端 gate 过窄）**：`getMaterialTypeCategory()` 把「里料」归为 `lining`，而 PC 详情列/信息卡/入库抽屉都写成 `!== 'fabric'` 才展示面料属性 → 里料被挡掉。
+**修法**：改为 `!== 'accessory'`（里料同属面料类：有幅宽/克重/成分，只有辅料没有）。同步改：
+- PC：`useMaterialInventoryColumns.tsx`（面料属性 gate + 料卷标签默认单位）、`MaterialInfoCard.tsx`、`InboundDrawer.tsx`
+- 小程序/H5 三副本：`components/material-inbound-form/index.js`（`isFabric: !isAccessory` + `loadFabricInfo` 门槛）、`pages/warehouse/material-inventory/detail/index.js`（2 处 `isFabric`）
+
+**单位默认米**：`useMaterialInventoryList` 已有 `item.unit || '米'`；料卷标签单位默认由固定 `件` 改为「物料自身单位 → 面料/里料兜底 米，辅料兜底 件」。
+
+**后端补数据源（第二层防御）**：
+- `MaterialWarehouseOperationOrchestrator.autoCreateMaterialStock` 新增 `enrichFromMaterialDatabase()`：自动建库存行时按编码从「物料资料」回填 类型/名称/规格/幅宽/克重/成分/单位/单价/供应商（只填空值），并按类型兜底单位（面料/里料=米、辅料=件）。
+- `MaterialStockServiceImpl.enrichConversionRate` 增加 物料名称/类型/规格/单位 的空值回填（列表查询即可用，修所有存量行）。
+
+**验证**：`mvn -o compile` 通过、`npx tsc --noEmit` 0 错误、三副本 md5 一致、未触碰打印样式。
+
+## ⚠️ 待处理（本次盘点发现，未擅自改）
+
+1. **`t_agent_checkpoint` 生产表残留 `iteration INT NOT NULL`（无默认值）** → 每次 Agent 图 checkpoint 插入都 `DataIntegrityViolationException`（WARN，非致命，但断点续跑完全失效 + 日志噪音）。实体侧 `@TableField(exist=false)` 已不写该列；V20260513001 / V202705031800 两次迁移都想 DROP 它（`success=1` 却未生效，属静默失效），同时残留 `idx_ac_session_iter` 索引与 `messages_json` / `tool_calls_json` / `total_tokens` 三列。**需一次确认后执行的迁移**。
+2. **小云「一直思考」**：一次提问触发 ToolAdvisor 预选 12 工具（含 `tool_think` / `tool_deep_analysis` / `tool_root_cause_analysis`）+ GoT 高级推理 + 5-Why RCA + 多Agent图 reflection/re_route，单次 LLM 5~11s 叠加 → 用户等 1~3 分钟；前端每收到事件就重置无活动计时器，一直停在「小云正在整理思路，准备给你结论…」。另 `systemPrompt过长(26300 字符 > 8000 上限)`，每次调用要裁掉 18300 字符。
+3. `progress.md` 遗留：86 个工具逐个端到端验收（目前仅保证「可达」）；SelfCritic 长期低分未追查。
+4. 待用户决定：最美布行 / 001 供应商主档是否新建；租户2「方大丝绸」主档重复两条。
+
+
+## ✅ 物料仓库「面料属性 -」修复 + 单位默认米（2026-10-06）
+
+**用户反馈**：物料资料（规格/幅宽 110、克重 80、成分 100%桑蚕丝、单位 米）齐全，但物料仓库详情面板「面料属性」显示 `-`。
+
+**根因（前端 gate 过窄）**：`getMaterialTypeCategory()` 把「里料」归为 `lining`，而 PC 详情列/信息卡/入库抽屉都写成 `!== 'fabric'` 才展示面料属性 → 里料被挡掉。
+**修法**：改为 `!== 'accessory'`（里料同属面料类：有幅宽/克重/成分，只有辅料没有）。同步改：
+- PC：`useMaterialInventoryColumns.tsx`（面料属性 gate + 料卷标签默认单位）、`MaterialInfoCard.tsx`、`InboundDrawer.tsx`
+- 小程序/H5 三副本：`components/material-inbound-form/index.js`（`isFabric: !isAccessory` + `loadFabricInfo` 门槛）、`pages/warehouse/material-inventory/detail/index.js`（2 处 `isFabric`）
+
+**单位默认米**：`useMaterialInventoryList` 已有 `item.unit || '米'`；料卷标签单位默认由固定 `件` 改为「物料自身单位 → 面料/里料兜底 米，辅料兜底 件」。
+
+**后端补数据源（第二层防御）**：
+- `MaterialWarehouseOperationOrchestrator.autoCreateMaterialStock` 新增 `enrichFromMaterialDatabase()`：自动建库存行时按编码从「物料资料」回填 类型/名称/规格/幅宽/克重/成分/单位/单价/供应商（只填空值），并按类型兜底单位（面料/里料=米、辅料=件）。
+- `MaterialStockServiceImpl.enrichConversionRate` 增加 物料名称/类型/规格/单位 的空值回填（列表查询即可用，修所有存量行）。
+
+**验证**：`mvn -o compile` 通过、`npx tsc --noEmit` 0 错误。
 
 ## ✅ D-754 智能化落地 5 批（2026-10-06，已推 CI 全绿）
 

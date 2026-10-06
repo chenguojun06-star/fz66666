@@ -202,7 +202,8 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
         <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
           {({ getFieldValue }) => {
             const materialType = getFieldValue('materialType');
-            if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
+            // 里料同属面料类（有幅宽/克重/成分），只有辅料无面料属性
+            if (getMaterialTypeCategory(materialType) === 'accessory') return null;
             return (
               <Row gutter={12} style={{ background: 'var(--color-primary-bg-light, var(--status-processing-bg))', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
                 <Col span={24} style={{ marginBottom: 6 }}>
