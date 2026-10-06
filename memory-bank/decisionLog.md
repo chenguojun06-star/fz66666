@@ -2,7 +2,7 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-06（D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳；每批独立提交并推送，CI 全绿）
+> 最后更新：2026-10-06（D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳；每批独立提交并推送，CI 全绿。追加「核查补遗」：修复 P0 死配置 + P4 孤儿端点 2 处偏差）
 > 上一版：2026-10-05（**补记** 2026-10-04~10-05 的 D-702 小云工具调用链路全面失效修复 + D-743~D-747：Spring AI 2.0 GA 迁移 / 流式带工具与 Handoff / 巡检交付风险卡去重 / PREMIUM 分级接工具 / 语义缓存拒缓存坏答案 / 适配器消息保真；代码已推 CI 全绿，本条为事后补记）
 
 ---
@@ -41,6 +41,14 @@
 - **不新建同用途编排器**：交期/排产已有 13 个编排器，本批只做「串联 + 闭环 + 反哺」，不改架构；
 - **时区/口径要在测试里钉死**：P3 偏差方向（负=提前）、P4 起止时刻（00:00:00 / 23:59:59）都写进断言，避免口径漂移；
 - **场景缺口要如实暴露**：P4 前端入口在「订单创建」弹窗（尚无 orderId），因此 UI 只能做回填，后端写库端口作为既有订单/工具调用的能力保留。
+
+**核查补遗（2026-10-06，用户要求「全部核实清楚 不要出现偏差」）**
+- 逐文件复核 P0~P4「承诺 vs 实码」，修复 2 处偏差：
+  1. **P0 死配置**：`application.yml` 的 `fashion.risk-monitor` 块在 `ExternalDataService` 删除后已无任何 Java 消费方（全仓 grep 仅 yml 自身命中）→ 删除（commit ed3c51a01）；
+  2. **P4 孤儿端点**：`intelligenceApi.adoptScheduling` 原全仓无调用方，采纳建议下单后不留任何痕迹 → 补接线：采纳方案暂存 ref，下单成功拿到 orderId 后回调 adopt（`OrderCreateModalSidebar`），并加**正向工厂匹配守卫**——仅当最终落地工厂 == 被采纳方案工厂才留痕，用户改选（含改回内部生产）则跳过，绝不覆盖用户选择（commit f460d3840）。
+- 确认无偏差项：P0 四个真 Job（`@Scheduled` + `getActiveTenantIds` + `withTenantContext`）；P1 异步 + 线程内重建 `UserContext` + 每日限额；P2 前端链路 `intelligenceApi → useCockpit → IntelligenceCenter → StageBottleneckPanel` 贯通；P3 幂等迁移 / 三维度回扫 / `applyCalibration` 反哺（已被 `suggest` 主流程 L101 真实调用）。
+- **P3 端点说明**：`GET /intelligence/delivery-calibration` 无前端 UI，但校准数据已被「每日 Job」+「交期建议反哺」两条真实链路消费，端点定位为 ops/诊断读取面（带 `@DataTruth`），非孤儿。
+- 验证：frontend `npx tsc --noEmit` EXIT=0；backend `mvn -o test -Dtest=SchedulingAdoptionOrchestratorTest` EXIT=0；pre-push safe-push 4/0/0。
 
 ---
 
