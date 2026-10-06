@@ -46,6 +46,9 @@ public class DeliveryDateSuggestionOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private DeliveryCalibrationOrchestrator deliveryCalibrationOrchestrator;
+
     public DeliveryDateSuggestionResponse suggest(String factoryName, Integer orderQuantity) {
         DeliveryDateSuggestionResponse resp = new DeliveryDateSuggestionResponse();
 
@@ -94,6 +97,48 @@ public class DeliveryDateSuggestionOrchestrator {
         } else {
             // 降级：历史交货周期均值
             resp = buildFallback(factoryName, qty);
+        }
+        return applyCalibration(resp, factoryName);
+    }
+
+    /**
+     * D-754 P3：用历史偏差实测校准建议值（越用越准）。
+     * 偏差倍数 &gt;1（历史上总是拖）则上调缓冲，&lt;1（历史上总是提前）则下调；
+     * 准交率 &lt;70% 时再补 15% 安全余量；结果封顶为原建议的 2 倍，避免极端样本。
+     */
+    private DeliveryDateSuggestionResponse applyCalibration(DeliveryDateSuggestionResponse resp, String factoryName) {
+        if (resp == null) {
+            return null;
+        }
+        try {
+            DeliveryCalibrationOrchestrator.DeliveryCalibration cal =
+                    deliveryCalibrationOrchestrator.lookup(factoryName, null);
+            if (cal == null
+                    || cal.getSampleCount() < DeliveryCalibrationOrchestrator.MIN_SAMPLE
+                    || cal.getOnTimeRate() < 0) {
+                return resp;
+            }
+            double multiple = cal.getDeviationMultiple() > 0 ? cal.getDeviationMultiple() : 1.0;
+            int base = resp.getRecommendedDays();
+            int calibrated = (int) Math.ceil(base * multiple);
+            if (cal.getOnTimeRate() < 70) {
+                calibrated = (int) Math.ceil(calibrated * 1.15);
+            }
+            calibrated = Math.max(Math.max(MIN_DAYS, base), Math.min(calibrated, base * 2));
+
+            resp.setRecommendedDays(calibrated);
+            resp.setEarliestDays(Math.max(MIN_DAYS, (int) Math.ceil(calibrated * 0.7)));
+            resp.setLatestDays((int) Math.ceil(calibrated * 1.4));
+            resp.setCalibrationApplied(true);
+            resp.setDeviationMultiple(multiple);
+            resp.setCalibrationSampleCount(cal.getSampleCount());
+            resp.setCalibrationNote(String.format(
+                    "基于近 %d 单历史实测：准交率 %.0f%%，实际周期约为计划的 %.2f 倍，已自动%s缓冲",
+                    cal.getSampleCount(), cal.getOnTimeRate(), multiple,
+                    multiple > 1.0 ? "上调" : "下调"));
+            resp.setReason(resp.getReason() + "；" + resp.getCalibrationNote());
+        } catch (Exception e) {
+            log.debug("[交货建议] 交期校准反哺失败(降级为原始建议): {}", e.getMessage());
         }
         return resp;
     }

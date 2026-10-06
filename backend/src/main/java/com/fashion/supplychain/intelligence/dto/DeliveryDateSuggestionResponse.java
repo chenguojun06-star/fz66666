@@ -27,4 +27,12 @@ public class DeliveryDateSuggestionResponse {
     private String reason;
     /** 算法说明 */
     private String algorithm;
+    /** 是否已用历史偏差校准（D-754 P3） */
+    private boolean calibrationApplied;
+    /** 历史偏差倍数（实际周期÷计划周期），0 表示无数据 */
+    private double deviationMultiple;
+    /** 校准样本数 */
+    private int calibrationSampleCount;
+    /** 校准说明 */
+    private String calibrationNote;
 }

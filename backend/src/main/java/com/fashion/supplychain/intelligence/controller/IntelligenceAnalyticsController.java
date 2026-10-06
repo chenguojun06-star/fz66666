@@ -41,6 +41,7 @@ public class IntelligenceAnalyticsController {
     private final MaterialShortageOrchestrator materialShortageOrchestrator;
     private final FactoryBottleneckOrchestrator factoryBottleneckOrchestrator;
     private final DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
+    private final DeliveryCalibrationOrchestrator deliveryCalibrationOrchestrator;
     private final ProcessTemplateOrchestrator processTemplateOrchestrator;
 
     @PostMapping("/precheck/scan")
@@ -170,5 +171,12 @@ public class IntelligenceAnalyticsController {
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "styleId", required = false) Long styleId) {
         return Result.success(processTemplateOrchestrator.suggest(category, styleId));
+    }
+
+    /** D-754 P3：交期偏差回扫自校准 — 返回各维度准交率/偏差倍数，并触发重算 */
+    @GetMapping("/delivery-calibration")
+    @DataTruth(source = DataTruth.Source.REAL_DATA, description = "已完工订单实测交期偏差")
+    public Result<java.util.Map<String, Object>> deliveryCalibration() {
+        return Result.success(deliveryCalibrationOrchestrator.calibrate());
     }
 }
