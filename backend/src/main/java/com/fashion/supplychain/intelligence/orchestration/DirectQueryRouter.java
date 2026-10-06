@@ -67,6 +67,14 @@ public class DirectQueryRouter {
         if (userMessage == null || userMessage.isBlank()) {
             return null;
         }
+        // D-702：先试【无参直查】——异常检测 / 财务异常。
+        // 这两个工具内部是纯统计计算（z-score / 金额聚合），不调 LLM，
+        // 因此问「有没有异常」本就不需要任何模型推理，走 Agent 循环纯属浪费
+        // （实测两轮 LLM 往返约 20 秒，而统计本身亚秒级）。
+        DirectAnswer noArg = tryNoArgDirect(userMessage);
+        if (noArg != null) {
+            return noArg;
+        }
         // 只有明确在问进度时才直查；其余问法交给 Agent（分析类需要推理）
         if (!asksAboutProgress(userMessage)) {
             return null;
@@ -87,6 +95,117 @@ public class DirectQueryRouter {
             // 直查失败绝不抛给用户，降级交回 Agent 循环
             log.warn("[DirectQuery] 直查失败，降级交回 Agent 循环: {}", e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * D-702：无参工具直查（异常检测 / 财务异常）。
+     *
+     * <p><b>为什么这两个最适合直查</b>：
+     * <ul>
+     *   <li><b>零参数歧义</b> —— 无需从问题里提取任何标识符，不可能猜错；</li>
+     *   <li><b>内部不调 LLM</b> —— {@code AnomalyDetectionOrchestrator.detect()} 是
+     *       纯 z-score 统计与金额聚合，走 Agent 循环纯属把亚秒级统计包装成 20 秒；</li>
+     *   <li><b>结论确定</b> —— 输出是规则算出的异常清单，不需要模型"解释"。</li>
+     * </ul>
+     *
+     * <p>相比订单进度直查，这里连参数提取都没有，是所有候选里风险最低的一档。
+     *
+     * @return 命中则返回；未命中或执行失败返回 {@code null}（交回 Agent）
+     */
+    private DirectAnswer tryNoArgDirect(String msg) {
+        final String toolName;
+        final String cardType;
+        final String cardTitle;
+        if (msg.matches("(?s).*(有没有异常|有什么异常|有异常吗|生产异常|风险检测|风险信号|"
+                + "今天有什么问题|异常检测|有没有问题|哪些异常).*")) {
+            toolName = "tool_anomaly_detection";
+            cardType = "anomaly_list";
+            cardTitle = "今日生产异常检测";
+        } else if (msg.matches("(?s).*(财务.{0,4}异常|异常.{0,4}财务|财务有没有问题|"
+                + "费用异常|收付款.{0,4}问题|有没有对不上的|财务风险).*")) {
+            toolName = "tool_finance_anomaly";
+            cardType = "anomaly_list";
+            cardTitle = "财务异常检测";
+        } else {
+            return null;
+        }
+
+        // 权限先行：直查绕过 Agent 循环，必须显式校验，否则等于给无权角色开旁路
+        if (!toolAccessService.canUseTool(toolName)) {
+            log.debug("[DirectQuery] 当前用户无权使用 {}，跳过直查", toolName);
+            return null;
+        }
+        AgentTool tool = toolExecHelper.getToolMap().get(toolName);
+        if (tool == null) {
+            log.warn("[DirectQuery] 未注册工具 {}，跳过直查", toolName);
+            return null;
+        }
+        try {
+            String result = tool.execute("{}");
+            if (result == null || result.isBlank()) {
+                return null;
+            }
+            Map<String, Object> parsed = MAPPER.readValue(result,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    });
+            if (Boolean.FALSE.equals(parsed.get("success"))) {
+                log.debug("[DirectQuery] {} 未成功（{}），交回 Agent", toolName, parsed.get("message"));
+                return null;
+            }
+            return renderAnomaly(toolName, cardType, cardTitle, parsed);
+        } catch (Exception e) {
+            // 直查是优化，失败一律降级交回 Agent 循环
+            log.warn("[DirectQuery] {} 执行失败，交回 Agent 循环: {}", toolName, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 把异常检测结果渲染成卡片。
+     *
+     * <p>字段来自 {@code AnomalyDetectionTool} 的真实输出：
+     * {@code {success,totalChecked,anomalyCount,anomalies:[{type,severity,title,
+     * description,targetName,todayValue,historyAvg,deviationRatio}],alert|summary}}。
+     */
+    private DirectAnswer renderAnomaly(String toolName, String cardType, String cardTitle,
+            Map<String, Object> parsed) {
+        Object listRaw = parsed.get("anomalies");
+        if (!(listRaw instanceof List<?> list)) {
+            log.debug("[DirectQuery] {} 返回结构中无 anomalies，交回 Agent", toolName);
+            return null;
+        }
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("tool", toolName);
+        copyIfPresent(parsed, card, "totalChecked");
+        copyIfPresent(parsed, card, "anomalyCount");
+        copyIfPresent(parsed, card, "alert");
+        copyIfPresent(parsed, card, "summary");
+        card.put("anomalies", list);
+
+        int count = list.size();
+        StringBuilder sb = new StringBuilder();
+        Object alert = parsed.get("alert");
+        Object summary = parsed.get("summary");
+        if (alert != null) {
+            sb.append(String.valueOf(alert)).append("。");
+        } else if (summary != null) {
+            sb.append(String.valueOf(summary)).append("。");
+        } else if (count > 0) {
+            sb.append("发现 ").append(count).append(" 项异常。");
+        } else {
+            sb.append("未检测到异常。");
+        }
+        sb.append("以上为系统规则实时统计（直接查库，未经 AI 生成）。");
+        sb.append("如需分析原因或给出处理建议，可以继续问我。");
+
+        return new DirectAnswer(sb.toString(), cardType, cardTitle, card);
+    }
+
+    private static void copyIfPresent(Map<String, Object> src, Map<String, Object> dst, String key) {
+        Object v = src.get(key);
+        if (v != null && !(v instanceof String s && s.isBlank())) {
+            dst.put(key, v);
         }
     }
 
