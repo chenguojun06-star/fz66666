@@ -103,7 +103,8 @@ const useStyleBomMutations = ({
       nextItem.partName = nextItem.partName || '';
       nextItem.partCode = nextItem.partCode || '';
     }
-    const conversionRate = Number(row?.conversionRate ?? nextItem.conversionRate ?? 1) || 1;
+    // D-702：勿用 `|| 1`（会把 0 强转成 1，使未填/填0状态被改写）
+    const conversionRate = Number(row?.conversionRate ?? nextItem.conversionRate ?? 0) || 0;
     const rawSizeUsageMap = activeSizes.length
       ? Object.fromEntries(activeSizes.map((size) => {
           const raw = Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? nextItem.usageAmount ?? 0);

@@ -59,7 +59,9 @@ const useStyleBomEditing = ({
         sizeUsageMapObject: parseNumberMap(row.patternSizeUsageMap || row.sizeUsageMap),
         sizeSpecMapObject: parseNumberMap(row.sizeSpecMap),
         patternUnit: String(row.patternUnit || row.unit || '').trim(),
-        conversionRate: Number(row.conversionRate ?? 1) || 1,
+        // D-702：`|| 1` 会把 0 也强转成 1，使用户填的 0/未填状态被改写。
+          // 改为「有值才取，无值保持 0」，与新增行默认值一致。
+          conversionRate: Number(row.conversionRate ?? 0) || 0,
       };
     }
     return next;
@@ -95,7 +97,7 @@ const useStyleBomEditing = ({
         sizeUsageMapObject: parseNumberMap(record.patternSizeUsageMap || record.sizeUsageMap),
         sizeSpecMapObject: parseNumberMap(record.sizeSpecMap),
         patternUnit: String(record.patternUnit || record.unit || '').trim(),
-        conversionRate: Number(record.conversionRate ?? 1) || 1,
+        conversionRate: Number(record.conversionRate ?? 0) || 0,
       },
     });
     setEditingKey(rowId);
@@ -139,9 +141,14 @@ const useStyleBomEditing = ({
         sizeUsageMap: buildSizeUsageMap(0),
         patternSizeUsageMap: buildSizeUsageMap(0),
         sizeSpecMap: buildSizeSpecMap(''),
-        unit: '',
-        patternUnit: '',
-        conversionRate: 1,
+unit: '',
+          patternUnit: '',
+          // D-702：默认 0 而非 1。原先写死 1 会让新增行看起来"已填换算率"，
+          // 但 1 既不是用户填的真实值，也无法在「非公斤物料不换算」的规则下被显示出来
+          // （bomUsageColumns 只在 unit=公斤 且 patternUnit=米 时才显示换算值），
+          // 结果是：数据表里 72 行 conversion_rate=1 全是默认值，界面上却全是「-」，
+          // 让人误以为"填了不出现"。0 与同组的 usageAmount / lossRate 语义一致（未填=0）。
+          conversionRate: 0,
         usageAmount: 0,
         lossRate: 0,
         unitPrice: 0,

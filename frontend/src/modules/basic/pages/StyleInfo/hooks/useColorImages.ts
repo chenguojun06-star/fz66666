@@ -118,7 +118,11 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
       const uploadedUrl = String(res?.data?.fileUrl || '');
       if (uploadedUrl) {
         setColorImageMap((prev) => ({ ...prev, [color]: uploadedUrl }));
-        handleCoverChange(uploadedUrl);
+        // D-455：封面去重——封面已有图时不再被颜色图覆盖（避免顶部封面/颜色图/商品编码三处同一张）。
+        // 仅首次上传（封面为空）时联动为默认封面。
+        if (!String(currentStyle?.cover || '').trim()) {
+          handleCoverChange(uploadedUrl);
+        }
         if (resolvedStyleId) {
           try {
             await api.put(`/style/sku/color-images/${resolvedStyleId}`, {

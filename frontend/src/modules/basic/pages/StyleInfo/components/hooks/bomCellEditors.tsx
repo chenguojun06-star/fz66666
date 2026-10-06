@@ -44,7 +44,8 @@ export const computeConvertedUsage = (record: StyleBom, form: FormInstance, acti
   const row = form.getFieldValue(String(record.id)) || {};
   const bomUnit = String(row.unit ?? record.unit ?? '').trim();
   const patternUnit = String(row.unit ?? record.patternUnit ?? '米').trim();
-  const conversionRate = Number(row.conversionRate ?? record.conversionRate ?? 1) || 1;
+  // D-702：勿用 `|| 1`（会把 0 强转成 1）
+  const conversionRate = Number(row.conversionRate ?? record.conversionRate ?? 0) || 0;
   const meterValue = computeAverageMeterUsage(record, form, activeSizes);
   if (!isKilogramUnit(bomUnit) || !isMeterUnit(patternUnit) || conversionRate <= 0) {
     return { unit: '公斤', value: null as number | null };

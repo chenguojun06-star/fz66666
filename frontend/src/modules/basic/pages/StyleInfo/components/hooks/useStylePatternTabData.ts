@@ -214,7 +214,8 @@ const useStylePatternTabData = ({
       for (const bom of bomList) {
         if (!bom.id) continue;
         const edits = usageEdits[bom.id] ?? {};
-        const conversionRate = Number(bom.conversionRate ?? 1) || 1;
+        // D-702：勿用 `|| 1`（会把 0 强转成 1）
+        const conversionRate = Number(bom.conversionRate ?? 0) || 0;
         const mapObj: Record<string, number> = {};
         for (const [size, val] of Object.entries(edits)) {
           if (val !== null && val !== undefined && val > 0) {

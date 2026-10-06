@@ -120,14 +120,16 @@ export const buildUsageColumns = (ctx: BomColumnsContext) => {
       }
     },
     {
-      title: (
-        <Space size={4}>
-          换算
-          <Tooltip title="每公斤对应的米数，物料单位为公斤时参与换算，辅料不换算">
-            <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
-          </Tooltip>
-        </Space>
-      ),
+title: (
+          <Space size={4}>
+            换算
+            <Tooltip title="每公斤对应的米数，用于把「公斤」用量换算成「米」。
+              仅当【物料单位=公斤/kg/千克】且【纸样单位=米/m】时才有值；
+              辅料、个/条/码等非重量单位不参与换算，此列恒为「-」，属正常。">
+              <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
+            </Tooltip>
+          </Space>
+        ),
       dataIndex: 'conversionRate',
       key: 'conversionRate',
       width: 120,
