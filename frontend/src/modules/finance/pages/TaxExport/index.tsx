@@ -119,7 +119,7 @@ const TaxExport: React.FC = () => {
       )}
       <Alert type="warning" showIcon style={{ marginBottom: 16 }}
         title="当前导出能力说明"
-        description="这里导出的是真实业务数据，不是展示假按钮；但现阶段属于 Excel 凭证导入模板，不是税控盘、电子发票平台、金蝶/用友开放平台 API 直连。已接数据源：工资结算、物料对账。"
+        description="这里导出的是真实业务数据。已接数据源：工资结算（工资结算单）、物料对账（对账单）、供应商付款（应付账款，与付款计划同源）、发票台账（月度税务汇总，随开票自动积累）。导出为 Excel 凭证导入模板，暂不直连税控盘/电子发票平台/金蝶用友 API。"
       />
       <Card title="第一步：选择导出格式" style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]}>

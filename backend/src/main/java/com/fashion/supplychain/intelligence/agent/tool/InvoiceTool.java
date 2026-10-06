@@ -395,7 +395,7 @@ public class InvoiceTool extends AbstractAgentTool {
         invoice.setRelatedBizType(optionalString(args, "relatedBizType"));
         invoice.setRelatedBizId(optionalString(args, "relatedBizId"));
         invoice.setRemark(optionalString(args, "remark"));
-        invoice.setStatus("draft");
+        invoice.setStatus("DRAFT"); // D-753：全系统状态大写，小写会让统计卡漏计且列表显示"未知"
         String uid = UserContext.userId();
         invoice.setCreatorId(uid);
         invoice.setCreatorName(UserContext.username());

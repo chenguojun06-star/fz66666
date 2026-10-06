@@ -13,6 +13,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,25 +28,66 @@ public class TaxConfigOrchestrator {
     @Autowired
     private TaxConfigService taxConfigService;
 
+    /** 内置增值税率（D-753）：t_tax_config 建表无种子，新租户开局即空且发票默认税率只能硬编码兜底 */
+    private static final BigDecimal[][] BUILTIN_VAT_RATES = {
+            {new BigDecimal("0.13"), BigDecimal.ONE},   // 13%，默认
+            {new BigDecimal("0.09"), BigDecimal.ZERO},
+            {new BigDecimal("0.06"), BigDecimal.ZERO},
+    };
+
     public List<TaxConfig> listAll() {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        return taxConfigService.list(
+        List<TaxConfig> list = taxConfigService.list(
                 new LambdaQueryWrapper<TaxConfig>()
                         .eq(TaxConfig::getTenantId, tenantId)
                         .orderByAsc(TaxConfig::getTaxCode));
+        if (list.isEmpty()) {
+            list = seedBuiltinVatRates(tenantId);
+        }
+        return list;
     }
 
     public List<TaxConfig> listActive() {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
-        return taxConfigService.list(
+        List<TaxConfig> list = taxConfigService.list(
                 new LambdaQueryWrapper<TaxConfig>()
                         .eq(TaxConfig::getStatus, "ACTIVE")
                         .eq(TaxConfig::getTenantId, tenantId)
                         .and(w -> w.isNull(TaxConfig::getExpiryDate).or().ge(TaxConfig::getExpiryDate, today))
                         .orderByAsc(TaxConfig::getTaxCode));
+        if (list.isEmpty()) {
+            list = seedBuiltinVatRates(tenantId);
+        }
+        return list;
+    }
+
+    /** 首次访问懒预置增值税三档（13% 默认/9%/6%），之后租户可自由增删改 */
+    private List<TaxConfig> seedBuiltinVatRates(Long tenantId) {
+        List<TaxConfig> seeded = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (BigDecimal[] builtin : BUILTIN_VAT_RATES) {
+            TaxConfig cfg = new TaxConfig();
+            cfg.setTaxName("增值税 " + builtin[0].multiply(new BigDecimal("100")).stripTrailingZeros().toPlainString() + "%");
+            cfg.setTaxCode("VAT");
+            cfg.setTaxRate(builtin[0]);
+            cfg.setIsDefault(builtin[1].intValue());
+            cfg.setEffectiveDate(today);
+            cfg.setDescription("系统预置，可修改或停用");
+            cfg.setStatus("ACTIVE");
+            cfg.setTenantId(tenantId);
+            cfg.setCreateTime(LocalDateTime.now());
+            cfg.setUpdateTime(LocalDateTime.now());
+            try {
+                taxConfigService.save(cfg);
+                seeded.add(cfg);
+            } catch (Exception e) {
+                log.warn("[TaxConfigOrchestrator] 预置税率写入失败（可能并发已写入）: {}", e.getMessage());
+            }
+        }
+        return seeded;
     }
 
     @Transactional(rollbackFor = Exception.class)

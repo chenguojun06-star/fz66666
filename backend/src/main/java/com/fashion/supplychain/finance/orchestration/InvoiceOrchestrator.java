@@ -236,6 +236,66 @@ public class InvoiceOrchestrator {
 
     // ─── 内部方法 ────────────────────────────────────────────────────────────
 
+    /**
+     * 应收单 → 自动生成草稿发票（D-753 发票台账智能化）。
+     *
+     * <p>发票台账此前是纯手填孤立表（业务事件零写入，页面恒空）；
+     * 现在每张应收单确认后自动带出一张草稿发票（金额/购方/关联单号全带出，
+     * 税率取税率配置默认 VAT），用户核对后点「开票」才转 ISSUED——
+     * 实际开票动作仍在税盘/平台，系统只管台账。</p>
+     *
+     * <p>幂等：按 relatedBizType=RECEIVABLE + relatedBizId 先查后建，重复调用不重复建。
+     * 刻意不加 @Transactional：调用方（应收创建/收款登记）自带事务，
+     * 单条 save 本身原子；若套进调用方事务，失败被 catch 也会把共享事务标 rollback-only
+     * 拖垮主流程（D-751 教训）。调用方必须 try/catch 包裹，发票生成失败不阻塞应收主流程。</p>
+     */
+    public void generateDraftFromReceivable(com.fashion.supplychain.crm.entity.Receivable receivable) {
+        if (receivable == null || !StringUtils.hasText(receivable.getId())) {
+            return;
+        }
+        try {
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
+            Invoice existing = invoiceService.lambdaQuery()
+                    .eq(Invoice::getRelatedBizType, "RECEIVABLE")
+                    .eq(Invoice::getRelatedBizId, receivable.getId())
+                    .eq(Invoice::getTenantId, tenantId)
+                    .eq(Invoice::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+            if (existing != null) {
+                return; // 幂等：该应收已有关联发票（草稿/已开/作废均不重建）
+            }
+
+            Invoice draft = new Invoice();
+            draft.setInvoiceNo("INV" + LocalDateTime.now().format(NO_FMT));
+            draft.setInvoiceType("NORMAL");
+            draft.setTitleName(receivable.getCustomerName());
+            draft.setAmount(receivable.getAmount());
+            draft.setTaxRate(getDefaultVatRate());
+            draft.setRelatedBizType("RECEIVABLE");
+            draft.setRelatedBizId(receivable.getId());
+            draft.setRelatedBizNo(receivable.getReceivableNo());
+            draft.setStatus("DRAFT");
+            draft.setRemark("由应收单自动生成草稿，请核对购方信息与税率后开票");
+            draft.setTenantId(tenantId);
+            draft.setDeleteFlag(0);
+            UserContext ctx = UserContext.get();
+            if (ctx != null) {
+                draft.setCreatorId(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
+                draft.setCreatorName(ctx.getUsername());
+            }
+            autoCalcTax(draft);
+            invoiceService.save(draft);
+            log.info("[InvoiceOrchestrator] 应收单 {} 自动生成草稿发票 {} 价税合计={}",
+                    receivable.getReceivableNo(), draft.getInvoiceNo(), draft.getTotalAmount());
+        } catch (Exception e) {
+            // fail-safe：发票台账生成失败绝不阻塞应收/收款主流程
+            log.warn("[InvoiceOrchestrator] 应收单自动生成草稿发票失败（不阻塞主流程）: receivableNo={}, err={}",
+                    receivable.getReceivableNo(), e.getMessage());
+        }
+    }
+
     private void autoCalcTax(Invoice invoice) {
         BigDecimal amount = invoice.getAmount();
         BigDecimal taxRate = invoice.getTaxRate();

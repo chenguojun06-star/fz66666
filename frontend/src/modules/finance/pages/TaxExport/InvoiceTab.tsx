@@ -145,8 +145,8 @@ const InvoiceTab: React.FC = () => {
   return (
     <>
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
-        title="发票台账已接真实发票表与税额计算"
-        description="当前为业务台账管理，不是税控盘/电子发票平台直连。适合先把开票信息、业务来源、税额和状态管起来；若要直连税盘或第三方开票平台，需要后续再接外部接口。"
+        title="发票台账会随业务自动生成，您只需确认开票"
+        description="每笔应收确认后（对账收款、订单结算、账单确认）会自动在这里生成一张「草稿发票」，金额、购方、关联单号、税率全部带好；您核对无误后点「开票」即计入台账。也可以用「新建发票」手工补录历史票。当前管的是业务台账，不直连税控盘——实际开票仍在税盘/电子发票平台操作。"
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={6}><Card><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
@@ -184,7 +184,8 @@ const InvoiceTab: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      <ResizableTable storageKey="finance-invoice-ledger" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} emptyDescription="暂无财务数据" scroll={{ x: 'max-content' }}
+      <ResizableTable storageKey="finance-invoice-ledger" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading}
+        emptyDescription="还没有发票。应收确认后会自动生成草稿发票出现在这里；也可以点右上角「新建发票」手工补录" scroll={{ x: 'max-content' }}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />
       <ResizableModal

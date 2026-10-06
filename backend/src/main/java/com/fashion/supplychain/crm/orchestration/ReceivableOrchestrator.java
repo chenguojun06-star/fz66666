@@ -56,6 +56,10 @@ public class ReceivableOrchestrator {
     @org.springframework.context.annotation.Lazy
     private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
+    /** D-753：应收确认后自动生成草稿发票（发票台账智能化，fail-safe 内置不阻塞主流程） */
+    @Autowired
+    private com.fashion.supplychain.finance.orchestration.InvoiceOrchestrator invoiceOrchestrator;
+
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
@@ -305,6 +309,8 @@ public class ReceivableOrchestrator {
         receivableService.save(receivable);
         log.info("[ReceivableOrchestrator] 新建应收单 {} 金额 {}", receivable.getReceivableNo(), receivable.getAmount());
         logAppendHelper.appendCreate(receivable, ctx != null ? ctx.getUsername() : null);
+        // D-753：发票台账智能化——每张应收确认即自动带出草稿发票（幂等，内部 fail-safe 不阻塞）
+        invoiceOrchestrator.generateDraftFromReceivable(receivable);
         return receivable;
     }
 
@@ -383,6 +389,10 @@ public class ReceivableOrchestrator {
         syncBillAggregationAfterReceipt(r, paymentAmount);
         log.info("[ReceivableOrchestrator] 应收单 {} 登记到账 {}，状态更新为 {}", id, paymentAmount, r.getStatus());
         logAppendHelper.appendMarkReceived(r, paymentAmount, UserContext.username());
+        // D-753：结清时兜底补草稿——覆盖本功能上线前的历史应收（幂等，已有发票不重建）
+        if ("PAID".equals(r.getStatus())) {
+            invoiceOrchestrator.generateDraftFromReceivable(r);
+        }
         return r;
     }
 

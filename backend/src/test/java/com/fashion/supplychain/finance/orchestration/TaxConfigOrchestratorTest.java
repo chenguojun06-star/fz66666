@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,5 +94,34 @@ class TaxConfigOrchestratorTest {
         stubTaxRate(new BigDecimal("0.13"));
         assertEquals(0, new BigDecimal("0.00").compareTo(
                 orchestrator.calcTax(BigDecimal.ZERO, "VAT13")));
+    }
+
+    @Test
+    @DisplayName("D-753：租户首次访问空税率表时懒预置增值税 13/9/6 三档，13% 为默认")
+    void seedsBuiltinVatRatesWhenEmpty() {
+        when(taxConfigService.list(any(LambdaQueryWrapper.class))).thenReturn(new java.util.ArrayList<>());
+
+        java.util.List<TaxConfig> result = orchestrator.listAll();
+
+        Mockito.verify(taxConfigService, Mockito.times(3)).save(any(TaxConfig.class));
+        assertEquals(3, result.size());
+        long defaults = result.stream().filter(c -> Integer.valueOf(1).equals(c.getIsDefault())).count();
+        assertEquals(1, defaults, "必须恰好一个默认档（13%）");
+        TaxConfig def = result.stream().filter(c -> Integer.valueOf(1).equals(c.getIsDefault())).findFirst().orElseThrow();
+        assertEquals(0, new BigDecimal("0.13").compareTo(def.getTaxRate()));
+        assertEquals("ACTIVE", def.getStatus());
+    }
+
+    @Test
+    @DisplayName("D-753：已有税率配置时不重复预置")
+    void doesNotSeedWhenConfigExists() {
+        TaxConfig existing = new TaxConfig();
+        existing.setTaxCode("VAT");
+        when(taxConfigService.list(any(LambdaQueryWrapper.class))).thenReturn(List.of(existing));
+
+        java.util.List<TaxConfig> result = orchestrator.listAll();
+
+        Mockito.verify(taxConfigService, Mockito.never()).save(any(TaxConfig.class));
+        assertEquals(1, result.size());
     }
 }

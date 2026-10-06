@@ -36,6 +36,7 @@ export const PAYABLE_STATUS = [
 ];
 
 export const RELATED_BIZ_TYPE_OPTIONS = [
+  { value: 'RECEIVABLE', label: '应收单' },
   { value: 'SETTLEMENT', label: '结算单' },
   { value: 'RECONCILIATION', label: '对账单' },
   { value: 'REIMBURSEMENT', label: '报销单' },
@@ -43,6 +44,7 @@ export const RELATED_BIZ_TYPE_OPTIONS = [
 ];
 
 export const RELATED_BIZ_TYPE_MAP: Record<string, string> = {
+  RECEIVABLE: '应收单',
   SETTLEMENT: '结算单',
   RECONCILIATION: '对账单',
   REIMBURSEMENT: '报销单',

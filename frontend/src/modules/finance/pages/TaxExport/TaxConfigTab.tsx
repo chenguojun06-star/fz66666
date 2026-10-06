@@ -90,12 +90,13 @@ const TaxConfigTab: React.FC = () => {
     <>
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title="税率配置会参与真实税额计算"
-        description="发票台账默认 VAT 税额来自这里的默认税率；建议至少维护默认 VAT、附加税等常用税码，并标清生效时间。"
+        description="系统已预置增值税三档（13% 默认 / 9% / 6%），发票台账算税额默认取这里标了「默认」的 VAT 税率；可按需修改、停用或新增。"
       />
       <div className="u-mb-12">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新增税率</Button>
       </div>
-      <ResizableTable storageKey="finance-tax-config" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} emptyDescription="暂无财务数据" scroll={{ x: 'max-content' }} pagination={false} />
+      <ResizableTable storageKey="finance-tax-config" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading}
+        emptyDescription="首次打开会自动预置增值税 13%/9%/6% 三档，刷新即可看到；也可手工新增" scroll={{ x: 'max-content' }} pagination={false} />
       <ResizableModal
         title={editRecord ? '编辑税率' : '新增税率'}
         open={formOpen}

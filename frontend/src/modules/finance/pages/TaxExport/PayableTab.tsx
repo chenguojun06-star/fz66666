@@ -183,9 +183,10 @@ const PayableTab: React.FC = () => {
       </Card>
       <Alert type="info" showIcon icon={<DollarOutlined />} style={{ marginBottom: 12 }}
         title="应付账款与业务系统深度联动"
-        description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
+        description="对账单审核通过、工资结算批准、扣款录入后，相关记录自动流入应付账款（与「财务管理 → 付款计划」同一份数据）。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款；到期日可在付款计划里补填，预测才准。"
       />
-      <ResizableTable storageKey="finance-accounts-payable" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} emptyDescription="暂无财务数据" scroll={{ x: 'max-content' }}
+      <ResizableTable storageKey="finance-accounts-payable" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading}
+        emptyDescription="还没有应付账款。对账单审核通过、工资结算批准后会自动生成应付单出现在这里" scroll={{ x: 'max-content' }}
         rowClassName={rowClassName}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />
