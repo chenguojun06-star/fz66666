@@ -43,7 +43,14 @@ public class AgentLoopContextBuilder {
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private List<AgentTool> registeredTools;
 
-    @Value("${xiaoyun.agent.token-budget:30000}")
+    /**
+     * D-761：单次对话 token 预算，30000 → 100000。
+     * 30000 是 D-702 收敛轮数时代的配额；直查/会诊/证据包类工具上线后，
+     * 正常问答一轮实测 33k~36k token，经常性撞墙，且撞墙文案与「日配额用完」相同，
+     * 用户会误以为当天额度没了（线上实证：日配额才用 40% 却提示次数耗尽）。
+     * 100000 = 实测超限值 3 倍余量；租户日配额 500k 下最坏 ~5 次失控大问题，可控。
+     */
+    @Value("${xiaoyun.agent.token-budget:100000}")
     private int tokenBudget;
 
     /**

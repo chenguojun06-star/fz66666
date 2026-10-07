@@ -503,8 +503,14 @@ public class AgentLoopEngine {
     }
 
     private String handleTokenBudgetExceeded(AgentLoopContext ctx, AgentLoopCallback cb) {
-        String budgetMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
-        log.warn("[AgentLoop] Token 预算超限: {} > {}", ctx.getTotalTokens(), ctx.getTokenBudget());
+        // D-761：与「租户日配额用完」区分开——这是单个问题的数据量超了单次预算，
+        // 不是当天次数没了。原文案让用户误以为当天额度耗尽（线上实证：日配额才用 40% 却提示次数耗尽）。
+        String budgetMsg = String.format(
+                "这个问题要处理的数据量较大，超出了单次对话预算（%s / %s token）。"
+                        + "可以把问题问得具体一点（比如指定某个订单或某个工厂），"
+                        + "或联系管理员调大小云单次预算（xiaoyun.agent.token-budget）。",
+                ctx.getTotalTokens(), ctx.getTokenBudget());
+        log.warn("[AgentLoop] 单次 Token 预算超限: {} > {}", ctx.getTotalTokens(), ctx.getTokenBudget());
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), budgetMsg, "token_budget_exceeded",
                 System.currentTimeMillis() - ctx.getRequestStartAt());
         cb.onTokenBudgetExceeded(budgetMsg, ctx.getCommandId());
