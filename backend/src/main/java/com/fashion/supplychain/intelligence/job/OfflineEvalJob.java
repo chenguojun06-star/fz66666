@@ -103,7 +103,23 @@ public class OfflineEvalJob {
                 // 2. 采样最近 100 条对话
                 int sampled = offlineEvalService.sampleConversations(tenantId, datasetId, SAMPLE_SIZE);
                 if (sampled <= 0) {
-                    log.info("[OfflineEvalJob] 租户 {} 无对话可采样，跳过评估", tenantId);
+                    // D-702：这里原先只 log.info「无对话可采样」，把「数据源根本没接通」
+                    // 说成了「没人提问」——典型的静默失真：每周都跳过，看起来一切正常，
+                    // 而 t_eval_item 恒为 0，没人知道自动评测从未真正跑过。
+                    //
+                    // 实情：sampleConversations 从 t_ai_conversation_memory（MySQL）抽样，
+                    // 但 AiAgentMemoryHelper.saveConversationTurn() 只写 Redis
+                    // （fashion:chat:memory:{tenant}:{user}），MySQL 侧没有任何写入方，
+                    // 因此抽样恒为 0。这不是「用户没提问」，而是接线问题。
+                    //
+                    // 真正能跑的是 regression 类型数据集（见
+                    // V202611080000__seed_regression_eval_dataset_d702.sql），
+                    // 它由人工沉淀真实事故用例，不依赖对话采样。
+                    log.warn("[OfflineEvalJob] 租户 {} 本轮采样 0 条，自动评测跳过。"
+                                    + "注意：对话仅落 Redis，t_ai_conversation_memory 无写入方，"
+                                    + "这是数据源未接通而非用户无提问；"
+                                    + "防复发的回归评测请用 regression 类型数据集",
+                            tenantId);
                     tenantsProcessed++;
                     continue;
                 }
