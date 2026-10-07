@@ -30,7 +30,7 @@ TOKEN=$(curl -sS -m 20 -X POST "$API/system/user/login" -H 'Content-Type: applic
   -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}" \
   | jsonget "d['data']['token'] if isinstance(d.get('data'),dict) and d['data'].get('token') else (d.get('data') if isinstance(d.get('data'),str) else '')")
 if [ -z "$TOKEN" ]; then
-  echo "❌ 登录失败（$USER@$BASE_URL）——先核对账号或 BaseURL 再谈冒烟"
+  echo "❌ 登录失败（$USER@${BASE_URL}）——先核对账号或 BaseURL 再谈冒烟"
   exit 1
 fi
 echo "✅ 登录成功"

@@ -285,7 +285,7 @@ if [ -n "$OWNER_TOKEN" ]; then
                 log_pass "页面刷新稳定性: 3次 /me 均返回 200（不会自动退出）"
             fi
         else
-            log_fail "第 $i 次刷新返回 $REFRESH_CODE，用户会被踢出登录"
+            log_fail "第 $i 次刷新返回 ${REFRESH_CODE}，用户会被踢出登录"
             break
         fi
     done

@@ -215,7 +215,7 @@ phase_sample_development() {
         if [ "$db_tenant_id" -eq "$TENANT_ID" ]; then
             log_success "样衣数据正确存储，租户隔离正确: $style_in_db"
         else
-            log_error "样衣数据租户隔离失败: 期望租户ID $TENANT_ID，实际 $db_tenant_id"
+            log_error "样衣数据租户隔离失败: 期望租户ID ${TENANT_ID}，实际 $db_tenant_id"
             ISSUES+=("数据隔离问题：样衣租户ID错误")
         fi
     else
@@ -390,7 +390,7 @@ phase_production_order() {
         if [ "$order_tenant" -eq "$TENANT_ID" ]; then
             log_success "订单租户隔离正确"
         else
-            log_error "订单租户隔离失败: 期望 $TENANT_ID，实际 $order_tenant"
+            log_error "订单租户隔离失败: 期望 ${TENANT_ID}，实际 $order_tenant"
             ISSUES+=("数据隔离问题：生产订单租户ID错误")]
         fi
     else

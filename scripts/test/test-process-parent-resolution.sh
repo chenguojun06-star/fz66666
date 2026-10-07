@@ -298,7 +298,7 @@ if [ -n "$TEST_PROCESS" ]; then
                     echo "  ⚠️ 进度尚未更新（异步计算可能有延迟）"
                 fi
             else
-                fail_test "扫码记录数量" "期望2条，实际$SCAN_COUNT条"
+                fail_test "扫码记录数量" "期望2条，实际${SCAN_COUNT}条"
             fi
         else
             echo "  ⚠️ 扫码记录2可能重复或失败"
@@ -354,7 +354,7 @@ if [ "$INBOUND_CODE" = "200" ]; then
         if [ "$COMPLETED_QTY" = "$WAREHOUSING_QTY" ] || [ "$COMPLETED_QTY" = "50" ]; then
             pass_test "completedQuantity取自入库合格数（而非扫码数）"
         else
-            echo "  ⚠️ completedQuantity=$COMPLETED_QTY，WAREHOUSING=$WAREHOUSING_QTY"
+            echo "  ⚠️ completedQuantity=${COMPLETED_QTY}，WAREHOUSING=$WAREHOUSING_QTY"
         fi
     else
         echo "  ⚠️ completedQuantity尚未更新（异步计算可能有延迟）"

@@ -169,7 +169,7 @@ HTTP_CODE=$(echo "$T2_DETAIL" | tail -1)
 RESPONSE=$(echo "$T2_DETAIL" | head -n -1)
 
 if [ "$HTTP_CODE" = "403" ] || [ "$HTTP_CODE" = "404" ]; then
-    echo -e "${GREEN}✅ 安全：租户2通过ID访问被拒绝（HTTP $HTTP_CODE）${NC}"
+    echo -e "${GREEN}✅ 安全：租户2通过ID访问被拒绝（HTTP ${HTTP_CODE}）${NC}"
 elif echo "$RESPONSE" | grep -q "\"data\":null\|\"data\":{}"; then
     echo -e "${GREEN}✅ 安全：租户2通过ID访问返回空数据${NC}"
 else
@@ -200,7 +200,7 @@ if [ "$INJECT_CODE" = "200" ]; then
         echo "需人工审查是否泄露了其他租户数据"
     fi
 else
-    echo -e "${GREEN}✅ 安全：SQL注入请求被拒绝（code=$INJECT_CODE）${NC}"
+    echo -e "${GREEN}✅ 安全：SQL注入请求被拒绝（code=${INJECT_CODE}）${NC}"
 fi
 
 # ========================================

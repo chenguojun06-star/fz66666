@@ -223,7 +223,7 @@ for material_code in "${MATERIAL_CODES[@]}"; do
   purchase_id="${PURCHASE_IDS[$FABRIC_INDEX]}"
 
   if [ -z "$purchase_id" ]; then
-    echo "   ⏭️  跳过 $name（无采购单）"
+    echo "   ⏭️  跳过 ${name}（无采购单）"
     INBOUND_NOS+=("")
     FABRIC_INDEX=$((FABRIC_INDEX + 1))
     continue
@@ -282,7 +282,7 @@ for material_code in "${MATERIAL_CODES[@]}"; do
   inbound_no="${INBOUND_NOS[$FABRIC_INDEX]}"
 
   if [ -z "$purchase_id" ] || [ -z "$inbound_no" ]; then
-    echo "   ⏭️  跳过 $name（无完整数据）"
+    echo "   ⏭️  跳过 ${name}（无完整数据）"
     RECONCILIATION_IDS+=("")
     FABRIC_INDEX=$((FABRIC_INDEX + 1))
     continue

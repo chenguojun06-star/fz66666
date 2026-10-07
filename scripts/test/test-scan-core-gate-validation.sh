@@ -330,7 +330,7 @@ if [ "$INBOUND_CODE" = "200" ]; then
         if [ "$COMPLETED_QTY" = "$WAREHOUSING_QTY" ] || [ "$COMPLETED_QTY" = "50" ]; then
             pass_test "completedQuantity 取自入库合格数（而非扫码数）"
         else
-            echo "  ⚠️ completedQuantity=$COMPLETED_QTY，WAREHOUSING=$WAREHOUSING_QTY"
+            echo "  ⚠️ completedQuantity=${COMPLETED_QTY}，WAREHOUSING=$WAREHOUSING_QTY"
         fi
     else
         echo "  ⚠️ completedQuantity 尚未更新（异步计算可能有延迟）"

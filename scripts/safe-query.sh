@@ -135,11 +135,11 @@ if echo "$SQL_UPPER" | grep -q "^SELECT"; then
     :   # COUNT itself, no LIMIT needed
   elif ! echo "$SQL_UPPER" | grep -qE "\bLIMIT\b"; then
     SQL="$SQL LIMIT $DEFAULT_LIMIT"
-    warn "SQL 无 LIMIT，自动补 LIMIT $DEFAULT_LIMIT（最大 $MAX_ROWS）"
+    warn "SQL 无 LIMIT，自动补 LIMIT ${DEFAULT_LIMIT}（最大 ${MAX_ROWS}）"
   else
     LIMIT_VAL=$(echo "$SQL_UPPER" | sed -E 's/.*LIMIT[[:space:]]+([0-9]+).*/\1/' | head -1)
     if [[ "$LIMIT_VAL" =~ ^[0-9]+$ ]] && [[ "$LIMIT_VAL" -gt "$MAX_ROWS" ]]; then
-      err "LIMIT $LIMIT_VAL 超过最大值 $MAX_ROWS，已拒绝"
+      err "LIMIT $LIMIT_VAL 超过最大值 ${MAX_ROWS}，已拒绝"
       err "如需大批量查询，请分页或使用 --count 模式"
       exit 4
     fi
@@ -162,7 +162,7 @@ if [[ "$TENANT_REMINDER_NEEDED" == "true" ]]; then
   # Extract all tenant_id = <number> values
   OTHER_TENANTS=$(echo "$SQL" | grep -oE "tenant_id[[:space:]]*=[[:space:]]*[0-9]+" | grep -oE "[0-9]+$" | sort -u | while read v; do [[ "$v" != "$DEFAULT_TENANT" ]] && echo "$v"; done || true)
   if [[ -n "$OTHER_TENANTS" ]]; then
-    err "跨租户检测：SQL 中包含非默认租户 tenant_id=$OTHER_TENANTS（当前默认租户 $DEFAULT_TENANT）"
+    err "跨租户检测：SQL 中包含非默认租户 tenant_id=${OTHER_TENANTS}（当前默认租户 ${DEFAULT_TENANT}）"
     err "如确需查询其他租户，请显式设置：SAFE_QUERY_TENANT=<目标租户ID>"
     exit 5
   fi

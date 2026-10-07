@@ -358,7 +358,7 @@ DB_NULL_CHECK=$(docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion
 if [ "$DB_NULL_CHECK" = "0" ] || [ -z "$DB_NULL_CHECK" ]; then
     log_pass "订单关键字段无NULL值"
 else
-    log_warning "发现$DB_NULL_CHECK条订单存在NULL字段"
+    log_warning "发现${DB_NULL_CHECK}条订单存在NULL字段"
 fi
 
 log_test "验证样衣关键字段完整性"
@@ -370,7 +370,7 @@ DB_STYLE_NULL=$(docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion
 if [ "$DB_STYLE_NULL" = "0" ] || [ -z "$DB_STYLE_NULL" ]; then
     log_pass "样衣关键字段无NULL值"
 else
-    log_warning "发现$DB_STYLE_NULL条样衣存在NULL字段"
+    log_warning "发现${DB_STYLE_NULL}条样衣存在NULL字段"
 fi
 
 echo ""
@@ -430,6 +430,6 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo -e "${GREEN}系统评分：99/100 ⭐⭐⭐⭐⭐${NC}"
     exit 0
 else
-    echo -e "${RED}❌ 存在$TESTS_FAILED个失败项，请检查上述错误信息${NC}"
+    echo -e "${RED}❌ 存在${TESTS_FAILED}个失败项，请检查上述错误信息${NC}"
     exit 1
 fi

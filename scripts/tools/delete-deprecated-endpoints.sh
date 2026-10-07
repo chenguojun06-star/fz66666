@@ -53,7 +53,7 @@ for controller_file in $BACKEND_DIR/src/main/java/com/fashion/supplychain/*/cont
 
   if [ "$deprecated_count" -gt "0" ]; then
     echo "" >> $REPORT_FILE
-    echo "=== $controller_name ($deprecated_count个废弃方法) ===" >> $REPORT_FILE
+    echo "=== $controller_name (${deprecated_count}个废弃方法) ===" >> $REPORT_FILE
     echo "文件: $controller_file" >> $REPORT_FILE
     echo "" >> $REPORT_FILE
 

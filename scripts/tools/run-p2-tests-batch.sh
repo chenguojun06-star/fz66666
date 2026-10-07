@@ -52,7 +52,7 @@ for test in "${P2_TESTS[@]}"; do
     echo "⏱️  超时（30秒）"
     ((FAIL++))
   else
-    echo "❌ 失败（退出码: $EXIT_CODE）"
+    echo "❌ 失败（退出码: ${EXIT_CODE}）"
     echo ""
     echo "最后30行输出："
     tail -30 "/tmp/${test}.log"
