@@ -405,10 +405,13 @@
       var prices = skus.map(function (k) { return Number(k.price || 0); }).filter(function (n) { return n > 0; });
       var minPrice = prices.length ? Math.min.apply(null, prices) : null;
       var totalStock = skus.reduce(function (s, k) { return s + (k.stock || 0); }, 0);
-      var sel = { skuId: null, qty: 1, color: null, size: null, stock: 0 };
+      var sel = { skuId: null, qty: 1, color: null, size: null, stock: 0, price: 0 };
+      // D-768：颜色 → 图片（顾客选颜色时换成该颜色的图，无则回退主图）
+      var colorImgMap = d.colorImages || {};
+      function heroUrlFor(color) { return (color && colorImgMap[color]) || d.cover || ''; }
 
-      var html = '<div class="d-hero">' + thumbHtml(d.cover)
-        + '<button class="navbtn" id="bk">&#8249;</button></div>';
+      var html = '<div class="d-hero"><div id="heroImg">' + thumbHtml(d.cover)
+        + '</div><button class="navbtn" id="bk">&#8249;</button></div>';
 
       html += '<div class="d-price">' + priceHtml(minPrice, 'lg')
         + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
@@ -450,7 +453,8 @@
         document.getElementById('sizes').innerHTML = list.map(function (k) {
           var dis = (k.stock || 0) <= 0;
           return '<button class="opt' + (dis ? ' dis' : '') + '" data-s="' + esc(k.size) + '"'
-            + ' data-id="' + k.skuId + '" data-stock="' + (k.stock || 0) + '">'
+            + ' data-id="' + k.skuId + '" data-stock="' + (k.stock || 0) + '"'
+            + ' data-price="' + (k.price == null ? '' : k.price) + '">'
             + esc(k.size) + '<span class="st">' + (dis ? '售罄' : k.stock) + '</span></button>';
         }).join('');
         Array.prototype.forEach.call(document.querySelectorAll('#sizes .opt'), function (el) {
@@ -461,6 +465,8 @@
             sel.size = el.getAttribute('data-s');
             sel.skuId = el.getAttribute('data-id');
             sel.stock = Number(el.getAttribute('data-stock')) || 0;
+            // 购物车用所选 SKU 的价格，而不是全局最低价
+            sel.price = Number(el.getAttribute('data-price')) || Number(minPrice || 0);
             sel.qty = 1; document.getElementById('qv').textContent = '1';
           };
         });
@@ -471,6 +477,9 @@
           el.classList.add('sel');
           sel.color = el.getAttribute('data-c'); sel.size = null; sel.skuId = null;
           document.getElementById('hint').textContent = '已选 ' + sel.color;
+          // D-768：切换成该颜色的图（没有配图就回退主图）
+          var hero = document.getElementById('heroImg');
+          if (hero) hero.innerHTML = thumbHtml(heroUrlFor(sel.color));
           refreshSizes();
         };
       });
@@ -492,7 +501,7 @@
         var exist = cart().filter(function (x) { return String(x.skuId) === String(sel.skuId); })[0];
         c.push({
           skuId: sel.skuId, qty: sel.qty, name: name,
-          price: Number(minPrice || 0), cover: d.cover || '',
+          price: sel.price || Number(minPrice || 0), cover: heroUrlFor(sel.color),
           color: sel.color, size: sel.size, stock: sel.stock,
           checked: exist ? exist.checked !== false : true
         });
@@ -503,7 +512,7 @@
         if (!requireSku()) return;
         saveCart([{
           skuId: sel.skuId, qty: sel.qty, name: d.styleName + ' ' + sel.color + '/' + sel.size,
-          price: Number(minPrice || 0), cover: d.cover || '', color: sel.color, size: sel.size,
+          price: sel.price || Number(minPrice || 0), cover: heroUrlFor(sel.color), color: sel.color, size: sel.size,
           stock: sel.stock, checked: true
         }]);
         go('#/checkout');

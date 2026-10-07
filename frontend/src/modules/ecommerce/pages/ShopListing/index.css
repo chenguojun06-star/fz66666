@@ -1,0 +1,149 @@
+/* D-768 商品上架管理 —— 与设计系统 token 对齐 */
+.shop-listing {
+  padding: 16px 16px 24px;
+  background: var(--color-bg-page);
+  min-height: calc(100vh - 64px);
+}
+
+.shop-listing__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 14px;
+}
+
+.shop-listing__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.shop-listing__desc {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.shop-listing__alert {
+  margin-bottom: 12px;
+}
+
+.shop-listing__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.shop-listing__toolbar-spacer {
+  flex: 1;
+}
+
+/* 列表主图缩略 */
+.shop-listing__thumb {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.shop-listing__thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-tertiary);
+  font-size: 18px;
+}
+
+.shop-listing__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 抽屉内容 */
+.shop-listing__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+}
+
+.shop-listing__section {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.shop-listing__probe {
+  display: none;
+}
+
+.shop-listing__imgs {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.shop-listing__cover {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.shop-listing__hint {
+  display: block;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.shop-listing__block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+.shop-listing__block-title--mt {
+  margin-top: 18px;
+}
+
+.shop-listing__colors {
+  flex: 1;
+  min-width: 280px;
+}
+
+.shop-listing__color-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.shop-listing__color-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.shop-listing__color-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}

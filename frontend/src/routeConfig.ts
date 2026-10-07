@@ -120,6 +120,7 @@ export const paths = {
   ecommerceCenter: '/ecommerce/center',
   ecommercePlatform: '/ecommerce/platform',
   shopAdmin: '/ecommerce/shop',
+  shopListing: '/ecommerce/shop-listing',
   cockpit: '/cockpit',
   cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
@@ -492,6 +493,7 @@ export const permissionCodes = {
   dataImport: 'MENU_DATA_IMPORT',
   ecommerceCenter: 'MENU_ECOMMERCE',
   shopAdmin: 'MENU_ECOMMERCE',
+  shopListing: 'MENU_ECOMMERCE',
   ecommercePlatform: 'MENU_ECOMMERCE',
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
@@ -605,6 +607,8 @@ export const menuConfig: MenuSection[] = [
       { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ShoppingCartOutlined) },
       // D-763：C端零售店铺管理（门面 /shop/index.html?s={slug} 游客免登录）
       { label: '店铺管理', path: paths.shopAdmin, icon: React.createElement(ShopOutlined) },
+      // D-768：店铺商品运营（改图 / 改售价库存 / 上下架）
+      { label: '商品上架管理', path: paths.shopListing, icon: React.createElement(ShoppingCartOutlined) },
     ],
   },
   {

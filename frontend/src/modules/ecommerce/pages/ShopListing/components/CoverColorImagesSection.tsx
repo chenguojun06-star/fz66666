@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { Alert, Button, Space, Tag, Typography } from 'antd';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+
+const { Text } = Typography;
+
+interface Props {
+  cover: string | null;
+  setCover: (v: string | null) => void;
+  colorImages: Record<string, string>;
+  setColorImages: (v: Record<string, string>) => void;
+  /** 该款式实际存在的颜色（来自 SKU 列表） */
+  colors: string[];
+}
+
+/**
+ * 商品图片区（D-768）：
+ * - 主图 = 店铺列表卡片 + 详情页默认大图（存 style.cover）
+ * - 每个颜色一张图 = 顾客在详情页切换颜色时换的图（存 sku_color_image）
+ */
+const CoverColorImagesSection: React.FC<Props> = ({
+  cover, setCover, colorImages, setColorImages, colors,
+}) => {
+  const [coverBad, setCoverBad] = useState(false);
+  const probeSrc = cover ? getFullAuthedFileUrl(cover) : '';
+
+  const pickAsCover = (color: string) => {
+    const url = colorImages[color];
+    if (url) setCover(url);
+  };
+
+  return (
+    <div className="shop-listing__section">
+      {/* 隐藏探针：识别 1×1 占位图（线上「连衣裙」封面就是 70 字节的 1×1，店铺里会糊成一块纯色） */}
+      {probeSrc ? (
+        <img
+          src={probeSrc}
+          alt=""
+          className="shop-listing__probe"
+          onLoad={(e) => setCoverBad(e.currentTarget.naturalWidth <= 1 || e.currentTarget.naturalHeight <= 1)}
+          onError={() => setCoverBad(true)}
+        />
+      ) : null}
+
+      <div className="shop-listing__imgs">
+        <div className="shop-listing__cover">
+          <ImageUploadBox
+            value={cover}
+            onChange={(v) => { setCover(v); setCoverBad(false); }}
+            width={132}
+            height={132}
+            label="主图"
+          />
+          <Text type="secondary" className="shop-listing__hint">
+            主图：店铺列表卡片与详情页默认大图
+          </Text>
+        </div>
+
+        <div className="shop-listing__colors">
+          <div className="shop-listing__block-title">每个颜色一张图（顾客选颜色时会切换）</div>
+          {colors.length === 0 ? (
+            <Text type="secondary">该款式还没有 SKU（颜色），请先在「款式资料」维护颜色尺码</Text>
+          ) : (
+            <div className="shop-listing__color-list">
+              {colors.map((color) => (
+                <div key={color} className="shop-listing__color-row">
+                  <ImageUploadBox
+                    value={colorImages[color] ?? null}
+                    onChange={(v) =>
+                      setColorImages({ ...colorImages, [color]: v ?? '' })
+                    }
+                    width={72}
+                    height={72}
+                    label={color}
+                  />
+                  <div className="shop-listing__color-meta">
+                    <Tag color="default">{color}</Tag>
+                    <Space size={4}>
+                      <Button
+                        type="link"
+                        size="small"
+                        disabled={!colorImages[color]}
+                        onClick={() => pickAsCover(color)}
+                      >
+                        设为主图
+                      </Button>
+                      {colorImages[color] ? (
+                        <Button
+                          type="link"
+                          size="small"
+                          danger
+                          onClick={() => setColorImages({ ...colorImages, [color]: '' })}
+                        >
+                          清除
+                        </Button>
+                      ) : null}
+                    </Space>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!cover ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="shop-listing__alert"
+          message="还没设置主图"
+          description="主图为空时，店铺列表会显示「暂无图片」占位。可上传，或先给某个颜色配图后点「设为主图」。"
+        />
+      ) : coverBad ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="shop-listing__alert"
+          message="当前主图是一张占位图（尺寸过小）"
+          description="这类图被拉伸后店铺里会变成一整块纯色，看起来像页面坏了。请重新上传一张真实商品图。"
+        />
+      ) : null}
+    </div>
+  );
+};
+
+export default CoverColorImagesSection;

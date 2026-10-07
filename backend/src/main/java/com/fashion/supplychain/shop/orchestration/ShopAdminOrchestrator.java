@@ -2,23 +2,36 @@ package com.fashion.supplychain.shop.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.shop.entity.ShopConfig;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.mapper.ShopConfigMapper;
 import com.fashion.supplychain.shop.mapper.ShopOrderMapper;
+import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 店铺管理编排器（D-763）：配置 / 上架开关 / 订单列表，供管理端控制器薄壳调用。
+ * D-768 增加店铺商品运营：SKU 售价 + 库存批量保存（含操作日志留痕）。
  */
 @Slf4j
 @Service
@@ -32,6 +45,12 @@ public class ShopAdminOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private ProductSkuService productSkuService;
+
+    @Autowired
+    private ProductSkuOrchestrator productSkuOrchestrator;
 
     /** 我的店铺配置（无则按默认建档，slug=t{tenantId}，默认打烊） */
     public ShopConfig config() {
@@ -88,6 +107,152 @@ public class ShopAdminOrchestrator {
         log.info("[ShopAdmin] 款式{} {}店铺", styleId, listed ? "上架" : "下架");
     }
 
+    /**
+     * 店铺商品运营：批量保存 SKU 的售价 + 库存（D-768）。
+     *
+     * <p>为什么必须编成一个事务、且必须放在编排器：
+     * <ul>
+     *   <li>{@code PUT /style/sku/{id}} 会强制保留原库存（改不了库存），库存只能走 updateStock，
+     *       两条独立事务会导致「价改了库存没改」的脏状态；</li>
+     *   <li>{@code updateStockById} 的参数是 <b>delta（增减量）</b> 且 SQL 为
+     *       {@code GREATEST(0, stock + delta)} 会钳到 0，所以「目标值 → delta」的换算
+     *       必须在服务端完成，不能让前端直接传增减量。</li>
+     * </ul>
+     *
+     * <p>⚠️ 手工改库存不产生出入库单据，会绕过库存台账（产品决策已接受），
+     * 因此每次库存变动都会写一条 {@code t_operation_log} 留痕。
+     *
+     * @param items 每项 {@code {skuId, salesPrice, stockQuantity}}，字段可缺省表示不改
+     * @return 改价/改库存项数 + 每个 SKU 更新后的真实库存（可能被钳制，供前端回显）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchSaveSku(Long styleId, List<Map<String, Object>> items) {
+        Long tenantId = UserContext.tenantId();
+        if (styleId == null) {
+            throw new IllegalArgumentException("styleId 不能为空");
+        }
+        StyleInfo style = styleInfoService.getById(styleId);
+        if (style == null || !tenantId.equals(style.getTenantId())) {
+            throw new IllegalArgumentException("款式不存在或无权操作");
+        }
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("没有需要保存的 SKU");
+        }
+        if (items.size() > 200) {
+            throw new IllegalArgumentException("单次最多保存200条SKU");
+        }
+
+        Map<String, Integer> stockAfter = new LinkedHashMap<>();
+        int priceChanged = 0;
+        int stockChanged = 0;
+
+        for (Map<String, Object> item : items) {
+            Long skuId = toLong(item.get("skuId"));
+            if (skuId == null) {
+                throw new IllegalArgumentException("SKU 明细缺少 skuId");
+            }
+            ProductSku existing = productSkuService.getById(skuId);
+            if (existing == null || !tenantId.equals(existing.getTenantId())
+                    || !styleId.equals(existing.getStyleId())) {
+                throw new IllegalArgumentException("SKU 不存在或不属于该款式：" + skuId);
+            }
+
+            int currentStock = existing.getStockQuantity() == null ? 0 : existing.getStockQuantity();
+            BigDecimal currentPrice = existing.getSalesPrice() == null ? BigDecimal.ZERO : existing.getSalesPrice();
+            BigDecimal targetPrice = toDecimal(item.get("salesPrice"));
+            Integer targetStock = toInt(item.get("stockQuantity"));
+
+            // 1) 售价：走 updateSku（内部会保留库存/编码/版本，且校验租户）
+            if (targetPrice != null && targetPrice.compareTo(currentPrice) != 0) {
+                ProductSku patch = new ProductSku();
+                patch.setSalesPrice(targetPrice);
+                Result<Boolean> r = productSkuOrchestrator.updateSku(skuId, patch);
+                if (r == null || !Integer.valueOf(200).equals(r.getCode())
+                        || Boolean.FALSE.equals(r.getData())) {
+                    throw new IllegalArgumentException("售价保存失败："
+                            + (r == null ? "无响应" : r.getMessage()));
+                }
+                priceChanged++;
+            }
+
+            // 2) 库存：updateStockById 是 delta 语义，按「目标值 - 当前值」换算
+            int delta = targetStock == null ? 0 : targetStock - currentStock;
+            if (delta != 0) {
+                try {
+                    productSkuService.updateStockById(skuId, delta);
+                } catch (IllegalStateException e) {
+                    throw new IllegalArgumentException("库存更新失败：" + e.getMessage());
+                }
+                stockChanged++;
+                OperationLogAppendUtil.writeLog("店铺管理", "手工调整SKU",
+                        String.format("库存 %d→%d（delta=%+d）skuCode=%s；手工调整，不走出入库台账",
+                                currentStock, targetStock, delta, existing.getSkuCode()),
+                        String.valueOf(skuId),
+                        existing.getStyleNo() + "-" + existing.getColor() + "-" + existing.getSize());
+            }
+
+            // 3) 回读真实库存（delta 可能被 GREATEST(0, ...) 钳制）
+            ProductSku after = productSkuService.getById(skuId);
+            stockAfter.put(String.valueOf(skuId),
+                    after == null || after.getStockQuantity() == null ? 0 : after.getStockQuantity());
+        }
+
+        log.info("[ShopAdmin] 店铺商品保存 styleId={} tenant={} 改价{}项 改库存{}项",
+                styleId, tenantId, priceChanged, stockChanged);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("priceChanged", priceChanged);
+        resp.put("stockChanged", stockChanged);
+        resp.put("stockAfter", stockAfter);
+        return resp;
+    }
+
+    /**
+     * 款式维度的 SKU 聚合，供店铺商品列表展示「售价区间 / 可售总量 / 颜色数」。
+     * 一次 in 查询 + 内存分组，避免前端逐行 N+1。
+     *
+     * @return {@code {items: {"<styleId>": {minPrice,maxPrice,totalStock,colorCount,skuCount}}}}
+     */
+    public Map<String, Object> skuSummary(List<Long> styleIds) {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Object> items = new LinkedHashMap<>();
+        if (styleIds != null && !styleIds.isEmpty()) {
+            List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
+                    .in(ProductSku::getStyleId, styleIds)
+                    .eq(ProductSku::getTenantId, tenantId));
+            Map<Long, List<ProductSku>> byStyle = skus.stream()
+                    .filter(k -> k.getStyleId() != null)
+                    .collect(Collectors.groupingBy(ProductSku::getStyleId));
+
+            for (Long styleId : styleIds) {
+                List<ProductSku> list = byStyle.getOrDefault(styleId, List.of());
+                BigDecimal min = null;
+                BigDecimal max = null;
+                int stock = 0;
+                Set<String> colors = new LinkedHashSet<>();
+                for (ProductSku k : list) {
+                    BigDecimal p = k.getSalesPrice();
+                    if (p != null) {
+                        if (min == null || p.compareTo(min) < 0) min = p;
+                        if (max == null || p.compareTo(max) > 0) max = p;
+                    }
+                    stock += k.getStockQuantity() == null ? 0 : k.getStockQuantity();
+                    if (StringUtils.hasText(k.getColor())) colors.add(k.getColor());
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("minPrice", min);
+                row.put("maxPrice", max);
+                row.put("totalStock", stock);
+                row.put("colorCount", colors.size());
+                row.put("skuCount", list.size());
+                items.put(String.valueOf(styleId), row);
+            }
+        }
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("items", items);
+        return resp;
+    }
+
     /** 店铺订单分页（含买家联系方式与挂账状态） */
     public Page<ShopOrder> orders(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
@@ -110,9 +275,47 @@ public class ShopAdminOrchestrator {
     private int parseInt(Object v, int def) {
         if (v == null) return def;
         try {
-            return Integer.parseInt(String.valueOf(v));
+            return Integer.parseInt(String.valueOf(v).trim());
         } catch (Exception e) {
             return def;
+        }
+    }
+
+    /** 空值返回 null（表示「本次不改」），非法值直接抛错避免静默写错数据 */
+    private Long toLong(Object v) {
+        if (v == null || !StringUtils.hasText(String.valueOf(v))) {
+            return null;
+        }
+        try {
+            return Long.parseLong(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("非法的 skuId：" + v);
+        }
+    }
+
+    private Integer toInt(Object v) {
+        if (v == null || !StringUtils.hasText(String.valueOf(v))) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("非法的库存数量：" + v);
+        }
+    }
+
+    private BigDecimal toDecimal(Object v) {
+        if (v == null || !StringUtils.hasText(String.valueOf(v))) {
+            return null;
+        }
+        try {
+            BigDecimal d = new BigDecimal(String.valueOf(v).trim());
+            if (d.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("售价不能为负数：" + v);
+            }
+            return d;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("非法的售价：" + v);
         }
     }
 }

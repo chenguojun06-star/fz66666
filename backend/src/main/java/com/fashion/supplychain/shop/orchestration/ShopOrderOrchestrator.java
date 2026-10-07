@@ -186,8 +186,20 @@ public class ShopOrderOrchestrator {
             r.put("size", k.getSize());
             r.put("price", k.getSalesPrice());
             r.put("stock", k.getStockQuantity() == null ? 0 : k.getStockQuantity());
+            // D-768：该 SKU（款号+颜色）的图片，供 C 端选颜色时切换主图
+            r.put("image", k.getSkuColorImage());
             return r;
         }).collect(Collectors.toList());
+
+        // D-768：颜色 → 图片 映射（每色取第一条非空），H5 直接取用，省二次聚合
+        Map<String, String> colorImages = new LinkedHashMap<>();
+        for (ProductSku k : skus) {
+            String color = k.getColor();
+            if (StringUtils.hasText(color) && StringUtils.hasText(k.getSkuColorImage())
+                    && !colorImages.containsKey(color)) {
+                colorImages.put(color, k.getSkuColorImage());
+            }
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("styleId", style.getId());
@@ -196,6 +208,7 @@ public class ShopOrderOrchestrator {
         data.put("cover", style.getCover());
         data.put("remark", style.getRemark());
         data.put("skus", skuRows);
+        data.put("colorImages", colorImages);
         return data;
     }
 

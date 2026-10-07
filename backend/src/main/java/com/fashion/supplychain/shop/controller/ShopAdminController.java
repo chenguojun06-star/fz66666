@@ -5,6 +5,7 @@ import com.fashion.supplychain.shop.orchestration.ShopAdminOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,5 +51,50 @@ public class ShopAdminController {
     @PostMapping("/orders")
     public Result<?> orders(@RequestBody Map<String, Object> params) {
         return Result.success(shopAdminOrchestrator.orders(params));
+    }
+
+    /**
+     * 店铺商品运营：批量保存 SKU 售价 + 库存（D-768）。
+     * body: {styleId, items:[{skuId, salesPrice, stockQuantity}]}；字段缺省表示不改。
+     * 库存为「设为目标值」，服务端换算增减量并留操作日志（不走出入库台账）。
+     */
+    @PostMapping("/sku/batch-save")
+    public Result<?> batchSaveSku(@RequestBody Map<String, Object> body) {
+        Long styleId;
+        try {
+            styleId = body.get("styleId") == null ? null
+                    : Long.valueOf(String.valueOf(body.get("styleId")).trim());
+        } catch (NumberFormatException e) {
+            return Result.fail("styleId 格式不正确");
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            return Result.success(shopAdminOrchestrator.batchSaveSku(styleId, items));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 款式维度 SKU 聚合（店铺商品列表展示 售价区间/可售总量/颜色数）。
+     * body: {styleIds:[1,2,3]}
+     */
+    @PostMapping("/sku/summary")
+    public Result<?> skuSummary(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Object> raw = (List<Object>) body.get("styleIds");
+        List<Long> styleIds = raw == null ? List.of() : raw.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(v -> {
+                    try {
+                        return Long.valueOf(String.valueOf(v).trim());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+        return Result.success(shopAdminOrchestrator.skuSummary(styleIds));
     }
 }
