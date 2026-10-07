@@ -39,6 +39,7 @@ public final class SecurityConstants {
             "/api/public/**",
             "/api/crm-client/login",
             "/api/shop/public/**",
+            "/shop/**",
             "/api/supplier-portal/login",
             "/api/wechat/mini-program/login",
             "/api/wechat/h5/jssdk-config",
