@@ -230,8 +230,14 @@
     return '<span class="price"><span class="cny">¥</span><span class="int">' + n[0] + '</span><span class="dec">.' + n[1] + '</span></span>';
   }
   function thumbHtml(cover, cls) {
-    if (cover) return '<img src="' + esc(cover) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;ph&quot;>' + '&#9634;' + '</div>\'">';
-    return '<div class="ph">&#9634;</div>';
+    // 1×1 像素的「占位图」被拉伸后就是一整块纯色，看着像页面坏了 →
+    // 加载后小于 2px 一律换成「暂无图片」占位（生图失败/脏数据兜底）
+    var PH = '<div class="ph">&#9634;</div>';
+    var PH_ATTR = "'<div class=&quot;ph&quot;>&#9634;</div>'";
+    if (!cover) return PH;
+    return '<img src="' + esc(cover) + '" alt=""'
+      + ' onload="if(this.naturalWidth<=1||this.naturalHeight<=1)this.outerHTML=' + PH_ATTR + '"'
+      + ' onerror="this.outerHTML=' + PH_ATTR + '">';
   }
   function get(url, ok) {
     fetch(url).then(function (r) { return r.json(); }).then(function (d) {
