@@ -2,323 +2,690 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>云裳小店</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ff5000">
+<title>店铺</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f5f5f5; color:#333; padding-bottom:60px; }
-  .topbar { background:linear-gradient(135deg,#ff6b35,#ff9558); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10; }
-  .topbar h1 { font-size:17px; font-weight:600; }
-  .topbar .notice { font-size:12px; opacity:.9; margin-top:2px; }
-  .searchbar { margin-top:8px; background:rgba(255,255,255,.25); border-radius:16px; display:flex; }
-  .searchbar input { flex:1; background:transparent; border:none; outline:none; color:#fff; padding:7px 14px; font-size:13px; }
-  .searchbar input::placeholder { color:rgba(255,255,255,.8); }
-  .searchbar button { border:none; background:rgba(255,255,255,.3); color:#fff; border-radius:0 16px 16px 0; padding:0 14px; font-size:13px; }
-  .closed { background:#fff3e0; color:#e65100; font-size:13px; padding:8px 16px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px; }
-  .card { background:#fff; border-radius:10px; overflow:hidden; position:relative; }
-  .card img { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:#eee; }
-  .card .info { padding:8px 10px 10px; }
-  .card .name { font-size:14px; line-height:1.35; height:38px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-  .card .row { display:flex; justify-content:space-between; align-items:baseline; margin-top:6px; }
-  .card .price { color:#ff4d4f; font-size:16px; font-weight:700; }
-  .card .price::before { content:"¥"; font-size:11px; }
-  .card .stock { font-size:11px; color:#999; }
-  .card .soldout { position:absolute; top:0; left:0; background:rgba(0,0,0,.55); color:#fff; font-size:12px; padding:3px 10px; border-radius:0 0 10px 0; }
-  .empty { text-align:center; padding:60px 0; color:#999; font-size:14px; }
-  /* 详情 */
-  .detail-img { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:#eee; }
-  .detail-head { background:#fff; padding:14px 16px; }
-  .detail-head .price { color:#ff4d4f; font-size:22px; font-weight:700; }
-  .detail-head .price::before { content:"¥"; font-size:13px; }
-  .detail-head h2 { font-size:16px; font-weight:600; margin-top:4px; }
-  .detail-head .no { color:#999; font-size:12px; margin-top:2px; }
-  .sec { background:#fff; margin-top:8px; padding:14px 16px; }
-  .sec h3 { font-size:14px; margin-bottom:10px; }
-  .opt-group { display:flex; flex-wrap:wrap; gap:8px; }
-  .opt { border:1px solid #ddd; border-radius:6px; padding:6px 14px; font-size:13px; background:#fff; }
-  .opt.sel { border-color:#ff6b35; color:#ff6b35; background:#fff7f3; font-weight:600; }
-  .opt.dis { color:#ccc; background:#fafafa; text-decoration:line-through; }
-  .qty-row { display:flex; align-items:center; justify-content:space-between; }
-  .qty-ctl { display:flex; align-items:center; gap:0; border:1px solid #ddd; border-radius:6px; overflow:hidden; }
-  .qty-ctl button { width:32px; height:30px; border:none; background:#fafafa; font-size:16px; }
-  .qty-ctl span { width:44px; text-align:center; font-size:14px; }
-  .bottombar { position:fixed; bottom:0; left:0; right:0; background:#fff; display:flex; box-shadow:0 -2px 8px rgba(0,0,0,.06); z-index:20; }
-  .bottombar .cart-btn { flex:1; text-align:center; padding:12px 0; font-size:15px; position:relative; }
-  .bottombar .cart-btn .badge { position:absolute; top:4px; right:24px; background:#ff4d4f; color:#fff; border-radius:9px; font-size:10px; padding:1px 5px; }
-  .bottombar .buy { flex:2; background:linear-gradient(135deg,#ff6b35,#ff9558); color:#fff; text-align:center; padding:12px 0; font-size:15px; font-weight:600; border:none; }
-  .bottombar .buy:disabled { background:#ccc; }
-  /* 表单 */
-  .form-item { margin-bottom:12px; }
-  .form-item label { display:block; font-size:13px; color:#666; margin-bottom:5px; }
-  .form-item input, .form-item textarea { width:100%; border:1px solid #ddd; border-radius:6px; padding:9px 10px; font-size:14px; outline:none; }
-  .form-item textarea { height:60px; resize:none; }
-  .submit { width:100%; background:linear-gradient(135deg,#ff6b35,#ff9558); color:#fff; border:none; border-radius:22px; padding:11px 0; font-size:15px; font-weight:600; }
-  .toast { position:fixed; top:40%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.75); color:#fff; padding:10px 18px; border-radius:8px; font-size:14px; z-index:99; max-width:80%; text-align:center; }
-  .order-card { background:#fff; margin:8px; border-radius:10px; padding:12px 14px; }
-  .order-card .no { font-size:12px; color:#999; }
-  .order-card .st { float:right; font-size:12px; }
-  .order-card .amt { color:#ff4d4f; font-weight:700; margin-top:6px; }
-  .status-PENDING_SHIP { color:#ff9800; } .status-SHIPPED { color:#4caf50; } .status-CANCELLED { color:#999; }
-  .back { font-size:14px; color:#666; padding:10px 16px; display:inline-block; }
-  .cartline { display:flex; justify-content:space-between; align-items:center; background:#fff; margin:8px; border-radius:10px; padding:10px 14px; font-size:14px; }
-  .cartline .rm { color:#ff4d4f; border:none; background:none; font-size:13px; }
+  :root{
+    --tb-orange:#ff5000;
+    --tb-orange-2:#ff7a1a;
+    --tb-red:#ff0036;
+    --tb-bg:#f4f4f4;
+    --tb-card:#fff;
+    --tb-text:#1a1a1a;
+    --tb-sub:#999;
+    --tb-line:#f0f0f0;
+    --tb-radius:10px;
+    --tb-shadow:0 1px 4px rgba(0,0,0,.04);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--tb-bg);color:var(--tb-text);-webkit-font-smoothing:antialiased;}
+  img{display:block;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+
+  /* ── 顶部搜索（吸顶） ── */
+  .sf-top{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));padding:10px 12px 12px;padding-top:calc(10px + env(safe-area-inset-top));}
+  .sf-top .row1{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .sf-top .shopname{color:#fff;font-size:16px;font-weight:600;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sf-top .follow{border:none;background:rgba(255,255,255,.95);color:var(--tb-orange);font-size:12px;font-weight:600;border-radius:14px;padding:5px 14px;}
+  .sf-top .follow.on{background:rgba(255,255,255,.22);color:#fff;}
+  .sf-search{display:flex;align-items:center;background:#fff;border-radius:18px;overflow:hidden;height:36px;}
+  .sf-search .ico{padding:0 8px 0 12px;color:var(--tb-sub);font-size:14px;}
+  .sf-search input{flex:1;border:none;outline:none;font-size:14px;height:100%;background:transparent;}
+  .sf-search .go{border:none;background:var(--tb-orange);color:#fff;height:100%;padding:0 18px;font-size:14px;font-weight:600;}
+
+  /* ── 店铺头图 ── */
+  .sf-banner{height:110px;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));position:relative;overflow:hidden;}
+  .sf-banner .bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(14px);transform:scale(1.25);opacity:.5;}
+  .sf-banner .mask{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,80,0,.55),rgba(255,80,0,.85));}
+
+  /* ── 店铺信息卡 ── */
+  .sf-shop{background:var(--tb-card);margin:-34px 10px 0;border-radius:var(--tb-radius);padding:12px 14px;position:relative;z-index:2;box-shadow:var(--tb-shadow);}
+  .sf-shop .head{display:flex;align-items:center;gap:12px;}
+  .sf-shop .avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex:none;border:2px solid #fff;box-shadow:0 1px 6px rgba(255,80,0,.25);}
+  .sf-shop .meta{flex:1;min-width:0;}
+  .sf-shop .meta h1{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sf-shop .meta .sub{font-size:12px;color:var(--tb-sub);margin-top:3px;}
+  .sf-shop .meta .sub b{color:var(--tb-orange);font-weight:600;}
+  .sf-shop .notice{margin-top:10px;background:#fff8f3;border-radius:8px;padding:8px 10px;font-size:12.5px;color:#a8541b;line-height:1.5;display:flex;gap:6px;}
+  .sf-shop .notice.hide{display:none;}
+
+  /* ── 商品双列瀑布 ── */
+  .sf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;}
+  .pcard{background:var(--tb-card);border-radius:var(--tb-radius);overflow:hidden;position:relative;box-shadow:var(--tb-shadow);}
+  .pcard .thumb{position:relative;width:100%;aspect-ratio:1/1;background:#f2f2f2;overflow:hidden;}
+  .pcard .thumb img{width:100%;height:100%;object-fit:cover;}
+  .pcard .thumb .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#cfcfcf;font-size:28px;}
+  .pcard .soldout{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;}
+  .pcard .soldout span{width:52px;height:52px;border-radius:50%;border:1px solid rgba(255,255,255,.85);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;}
+  .pcard .body{padding:8px 9px 10px;}
+  .pcard .name{font-size:13.5px;line-height:1.35;height:36px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#222;}
+  .pcard .tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+  .pcard .tag{font-size:10px;color:var(--tb-orange);border:1px solid rgba(255,80,0,.45);border-radius:3px;padding:0 4px;line-height:15px;}
+  .pcard .tag.free{color:#00a870;border-color:rgba(0,168,112,.45);}
+  .pcard .foot{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px;}
+  .price{color:var(--tb-red);font-weight:700;line-height:1;white-space:nowrap;}
+  .price .cny{font-size:11px;font-weight:600;}
+  .price .int{font-size:18px;}
+  .price .dec{font-size:12px;font-weight:600;}
+  .pcard .stock{font-size:11px;color:var(--tb-sub);}
+
+  .sf-more{text-align:center;padding:4px 0 18px;}
+  .sf-more button{border:none;background:#fff;color:var(--tb-orange);font-size:13px;border-radius:16px;padding:9px 26px;box-shadow:var(--tb-shadow);}
+  .sf-more span{font-size:12px;color:#bbb;}
+
+  /* ── 底部 Tab ── */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:env(safe-area-inset-bottom);}
+  .tabbar .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 5px;font-size:11px;color:#9a9a9a;position:relative;background:none;border:none;}
+  .tabbar .tab.on{color:var(--tb-orange);}
+  .tabbar .tab svg{width:22px;height:22px;fill:currentColor;}
+  .tabbar .tab .badge{position:absolute;top:2px;left:calc(50% + 4px);min-width:16px;height:16px;padding:0 4px;background:var(--tb-red);color:#fff;font-size:10px;line-height:16px;border-radius:8px;text-align:center;}
+
+  /* ── 详情页 ── */
+  .d-hero{position:relative;background:#fff;}
+  .d-hero img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#f2f2f2;}
+  .d-hero .ph{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;color:#d5d5d5;font-size:40px;background:#f6f6f6;}
+  .d-hero .navbtn{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.35);color:#fff;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .d-price{background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));color:#fff;padding:12px 14px 14px;}
+  .d-price .amount{font-size:26px;font-weight:800;line-height:1;}
+  .d-price .amount .cny{font-size:15px;font-weight:600;}
+  .d-price .amount .dec{font-size:16px;}
+  .d-price .sub{font-size:11.5px;opacity:.92;margin-top:6px;display:flex;gap:10px;}
+  .d-title{background:#fff;padding:12px 14px;border-bottom:1px solid var(--tb-line);}
+  .d-title h2{font-size:16px;font-weight:600;line-height:1.45;}
+  .d-title .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .d-title .tag{font-size:11px;color:var(--tb-orange);background:#fff3ec;border-radius:4px;padding:2px 7px;}
+  .d-title .tag.free{color:#00a870;background:#eafaf3;}
+  .d-title .no{font-size:12px;color:var(--tb-sub);margin-top:8px;}
+
+  .d-sec{background:#fff;margin-top:8px;padding:14px 14px 16px;}
+  .d-sec .lbl{font-size:13.5px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .d-sec .lbl .hint{font-size:11.5px;color:var(--tb-sub);font-weight:400;}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;}
+  .opt{border:1px solid #e5e5e5;background:#fafafa;border-radius:6px;padding:7px 14px;font-size:13px;color:#444;}
+  .opt.sel{border-color:var(--tb-orange);color:var(--tb-orange);background:#fff3ec;font-weight:600;}
+  .opt.dis{color:#c9c9c9;background:#f5f5f5;text-decoration:line-through;border-color:#eee;}
+  .opt .st{font-size:10.5px;color:var(--tb-sub);margin-left:3px;}
+  .opt.sel .st{color:var(--tb-orange);}
+  .stepper{display:inline-flex;align-items:center;border:1px solid #e5e5e5;border-radius:6px;overflow:hidden;}
+  .stepper button{width:36px;height:32px;border:none;background:#fafafa;font-size:17px;color:#555;}
+  .stepper button:active{background:#f0f0f0;}
+  .stepper span{width:52px;text-align:center;font-size:14px;}
+  .d-desc{font-size:13px;color:#666;line-height:1.7;white-space:pre-wrap;word-break:break-word;}
+
+  .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
+  .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
+  .d-bar .mini svg{width:20px;height:20px;fill:#666;}
+  .d-bar .mini .badge{position:absolute;top:-2px;right:2px;min-width:15px;height:15px;background:var(--tb-red);color:#fff;font-size:9.5px;line-height:15px;border-radius:8px;text-align:center;padding:0 3px;}
+  .d-bar .btns{flex:1;display:flex;border-radius:20px;overflow:hidden;}
+  .d-bar .add{flex:1;border:none;background:#ffd9c2;color:var(--tb-orange);font-size:14.5px;font-weight:600;padding:11px 0;}
+  .d-bar .buy{flex:1.15;border:none;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));color:#fff;font-size:15px;font-weight:700;padding:11px 0;}
+  .d-bar .buy:disabled{background:#d8d8d8;color:#fff;}
+
+  /* ── 购物车 ── */
+  .cq{padding:10px 10px 120px;}
+  .citem{background:#fff;border-radius:var(--tb-radius);padding:10px;display:flex;gap:10px;margin-bottom:8px;align-items:center;}
+  .citem .chk{width:22px;height:22px;flex:none;}
+  .citem .ph{width:70px;height:70px;border-radius:8px;background:#f2f2f2;overflow:hidden;flex:none;}
+  .citem .ph img{width:100%;height:100%;object-fit:cover;}
+  .citem .info{flex:1;min-width:0;}
+  .citem .info .nm{font-size:13.5px;line-height:1.4;max-height:38px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .citem .info .pr{color:var(--tb-red);font-weight:700;font-size:15px;margin-top:8px;}
+  .citem .info .pr .cny{font-size:11px;}
+  .citem .side{display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+  .citem .rm{border:none;background:none;color:#bbb;font-size:12px;}
+  .stepper.sm button{width:28px;height:26px;font-size:15px;}
+  .stepper.sm span{width:34px;font-size:13px;}
+  .cbar{position:fixed;left:0;right:0;bottom:calc(52px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--tb-line);display:flex;align-items:center;padding:8px 12px;gap:10px;z-index:25;}
+  .cbar .all{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;}
+  .cbar .sum{flex:1;text-align:right;font-size:12px;color:#666;}
+  .cbar .sum b{color:var(--tb-red);font-size:18px;}
+  .cbar .sum b .cny{font-size:12px;}
+  .cbar .go{border:none;border-radius:20px;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));color:#fff;font-size:14.5px;font-weight:600;padding:10px 22px;}
+  .cbar .go:disabled{background:#d8d8d8;}
+
+  /* ── 通用页头 / 表单 / 卡片 ── */
+  .pagehead{background:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--tb-line);}
+  .pagehead .bk{border:none;background:none;font-size:20px;color:#333;line-height:1;padding:0 2px;}
+  .pagehead h1{font-size:16px;font-weight:600;}
+
+  .card{background:#fff;border-radius:var(--tb-radius);margin:10px;padding:14px;}
+  .fi{margin-bottom:12px;}
+  .fi label{display:block;font-size:12.5px;color:#888;margin-bottom:6px;}
+  .fi label b{color:var(--tb-red);font-weight:400;}
+  .fi input,.fi textarea{width:100%;border:1px solid #e8e8e8;background:#fafafa;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;}
+  .fi input:focus,.fi textarea:focus{border-color:var(--tb-orange);background:#fff;}
+  .fi textarea{height:74px;resize:none;}
+  .obtn{width:100%;border:none;border-radius:22px;background:linear-gradient(135deg,var(--tb-orange),var(--tb-orange-2));color:#fff;font-size:15px;font-weight:600;padding:12px 0;}
+  .obtn:disabled{background:#d8d8d8;}
+  .obtn.ghost{background:#fff;color:var(--tb-orange);border:1px solid var(--tb-orange);}
+
+  .olist{margin:10px;}
+  .ocard{background:#fff;border-radius:var(--tb-radius);padding:12px 14px;margin-bottom:10px;}
+  .ocard .top{display:flex;justify-content:space-between;align-items:center;}
+  .ocard .no{font-size:12px;color:#999;}
+  .ocard .st{font-size:12.5px;font-weight:600;}
+  .st-PENDING_SHIP{color:var(--tb-orange);}
+  .st-SHIPPED{color:#00a870;}
+  .st-CANCELLED{color:#999;}
+  .ocard .mid{margin-top:8px;font-size:13px;color:#555;line-height:1.6;}
+  .ocard .amt{margin-top:8px;padding-top:8px;border-top:1px dashed var(--tb-line);display:flex;justify-content:space-between;align-items:baseline;}
+  .ocard .amt .money{color:var(--tb-red);font-weight:700;font-size:16px;}
+  .ocard .amt .money .cny{font-size:11px;}
+
+  .empty{text-align:center;padding:64px 24px;color:#bbb;font-size:14px;}
+  .empty .big{font-size:42px;margin-bottom:12px;}
+
+  .done{text-align:center;padding:56px 24px;}
+  .done .ok{width:64px;height:64px;border-radius:50%;background:#eafaf3;color:#00a870;font-size:34px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+  .done h2{font-size:18px;margin-bottom:8px;}
+  .done p{font-size:13.5px;color:#777;line-height:1.7;}
+
+  .toast{position:fixed;top:42%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;z-index:99;max-width:80%;text-align:center;}
+  .loading{text-align:center;padding:40px 0;color:#bbb;font-size:13px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{width:20px;height:20px;border:2px solid #eee;border-top-color:var(--tb-orange);border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:6px;}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="loading"><span class="spin"></span>加载中…</div></div>
+
 <script>
-var API = '/api/shop/public';
-var slug = new URLSearchParams(location.search).get('s') || localStorage.getItem('shop_slug') || '';
-if (slug) localStorage.setItem('shop_slug', slug);
+(function () {
+  'use strict';
+  var API = '/api/shop/public';
+  var slug = new URLSearchParams(location.search).get('s') || localStorage.getItem('shop_slug') || '';
+  if (slug) localStorage.setItem('shop_slug', slug);
 
-function esc(s){ return String(s==null?'':s).replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
-function toast(msg){ var t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); },2400); }
-function money(v){ return v==null?'—':'¥'+Number(v).toFixed(2); }
-var ST = {PENDING_SHIP:'待发货', SHIPPED:'已发货', CANCELLED:'已取消'};
-function cart(){ try { return JSON.parse(localStorage.getItem('shop_cart_'+slug)||'[]'); } catch(e){ return []; } }
-function saveCart(c){ localStorage.setItem('shop_cart_'+slug, JSON.stringify(c)); }
+  var ST = { PENDING_SHIP: '待发货', SHIPPED: '已发货', CANCELLED: '已取消' };
+  var app = document.getElementById('app');
+  var shopInfo = null;
 
-function getJSON(url, cb){
-  fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    if (d && d.code === 200) cb(d.data);
-    else toast((d && d.message) || '加载失败');
-  }).catch(function(){ toast('网络异常，请稍后再试'); });
-}
-function postJSON(url, body, cb){
-  fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
-    .then(function(r){ return r.json(); }).then(function(d){
-      if (d && d.code === 200) cb(d.data);
-      else toast((d && d.message) || '操作失败');
-    }).catch(function(){ toast('网络异常，请稍后再试'); });
-}
+  /* ── 工具 ── */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
+      return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
+    });
+  }
+  function toast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2200);
+  }
+  function priceHtml(v, size) {
+    if (v == null || isNaN(Number(v))) return '<span class="price"><span class="cny">¥</span><span class="int">—</span></span>';
+    var n = Number(v).toFixed(2).split('.');
+    var iCls = size === 'lg' ? 'amount' : 'price';
+    if (size === 'lg') return '<span class="amount"><span class="cny">¥</span>' + n[0] + '<span class="dec">.' + n[1] + '</span></span>';
+    return '<span class="price"><span class="cny">¥</span><span class="int">' + n[0] + '</span><span class="dec">.' + n[1] + '</span></span>';
+  }
+  function thumbHtml(cover, cls) {
+    if (cover) return '<img src="' + esc(cover) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;ph&quot;>' + '&#9634;' + '</div>\'">';
+    return '<div class="ph">&#9634;</div>';
+  }
+  function get(url, ok) {
+    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.code === 200) ok(d.data);
+      else toast((d && d.message) || '加载失败');
+    }).catch(function () { toast('网络异常，请稍后再试'); });
+  }
+  function post(url, body, ok) {
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.code === 200) ok(d.data);
+        else toast((d && d.message) || '操作失败');
+      }).catch(function () { toast('网络异常，请稍后再试'); });
+  }
+  function go(hash) { location.hash = hash; }
+  function back() { if (history.length > 1) history.back(); else go('#/'); }
 
-/* ── 首页：商品流 ── */
-function renderHome(){
-  getJSON(API+'/'+slug+'/info', function(info){
-    getJSON(API+'/'+slug+'/products', function(data){
-      var html = '<div class="topbar"><h1>'+esc(info.shopName||'小店')+(info.enabled?'':'（已打烊）')+'</h1>'
-        + (info.notice?'<div class="notice">'+esc(info.notice)+'</div>':'')
-        + '<div class="searchbar"><input id="kw" placeholder="搜索款式 / 货号"><button id="dosearch">搜索</button></div></div>';
-      if (!info.enabled) html += '<div class="closed">店铺打烊中，暂时无法下单，可以继续逛</div>';
-      html += '<div class="grid">';
-      (data.records||[]).forEach(function(p){
-        html += '<div class="card" data-id="'+p.styleId+'">'
-          + '<img src="'+esc(p.cover||'')+'" onerror="this.style.visibility=\'hidden\'">'
-          + (p.totalStock<=0?'<div class="soldout">已售罄</div>':'')
-          + '<div class="info"><div class="name">'+esc(p.styleName)+'</div>'
-          + '<div class="row"><span class="price">'+(p.minPrice==null?'—':Number(p.minPrice).toFixed(2))+'</span>'
-          + '<span class="stock">库存'+p.totalStock+'</span></div></div></div>';
+  /* ── 购物车（localStorage） ── */
+  function cartKey() { return 'shop_cart_' + slug; }
+  function cart() { try { return JSON.parse(localStorage.getItem(cartKey()) || '[]'); } catch (e) { return []; } }
+  function saveCart(c) { localStorage.setItem(cartKey(), JSON.stringify(c)); }
+  function cartCount() { return cart().reduce(function (s, x) { return s + x.qty; }, 0); }
+  function cartAmount() {
+    return cart().filter(function (x) { return x.checked !== false; })
+      .reduce(function (s, x) { return s + x.price * x.qty; }, 0);
+  }
+
+  /* ── 关注（本地记录，展示用） ── */
+  function isFollowed() { return localStorage.getItem('shop_follow_' + slug) === '1'; }
+  function setFollow(v) { localStorage.setItem('shop_follow_' + slug, v ? '1' : '0'); }
+
+  /* ── 底部 Tab ── */
+  var ICON = {
+    home: '<svg viewBox="0 0 24 24"><path d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z"/></svg>',
+    cart: '<svg viewBox="0 0 24 24"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6.2 6l1.3 6.5a2 2 0 0 0 2 1.6h7.1a2 2 0 0 0 2-1.6L20 6zM5.9 4H2v2h3l2.4 12.3A3.9 3.9 0 0 1 7 18"/></svg>',
+    mine: '<svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.6-8 5.8V22h16v-2.2c0-3.2-3.6-5.8-8-5.8z"/></svg>'
+  };
+  function tabbar(active) {
+    var n = cartCount();
+    return '<div class="tabbar">'
+      + '<button class="tab' + (active === 'home' ? ' on' : '') + '" data-go="#/">' + ICON.home + '<span>首页</span></button>'
+      + '<button class="tab' + (active === 'cart' ? ' on' : '') + '" data-go="#/cart">' + ICON.cart + (n ? '<i class="badge">' + n + '</i>' : '') + '<span>购物车</span></button>'
+      + '<button class="tab' + (active === 'mine' ? ' on' : '') + '" data-go="#/mine">' + ICON.mine + '<span>我的</span></button>'
+      + '</div>';
+  }
+  function bindTabs() {
+    Array.prototype.forEach.call(document.querySelectorAll('.tabbar .tab'), function (el) {
+      el.onclick = function () { go(el.getAttribute('data-go')); };
+    });
+  }
+
+  /* ── 首页 ── */
+  var home = { page: 1, pageSize: 10, kw: '', records: [], total: 0, loading: false };
+
+  function renderHome() {
+    home = { page: 1, pageSize: 10, kw: '', records: [], total: 0, loading: false };
+    app.innerHTML = '<div class="loading"><span class="spin"></span>加载中…</div>';
+    get(API + '/' + slug + '/info', function (info) {
+      shopInfo = info;
+      document.title = info.shopName || '店铺';
+      loadProducts(true);
+    });
+  }
+
+  function loadProducts(reset) {
+    if (home.loading) return;
+    home.loading = true;
+    var url = API + '/' + slug + '/products?page=' + home.page + '&pageSize=' + home.pageSize
+      + (home.kw ? '&keyword=' + encodeURIComponent(home.kw) : '');
+    get(url, function (data) {
+      home.loading = false;
+      var recs = data.records || [];
+      home.total = data.total || 0;
+      home.records = reset ? recs : home.records.concat(recs);
+      paintHome();
+    });
+  }
+
+  function paintHome() {
+    var info = shopInfo || {};
+    var enables = !!info.enabled;
+    var html = '';
+
+    html += '<div class="sf-top">'
+      + '<div class="row1"><span class="shopname">' + esc(info.shopName || '小店') + '</span>'
+      + '<button class="follow' + (isFollowed() ? ' on' : '') + '" id="follow">' + (isFollowed() ? '已关注' : '+ 关注') + '</button></div>'
+      + '<div class="sf-search"><span class="ico">&#128269;</span>'
+      + '<input id="kw" placeholder="搜索店铺内的款式 / 货号" value="' + esc(home.kw) + '">'
+      + '<button class="go" id="dosearch">搜索</button></div>'
+      + '</div>';
+
+    html += '<div class="sf-banner"><div class="bg" id="bannerbg"></div><div class="mask"></div></div>';
+
+    html += '<div class="sf-shop"><div class="head">'
+      + '<div class="avatar">' + esc((info.shopName || '店').slice(0, 1)) + '</div>'
+      + '<div class="meta"><h1>' + esc(info.shopName || '小店') + '</h1>'
+      + '<div class="sub">在售 <b>' + home.total + '</b> 款 · ' + (enables ? '营业中' : '<span style="color:#999">已打烊</span>') + '</div></div>'
+      + '</div>'
+      + '<div class="notice' + (info.notice ? '' : ' hide') + '"><span>&#128226;</span><span>' + esc(info.notice || '') + '</span></div>'
+      + '</div>';
+
+    if (!enables) {
+      html += '<div class="card" style="margin:10px;background:#fff8f0;color:#b25d1a;font-size:12.5px;line-height:1.6">'
+        + '店铺正在打烊中，商品可浏览，暂不支持下单。欢迎稍后再来～</div>';
+    }
+
+    if (!home.records.length) {
+      html += '<div class="empty"><div class="big">&#128717;</div>' + (home.kw ? '没有找到相关商品' : '还没有上架商品') + '</div>';
+    } else {
+      html += '<div class="sf-grid">';
+      home.records.forEach(function (p) {
+        var stock = p.totalStock || 0;
+        html += '<div class="pcard" data-id="' + p.styleId + '">'
+          + '<div class="thumb">' + thumbHtml(p.cover)
+          + (stock <= 0 ? '<div class="soldout"><span>已售罄</span></div>' : '')
+          + '</div>'
+          + '<div class="body"><div class="name">' + esc(p.styleName) + '</div>'
+          + '<div class="tags"><span class="tag free">包邮</span>'
+          + '<span class="tag">现货</span>'
+          + '<span class="tag">' + (p.colorCount || 1) + '色可选</span></div>'
+          + '<div class="foot">' + priceHtml(p.minPrice)
+          + '<span class="stock">' + (stock > 0 ? '库存 ' + stock : '缺货') + '</span></div>'
+          + '</div></div>';
       });
       html += '</div>';
-      if (!(data.records||[]).length) html += '<div class="empty">上架商品会出现在这里</div>';
-      html += '<div class="bottombar"><div class="cart-btn" id="gocart">🛒 购物车'
-        + (cart().length?'<span class="badge">'+cart().length+'</span>':'') + '</div>'
-        + '<div class="cart-btn" id="gomine">📋 我的订单</div></div>';
-      document.getElementById('app').innerHTML = html;
-      document.getElementById('dosearch').onclick = function(){ loadHome(document.getElementById('kw').value.trim()); };
-      document.getElementById('kw').onkeydown = function(e){ if(e.key==='Enter') loadHome(e.target.value.trim()); };
-      Array.prototype.forEach.call(document.querySelectorAll('.card'), function(el){
-        el.onclick = function(){ location.hash = '#/p/' + el.getAttribute('data-id'); };
-      });
-      document.getElementById('gocart').onclick = function(){ location.hash = '#/cart'; };
-      document.getElementById('gomine').onclick = function(){ location.hash = '#/mine'; };
-    });
-  });
-}
-function loadHome(kw){
-  document.getElementById('app').innerHTML = '<div class="empty">加载中…</div>';
-  getJSON(API+'/'+slug+'/products' + (kw ? '?keyword='+encodeURIComponent(kw) : ''), function(data){
-    // 复用首页渲染（简单起见整页重画，保留搜索词）
-    renderHomeWithKeyword(kw, data);
-  });
-}
-function renderHomeWithKeyword(kw, data){
-  location.hash = '#/';
-  getJSON(API+'/'+slug+'/info', function(info){
-    var html = '<div class="topbar"><h1>'+esc(info.shopName||'小店')+'</h1>'
-      + '<div class="searchbar"><input id="kw" value="'+esc(kw||'')+'" placeholder="搜索款式 / 货号"><button id="dosearch">搜索</button></div></div><div class="grid">';
-    (data.records||[]).forEach(function(p){
-      html += '<div class="card" data-id="'+p.styleId+'"><img src="'+esc(p.cover||'')+'" onerror="this.style.visibility=\'hidden\'">'
-        + (p.totalStock<=0?'<div class="soldout">已售罄</div>':'')
-        + '<div class="info"><div class="name">'+esc(p.styleName)+'</div><div class="row"><span class="price">'
-        + (p.minPrice==null?'—':Number(p.minPrice).toFixed(2))+'</span><span class="stock">库存'+p.totalStock+'</span></div></div></div>';
-    });
-    html += '</div>';
-    if (!(data.records||[]).length) html += '<div class="empty">没有找到相关商品</div>';
-    document.getElementById('app').innerHTML = html;
-    document.getElementById('dosearch').onclick = function(){ loadHome(document.getElementById('kw').value.trim()); };
-    Array.prototype.forEach.call(document.querySelectorAll('.card'), function(el){
-      el.onclick = function(){ location.hash = '#/p/' + el.getAttribute('data-id'); };
-    });
-  });
-}
+      var loaded = home.records.length;
+      html += '<div class="sf-more">';
+      if (loaded < home.total) html += '<button id="more">加载更多 (' + loaded + '/' + home.total + ')</button>';
+      else html += '<span>— 已经到底啦 —</span>';
+      html += '</div>';
+    }
 
-/* ── 详情：颜色/尺码/数量 ── */
-var sel = {skuId:null, qty:1};
-function renderDetail(styleId){
-  getJSON(API+'/'+slug+'/products/'+styleId, function(d){
-    var byColor = {};
-    d.skus.forEach(function(k){ (byColor[k.color||'默认'] = byColor[k.color||'默认']||[]).push(k); });
-    var colors = Object.keys(byColor);
-    sel = {skuId:null, qty:1};
-    var html = '<img class="detail-img" src="'+esc(d.cover||'')+'" onerror="this.style.visibility=\'hidden\')">'
-      + '<div class="detail-head"><span class="price">'
-      + (d.skus.length? Number(Math.min.apply(null, d.skus.map(function(k){return Number(k.price||0);}))).toFixed(2) : '—')
-      + '</span><h2>'+esc(d.styleName)+'</h2><div class="no">货号 '+esc(d.styleNo)+'</div></div>'
-      + '<div class="sec"><h3>颜色</h3><div class="opt-group" id="colors">'
-      + colors.map(function(c){ return '<button class="opt" data-c="'+esc(c)+'">'+esc(c)+'</button>'; }).join('')
-      + '</div><h3 style="margin-top:14px">尺码</h3><div class="opt-group" id="sizes"></div>'
-      + '<div class="qty-row" style="margin-top:14px"><h3 style="margin:0">数量</h3>'
-      + '<div class="qty-ctl"><button id="qm">−</button><span id="qv">1</span><button id="qp">＋</button></div></div></div>'
-      + '<div class="back" id="bk">‹ 返回</div>'
-      + '<div class="bottombar"><div class="cart-btn" id="addcart">🛒 加入购物车</div>'
-      + '<button class="buy" id="buynow" disabled>请选择颜色尺码</button></div>';
-    document.getElementById('app').innerHTML = html;
-    document.getElementById('bk').onclick = function(){ history.back(); };
-    var pickedColor = null, pickedSize = null;
-    function refreshSizes(){
-      var sizes = byColor[pickedColor] || [];
-      document.getElementById('sizes').innerHTML = sizes.map(function(k){
-        var dis = k.stock<=0 ? ' dis' : '';
-        return '<button class="opt'+dis+'" data-s="'+esc(k.size)+'" data-id="'+k.skuId+'" data-stock="'+k.stock+'">'+esc(k.size)+'（'+k.stock+'）</button>';
-      }).join('');
-      Array.prototype.forEach.call(document.querySelectorAll('#sizes .opt'), function(el){
-        el.onclick = function(){
-          if (el.classList.contains('dis')) return;
-          Array.prototype.forEach.call(document.querySelectorAll('#sizes .opt'), function(x){ x.classList.remove('sel'); });
+    html += tabbar('home');
+    app.innerHTML = html;
+
+    // 头图：用第一件商品封面做虚化底图
+    var bg = document.getElementById('bannerbg');
+    var first = home.records.filter(function (x) { return x.cover; })[0];
+    if (bg && first) bg.style.backgroundImage = 'url("' + first.cover.replace(/"/g, '') + '")';
+
+    var kwEl = document.getElementById('kw');
+    function doSearch() { home.kw = kwEl.value.trim(); home.page = 1; home.records = []; loadProducts(true); }
+    document.getElementById('dosearch').onclick = doSearch;
+    kwEl.onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
+    document.getElementById('follow').onclick = function () {
+      var v = !isFollowed(); setFollow(v); toast(v ? '已关注店铺' : '已取消关注'); paintHome();
+    };
+    var more = document.getElementById('more');
+    if (more) more.onclick = function () { home.page++; loadProducts(false); };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.pcard'), function (el) {
+      el.onclick = function () { go('#/p/' + el.getAttribute('data-id')); };
+    });
+    bindTabs();
+  }
+
+  /* ── 商品详情 ── */
+  function renderDetail(styleId) {
+    app.innerHTML = '<div class="loading"><span class="spin"></span>加载中…</div>';
+    get(API + '/' + slug + '/products/' + styleId, function (d) {
+      var skus = d.skus || [];
+      var byColor = {};
+      skus.forEach(function (k) { var c = k.color || '默认'; (byColor[c] = byColor[c] || []).push(k); });
+      var colors = Object.keys(byColor);
+      var prices = skus.map(function (k) { return Number(k.price || 0); }).filter(function (n) { return n > 0; });
+      var minPrice = prices.length ? Math.min.apply(null, prices) : null;
+      var totalStock = skus.reduce(function (s, k) { return s + (k.stock || 0); }, 0);
+      var sel = { skuId: null, qty: 1, color: null, size: null, stock: 0 };
+
+      var html = '<div class="d-hero">' + thumbHtml(d.cover)
+        + '<button class="navbtn" id="bk">&#8249;</button></div>';
+
+      html += '<div class="d-price">' + priceHtml(minPrice, 'lg')
+        + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
+        + '<span>包邮</span><span>7 天无理由</span></div></div>';
+
+      html += '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
+        + '<div class="tags"><span class="tag free">包邮</span><span class="tag">现货速发</span>'
+        + '<span class="tag">' + colors.length + ' 色可选</span></div>'
+        + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
+
+      html += '<div class="d-sec"><div class="lbl">颜色 <span class="hint" id="hint">请选择颜色</span></div>'
+        + '<div class="opts" id="colors">'
+        + colors.map(function (c) { return '<button class="opt" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join('')
+        + '</div></div>';
+
+      html += '<div class="d-sec"><div class="lbl">尺码</div><div class="opts" id="sizes">'
+        + '<span style="font-size:12.5px;color:#bbb">请先选择颜色</span></div></div>';
+
+      html += '<div class="d-sec"><div class="lbl" style="justify-content:space-between">数量'
+        + '<span class="stepper"><button id="qm">&#8722;</button><span id="qv">1</span><button id="qp">&#65291;</button></span>'
+        + '</div></div>';
+
+      if (d.remark) html += '<div class="d-sec"><div class="lbl">商品说明</div><div class="d-desc">' + esc(d.remark) + '</div></div>';
+
+      var closed = shopInfo && !shopInfo.enabled;
+      html += '<div class="d-bar">'
+        + '<button class="mini" id="tocart">' + ICON.cart + (cartCount() ? '<i class="badge">' + cartCount() + '</i>' : '') + '<span>购物车</span></button>'
+        + '<div class="btns">'
+        + '<button class="add" id="addcart">加入购物车</button>'
+        + '<button class="buy" id="buynow"' + (closed ? ' disabled' : '') + '>' + (closed ? '店铺打烊中' : '立即购买') + '</button>'
+        + '</div></div>';
+
+      app.innerHTML = html;
+      document.getElementById('bk').onclick = back;
+      document.getElementById('tocart').onclick = function () { go('#/cart'); };
+
+      function refreshSizes() {
+        var list = byColor[sel.color] || [];
+        document.getElementById('sizes').innerHTML = list.map(function (k) {
+          var dis = (k.stock || 0) <= 0;
+          return '<button class="opt' + (dis ? ' dis' : '') + '" data-s="' + esc(k.size) + '"'
+            + ' data-id="' + k.skuId + '" data-stock="' + (k.stock || 0) + '">'
+            + esc(k.size) + '<span class="st">' + (dis ? '售罄' : k.stock) + '</span></button>';
+        }).join('');
+        Array.prototype.forEach.call(document.querySelectorAll('#sizes .opt'), function (el) {
+          el.onclick = function () {
+            if (el.classList.contains('dis')) return;
+            Array.prototype.forEach.call(document.querySelectorAll('#sizes .opt'), function (x) { x.classList.remove('sel'); });
+            el.classList.add('sel');
+            sel.size = el.getAttribute('data-s');
+            sel.skuId = el.getAttribute('data-id');
+            sel.stock = Number(el.getAttribute('data-stock')) || 0;
+            sel.qty = 1; document.getElementById('qv').textContent = '1';
+          };
+        });
+      }
+      Array.prototype.forEach.call(document.querySelectorAll('#colors .opt'), function (el) {
+        el.onclick = function () {
+          Array.prototype.forEach.call(document.querySelectorAll('#colors .opt'), function (x) { x.classList.remove('sel'); });
           el.classList.add('sel');
-          pickedSize = el.getAttribute('data-s');
-          sel.skuId = el.getAttribute('data-id');
-          sel.qty = 1; document.getElementById('qv').textContent = '1';
-          var buy = document.getElementById('buynow');
-          buy.disabled = false; buy.textContent = '立即购买';
+          sel.color = el.getAttribute('data-c'); sel.size = null; sel.skuId = null;
+          document.getElementById('hint').textContent = '已选 ' + sel.color;
+          refreshSizes();
         };
       });
+      document.getElementById('qm').onclick = function () {
+        if (sel.qty > 1) { sel.qty--; document.getElementById('qv').textContent = sel.qty; }
+      };
+      document.getElementById('qp').onclick = function () {
+        if (sel.skuId && sel.qty >= sel.stock) return toast('库存仅剩 ' + sel.stock + ' 件');
+        sel.qty++; document.getElementById('qv').textContent = sel.qty;
+      };
+      function requireSku() {
+        if (!sel.skuId) { toast(sel.color ? '请选择尺码' : '请选择颜色'); return false; }
+        return true;
+      }
+      document.getElementById('addcart').onclick = function () {
+        if (!requireSku()) return;
+        var name = d.styleName + ' ' + sel.color + '/' + sel.size;
+        var c = cart().filter(function (x) { return String(x.skuId) !== String(sel.skuId); });
+        var exist = cart().filter(function (x) { return String(x.skuId) === String(sel.skuId); })[0];
+        c.push({
+          skuId: sel.skuId, qty: sel.qty, name: name,
+          price: Number(minPrice || 0), cover: d.cover || '',
+          color: sel.color, size: sel.size, stock: sel.stock,
+          checked: exist ? exist.checked !== false : true
+        });
+        saveCart(c); toast('已加入购物车'); paintBadges();
+      };
+      document.getElementById('buynow').onclick = function () {
+        if (closed) return toast('店铺打烊中，暂时无法下单');
+        if (!requireSku()) return;
+        saveCart([{
+          skuId: sel.skuId, qty: sel.qty, name: d.styleName + ' ' + sel.color + '/' + sel.size,
+          price: Number(minPrice || 0), cover: d.cover || '', color: sel.color, size: sel.size,
+          stock: sel.stock, checked: true
+        }]);
+        go('#/checkout');
+      };
+      function paintBadges() {
+        var b = document.querySelector('.d-bar .mini .badge');
+        var n = cartCount();
+        if (b) { if (n) b.textContent = n; else b.remove(); }
+      }
+    });
+  }
+
+  /* ── 购物车 ── */
+  function renderCart() {
+    var c = cart();
+    var html = '<div class="pagehead"><button class="bk" id="bk">&#8249;</button><h1>购物车</h1></div>';
+    if (!c.length) {
+      html += '<div class="empty"><div class="big">&#128722;</div>购物车还是空的<div style="margin-top:18px"><button class="obtn" style="width:200px" onclick="location.hash=\'#/\'">去逛逛</button></div></div>';
+      app.innerHTML = html + tabbar('cart');
+      document.getElementById('bk').onclick = back;
+      bindTabs();
+      return;
     }
-    Array.prototype.forEach.call(document.querySelectorAll('#colors .opt'), function(el){
-      el.onclick = function(){
-        Array.prototype.forEach.call(document.querySelectorAll('#colors .opt'), function(x){ x.classList.remove('sel'); });
-        el.classList.add('sel');
-        pickedColor = el.getAttribute('data-c'); pickedSize = null; sel.skuId = null;
-        document.getElementById('buynow').disabled = true;
-        document.getElementById('buynow').textContent = '请选择尺码';
-        refreshSizes();
+    html += '<div class="cq">';
+    c.forEach(function (x, i) {
+      html += '<div class="citem">'
+        + '<input type="checkbox" class="chk" data-i="' + i + '"' + (x.checked !== false ? ' checked' : '') + '>'
+        + '<div class="ph">' + thumbHtml(x.cover) + '</div>'
+        + '<div class="info"><div class="nm">' + esc(x.name) + '</div>'
+        + '<div class="pr"><span class="cny">¥</span>' + Number(x.price).toFixed(2) + '</div></div>'
+        + '<div class="side"><button class="rm" data-i="' + i + '">删除</button>'
+        + '<span class="stepper sm"><button data-m="' + i + '">&#8722;</button><span>' + x.qty + '</span><button data-p="' + i + '">&#65291;</button></span>'
+        + '</div></div>';
+    });
+    html += '</div>';
+
+    var allChecked = c.every(function (x) { return x.checked !== false; });
+    var picked = c.filter(function (x) { return x.checked !== false; });
+    var amount = picked.reduce(function (s, x) { return s + x.price * x.qty; }, 0);
+    var qty = picked.reduce(function (s, x) { return s + x.qty; }, 0);
+
+    html += '<div class="cbar">'
+      + '<label class="all"><input type="checkbox" id="all"' + (allChecked ? ' checked' : '') + '>全选</label>'
+      + '<div class="sum">合计 <b><span class="cny">¥</span>' + amount.toFixed(2) + '</b><div style="font-size:11px;color:#aaa">不含运费</div></div>'
+      + '<button class="go" id="checkout"' + (picked.length ? '' : ' disabled') + '>结算(' + qty + ')</button>'
+      + '</div>';
+
+    app.innerHTML = html + tabbar('cart');
+    document.getElementById('bk').onclick = back;
+
+    Array.prototype.forEach.call(document.querySelectorAll('.chk'), function (el) {
+      el.onchange = function () {
+        var cc = cart(); cc[Number(el.getAttribute('data-i'))].checked = el.checked;
+        saveCart(cc); renderCart();
       };
     });
-    document.getElementById('qm').onclick = function(){ if (sel.qty>1){ sel.qty--; document.getElementById('qv').textContent = sel.qty; } };
-    document.getElementById('qp').onclick = function(){ sel.qty++; document.getElementById('qv').textContent = sel.qty; };
-    document.getElementById('addcart').onclick = function(){
-      if (!sel.skuId) return toast('请先选颜色和尺码');
-      var name = d.styleName + ' ' + pickedColor + '/' + pickedSize;
-      var c = cart().filter(function(x){ return x.skuId !== sel.skuId; });
-      c.push({skuId:sel.skuId, qty:sel.qty, name:name, price:Number(document.querySelector('.detail-head .price').textContent)||0});
-      saveCart(c); toast('已加入购物车');
+    document.getElementById('all').onchange = function (e) {
+      var cc = cart(); cc.forEach(function (x) { x.checked = e.target.checked; }); saveCart(cc); renderCart();
     };
-    document.getElementById('buynow').onclick = function(){
-      if (!sel.skuId) return;
-      saveCart([{skuId:sel.skuId, qty:sel.qty, name:d.styleName+' '+pickedColor+'/'+pickedSize, price:0}]);
-      location.hash = '#/checkout';
-    };
-  });
-}
-
-/* ── 购物车 ── */
-function renderCart(){
-  var c = cart();
-  var html = '<div class="back" id="bk">‹ 返回</div>';
-  if (!c.length) {
-    html += '<div class="empty">购物车是空的</div>';
-  } else {
-    c.forEach(function(x, i){
-      html += '<div class="cartline"><span>'+esc(x.name)+'</span><span>×'+x.qty
-        + ' <button class="rm" data-i="'+i+'">移除</button></span></div>';
+    Array.prototype.forEach.call(document.querySelectorAll('.rm'), function (el) {
+      el.onclick = function () {
+        var cc = cart(); cc.splice(Number(el.getAttribute('data-i')), 1); saveCart(cc); renderCart();
+      };
     });
-    html += '<div style="padding:8px"><button class="submit" id="toorder">去下单（'+c.length+' 项）</button></div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-m]'), function (el) {
+      el.onclick = function () {
+        var i = Number(el.getAttribute('data-m')); var cc = cart();
+        if (cc[i].qty > 1) { cc[i].qty--; saveCart(cc); renderCart(); }
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-p]'), function (el) {
+      el.onclick = function () {
+        var i = Number(el.getAttribute('data-p')); var cc = cart();
+        if (cc[i].stock && cc[i].qty >= cc[i].stock) return toast('库存仅剩 ' + cc[i].stock + ' 件');
+        cc[i].qty++; saveCart(cc); renderCart();
+      };
+    });
+    var co = document.getElementById('checkout');
+    if (co) co.onclick = function () { go('#/checkout'); };
+    bindTabs();
   }
-  document.getElementById('app').innerHTML = html;
-  document.getElementById('bk').onclick = function(){ history.back(); };
-  Array.prototype.forEach.call(document.querySelectorAll('.rm'), function(el){
-    el.onclick = function(){
-      var cc = cart(); cc.splice(Number(el.getAttribute('data-i')),1); saveCart(cc); renderCart();
-    };
-  });
-  var to = document.getElementById('toorder');
-  if (to) to.onclick = function(){ location.hash = '#/checkout'; };
-}
 
-/* ── 下单表单 ── */
-function renderCheckout(){
-  var c = cart();
-  if (!c.length) { document.getElementById('app').innerHTML = '<div class="empty">购物车是空的</div>'; return; }
-  document.getElementById('app').innerHTML =
-    '<div class="back" id="bk">‹ 返回</div>'
-    + '<div class="sec"><div class="form-item"><label>收货人 *</label><input id="f_name" placeholder="姓名"></div>'
-    + '<div class="form-item"><label>手机号 *</label><input id="f_phone" type="tel" placeholder="用于订单查询和联系发货"></div>'
-    + '<div class="form-item"><label>收货地址 *</label><textarea id="f_addr" placeholder="省市区 + 详细地址"></textarea></div>'
-    + '<div class="form-item"><label>留言</label><textarea id="f_remark" placeholder="选填"></textarea></div></div>'
-    + '<div style="padding:8px"><button class="submit" id="submit">提交订单（货到前请准备付款，客服会联系您）</button></div>';
-  document.getElementById('bk').onclick = function(){ history.back(); };
-  document.getElementById('submit').onclick = function(){
-    var body = {
-      customerName: document.getElementById('f_name').value.trim(),
-      phone: document.getElementById('f_phone').value.trim(),
-      address: document.getElementById('f_addr').value.trim(),
-      remark: document.getElementById('f_remark').value.trim(),
-      items: c.map(function(x){ return {skuId:x.skuId, quantity:x.qty}; })
-    };
-    if (!body.customerName || !body.phone || !body.address) return toast('请填写收货人、手机号和地址');
-    postJSON(API+'/'+slug+'/orders', body, function(d){
-      saveCart([]);
-      document.getElementById('app').innerHTML =
-        '<div class="empty" style="padding-top:80px"><div style="font-size:40px">✅</div>'
-        + '<p style="margin:14px 0 6px;font-size:16px;font-weight:600">下单成功</p>'
-        + '<p>订单号 <b>'+esc(d.orderNo)+'</b></p>'
-        + '<p style="margin-top:6px">应付 '+money(d.totalAmount)+'，客服会尽快联系您确认发货与付款</p>'
-        + '<div style="margin-top:20px"><button class="submit" onclick="location.hash=\'#/mine\'">查我的订单</button>'
-        + '<div style="height:10px"></div><button class="submit" style="background:#eee;color:#666" onclick="location.hash=\'#/\'">继续逛</button></div></div>';
+  /* ── 下单 ── */
+  function renderCheckout() {
+    var c = cart().filter(function (x) { return x.checked !== false; });
+    if (!c.length) { app.innerHTML = '<div class="empty">没有待结算的商品</div>'; return; }
+    var amount = c.reduce(function (s, x) { return s + x.price * x.qty; }, 0);
+
+    var html = '<div class="pagehead"><button class="bk" id="bk">&#8249;</button><h1>确认订单</h1></div>';
+    html += '<div class="olist">';
+    c.forEach(function (x) {
+      html += '<div class="citem"><div class="ph">' + thumbHtml(x.cover) + '</div>'
+        + '<div class="info"><div class="nm">' + esc(x.name) + '</div>'
+        + '<div class="pr"><span class="cny">¥</span>' + Number(x.price).toFixed(2) + ' <span style="color:#aaa;font-weight:400;font-size:12px">× ' + x.qty + '</span></div></div></div>';
     });
-  };
-}
+    html += '</div>';
 
-/* ── 我的订单 ── */
-function renderMine(){
-  document.getElementById('app').innerHTML =
-    '<div class="back" id="bk">‹ 返回</div>'
-    + '<div class="sec"><div class="form-item"><label>下单时留的手机号</label>'
-    + '<input id="qphone" type="tel" placeholder="手机号"><button class="submit" id="q" style="margin-top:10px">查询</button></div></div>'
-    + '<div id="list"></div>';
-  document.getElementById('bk').onclick = function(){ history.back(); };
-  document.getElementById('q').onclick = function(){
-    var p = document.getElementById('qphone').value.trim();
-    if (!p) return toast('请输入手机号');
-    getJSON(API+'/'+slug+'/orders?phone='+encodeURIComponent(p), function(list){
-      var html = (list||[]).map(function(o){
-        return '<div class="order-card"><span class="no">'+esc(o.orderNo)+'</span>'
-          + '<span class="st status-'+esc(o.status)+'">'+(ST[o.status]||o.status)+'</span>'
-          + '<div class="amt">'+money(o.totalAmount)+' <span style="color:#999;font-weight:400;font-size:12px">共'+o.itemCount+'件</span></div></div>';
-      }).join('');
-      document.getElementById('list').innerHTML = html || '<div class="empty">该手机号暂无订单</div>';
-    });
-  };
-}
+    html += '<div class="card">'
+      + '<div class="fi"><label>收货人 <b>*</b></label><input id="f_name" placeholder="请输入姓名"></div>'
+      + '<div class="fi"><label>手机号 <b>*</b></label><input id="f_phone" type="tel" inputmode="numeric" placeholder="用于订单查询与发货联系"></div>'
+      + '<div class="fi"><label>收货地址 <b>*</b></label><textarea id="f_addr" placeholder="省 / 市 / 区 + 详细地址"></textarea></div>'
+      + '<div class="fi" style="margin-bottom:0"><label>买家留言</label><textarea id="f_remark" placeholder="选填，如颜色偏好、发货时间要求"></textarea></div>'
+      + '</div>';
 
-/* ── 路由 ── */
-function route(){
-  var h = location.hash || '#/';
-  var m;
-  if (!slug) {
-    document.getElementById('app').innerHTML = '<div class="empty">店铺链接不正确（缺少店铺标识 s）</div>';
-    return;
+    html += '<div class="card" style="display:flex;justify-content:space-between;align-items:baseline">'
+      + '<span style="font-size:13px;color:#666">共 ' + c.reduce(function (s, x) { return s + x.qty; }, 0) + ' 件，应收</span>'
+      + '<span class="money" style="color:var(--tb-red);font-weight:700;font-size:20px"><span style="font-size:12px">¥</span>' + amount.toFixed(2) + '</span></div>';
+
+    html += '<div style="padding:0 10px 24px"><button class="obtn" id="submit">提交订单</button>'
+      + '<div style="font-size:11.5px;color:#aaa;text-align:center;margin-top:10px;line-height:1.6">提交后客服将联系您确认发货与付款方式</div></div>';
+
+    app.innerHTML = html;
+    document.getElementById('bk').onclick = back;
+    document.getElementById('submit').onclick = function () {
+      var body = {
+        customerName: document.getElementById('f_name').value.trim(),
+        phone: document.getElementById('f_phone').value.trim(),
+        address: document.getElementById('f_addr').value.trim(),
+        remark: document.getElementById('f_remark').value.trim(),
+        items: c.map(function (x) { return { skuId: x.skuId, quantity: x.qty }; })
+      };
+      if (!body.customerName) return toast('请填写收货人');
+      if (!/^1\d{10}$/.test(body.phone)) return toast('请填写正确的手机号');
+      if (!body.address) return toast('请填写收货地址');
+      var btn = document.getElementById('submit');
+      btn.disabled = true; btn.textContent = '提交中…';
+      post(API + '/' + slug + '/orders', body, function (d) {
+        saveCart(cart().filter(function (x) { return x.checked === false; }));
+        renderDone(d);
+      });
+    };
   }
-  if ((m = h.match(/^#\/p\/(\d+)$/))) renderDetail(m[1]);
-  else if (h === '#/cart') renderCart();
-  else if (h === '#/checkout') renderCheckout();
-  else if (h === '#/mine') renderMine();
-  else renderHome();
-}
-window.addEventListener('hashchange', route);
-route();
+
+  function renderDone(d) {
+    app.innerHTML = '<div class="pagehead"><h1>下单成功</h1></div>'
+      + '<div class="done"><div class="ok">&#10003;</div>'
+      + '<h2>下单成功</h2>'
+      + '<p>订单号 <b>' + esc(d.orderNo) + '</b><br>'
+      + '应付 <span style="color:var(--tb-red);font-weight:700">¥' + Number(d.totalAmount).toFixed(2) + '</span><br>'
+      + '客服会尽快联系您确认发货与付款</p>'
+      + '<div style="margin-top:26px;display:flex;flex-direction:column;gap:10px">'
+      + '<button class="obtn" id="mymine">查看我的订单</button>'
+      + '<button class="obtn ghost" id="cont">继续逛逛</button></div></div>';
+    document.getElementById('mymine').onclick = function () { go('#/mine'); };
+    document.getElementById('cont').onclick = function () { go('#/'); };
+  }
+
+  /* ── 我的订单 ── */
+  function renderMine() {
+    var phone = localStorage.getItem('shop_phone_' + slug) || '';
+    var html = '<div class="pagehead"><button class="bk" id="bk">&#8249;</button><h1>我的订单</h1></div>';
+    html += '<div class="card"><div class="fi" style="margin-bottom:10px"><label>下单时填写的手机号</label>'
+      + '<input id="qphone" type="tel" inputmode="numeric" placeholder="请输入手机号查询订单" value="' + esc(phone) + '"></div>'
+      + '<button class="obtn" id="q">查询订单</button></div>'
+      + '<div class="olist" id="list"></div>';
+    app.innerHTML = html + tabbar('mine');
+    document.getElementById('bk').onclick = back;
+    bindTabs();
+    document.getElementById('q').onclick = doQuery;
+    function doQuery() {
+      var p = document.getElementById('qphone').value.trim();
+      if (!/^1\d{10}$/.test(p)) return toast('请输入正确的手机号');
+      localStorage.setItem('shop_phone_' + slug, p);
+      get(API + '/' + slug + '/orders?phone=' + encodeURIComponent(p), function (list) {
+        list = list || [];
+        if (!list.length) { document.getElementById('list').innerHTML = '<div class="empty"><div class="big">&#128230;</div>该手机号暂无订单</div>'; return; }
+        document.getElementById('list').innerHTML = list.map(function (o) {
+          return '<div class="ocard"><div class="top">'
+            + '<span class="no">' + esc(o.orderNo) + '</span>'
+            + '<span class="st st-' + esc(o.status) + '">' + (ST[o.status] || o.status) + '</span></div>'
+            + '<div class="mid">' + esc((o.createTime || '').replace('T', ' ').slice(0, 16)) + '</div>'
+            + '<div class="amt"><span style="font-size:12px;color:#999">共 ' + (o.itemCount || 0) + ' 件</span>'
+            + '<span class="money"><span class="cny">¥</span>' + Number(o.totalAmount).toFixed(2) + '</span></div></div>';
+        }).join('');
+      });
+    }
+    if (phone) doQuery();
+  }
+
+  /* ── 路由 ── */
+  function route() {
+    if (!slug) {
+      app.innerHTML = '<div class="empty"><div class="big">&#128279;</div>店铺链接不正确<br><span style="font-size:12px">缺少店铺标识参数 s</span></div>';
+      return;
+    }
+    var h = location.hash || '#/', m;
+    window.scrollTo(0, 0);
+    if ((m = h.match(/^#\/p\/(\d+)$/))) renderDetail(m[1]);
+    else if (h === '#/cart') renderCart();
+    else if (h === '#/checkout') renderCheckout();
+    else if (h === '#/mine') renderMine();
+    else renderHome();
+  }
+  window.addEventListener('hashchange', route);
+  route();
+})();
 </script>
 </body>
 </html>

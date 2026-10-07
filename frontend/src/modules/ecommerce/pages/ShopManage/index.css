@@ -1,0 +1,157 @@
+/* D-763：店铺管理页 —— 与设计系统 token 对齐 */
+.shop-manage {
+  padding: 16px 16px 24px;
+  background: var(--color-bg-page);
+  min-height: calc(100vh - 64px);
+}
+
+/* 顶部概览条 */
+.shop-manage__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 14px;
+}
+
+.shop-manage__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.shop-manage__desc {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.shop-manage__tabs {
+  margin-bottom: 14px;
+}
+
+/* 配置页：左表单 + 右手机预览 */
+.shop-config {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 14px;
+  align-items: start;
+}
+
+.shop-config__form,
+.shop-config__preview {
+  border-radius: 12px;
+}
+
+.shop-field {
+  margin-bottom: 18px;
+}
+
+.shop-field > label {
+  display: block;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.shop-field .req {
+  color: var(--color-danger);
+}
+
+.shop-field--inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shop-field__label {
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.shop-field__hint {
+  font-size: 12px;
+}
+
+.shop-url {
+  margin: 0;
+  background: var(--color-bg-subtle);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
+/* 手机预览框 */
+.shop-phone {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.shop-phone__frame {
+  width: 100%;
+  max-width: 360px;
+  height: 620px;
+  border: none;
+  border-radius: 20px;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.shop-config__tip {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* 列表工具条 */
+.shop-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.shop-toolbar__spacer {
+  flex: 1;
+}
+
+.shop-cell-cover {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.shop-cell-cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-tertiary);
+  font-size: 18px;
+}
+
+.shop-amount {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+  .shop-config {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
