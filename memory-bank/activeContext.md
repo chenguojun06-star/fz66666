@@ -68,9 +68,11 @@
 
 1. **`t_agent_checkpoint` 生产表残留 `iteration INT NOT NULL`（无默认值）** → 每次 Agent 图 checkpoint 插入都 `DataIntegrityViolationException`（WARN，非致命，但断点续跑完全失效 + 日志噪音）。实体侧 `@TableField(exist=false)` 已不写该列；`V20260513001` / `V202705031800` 两次迁移都写了 DROP 却未生效。同表还残留 `idx_ac_session_iter` 索引与 `messages_json` / `tool_calls_json` / `total_tokens` 三列。
    - **已澄清（2026-10-07 抽检）**：迁移**台账本身是干净的** —— 625 个仓库迁移**全部**已在生产执行、无一条 `success=0`；且近期迁移目标对象实测均存在（`t_delivery_calibration_stat` / `t_intelligence_signal` / `t_ai_cost_tracking` 缓存列）。**漂移只集中在这一张表**，更像历史 DB 重建/同步把旧列带了回来，**不是系统性迁移失效**。
-   - **需一次确认后执行的迁移**（DROP 前先确认无依赖：实测仅 `idx_ac_session_iter` 单列索引，无外键）。
+   - ✅ **已修复（D-767，2026-10-07）**：新增 `V202710070002` 逐列独立守卫迁移，生产已执行并验证（表结构 = 实体期望的 10 列 / 插入成功 / 重跑幂等 / Flyway 记录 `success=1` / 后端 healthy）。**真实根因**：`V20260513001` 用「单列 `session_id` 守卫」去控制**五列一起 DROP** → 守卫恒假整条跳过（**不是** Flyway 静默失效）；全仓扫描 626 个迁移**仅此 1 处**。执行顺序刻意设计为「先手工执行迁移原文验证 → 再提交」，使上线时对生产是 no-op，不可能因它起不来。
 2. **小云「一直思考」**：一次提问触发 ToolAdvisor 预选 12 工具（含 `tool_think` / `tool_deep_analysis` / `tool_root_cause_analysis`）+ GoT 高级推理 + 5-Why RCA + 多Agent图 reflection/re_route，单次 LLM 5~11s 叠加 → 用户等 1~3 分钟；前端每收到事件就重置无活动计时器，一直停在「小云正在整理思路，准备给你结论…」。另 `systemPrompt过长(26300 字符 > 8000 上限)`，每次调用要裁掉 18300 字符。
-3. `progress.md` 遗留：86 个工具逐个端到端验收（目前仅保证「可达」）；SelfCritic 长期低分未追查。
+   - **2026-10-07 补充核实**：前端**已有**进度 UI（`ChatMessageList` 渲染 mood/step/toolExecuting/elapsedMs），不只是那句文字；后端 `xiaoyun.agent.sse-heartbeat-interval-s=15` → **心跳每 15s 重置前端的 30s 无活动计时器**，所以那句「思考时间较长」兜底**实际永远不会触发**（`useAiChatStream.ts:15/133-141/188/323`）。
+   - **仍未改（等拍板）**：① 改推理链 / 预选工具数 = 产品决策，会动回答质量；② 改成「心跳不重置计时器」会让 30s 兜底在长 LLM 调用中提前 `finishTyping()`，可能打断仍在进行的回答 → 风险大于收益。
+3. ✅ **已完成（D-759 / D-760 / D-768）**：103 个工具端到端验收（真实缺陷 2 处已修：`QualityStatisticsTool` / `ComplianceExpertTool` + `BusinessSnapshotPrefetcher` 静默失效指标）；SelfCritic 低分追查（**是口径问题**——只存失败样本，已补分母）。
 4. 待用户决定：最美布行 / 001 供应商主档是否新建；租户2「方大丝绸」主档重复两条。
 
 
