@@ -105,6 +105,22 @@ public class CustomerOrchestrator {
     }
 
     /**
+     * 按联系电话查客户（D-763 店铺下单归并用：同手机号=同一个客户，不重复建档）。
+     */
+    public Customer getByPhone(Long tenantId, String phone) {
+        if (!StringUtils.hasText(phone)) {
+            return null;
+        }
+        return customerService.lambdaQuery()
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getContactPhone, phone.trim())
+                .eq(Customer::getDeleteFlag, 0)
+                .orderByAsc(Customer::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+    }
+
+    /**
      * 查询该客户关联的生产订单
      * 优先按 customer_id 精确匹配，兜底按 company 字段模糊匹配
      */

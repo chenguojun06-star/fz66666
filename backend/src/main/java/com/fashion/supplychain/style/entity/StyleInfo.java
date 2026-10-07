@@ -117,6 +117,12 @@ public class StyleInfo {
      */
     private String cover;
 
+    /** D-763：是否上架 C 端店铺（仅上架款式在店铺可见，价格/库存以服务端为准） */
+    private Integer shopListed;
+
+    /** D-763：上架时间 */
+    private LocalDateTime shopListingTime;
+
     /**
      * AI视觉图像分析摘要（豆包Vision识别结果，用于持久化缓存，避免重复调用AI）
      */
