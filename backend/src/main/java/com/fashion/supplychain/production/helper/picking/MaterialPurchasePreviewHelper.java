@@ -75,8 +75,14 @@ public class MaterialPurchasePreviewHelper {
         result.put("sourceType", byStyleNo ? "sample" : "order");
         result.put("materials", items);
         result.put("pickingRecords", pickingRecords);
-        result.put("totalRequired", items.stream().mapToInt(i -> (int) i.get("requiredQty")).sum());
-        result.put("totalAvailable", items.stream().mapToInt(i -> (int) i.get("availableStock")).sum());
+        // 修复 ClassCastException：requiredQty/availableStock 是 BigDecimal（D-414 小数口径），
+        // 直接 (int) 强转 Object 会在有采购数据时必崩 500。
+        result.put("totalRequired", items.stream()
+                .map(i -> i.get("requiredQty") instanceof BigDecimal ? (BigDecimal) i.get("requiredQty") : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        result.put("totalAvailable", items.stream()
+                .map(i -> i.get("availableStock") instanceof BigDecimal ? (BigDecimal) i.get("availableStock") : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         result.put("pendingCount", pendingCount);
         result.put("totalCount", items.size());
         return result;

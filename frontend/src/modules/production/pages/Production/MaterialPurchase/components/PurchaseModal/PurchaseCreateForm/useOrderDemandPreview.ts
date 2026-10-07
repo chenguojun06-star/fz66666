@@ -37,7 +37,7 @@ export const useOrderDemandPreview = (orderNo: string | undefined): OrderDemandS
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await api.get('/production/material-purchase/demand/preview', {
+        const res = await api.get('/production/purchase/demand/preview', {
           params: { orderNo: trimmed },
         });
         if (seqRef.current !== seq) return;

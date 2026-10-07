@@ -7,6 +7,18 @@
 
 ---
 
+## D-764：线上 500/404 根治——采购预览 BigDecimal 强转崩 + 需求预览路径前缀死链（2026-10-07）
+
+**上下文**：生产服务器 48h 日志非 2xx 共 4 条（3×500 + 1×404），排查定位两处根因。
+
+**决策**：
+1. **500 `GET /api/production/purchase/smart-receive-preview`**：`MaterialPurchasePickingHelper.previewSmartReceive` 汇总行用 `(int) i.get("requiredQty")` 强转，而 item 放入的 `requiredQty`/`availableStock` 早已是 `BigDecimal`（D-414 小数口径，支持 375.5 米）→ 只要该订单有采购数据必抛 `ClassCastException`。改为 `BigDecimal` 安全累加求和（保留小数）。孤儿副本 `helper/picking/MaterialPurchasePreviewHelper` 同款一并修（全库无调用点，死代码，防复活）。
+2. **404 `GET /api/production/material-purchase/demand/preview`**：`MaterialPurchaseController` 只注册 `/api/production/purchase` 与 `/api/production/material` 两个前缀，`material-purchase` 未注册。前端 2 处（`OrderDemandSummaryPanel.tsx` / `useOrderDemandPreview.ts`）写错前缀，改回规范路径 `/production/purchase/demand/preview`；同步修正 `MaterialDemandSummary.tsx` 误导注释。
+
+**理由**：强转 Object 到基本类型是类型擦除下的隐式陷阱；路径前缀必须与 `@RequestMapping` 一致，属 D-360 已修过的同类死链残留。编译验证 `mvn -o compile` + `npx tsc --noEmit` 均通过。
+
+---
+
 ## D-754：智能化落地 5 批（2026-10-06，P0~P4 均已推 CI 全绿）
 
 **主旨**：把「看着像智能、实际喂假数据 / 只有建议没有闭环」的模块逐批改成真数据 + 真闭环。按 P0 → P4 顺序推进，**每批独立提交验收**。

@@ -19,7 +19,7 @@ const OrderDemandSummaryPanel: React.FC<{ orderId?: string; orderNo?: string }> 
       setItems([]);
       return;
     }
-    api.get('/production/material-purchase/demand/preview', { params: id ? { orderId: id } : { orderNo: no } })
+    api.get('/production/purchase/demand/preview', { params: id ? { orderId: id } : { orderNo: no } })
       .then((res) => {
         if (!alive) return;
         const list = Array.isArray(res?.data) ? res.data : [];

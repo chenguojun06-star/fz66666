@@ -8,7 +8,7 @@ import { Collapse, Tag } from 'antd';
  * 每物料一张卡——需求 / 库存 / 在途 / 缺口，一眼看清"要采什么料、还差多少"。
  *
  * 数据口径与智能采购推荐一致：净需求 = 需求(物料用量×下单量，含损耗) − 可用库存 − 在途采购。
- * 调用方自行取数（如 /production/material-purchase/demand/preview?orderNo=），本组件只管渲染。
+ * 调用方自行取数（如 /production/purchase/demand/preview?orderNo=），本组件只管渲染。
  */
 
 export interface MaterialDemandItem {
