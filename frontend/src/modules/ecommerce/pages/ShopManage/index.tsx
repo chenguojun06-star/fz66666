@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Empty, Input, Segmented, Space, Switch, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Input, Segmented, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -52,6 +52,7 @@ const ShopManage: React.FC = () => {
   const [styleKw, setStyleKw] = useState('');
   const [styles, setStyles] = useState<StyleRow[]>([]);
   const [styleLoading, setStyleLoading] = useState(false);
+  const [listingFilter, setListingFilter] = useState<string>('all');
 
   // 订单
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -77,8 +78,10 @@ const ShopManage: React.FC = () => {
   const fetchStyles = useCallback(async (kw: string) => {
     setStyleLoading(true);
     try {
+      // 注意：后端 keyword 才对 款号/款名/品类 做 OR 模糊匹配；
+      // 同时传 styleName+styleNo 会被 AND 起来，等于搜不到。
       const res: any = await api.get('/style/info/list', {
-        params: { styleName: kw || undefined, styleNo: kw || undefined, page: 1, pageSize: 20 },
+        params: { keyword: kw || undefined, page: 1, pageSize: 50 },
       });
       const data = res?.data?.records ?? res?.data ?? [];
       setStyles(Array.isArray(data) ? data : []);
@@ -148,6 +151,17 @@ const ShopManage: React.FC = () => {
 
   const shopUrl = config ? `${window.location.origin}/shop/index.html?s=${config.slug}` : '';
   const listedCount = useMemo(() => styles.filter((s) => s.shopListed === 1).length, [styles]);
+  const shownStyles = useMemo(() => {
+    if (listingFilter === 'listed') return styles.filter((s) => s.shopListed === 1);
+    if (listingFilter === 'unlisted') return styles.filter((s) => s.shopListed !== 1);
+    return styles;
+  }, [styles, listingFilter]);
+
+  /** 电脑上打开店铺：固定开一个手机尺寸窗口，避免被拉成全屏巨幅 */
+  const openShop = () => {
+    if (!shopUrl) return;
+    window.open(shopUrl, 'shopPreview', 'width=430,height=900,left=200,top=60');
+  };
 
   const copyLink = async () => {
     if (!shopUrl) return;
@@ -174,22 +188,24 @@ const ShopManage: React.FC = () => {
     { title: '款名', dataIndex: 'styleName', ellipsis: true },
     {
       title: '店铺状态',
-      width: 130,
+      width: 110,
       render: (_, r) =>
-        r.shopListed === 1 ? <Tag color="orange">已上架</Tag> : <Tag>未上架</Tag>,
+        r.shopListed === 1 ? (
+          <Tag color="orange">已上架</Tag>
+        ) : (
+          <Tag>未上架</Tag>
+        ),
     },
     {
       title: '操作',
-      width: 120,
+      width: 130,
       align: 'right',
-      render: (_, r) => (
-        <Switch
-          checked={r.shopListed === 1}
-          checkedChildren="上架"
-          unCheckedChildren="下架"
-          onChange={(v) => void handleToggleListing(r, v)}
-        />
-      ),
+      render: (_, r) =>
+        r.shopListed === 1 ? (
+          <Button size="small" danger onClick={() => void handleToggleListing(r, false)}>下架</Button>
+        ) : (
+          <Button size="small" type="primary" onClick={() => void handleToggleListing(r, true)}>上架到店铺</Button>
+        ),
     },
   ];
 
@@ -235,7 +251,7 @@ const ShopManage: React.FC = () => {
         </div>
         <Space>
           <Button icon={<CopyOutlined />} onClick={() => void copyLink()} disabled={!shopUrl}>复制店铺链接</Button>
-          <Button type="primary" icon={<ExportOutlined />} disabled={!shopUrl} onClick={() => shopUrl && window.open(shopUrl, '_blank')}>
+          <Button type="primary" icon={<ExportOutlined />} disabled={!shopUrl} onClick={openShop}>
             打开店铺
           </Button>
         </Space>
@@ -313,28 +329,62 @@ const ShopManage: React.FC = () => {
 
       {tab === 'listing' && (
         <Card>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="怎么上架：在下面找到款式，点右侧「上架到店铺」——顾客马上就能在店铺里看到并下单"
+            description={
+              <span style={{ fontSize: 12.5 }}>
+                商品在店铺里显示的价格 = 该款 SKU 的「售价」，可售数量 = SKU 库存；
+                如果显示 ¥— 或「已售罄」，说明款式还没维护 SKU 售价 / 库存，请先去「款式资料」补齐。
+                也可在「店铺配置」页右侧手机预览里实时确认效果。
+              </span>
+            }
+          />
           <div className="shop-toolbar">
-            <Input
+            <Input.Search
               allowClear
               style={{ width: 280 }}
-              prefix={<ShoppingOutlined />}
-              placeholder="按款名 / 款号搜索"
-              value={styleKw}
-              onChange={(e) => setStyleKw(e.target.value)}
-              onPressEnter={() => void fetchStyles(styleKw)}
+              placeholder="输入款号 / 款名 / 品类后回车"
+              defaultValue={styleKw}
+              onSearch={(v) => {
+                setStyleKw(v);
+                void fetchStyles(v);
+              }}
+              enterButton
             />
-            <Button type="primary" onClick={() => void fetchStyles(styleKw)}>搜索</Button>
+            <Segmented
+              value={listingFilter}
+              onChange={(v) => setListingFilter(String(v))}
+              options={[
+                { value: 'all', label: '全部' },
+                { value: 'listed', label: '已上架' },
+                { value: 'unlisted', label: '未上架' },
+              ]}
+            />
             <div className="shop-toolbar__spacer" />
-            <Text type="secondary">本页已上架 {listedCount} / {styles.length} 款</Text>
+            <Text type="secondary">
+              共 {styles.length} 款，已上架 <Text strong style={{ color: 'var(--color-warning)' }}>{listedCount}</Text> 款
+            </Text>
+            <Tooltip title="重新拉取款式列表">
+              <Button icon={<ReloadOutlined />} onClick={() => void fetchStyles(styleKw)}>刷新</Button>
+            </Tooltip>
           </div>
           <ResizableTable
             rowKey="id"
             size="small"
             columns={styleColumns}
-            dataSource={styles}
+            dataSource={shownStyles}
             loading={styleLoading}
             pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
-            emptyDescription="没有找到款式"
+            emptyDescription={
+              styles.length === 0
+                ? '没有查到款式，换个款号或款名试试'
+                : listingFilter === 'listed'
+                  ? '还没有上架的款式，去「全部」里点上架'
+                  : '该筛选下没有款式'
+            }
           />
         </Card>
       )}
