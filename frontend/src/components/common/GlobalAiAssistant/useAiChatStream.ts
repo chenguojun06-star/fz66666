@@ -8,7 +8,7 @@ import type { HyperAdvisorResponse } from '@/services/intelligence/intelligenceA
 import api from '@/utils/api';
 import type { Message, FollowUpAction } from './types';
 import { parseAiResponse } from './types';
-import { describeToolName, needsRiskAnalysis, needsOverdueFactory, isAuthError } from './helpers';
+import { describeToolName, describeThinkingStage, needsRiskAnalysis, needsOverdueFactory, isAuthError } from './helpers';
 import { upsertMessage, buildMessageData } from './utils';
 import type { BuildMessageDataOptions } from './utils';
 
@@ -325,7 +325,8 @@ export function useAiChatStream(config: StreamConfig) {
 
       switch (event.type) {
         case 'thinking':
-          setTextMessage(aiMsgId, '小云正在整理思路，准备给你结论…');
+          // D-770：后端已带 stage(planning/querying)，此前被忽略 → 永远同一句
+          setTextMessage(aiMsgId, describeThinkingStage(event.data?.stage));
           break;
         case 'tool_call':
           setTextMessage(aiMsgId, `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`);

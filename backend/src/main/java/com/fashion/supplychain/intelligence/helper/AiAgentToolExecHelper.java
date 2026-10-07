@@ -81,8 +81,12 @@ public class AiAgentToolExecHelper {
         if (registeredTools != null) {
             for (AgentTool tool : registeredTools) {
                 toolMap.put(tool.getName(), tool);
-                log.info("[AiAgent] 已注册工具: {}", tool.getName());
+                // D-770：逐条 INFO 会一次刷 100+ 行（首个 AI 请求触发 @Lazy Bean 创建时），
+                // 把同一时间窗的业务日志整段挤掉（排查线上问题时看不出来）→ 降到 debug，
+                // INFO 只打一条汇总。
+                log.debug("[AiAgent] 已注册工具: {}", tool.getName());
             }
+            log.info("[AiAgent] 工具注册完成: 共 {} 个", toolMap.size());
         }
     }
 

@@ -102,6 +102,22 @@ export const choose = (seed: number, variants: string[]) => {
   return variants[Math.abs(seed) % variants.length];
 };
 
+/**
+ * D-770：把后端 thinking 事件里的 stage 翻译成用户看得懂的真实阶段。
+ *
+ * 后端早已在 `emitSse("thinking", Map.of("stage","planning"))` /
+ * `("stage","querying")` 里带上阶段，但前端此前**直接忽略** —— 无论后端在做什么，
+ * 用户永远只看到同一句「小云正在整理思路，准备给你结论…」，叠加长耗时就成了
+ * 「一直思考 / 到处都在思考」。
+ *
+ * 纯显示映射：不改任何超时、迭代、推理行为。
+ */
+export const describeThinkingStage = (stage?: unknown): string => {
+  if (stage === 'planning') return '小云正在理解你的问题…';
+  if (stage === 'querying') return '小云正在查数据、核对结果…';
+  return '小云正在整理思路，准备给你结论…';
+};
+
 export const extractOrderNo = (text: string) => {
   const match = text.match(/\b([A-Z]{1,6}\d{6,}|\d{8,})\b/i);
   return match?.[1]?.trim();
