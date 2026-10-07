@@ -172,4 +172,36 @@ class DirectQueryContextIsolationTest {
         assertThat(DirectQueryRouter.extractUserQuestion("什么情况")).isEqualTo("什么情况");
         assertThat(DirectQueryRouter.extractUserQuestion(null)).isNull();
     }
+
+    /**
+     * 前端两个按钮的<b>真实文案</b>必须命中快路径。
+     *
+     * <p>{@code routeConfig.ts:147}「🔍 检测今日异常」与 {@code GlobalSearchModal.tsx:46}
+     * 「查看今日异常」此前都不在词表里（词表只有「生产异常」，那对应的是另一个按钮
+     * 「🔍 检测生产异常」）→ 点「检测今日异常」永远落到 Agent 循环，白等 1~3 分钟。
+     */
+    @Test
+    @DisplayName("⑧ 按钮文案「检测今日异常」「查看今日异常」必须命中快路径")
+    void todayAnomalyButtonsMustHitFastPath() {
+        String[] shouldHit = {
+                "🔍 检测今日异常", "查看今日异常", "今日异常",
+                "🔍 检测生产异常", "异常检测", "今天有什么问题",
+        };
+        for (String q : shouldHit) {
+            assertThat(DirectQueryRouter.detectNoArgTool(q))
+                    .as("「%s」应命中异常直查", q)
+                    .isEqualTo("tool_anomaly_detection");
+        }
+
+        // 反向：不得因为新增「今日异常」而误伤普通问法
+        String[] mustNotHit = {
+                "今天生产了多少件", "今日入库多少", "这个订单什么时候交",
+                "帮我查下PO20260901172615", "🏭 查看今日生产进度",
+        };
+        for (String q : mustNotHit) {
+            assertThat(DirectQueryRouter.detectNoArgTool(q))
+                    .as("「%s」不含异常关键词，不得命中", q)
+                    .isNull();
+        }
+    }
 }

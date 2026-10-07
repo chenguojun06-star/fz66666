@@ -196,8 +196,11 @@ public class DirectQueryRouter {
                 + "费用异常|收付款.{0,4}问题|有没有对不上的|财务风险).*")) {
             tools.add("tool_finance_anomaly");
         }
+        // 「今日异常」补齐前端两个按钮文案：routeConfig.ts「🔍 检测今日异常」、
+        // GlobalSearchModal.tsx「查看今日异常」。此前词表只有「生产异常」（对应另一个按钮
+        // 「🔍 检测生产异常」，那个一直是好的），导致「检测今日异常」按钮点了永远走 Agent 循环。
         if (msg.matches("(?s).*(有没有异常|有什么异常|有异常吗|生产异常|风险检测|风险信号|"
-                + "今天有什么问题|异常检测|有没有问题|哪些异常).*")) {
+                + "今天有什么问题|异常检测|有没有问题|哪些异常|今日异常).*")) {
             tools.add("tool_anomaly_detection");
         }
         return tools;

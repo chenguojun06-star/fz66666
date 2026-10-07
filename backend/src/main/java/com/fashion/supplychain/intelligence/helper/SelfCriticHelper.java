@@ -51,6 +51,15 @@ public class SelfCriticHelper {
 
     /** 自动反馈的阈值：综合评分低于此值时触发自我改进 */
     private static final double SELF_IMPROVE_THRESHOLD = 75.0;
+    /**
+     * D-768：高分样本行的 {@code feedback_result} 取值 —— 仅用于「补齐分母」。
+     * <p>低分仍写 {@code rejected}（历史语义不变）；高分写本值。现有消费者
+     * （{@code PromptContextProvider.buildSelfCritiqueContext}、{@code LearningLoopOrchestrator}
+     * 的归因聚合）都按 {@code rejected} 过滤，因此本值不会进入任何既有链路。
+     * <p>另外，本方法写入的行 {@code feedback_analysis} 非空，而 {@code LearningLoopOrchestrator}
+     * 的「待分析」查询要求 {@code feedback_analysis IS NULL} → 样本行也不会被拿去消耗 AI 配额做反思。
+     */
+    public static final String RESULT_OBSERVED = "observed";
     /** 幻觉检测：回答中包含数字但工具返回无数字时扣分 */
     private static final double HALLUCINATION_PENALTY = 20.0;
     /** 数据不一致惩罚 */
@@ -235,10 +244,12 @@ public class SelfCriticHelper {
                     userMessage, aiResponse, toolCalls, usedQuickPath);
         }
 
-        // 3. 低分自动沉淀反馈
-        if (overallScore < SELF_IMPROVE_THRESHOLD) {
-            autoSaveFeedback(sessionId, userMessage, aiResponse, overallScore, critiqueReport, usedQuickPath);
-        }
+        // 3. D-768：无论分数高低都沉淀一条评分记录 —— 补上「分母」。
+        //    此前只在 <75 分时写库 → t_intelligence_feedback 里只有失败样本、没有分母，
+        //    算出来的「平均 47.2 分」必然偏低，无法据此判断回答质量是否真的下降。
+        //    低分仍写 feedback_result='rejected'（下游过滤条件不变，语义完全一致）；
+        //    高分写 'observed'（见 RESULT_OBSERVED），不进任何现有消费者。
+        autoSaveFeedback(sessionId, userMessage, aiResponse, overallScore, critiqueReport, usedQuickPath);
 
         // 4. 无论分数高低，都保存执行快照到记忆系统（用于后续模式挖掘）
         saveExecutionSnapshot(sessionId, userMessage, aiResponse, overallScore, metrics, usedQuickPath);
@@ -405,19 +416,33 @@ public class SelfCriticHelper {
     // ──────────────────────────────────────────────────────────────
     // 辅助方法
 
+    /**
+     * D-768：沉淀一条自我评分记录（无论分数高低）。
+     *
+     * <p>低分（&lt; {@link #SELF_IMPROVE_THRESHOLD}）写 {@code feedback_result='rejected'} —— 与历史语义
+     * 完全一致，下游 {@code PromptContextProvider.buildSelfCritiqueContext} 与
+     * {@code LearningLoopOrchestrator} 都按 {@code rejected} 过滤，不受影响。
+     *
+     * <p>高分写 {@link #RESULT_OBSERVED}（纯样本行）用于补齐分母；该值不进任何现有消费者
+     * （它们都按 {@code rejected} 过滤），也不进 {@code LearningLoopOrchestrator} 的待分析队列
+     * （该队列要求 {@code feedback_analysis IS NULL}，而本方法写入的行该字段非空）。
+     */
     private void autoSaveFeedback(String sessionId, String userMessage, String aiResponse,
                                    double score, String critiqueReport, boolean usedQuickPath) {
         try {
+            boolean lowScore = score < SELF_IMPROVE_THRESHOLD;
             Long tenantId = UserContext.tenantId();
             IntelligenceFeedbackRecord feedback = new IntelligenceFeedbackRecord();
             feedback.setTenantId(tenantId != null ? tenantId : 0L);
             feedback.setPredictionId(truncate(sessionId, 100));
             feedback.setSuggestionType(truncate(usedQuickPath ? "quick_path_quality" : "agent_loop_quality", 100));
             feedback.setSuggestionContent(aiResponse.length() > 500 ? aiResponse.substring(0, 500) : aiResponse);
-            feedback.setFeedbackResult("rejected"); // 自我批评视为"拒绝"
-                feedback.setFeedbackReason(truncate(
-                    String.format("[自动评估] 综合评分%.1f/100。问题：%s",
-                        score, critiqueReport.length() > 300 ? critiqueReport.substring(0, 300) : critiqueReport),
+            // 低分 = rejected（自我批评视为"拒绝"，保持历史语义）；高分 = observed（纯样本，补分母）
+            feedback.setFeedbackResult(lowScore ? "rejected" : RESULT_OBSERVED);
+            feedback.setFeedbackReason(truncate(
+                    String.format("[自动评估%s] 综合评分%.1f/100。问题：%s",
+                        lowScore ? "" : "-样本", score,
+                        critiqueReport.length() > 300 ? critiqueReport.substring(0, 300) : critiqueReport),
                     500));
             feedback.setFeedbackAnalysis(critiqueReport);
             feedback.setDeviationMinutes((long) (100 - score)); // 用偏差分记录差距
@@ -426,7 +451,8 @@ public class SelfCriticHelper {
 
             feedbackMapper.insert(feedback);
 
-            log.info("[SelfCritic] 低分反馈已自动沉淀 session={} score={}", sessionId, String.format("%.1f", score));
+            log.info("[SelfCritic] 评分记录已沉淀 session={} score={} result={}",
+                    sessionId, String.format("%.1f", score), feedback.getFeedbackResult());
         } catch (Exception e) {
             log.warn("[SelfCritic] 自动保存反馈失败: {}", e.getMessage());
         }
