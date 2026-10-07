@@ -133,7 +133,7 @@ public class BusinessSnapshotPrefetcher {
         StringBuilder evidence = new StringBuilder();
         evidence.append("t_production_order(tenant_id=").append(tenantId).append(")");
         evidence.append(", t_material_stock(tenant_id=").append(tenantId).append(")");
-        evidence.append(", t_quality_inspection(tenant_id=").append(tenantId).append(")");
+        evidence.append(", t_cutting_bundle(tenant_id=").append(tenantId).append(")");
 
         // 使用Orchestrator获得事务保护（P0铁律2：@Transactional仅在Orchestrator层）
         if (quickAnswerOrchestrator != null) {
@@ -183,12 +183,19 @@ public class BusinessSnapshotPrefetcher {
     }
 
     private int countQualityIssues24h(Long tenantId) {
-        // 近24小时内有"不合格/次品"记录的质检单
+        // D-760 修复：原实现查 t_quality_inspection —— 该表在生产库**不存在**，
+        // countWithSql 兜底返回 -1，再经 fmtNum 渲染成「暂无数据」，
+        // 于是**每个租户**的业务快照长期缺这一项，且**零告警**。
+        //
+        // 真实数据源是裁剪菲的质检状态（t_cutting_bundle.status）：
+        //   unqualified           不合格
+        //   repaired_waiting_qc   返修待质检
+        // 两者合计即「质检异常」。注意该表**没有 delete_flag 列**，不能带软删条件。
         return countWithSql(
-                "SELECT COUNT(*) FROM t_quality_inspection " +
-                "WHERE tenant_id = ? AND delete_flag = 0 " +
-                "AND inspection_result IN ('FAIL','UNQUALIFIED','DEFECTIVE','REWORK') " +
-                "AND inspection_time > NOW() - INTERVAL 24 HOUR",
+                "SELECT COUNT(*) FROM t_cutting_bundle " +
+                "WHERE tenant_id = ? " +
+                "AND status IN ('unqualified','repaired_waiting_qc') " +
+                "AND create_time > NOW() - INTERVAL 24 HOUR",
                 tenantId);
     }
 
