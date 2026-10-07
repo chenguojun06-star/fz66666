@@ -97,7 +97,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         // P0-4: 完整净化输出 — 剥离 prompt 内部标记 + 应用敏感信息屏蔽，确保 SSE 发送和记忆存储的都是干净内容
         String sanitized = sanitize(deduplicateAnswer(content));
         this.finalContent = sanitized;
-        emitSse("answer", Map.of("content", sanitized, "commandId", commandId));
+        emitAnswer(sanitized, commandId, false);
 
         memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
         memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
@@ -137,7 +137,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
             // 与已发出的完全一致，没必要让气泡闪一次
             return;
         }
-        emitSse("answer", Map.of("content", sanitized, "commandId", commandId));
+        emitAnswer(sanitized, commandId, false);
         // 同步更新 finalContent：getFinalContent() 的调用方应拿到最终版
         this.finalContent = sanitized;
         memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
@@ -242,13 +242,13 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     @Override
     public void onStuckDetected() {
         String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
-        emitSse("answer", Map.of("content", stuckMsg, "commandId", ctx.getCommandId()));
+        emitAnswer(stuckMsg, ctx.getCommandId(), true);
         closeEmitterWithDone();
     }
 
     @Override
     public void onTokenBudgetExceeded(String message, String commandId) {
-        emitSse("answer", Map.of("content", message, "commandId", commandId));
+        emitAnswer(message, commandId, true);
         closeEmitterWithDone();
     }
 
@@ -256,7 +256,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     public void onPlanMode(List<AiToolCall> toolCalls, int iteration, String content) {
         String planDesc = buildPlanDescription(toolCalls, iteration);
         String planContent = (content != null && !content.isBlank() ? content + "\n\n" : "") + planDesc;
-        emitSse("answer", Map.of("content", planContent, "commandId", ctx.getCommandId()));
+        emitAnswer(planContent, ctx.getCommandId(), true);
         closeEmitterWithDone();
     }
 
@@ -292,6 +292,46 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         return emitterClosed;
     }
 
+    /**
+     * D-702：<b>用户可见正文唯一出口</b>。
+     *
+     * <p>今天出过两次线上事故，根因都是「绕过校验直接 emit」：
+     * <ol>
+     *   <li>补发审查版时，空判断写在 sanitize <b>之前</b>，清洗后变空串照样发出，
+     *       前端用兜底文案把用户已看到的正常答案覆盖成「小云暂时无法给出回答」；</li>
+     *   <li>另有路径直接 {@code emitSse("answer", ...)}，各自手工准备内容，
+     *       迟早有人忘记判空。</li>
+     * </ol>
+     *
+     * <p>与其要求每次都记得判空，不如让这条路径<b>无法被绕过</b>：
+     * 所有 answer 事件必须经由此处。
+     *
+     * @param terminal true 表示终止类提示（stuck / 超预算 / plan 模式），
+     *                 允许覆盖已发出的正常答案——这些是「流程终止」而非「回答」，
+     *                 且内容是固定文案，不会为空。
+     */
+    private void emitAnswer(String content, String commandId, boolean terminal) {
+        if (!terminal) {
+            if (content == null || content.isBlank()) {
+                log.warn("[StreamCallback] 拒绝发送空的 answer{}",
+                        finalContent == null ? "" : "（已有正常答案，保留之）");
+                return;
+            }
+            emitSse("answer", Map.of("content", content, "commandId", commandId));
+            return;
+        }
+        if (content == null || content.isBlank()) {
+            log.warn("[StreamCallback] 终止提示为空，改用默认文案: {}", eventNameOf(commandId));
+            content = "抱歉，处理已中断，请重新描述您的需求。";
+        }
+        emitSse("answer", Map.of("content", content, "commandId", commandId));
+    }
+
+    private static String eventNameOf(String commandId) {
+        return commandId == null ? "unknown" : commandId;
+    }
+
+    /** 终止提示为空时的兜底文案。仅用于日志定位，不做业务判断。 */
     private void emitSse(String eventName, Map<String, Object> data) {
         if (emitterClosed) {
             return;

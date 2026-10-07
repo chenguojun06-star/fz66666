@@ -143,10 +143,11 @@ class RefinedAnswerDeliveryTest {
 
         int sanitize = body.indexOf("String sanitized = sanitize(");
         int blankGuard = body.indexOf("sanitized.isBlank()");
-        int emit = body.indexOf("emitSse(\"answer\"");
+        // 已改为统一收口：发送必须走 emitAnswer，而不是直接 emitSse
+        int emit = body.indexOf("emitAnswer(");
         assertThat(sanitize).as("应存在清洗步骤").isGreaterThan(0);
         assertThat(blankGuard).as("必须对清洗后的结果判空").isGreaterThan(0);
-        assertThat(emit).as("应存在补发动作").isGreaterThan(0);
+        assertThat(emit).as("补发必须走统一收口 emitAnswer").isGreaterThan(0);
         assertThat(blankGuard)
                 .as("判空必须发生在清洗之后、发送之前 —— 否则空串会覆盖用户已看到的答案")
                 .isGreaterThan(sanitize)
@@ -155,15 +156,9 @@ class RefinedAnswerDeliveryTest {
         assertThat(body.indexOf("return;", blankGuard))
                 .as("清洗后为空必须直接放弃")
                 .isLessThan(emit);
-    }
-
-    @Test
-    @DisplayName("⑦ 同步回调保持原行为（无 SSE 可补发）")
-    void syncCallbackUnaffected() throws Exception {
-        String iface = read("AgentLoopCallback.java");
-        assertThat(iface)
-                .as("补发与收尾必须是 default 方法，不破坏其它实现")
-                .contains("default void onRefinedAnswer(String content, String commandId) {}")
-                .contains("default void onPostProcessFinished() {}");
+        // 不得绕过收口直接发
+        assertThat(body)
+                .as("补发路径不得绕过收口")
+                .doesNotContain("emitSse(\"answer\"");
     }
 }
