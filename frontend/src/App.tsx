@@ -19,7 +19,7 @@ import { PurchaseCartProvider, usePurchaseCartContext } from './context/Purchase
 import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, SalaryConfig, DeductionManage, FinanceCenter, ExpenseAdvanceCenter, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, SalaryConfig, DeductionManage, FinanceCenter, ExpenseAdvanceCenter, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow, AccountingVoucher } from './modules/finance';
 import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
@@ -251,6 +251,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.crm} element={<RouteErrorBoundary pageName="客户管理"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><CrmReceivableList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financePaymentSchedule} element={<RouteErrorBoundary pageName="付款计划"><Suspense fallback={routeFallback}><PaymentSchedule /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeAccountingVoucher} element={<RouteErrorBoundary pageName="会计凭证"><Suspense fallback={routeFallback}><AccountingVoucher /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />

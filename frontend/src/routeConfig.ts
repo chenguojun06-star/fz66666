@@ -84,6 +84,7 @@ export const paths = {
   financeReceivables: '/finance/receivables',
   financePayable: '/finance/payable',
   financePaymentSchedule: '/finance/payment-schedule',
+  financeAccountingVoucher: '/finance/accounting-voucher',
 
   materialInventory: '/warehouse/material',
   materialDatabase: '/warehouse/material-database',
@@ -498,6 +499,9 @@ export const permissionCodes = {
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
+  // D-513：会计凭证独立权限码（会计数据敏感，默认不授予任何角色，
+  // 由管理员在「系统设置 → 岗位与权限」按需分配；租户管理员/超管有全量权限不受影响）
+  financeAccountingVoucher: 'MENU_FINANCE_VOUCHER',
   financeDashboard: 'MENU_FINISHED_SETTLEMENT',
   crm: 'MENU_CRM',
   crmReceivables: 'MENU_CRM',
@@ -647,6 +651,8 @@ export const menuConfig: MenuSection[] = [
       { label: '费用与借支', path: paths.expenseReimbursement, icon: React.createElement(DollarOutlined) },
       // ========== 财税工具（统一入口：发票台账/应付/税率/数据导出） ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
+      // D-513：会计凭证（后端 AccountingVoucherController 早已实现，本次开放前端入口）
+      { label: '会计凭证', path: paths.financeAccountingVoucher, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -799,6 +805,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
   [paths.dailyFlow]: permissionCodes.financeDashboard,              // 每日流水 → 复用财务总览权限
   [paths.financePaymentSchedule]: permissionCodes.wagePayment,      // 付款计划 → 收付款权限（D-300：与权限矩阵"收付款中心（含付款计划）"行对齐）
+  [paths.financeAccountingVoucher]: permissionCodes.financeAccountingVoucher, // 会计凭证 → MENU_FINANCE_VOUCHER
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,

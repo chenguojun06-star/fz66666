@@ -14,3 +14,5 @@ export const WagePayment = React.lazy(() => import('./pages/Finance/WagePayment'
 export const EcSalesRevenue = React.lazy(() => import('./pages/EcSalesRevenue'));
 export const TaxExport = React.lazy(() => import('./pages/TaxExport'));
 export const PaymentSchedule = React.lazy(() => import('./pages/Finance/PaymentSchedule'));
+// D-513：会计凭证（后端早已实现，本次补齐前端入口与菜单）
+export const AccountingVoucher = React.lazy(() => import('./pages/Finance/AccountingVoucher'));
