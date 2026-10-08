@@ -32,8 +32,46 @@ export interface ShopOrder {
   expressNo?: string | null;
   /** 发货时间（发货后） */
   shipTime?: string | null;
+  /** 取消原因（取消后） */
+  cancelReason?: string | null;
+  /** 取消时间（取消后） */
+  cancelTime?: string | null;
   remark?: string;
   createTime: string;
+}
+
+/** 订单商品明细行 */
+export interface ShopOrderItem {
+  id: string;
+  skuCode?: string;
+  styleNo?: string;
+  styleName?: string;
+  color?: string;
+  size?: string;
+  unitPrice?: number | null;
+  quantity?: number | null;
+  amount?: number | null;
+}
+
+/** 订单详情（订单头 + 明细） */
+export interface ShopOrderDetail {
+  order: ShopOrder;
+  items: ShopOrderItem[];
+}
+
+/** 订单概览统计 */
+export interface ShopOrderStats {
+  pendingShip: number;
+  todayOrders: number;
+  todayAmount: number;
+  totalOrders: number;
+  totalAmount: number;
+}
+
+/** 批量发货结果 */
+export interface BatchShipResult {
+  shipped: number;
+  failed: string[];
 }
 
 /** 款式维度的 SKU 聚合（D-768 店铺商品列表用） */
@@ -97,6 +135,28 @@ export const shopAdminApi = {
   /** 订单发货（待发货 → 已发货；快递公司与单号选填，自提/同城配送可不填） */
   shipOrder: (orderId: string, body?: { expressCompany?: string; expressNo?: string }) =>
     api.post<null>(`/shop/admin/orders/${orderId}/ship`, body ?? {}),
+
+  /** 批量发货（逐条独立，返回成功数与被跳过原因） */
+  batchShipOrders: (orderIds: string[], body?: { expressCompany?: string; expressNo?: string }) =>
+    api.post<BatchShipResult>('/shop/admin/orders/batch-ship', {
+      orderIds,
+      expressCompany: body?.expressCompany,
+      expressNo: body?.expressNo,
+    }),
+
+  /** 订单详情（订单头 + 商品明细） */
+  orderDetail: (orderId: string) => api.post<ShopOrderDetail>(`/shop/admin/orders/${orderId}/detail`, {}),
+
+  /** 取消订单（仅待发货；会回补库存并撤销挂账应收） */
+  cancelOrder: (orderId: string, reason?: string) =>
+    api.post<null>(`/shop/admin/orders/${orderId}/cancel`, { reason }),
+
+  /** 商家备注（买家不可见） */
+  updateOrderRemark: (orderId: string, remark: string) =>
+    api.post<null>(`/shop/admin/orders/${orderId}/remark`, { remark }),
+
+  /** 订单概览统计 */
+  orderStats: () => api.get<ShopOrderStats>('/shop/admin/orders/stats'),
 
   /** 款式维度 SKU 聚合：售价区间 / 可售总量 / 颜色数（列表展示用，避免逐行 N+1） */
   skuSummary: (styleIds: Array<number | string>) =>

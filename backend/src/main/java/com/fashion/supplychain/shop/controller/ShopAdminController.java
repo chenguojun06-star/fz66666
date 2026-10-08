@@ -73,6 +73,68 @@ public class ShopAdminController {
         }
     }
 
+    /** D-513：订单详情（订单头 + 商品明细） */
+    @PostMapping("/orders/{id}/detail")
+    public Result<?> orderDetail(@PathVariable String id) {
+        try {
+            return Result.success(shopAdminOrchestrator.orderDetail(id));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * D-513：取消订单（仅待发货）。
+     * body: {reason?}；取消会回补库存并撤销挂账应收。
+     */
+    @PostMapping("/orders/{id}/cancel")
+    public Result<?> cancelOrder(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body == null || body.get("reason") == null ? null : String.valueOf(body.get("reason"));
+        try {
+            shopAdminOrchestrator.cancelOrder(id, reason);
+            return Result.successMessage("订单已取消，库存已退回、应收已撤销");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-513：商家备注（买家不可见） */
+    @PostMapping("/orders/{id}/remark")
+    public Result<?> updateOrderRemark(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String remark = body == null || body.get("remark") == null ? null : String.valueOf(body.get("remark"));
+        try {
+            shopAdminOrchestrator.updateOrderRemark(id, remark);
+            return Result.successMessage("备注已保存");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-513：批量发货。body: {orderIds:[], expressCompany?, expressNo?} */
+    @PostMapping("/orders/batch-ship")
+    public Result<?> batchShip(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Object> raw = (List<Object>) body.get("orderIds");
+        List<String> ids = raw == null ? List.of() : raw.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(v -> String.valueOf(v).trim())
+                .filter(s -> !s.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
+        String expressCompany = body.get("expressCompany") == null ? null : String.valueOf(body.get("expressCompany"));
+        String expressNo = body.get("expressNo") == null ? null : String.valueOf(body.get("expressNo"));
+        try {
+            return Result.success(shopAdminOrchestrator.batchShip(ids, expressCompany, expressNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-513：订单概览统计（待发货 / 今日订单 / 今日销售额 / 累计） */
+    @GetMapping("/orders/stats")
+    public Result<?> orderStats() {
+        return Result.success(shopAdminOrchestrator.orderStats());
+    }
+
     /**
      * 店铺商品运营：批量保存 SKU 售价 + 库存（D-768）。
      * body: {styleId, items:[{skuId, salesPrice, stockQuantity}]}；字段缺省表示不改。

@@ -54,6 +54,12 @@ public class ShopOrder {
     /** 发货时间（状态置为 SHIPPED 时写入） */
     private LocalDateTime shipTime;
 
+    /** 取消原因（状态置为 CANCELLED 时写入，售后对账留痕） */
+    private String cancelReason;
+
+    /** 取消时间 */
+    private LocalDateTime cancelTime;
+
     private String remark;
 
     private Integer deleteFlag;

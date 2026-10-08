@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Empty, Input, Modal, Segmented, Space, Switch, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, Modal, Segmented, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -13,7 +13,7 @@ import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
-import type { ShopConfig, ShopOrder } from '@/services/shop/shopApi';
+import type { ShopConfig, ShopOrder, ShopOrderDetail, ShopOrderItem, ShopOrderStats } from '@/services/shop/shopApi';
 import api, { unwrapApiData } from '@/utils/api';
 import './index.css';
 
@@ -68,6 +68,23 @@ const ShopManage: React.FC = () => {
   const [shipNo, setShipNo] = useState('');
   const [shipSubmitting, setShipSubmitting] = useState(false);
 
+  // D-513 订单全生命周期：统计 / 详情 / 取消 / 备注 / 批量发货
+  const [stats, setStats] = useState<ShopOrderStats | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailData, setDetailData] = useState<ShopOrderDetail | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<ShopOrder | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [remarkTarget, setRemarkTarget] = useState<ShopOrder | null>(null);
+  const [remarkValue, setRemarkValue] = useState('');
+  const [remarkSubmitting, setRemarkSubmitting] = useState(false);
+  const [batchShipOpen, setBatchShipOpen] = useState(false);
+  const [batchCompany, setBatchCompany] = useState('');
+  const [batchNo, setBatchNo] = useState('');
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+
   const fetchConfig = useCallback(async () => {
     try {
       const res: any = await shopAdminApi.getConfig();
@@ -118,6 +135,16 @@ const ShopManage: React.FC = () => {
     }
   }, [orderStatus, orderKw]);
 
+  /** D-513：订单概览统计（待发货 / 今日 / 累计） */
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await shopAdminApi.orderStats();
+      setStats(unwrapApiData<ShopOrderStats>(res, '加载订单统计失败'));
+    } catch {
+      setStats(null);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchConfig();
   }, [fetchConfig]);
@@ -126,8 +153,11 @@ const ShopManage: React.FC = () => {
     setTab(v);
     // 页签数据在切入时拉取（事件驱动，避免 effect 依赖棘轮豁免）
     if (v === 'listing') void fetchStyles(styleKw);
-    if (v === 'orders') void fetchOrders(1);
-  }, [fetchStyles, styleKw, fetchOrders]);
+    if (v === 'orders') {
+      void fetchOrders(1);
+      void fetchStats();
+    }
+  }, [fetchStyles, styleKw, fetchOrders, fetchStats]);
 
   const handleSaveConfig = async () => {
     if (!shopName.trim()) return message.warning('店铺名称不能为空');
@@ -177,10 +207,95 @@ const ShopManage: React.FC = () => {
       setShipCompany('');
       setShipNo('');
       void fetchOrders(orderPage);
+      void fetchStats();
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '发货失败');
     } finally {
       setShipSubmitting(false);
+    }
+  };
+
+  /** 订单详情（抽屉） */
+  const handleOpenDetail = async (order: ShopOrder) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailData(null);
+    try {
+      const res = await shopAdminApi.orderDetail(order.id);
+      setDetailData(unwrapApiData<ShopOrderDetail>(res, '加载订单详情失败'));
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '加载订单详情失败');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  /** 取消订单（回补库存 + 撤销应收，后端保证） */
+  const handleCancelOrder = async () => {
+    if (!cancelTarget) return;
+    setCancelSubmitting(true);
+    try {
+      unwrapApiData(
+        await shopAdminApi.cancelOrder(cancelTarget.id, cancelReason.trim() || undefined),
+        '取消订单失败',
+      );
+      message.success('订单已取消，库存已退回、应收已撤销');
+      setCancelTarget(null);
+      setCancelReason('');
+      void fetchOrders(orderPage);
+      void fetchStats();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '取消订单失败');
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
+
+  /** 商家备注 */
+  const handleSaveRemark = async () => {
+    if (!remarkTarget) return;
+    setRemarkSubmitting(true);
+    try {
+      unwrapApiData(await shopAdminApi.updateOrderRemark(remarkTarget.id, remarkValue.trim()), '备注保存失败');
+      message.success('备注已保存');
+      setRemarkTarget(null);
+      void fetchOrders(orderPage);
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '备注保存失败');
+    } finally {
+      setRemarkSubmitting(false);
+    }
+  };
+
+  /** 批量发货（后端逐条独立事务，返回成功数与跳过原因） */
+  const handleBatchShip = async () => {
+    const pending = orders.filter((o) => selectedOrderIds.includes(o.id) && o.status === 'PENDING_SHIP');
+    if (pending.length === 0) {
+      message.warning('勾选中没有「待发货」的订单');
+      return;
+    }
+    setBatchSubmitting(true);
+    try {
+      const res = await shopAdminApi.batchShipOrders(
+        pending.map((o) => o.id),
+        { expressCompany: batchCompany.trim() || undefined, expressNo: batchNo.trim() || undefined },
+      );
+      const data = unwrapApiData<{ shipped: number; failed: string[] }>(res, '批量发货失败');
+      if (data.failed && data.failed.length > 0) {
+        message.warning(`成功 ${data.shipped} 笔，跳过 ${data.failed.length} 笔：${data.failed[0]}`);
+      } else {
+        message.success(`已批量发货 ${data.shipped} 笔`);
+      }
+      setBatchShipOpen(false);
+      setBatchCompany('');
+      setBatchNo('');
+      setSelectedOrderIds([]);
+      void fetchOrders(orderPage);
+      void fetchStats();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '批量发货失败');
+    } finally {
+      setBatchSubmitting(false);
     }
   };
 
@@ -284,26 +399,43 @@ const ShopManage: React.FC = () => {
     },
     {
       title: '操作',
-      width: 100,
+      width: 190,
       fixed: 'right' as const,
-      render: (_, r) =>
-        r.status === 'PENDING_SHIP' ? (
+      render: (_, r) => (
+        <Space size={4} wrap>
+          <Button size="small" type="link" onClick={() => void handleOpenDetail(r)}>详情</Button>
+          {r.status === 'PENDING_SHIP' && (
+            <>
+              <Button
+                size="small"
+                type="link"
+                onClick={() => {
+                  setShipTarget(r);
+                  setShipCompany('');
+                  setShipNo('');
+                }}
+              >
+                发货
+              </Button>
+              <Button
+                size="small"
+                type="link"
+                danger
+                onClick={() => { setCancelTarget(r); setCancelReason(''); }}
+              >
+                取消
+              </Button>
+            </>
+          )}
           <Button
             size="small"
-            type="primary"
-            onClick={() => {
-              setShipTarget(r);
-              setShipCompany('');
-              setShipNo('');
-            }}
+            type="link"
+            onClick={() => { setRemarkTarget(r); setRemarkValue(r.remark || ''); }}
           >
-            发货
+            备注
           </Button>
-        ) : (
-          <Text type="secondary" className="u-fs-12">
-            {r.status === 'SHIPPED' ? '已发货' : '已取消'}
-          </Text>
-        ),
+        </Space>
+      ),
     },
   ];
 
@@ -462,12 +594,29 @@ const ShopManage: React.FC = () => {
 
       {tab === 'orders' && (
         <Card>
+          {/* D-513：订单概览（待发货 / 今日 / 累计），商家一眼看经营情况 */}
+          <div className="shop-order-stats">
+            {[
+              { key: 'pendingShip', label: '待发货', value: stats ? `${stats.pendingShip}` : '-', accent: 'var(--color-warning)' },
+              { key: 'todayOrders', label: '今日订单', value: stats ? `${stats.todayOrders}` : '-' },
+              { key: 'todayAmount', label: '今日销售额', value: stats ? `¥ ${Number(stats.todayAmount).toFixed(2)}` : '-' },
+              { key: 'totalOrders', label: '累计订单', value: stats ? `${stats.totalOrders}` : '-' },
+              { key: 'totalAmount', label: '累计销售额', value: stats ? `¥ ${Number(stats.totalAmount).toFixed(2)}` : '-' },
+            ].map((c) => (
+              <div key={c.key} className="shop-order-stat">
+                <div className="shop-order-stat__label">{c.label}</div>
+                <div className="shop-order-stat__value" style={c.accent ? { color: c.accent } : undefined}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+
           <div className="shop-toolbar">
             <Segmented
               value={orderStatus}
               onChange={(v) => {
                 const s = String(v);
                 setOrderStatus(s);
+                setSelectedOrderIds([]);
                 void fetchOrders(1, s, orderKw);
               }}
               options={[
@@ -477,14 +626,23 @@ const ShopManage: React.FC = () => {
                 { value: 'CANCELLED', label: '已取消' },
               ]}
             />
-            <Input.Search
-              allowClear
-              style={{ width: 260 }}
-              placeholder="订单号 / 收货人 / 电话"
-              value={orderKw}
-              onChange={(e) => setOrderKw(e.target.value)}
-              onSearch={(v) => void fetchOrders(1, orderStatus, v)}
-            />
+            <Space>
+              <Input.Search
+                allowClear
+                style={{ width: 240 }}
+                placeholder="订单号 / 收货人 / 电话"
+                value={orderKw}
+                onChange={(e) => setOrderKw(e.target.value)}
+                onSearch={(v) => void fetchOrders(1, orderStatus, v)}
+              />
+              <Button
+                type="primary"
+                disabled={selectedOrderIds.length === 0}
+                onClick={() => { setBatchShipOpen(true); setBatchCompany(''); setBatchNo(''); }}
+              >
+                批量发货{selectedOrderIds.length > 0 ? `（${selectedOrderIds.length}）` : ''}
+              </Button>
+            </Space>
           </div>
           <ResizableTable
             rowKey="id"
@@ -492,12 +650,17 @@ const ShopManage: React.FC = () => {
             columns={orderColumns}
             dataSource={orders}
             loading={orderLoading}
+            rowSelection={{
+              selectedRowKeys: selectedOrderIds,
+              onChange: (keys) => setSelectedOrderIds(keys.map(String)),
+              getCheckboxProps: (r: ShopOrder) => ({ disabled: r.status !== 'PENDING_SHIP' }),
+            }}
             pagination={{
               current: orderPage,
               total: orderTotal,
               pageSize: 20,
               showTotal: (t) => `共 ${t} 条`,
-              onChange: (p) => void fetchOrders(p),
+              onChange: (p) => { setSelectedOrderIds([]); void fetchOrders(p); },
             }}
             emptyDescription="还没有店铺订单"
           />
@@ -545,6 +708,187 @@ const ShopManage: React.FC = () => {
           </Space>
         )}
       </Modal>
+
+      {/* D-513：批量发货 */}
+      <Modal
+        title="批量发货"
+        open={batchShipOpen}
+        onOk={() => void handleBatchShip()}
+        confirmLoading={batchSubmitting}
+        onCancel={() => setBatchShipOpen(false)}
+        okText="确认发货"
+        destroyOnHidden
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={10}>
+          <Text type="secondary">
+            将给勾选的 {orders.filter((o) => selectedOrderIds.includes(o.id) && o.status === 'PENDING_SHIP').length} 笔「待发货」订单统一登记同一组快递信息。
+          </Text>
+          <div>
+            <div style={{ marginBottom: 4 }}>快递公司</div>
+            <Input value={batchCompany} onChange={(e) => setBatchCompany(e.target.value)} placeholder="如：顺丰 / 中通（可留空）" maxLength={32} />
+          </div>
+          <div>
+            <div style={{ marginBottom: 4 }}>快递单号</div>
+            <Input value={batchNo} onChange={(e) => setBatchNo(e.target.value)} placeholder="快递单号（可留空，后续可单独补）" maxLength={32} />
+          </div>
+          <Text type="secondary" className="u-fs-12">
+            逐笔独立处理：个别订单不可发货（如已取消）会自动跳过，其余照常成功。
+          </Text>
+        </Space>
+      </Modal>
+
+      {/* D-513：取消订单（回补库存 + 撤销应收） */}
+      <Modal
+        title="取消订单"
+        open={!!cancelTarget}
+        onOk={() => void handleCancelOrder()}
+        confirmLoading={cancelSubmitting}
+        onCancel={() => setCancelTarget(null)}
+        okText="确认取消订单"
+        okButtonProps={{ danger: true }}
+        destroyOnHidden
+      >
+        {cancelTarget && (
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
+            <Text>订单 {cancelTarget.orderNo} · {cancelTarget.customerName} · ¥{Number(cancelTarget.totalAmount).toFixed(2)}</Text>
+            <Alert
+              type="warning"
+              showIcon
+              message="取消会同时做三件事"
+              description={<span style={{ fontSize: 13 }}>① 退回已扣库存（生成退回入库单）<br />② 撤销挂账应收<br />③ 订单置为「已取消」，不可恢复</span>}
+            />
+            <div>
+              <div style={{ marginBottom: 4 }}>取消原因</div>
+              <Input.TextArea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="如：买家改主意 / 缺货 / 地址填错"
+                maxLength={200}
+                showCount
+                autoSize={{ minRows: 2, maxRows: 4 }}
+              />
+            </div>
+          </Space>
+        )}
+      </Modal>
+
+      {/* D-513：商家备注 */}
+      <Modal
+        title="商家备注"
+        open={!!remarkTarget}
+        onOk={() => void handleSaveRemark()}
+        confirmLoading={remarkSubmitting}
+        onCancel={() => setRemarkTarget(null)}
+        okText="保存"
+        destroyOnHidden
+      >
+        {remarkTarget && (
+          <Space direction="vertical" style={{ width: '100%' }} size={8}>
+            <Text type="secondary">订单 {remarkTarget.orderNo} · 仅内部可见，买家看不到</Text>
+            <Input.TextArea
+              value={remarkValue}
+              onChange={(e) => setRemarkValue(e.target.value)}
+              placeholder="如：老客户，优先发货 / 已电话确认尺码"
+              maxLength={500}
+              showCount
+              autoSize={{ minRows: 3, maxRows: 6 }}
+            />
+          </Space>
+        )}
+      </Modal>
+
+      {/* D-513：订单详情 */}
+      <Drawer
+        title="订单详情"
+        width="min(760px, 94vw)"
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        destroyOnHidden
+      >
+        {detailLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : detailData ? (
+          <Space direction="vertical" style={{ width: '100%' }} size={16}>
+            <Descriptions title="订单信息" column={2} bordered size="small">
+              <Descriptions.Item label="订单号" span={2}>{detailData.order.orderNo}</Descriptions.Item>
+              <Descriptions.Item label="状态" span={2}>
+                <Tag color={STATUS_MAP[detailData.order.status]?.color}>
+                  {STATUS_MAP[detailData.order.status]?.label ?? detailData.order.status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="下单时间" span={2}>
+                {(detailData.order.createTime || '').replace('T', ' ').slice(0, 19)}
+              </Descriptions.Item>
+              <Descriptions.Item label="订单金额" span={2}>
+                <Text strong className="shop-amount">¥ {Number(detailData.order.totalAmount).toFixed(2)}</Text>
+                <Text type="secondary">（{detailData.order.itemCount} 件）</Text>
+              </Descriptions.Item>
+              {detailData.order.outstockNo ? (
+                <Descriptions.Item label="出库单号" span={2}>{detailData.order.outstockNo}</Descriptions.Item>
+              ) : null}
+            </Descriptions>
+
+            <Descriptions title="收货信息" column={1} bordered size="small">
+              <Descriptions.Item label="收货人">{detailData.order.customerName}</Descriptions.Item>
+              <Descriptions.Item label="电话">{detailData.order.phone}</Descriptions.Item>
+              <Descriptions.Item label="地址">{detailData.order.address}</Descriptions.Item>
+            </Descriptions>
+
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 600 }}>商品明细</div>
+              <Table<ShopOrderItem>
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={detailData.items}
+                columns={[
+                  { title: '款号', dataIndex: 'styleNo', width: 110 },
+                  { title: '款名', dataIndex: 'styleName', ellipsis: true },
+                  { title: '颜色', dataIndex: 'color', width: 80 },
+                  { title: '尺码', dataIndex: 'size', width: 70 },
+                  {
+                    title: '单价', dataIndex: 'unitPrice', width: 90, align: 'right',
+                    render: (v: number) => `¥${Number(v ?? 0).toFixed(2)}`,
+                  },
+                  { title: '数量', dataIndex: 'quantity', width: 60, align: 'center' },
+                  {
+                    title: '小计', dataIndex: 'amount', width: 100, align: 'right',
+                    render: (v: number) => <Text strong>¥{Number(v ?? 0).toFixed(2)}</Text>,
+                  },
+                ]}
+                summary={() => (
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} colSpan={6} align="right"><Text strong>合计</Text></Table.Summary.Cell>
+                    <Table.Summary.Cell index={6} align="right">
+                      <Text strong className="shop-amount">¥ {Number(detailData.order.totalAmount).toFixed(2)}</Text>
+                    </Table.Summary.Cell>
+                  </Table.Summary.Row>
+                )}
+              />
+
+            </div>
+
+            <Descriptions title="物流与备注" column={1} bordered size="small">
+              <Descriptions.Item label="快递公司">{detailData.order.expressCompany || '-'}</Descriptions.Item>
+              <Descriptions.Item label="快递单号">{detailData.order.expressNo || '-'}</Descriptions.Item>
+              <Descriptions.Item label="发货时间">
+                {(detailData.order.shipTime || '').replace('T', ' ').slice(0, 19) || '-'}
+              </Descriptions.Item>
+              {detailData.order.cancelTime ? (
+                <>
+                  <Descriptions.Item label="取消时间">
+                    {(detailData.order.cancelTime || '').replace('T', ' ').slice(0, 19)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="取消原因">{detailData.order.cancelReason || '-'}</Descriptions.Item>
+                </>
+              ) : null}
+              <Descriptions.Item label="商家备注">{detailData.order.remark || '-'}</Descriptions.Item>
+            </Descriptions>
+          </Space>
+        ) : (
+          <Empty description="未取到订单详情" />
+        )}
+      </Drawer>
     </div>
   );
 };

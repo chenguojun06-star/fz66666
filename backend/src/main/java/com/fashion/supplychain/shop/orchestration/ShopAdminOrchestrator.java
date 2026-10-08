@@ -5,23 +5,33 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.OperationLogAppendUtil;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.crm.entity.Receivable;
+import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.shop.entity.ShopConfig;
 import com.fashion.supplychain.shop.entity.ShopOrder;
+import com.fashion.supplychain.shop.entity.ShopOrderItem;
 import com.fashion.supplychain.shop.mapper.ShopConfigMapper;
+import com.fashion.supplychain.shop.mapper.ShopOrderItemMapper;
 import com.fashion.supplychain.shop.mapper.ShopOrderMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,6 +61,29 @@ public class ShopAdminOrchestrator {
 
     @Autowired
     private ProductSkuOrchestrator productSkuOrchestrator;
+
+    @Autowired
+    private ShopOrderItemMapper shopOrderItemMapper;
+
+    /** 取消订单时回补库存（与下单同一套仓库编排，留入库台账） */
+    @Autowired
+    private FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
+
+    /** 取消订单时撤销挂账应收 */
+    @Autowired
+    private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    /** D-513：批量发货逐条独立事务，避免单条失败把整批标 rollback-only */
+    private TransactionTemplate requiresNewTx;
+
+    @PostConstruct
+    private void initRequiresNewTx() {
+        requiresNewTx = new TransactionTemplate(transactionManager);
+        requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     /** 我的店铺配置（无则按默认建档，slug=t{tenantId}，默认打烊） */
     public ShopConfig config() {
@@ -320,6 +353,207 @@ public class ShopAdminOrchestrator {
         } catch (Exception e) {
             return def;
         }
+    }
+
+    // ── D-513：订单全生命周期（详情 / 取消 / 备注 / 批量发货 / 统计）────────────
+
+    /** 订单详情：订单头 + 商品明细（管理端查看/售后核对用） */
+    public Map<String, Object> orderDetail(String orderId) {
+        ShopOrder order = requireOrder(orderId);
+        List<ShopOrderItem> items = shopOrderItemMapper.selectList(
+                new LambdaQueryWrapper<ShopOrderItem>()
+                        .eq(ShopOrderItem::getOrderId, order.getId())
+                        .eq(ShopOrderItem::getTenantId, UserContext.tenantId()));
+
+        List<Map<String, Object>> itemRows = new ArrayList<>();
+        for (ShopOrderItem it : items) {
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("id", it.getId());
+            r.put("skuCode", it.getSkuCode());
+            r.put("styleNo", it.getStyleNo());
+            r.put("styleName", it.getStyleName());
+            r.put("color", it.getColor());
+            r.put("size", it.getSize());
+            r.put("unitPrice", it.getUnitPrice());
+            r.put("quantity", it.getQuantity());
+            r.put("amount", it.getAmount());
+            itemRows.add(r);
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("order", order);
+        data.put("items", itemRows);
+        return data;
+    }
+
+    /**
+     * D-513：取消订单（仅待发货可取消）。
+     *
+     * <p>取消必须**把下单时做的三件事反向做掉**，否则会留下脏数据：
+     * <ol>
+     *   <li>库存：下单时 freeOutbound 扣了库存 → 这里 freeInbound（sourceType=return_in）加回来；</li>
+     *   <li>应收：下单时挂了应收 → 未收款的直接删除（已收款的拒绝取消，需走退款流程）；</li>
+     *   <li>状态：置 CANCELLED 并留痕取消原因/时间。</li>
+     * </ol>
+     * 已发货订单不允许取消（货已出，应走退货/售后，不能一键抹掉）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelOrder(String orderId, String reason) {
+        ShopOrder order = requireOrder(orderId);
+        if (!"PENDING_SHIP".equals(order.getStatus())) {
+            throw new IllegalArgumentException("当前状态不可取消："
+                    + ("SHIPPED".equals(order.getStatus()) ? "该订单已发货，请走退货/售后流程" : "该订单已取消"));
+        }
+
+        // 已收款则不能直接取消（钱已进账，必须走退款）
+        if (StringUtils.hasText(order.getReceivableId())) {
+            Receivable receivable = receivableOrchestrator.getById(order.getReceivableId());
+            if (receivable != null && receivable.getReceivedAmount() != null
+                    && receivable.getReceivedAmount().compareTo(BigDecimal.ZERO) > 0) {
+                throw new IllegalArgumentException("该订单已收到款项，不能直接取消，请先在收付款中心处理退款");
+            }
+        }
+
+        // 1) 库存回补：按下单时的出库明细逐条退回入库（与下单同一套仓库编排，留入库台账）
+        List<ShopOrderItem> items = shopOrderItemMapper.selectList(
+                new LambdaQueryWrapper<ShopOrderItem>()
+                        .eq(ShopOrderItem::getOrderId, order.getId())
+                        .eq(ShopOrderItem::getTenantId, UserContext.tenantId()));
+        for (ShopOrderItem it : items) {
+            if (!StringUtils.hasText(it.getSkuCode()) || it.getQuantity() == null || it.getQuantity() <= 0) {
+                continue;
+            }
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("skuCode", it.getSkuCode());
+            params.put("quantity", it.getQuantity());
+            params.put("sourceType", "return_in");
+            params.put("warehouseLocation", "默认仓");
+            params.put("remark", "店铺订单取消退回 " + order.getOrderNo());
+            finishedWarehouseOperationOrchestrator.freeInbound(params);
+        }
+
+        // 2) 应收撤销（未收款才走到这里）
+        if (StringUtils.hasText(order.getReceivableId())) {
+            try {
+                receivableOrchestrator.delete(order.getReceivableId());
+            } catch (Exception e) {
+                log.warn("[ShopAdmin] 取消订单时删除应收失败（不阻断取消）: orderNo={}, err={}",
+                        order.getOrderNo(), e.getMessage());
+            }
+        }
+
+        // 3) 状态与留痕
+        String cancelReason = StringUtils.hasText(reason) ? reason.trim() : "未填写取消原因";
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setStatus("CANCELLED");
+        patch.setCancelReason(cancelReason);
+        patch.setCancelTime(LocalDateTime.now());
+        shopOrderMapper.updateById(patch);
+
+        OperationLogAppendUtil.writeLog("店铺管理", "取消订单",
+                String.format("订单 %s 已取消（原因：%s），库存已退回、应收已撤销",
+                        order.getOrderNo(), cancelReason),
+                order.getId(), order.getOrderNo());
+        log.info("[ShopAdmin] 店铺订单取消 orderNo={} tenant={} 明细={}条 原因={}",
+                order.getOrderNo(), order.getTenantId(), items.size(), cancelReason);
+    }
+
+    /** 商家备注（买家看不到，仅内部记录） */
+    public void updateOrderRemark(String orderId, String remark) {
+        ShopOrder order = requireOrder(orderId);
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setRemark(StringUtils.hasText(remark) ? remark.trim() : null);
+        shopOrderMapper.updateById(patch);
+        OperationLogAppendUtil.writeLog("店铺管理", "订单备注",
+                "订单 " + order.getOrderNo() + " 备注：" + (StringUtils.hasText(remark) ? remark.trim() : "（清空）"),
+                order.getId(), order.getOrderNo());
+    }
+
+    /**
+     * D-513：批量发货。逐条独立事务（REQUIRES_NEW），
+     * 「跳过失败项、其余照常成功」才成立（整批一个事务会被单条失败标 rollback-only 拖垮，见 batchConfirm 教训）。
+     */
+    public Map<String, Object> batchShip(List<String> orderIds, String expressCompany, String expressNo) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            throw new IllegalArgumentException("请先勾选要发货的订单");
+        }
+        int ok = 0;
+        List<String> failed = new ArrayList<>();
+        for (String id : orderIds) {
+            try {
+                requiresNewTx.executeWithoutResult(status -> shipOrder(id, expressCompany, expressNo));
+                ok++;
+            } catch (Exception e) {
+                failed.add(id + "：" + e.getMessage());
+                log.warn("[ShopAdmin] 批量发货跳过: id={}, reason={}", id, e.getMessage());
+            }
+        }
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("shipped", ok);
+        resp.put("failed", failed);
+        return resp;
+    }
+
+    /** 订单概览统计（列表页顶部卡片：待发货 / 今日订单 / 今日销售额 / 累计销售额） */
+    public Map<String, Object> orderStats() {
+        Long tenantId = UserContext.tenantId();
+        LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
+
+        long pendingShip = shopOrderMapper.selectCount(new LambdaQueryWrapper<ShopOrder>()
+                .eq(ShopOrder::getTenantId, tenantId)
+                .eq(ShopOrder::getDeleteFlag, 0)
+                .eq(ShopOrder::getStatus, "PENDING_SHIP"));
+
+        List<ShopOrder> todayOrders = shopOrderMapper.selectList(new LambdaQueryWrapper<ShopOrder>()
+                .eq(ShopOrder::getTenantId, tenantId)
+                .eq(ShopOrder::getDeleteFlag, 0)
+                .ge(ShopOrder::getCreateTime, todayStart));
+
+        BigDecimal todayAmount = BigDecimal.ZERO;
+        long todayCount = 0;
+        for (ShopOrder o : todayOrders) {
+            if ("CANCELLED".equals(o.getStatus())) {
+                continue;
+            }
+            todayCount++;
+            todayAmount = todayAmount.add(o.getTotalAmount() == null ? BigDecimal.ZERO : o.getTotalAmount());
+        }
+
+        List<ShopOrder> all = shopOrderMapper.selectList(new LambdaQueryWrapper<ShopOrder>()
+                .eq(ShopOrder::getTenantId, tenantId)
+                .eq(ShopOrder::getDeleteFlag, 0));
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        long totalCount = 0;
+        for (ShopOrder o : all) {
+            if ("CANCELLED".equals(o.getStatus())) {
+                continue;
+            }
+            totalCount++;
+            totalAmount = totalAmount.add(o.getTotalAmount() == null ? BigDecimal.ZERO : o.getTotalAmount());
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("pendingShip", pendingShip);
+        resp.put("todayOrders", todayCount);
+        resp.put("todayAmount", todayAmount);
+        resp.put("totalOrders", totalCount);
+        resp.put("totalAmount", totalAmount);
+        return resp;
+    }
+
+    /** 取订单并校验归属（不存在/跨租户/已删除一律拒绝） */
+    private ShopOrder requireOrder(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        ShopOrder order = shopOrderMapper.selectById(orderId);
+        if (order == null || !UserContext.tenantId().equals(order.getTenantId())
+                || Integer.valueOf(1).equals(order.getDeleteFlag())) {
+            throw new IllegalArgumentException("订单不存在或无权操作");
+        }
+        return order;
     }
 
     /** 空值返回 null（表示「本次不改」），非法值直接抛错避免静默写错数据 */
