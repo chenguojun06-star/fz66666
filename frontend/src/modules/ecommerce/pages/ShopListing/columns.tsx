@@ -3,7 +3,9 @@ import { Button, Popconfirm, Tag, Tooltip, Typography } from 'antd';
 import { CheckCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { ListingRow, ShopSkuSummary } from './types';
-import { diagnoseListingFromSummary, summarizeListingIssues } from './listingCompliance';
+import {
+  diagnoseListingFromSummary, summarizeListingIssues, calcStyleProfit, profitLevelOf,
+} from './listingCompliance';
 
 const { Text } = Typography;
 
@@ -86,6 +88,65 @@ export function buildListingColumns({
         r.shopListed === 1 && r.shopListingTime
           ? (r.shopListingTime || '').replace('T', ' ').slice(0, 19)
           : <Text type="secondary">—</Text>,
+    },
+    {
+      /**
+       * D-769「毛利（保守）」列：对标店小秘/聚水潭的售价估算/利润试算。
+       *
+       * 口径 = 最低售价 − 最高成本，即**最坏情况**。这样结果为正就意味着
+       * 所有 SKU 都赚钱；若拿均价算，会出现「算出来赚钱、实际有 SKU 在亏」，
+       * 而亏的往往是促销先卖掉的那几个——结论不可靠。
+       *
+       * 成本未维护时显示「成本未维护」而<b>不显示 0</b>：用 0 冒充成本会让
+       * 运营以为在亏钱（或暴利），比不显示更糟。
+       */
+      title: '毛利(保守)',
+      width: 150,
+      render: (_, r) => {
+        const s = summary[String(r.id)];
+        const res = calcStyleProfit({
+          minPrice: s?.minPrice,
+          minCost: s?.minCost,
+          maxCost: s?.maxCost,
+          costCoverage: s?.costCoverage,
+        });
+        if (res.status === 'no_cost') {
+          return (
+            <Tooltip title="该款 SKU 未维护成本价，无法估算毛利。请先在「改图与数据」里补成本，避免改价时算不清盈亏。">
+              <Text type="secondary">成本未维护</Text>
+            </Tooltip>
+          );
+        }
+        if (res.status === 'partial_cost') {
+          return (
+            <Tooltip title={`仅 ${res.coverage}% 的 SKU 维护了成本，成本区间不完整，毛利不可信。请补齐全部 SKU 成本。`}>
+              <Text type="warning">成本不完整 {res.coverage}%</Text>
+            </Tooltip>
+          );
+        }
+        const lv = profitLevelOf(res.marginRate);
+        const tag = lv === 'loss' ? 'error' : lv === 'low' ? 'warning' : 'success';
+        const tip = (
+          <div style={{ maxWidth: 280 }}>
+            <div>保守毛利（最低售价 − 最高成本）</div>
+            <div>单件利润：¥{res.profit.toFixed(2)}</div>
+            <div>毛利率：{res.marginRate.toFixed(2)}%</div>
+            <div style={{ opacity: 0.8, marginTop: 4 }}>
+              该口径为最坏情况：为正即所有 SKU 都赚钱。
+            </div>
+          </div>
+        );
+        return (
+          <Tooltip title={tip}>
+            <span>
+              <Tag color={tag}>{res.marginRate.toFixed(1)}%</Tag>
+              <Text type="secondary" style={{ marginLeft: 4 }}>
+                ¥{res.profit.toFixed(0)}
+              </Text>
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       /**

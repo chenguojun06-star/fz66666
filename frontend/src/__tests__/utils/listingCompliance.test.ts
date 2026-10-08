@@ -7,6 +7,7 @@ import {
   profitLevelOf,
   BANNED_WORD_RULES,
   diagnoseListingFromSummary,
+  calcStyleProfit,
 } from '../../modules/ecommerce/pages/ShopListing/listingCompliance';
 
 /**
@@ -230,6 +231,54 @@ describe('店铺刊登合规与质检（D-769）', () => {
 
     it('聚合口径不得声称「颜色图缺失」——它看不到 per-SKU 图像', () => {
       expect(diagnoseListingFromSummary(ok).some((i) => i.field === '颜色图')).toBe(false);
+    });
+  });
+
+  /**
+   * 款式级利润口径（D-769）
+   *
+   * 核心风险：用均价算会「算出来赚钱、实际有 SKU 在亏」，而亏的通常是
+   * 促销先卖掉的那几个。故必须用最保守口径（最低售价 − 最高成本）。
+   */
+  describe('款式级保守利润', () => {
+    it('按最低售价−最高成本计算（最保守口径）', () => {
+      const r = calcStyleProfit({ minPrice: 89, minCost: 50, maxCost: 60, costCoverage: 100 });
+      expect(r).toEqual({ status: 'ok', profit: 29, marginRate: 32.58 });
+    });
+
+    it('保守口径下仍为正 ⇒ 所有 SKU 都赚钱', () => {
+      const r = calcStyleProfit({ minPrice: 100, minCost: 20, maxCost: 40, costCoverage: 100 });
+      expect(r.status).toBe('ok');
+      if (r.status === 'ok') expect(r.profit).toBeGreaterThan(0);
+    });
+
+    it('亏损必须暴露负利润，不得被抹平', () => {
+      const r = calcStyleProfit({ minPrice: 50, minCost: 80, maxCost: 90, costCoverage: 100 });
+      expect(r.status).toBe('ok');
+      if (r.status === 'ok') {
+        expect(r.profit).toBe(-40);
+        expect(r.marginRate).toBe(-80);
+      }
+    });
+
+    it('成本缺失必须报 no_cost（禁止按 0 成本算成暴利）', () => {
+      expect(calcStyleProfit({ minPrice: 89, minCost: null, maxCost: null })).toEqual({ status: 'no_cost' });
+      expect(calcStyleProfit({ minPrice: 89 })).toEqual({ status: 'no_cost' });
+    });
+
+    it('部分 SKU 未维护成本时结论不可信，必须单独报出', () => {
+      const r = calcStyleProfit({ minPrice: 89, minCost: 50, maxCost: 60, costCoverage: 60 });
+      expect(r).toEqual({ status: 'partial_cost', coverage: 60 });
+    });
+
+    it('覆盖率缺失时不误判为不可信（后端未回传时按完整处理）', () => {
+      const r = calcStyleProfit({ minPrice: 89, minCost: 50, maxCost: 60 });
+      expect(r.status).toBe('ok');
+    });
+
+    it('售价为 0 / 负数不得算出利润', () => {
+      expect(calcStyleProfit({ minPrice: 0, minCost: 10, maxCost: 20 }).status).toBe('no_cost');
+      expect(calcStyleProfit({ minPrice: -5, minCost: 10, maxCost: 20 }).status).toBe('no_cost');
     });
   });
 

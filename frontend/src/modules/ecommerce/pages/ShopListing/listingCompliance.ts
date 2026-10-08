@@ -347,6 +347,52 @@ export function calcListingProfit(
   return { profit: round2(profit), marginRate: round2((profit / salesPrice) * 100) };
 }
 
+
+/**
+ * 款式级利润估算（列表列用）。
+ *
+ * <p><b>口径：最保守</b> —— 用「最低售价 − 最高成本」。
+ * 理由：列表展示的是价格<b>区间</b>，若拿均价算，会出现「算出来赚钱、
+ * 实际有 SKU 在亏」的情况，而亏的那几个正是促销时先卖掉的。
+ * 用最保守口径时，只要结果为正就意味着<b>所有 SKU 都赚钱</b>，
+ * 这个结论对运营是可靠的。
+ *
+ * <p><b>成本缺失的处理</b>：返回 {@code status:'no_cost'}，
+ * 前端必须显示「成本未维护」而<b>不能</b>显示 0 或当作免费。
+ * 另用 {@code costCoverage} 暴露成本维护完整度——部分 SKU 有成本时，
+ * 区间会被系统性高估，此时也按不可信处理。
+ *
+ * @param minPrice 款式内最低售价
+ * @param minCost  款式内最低成本
+ * @param maxCost  款式内最高成本
+ * @param costCoverage 成本维护覆盖率（0~100）
+ */
+export function calcStyleProfit(input: {
+  minPrice?: number | null;
+  minCost?: number | null;
+  maxCost?: number | null;
+  costCoverage?: number | null;
+}):
+  | { status: 'ok'; profit: number; marginRate: number }
+  | { status: 'no_cost' }
+  | { status: 'partial_cost'; coverage: number } {
+  const { minPrice, minCost, maxCost } = input;
+  const coverage = input.costCoverage;
+
+  if (minPrice == null || minCost == null || maxCost == null) {
+    return { status: 'no_cost' };
+  }
+  // 部分 SKU 未维护成本时，成本区间不完整，结论不可信
+  if (coverage != null && coverage < 100) {
+    return { status: 'partial_cost', coverage };
+  }
+  if (!(minPrice > 0)) {
+    return { status: 'no_cost' };
+  }
+  const profit = minPrice - maxCost;
+  return { status: 'ok', profit: round2(profit), marginRate: round2((profit / minPrice) * 100) };
+}
+
 /** 毛利率对应的语义标签，供列表着色（用 Design Token 表达，不硬编码颜色） */
 export type ProfitLevel = 'loss' | 'low' | 'normal' | 'high';
 

@@ -88,6 +88,12 @@ export interface BatchShipResult {
 export interface ShopSkuSummary {
   minPrice?: number | null;
   maxPrice?: number | null;
+  /** D-769：成本区间。全为 null 表示该款 SKU 未维护成本 */
+  minCost?: number | null;
+  maxCost?: number | null;
+  /** 成本维护覆盖率 0~100；<100 表示部分 SKU 缺成本，利润结论不可信 */
+  costCoverage?: number;
+  pricedSkuCount?: number;
   totalStock?: number;
   colorCount?: number;
   skuCount?: number;

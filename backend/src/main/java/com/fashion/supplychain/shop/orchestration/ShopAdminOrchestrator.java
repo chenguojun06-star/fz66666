@@ -261,6 +261,13 @@ public class ShopAdminOrchestrator {
                 List<ProductSku> list = byStyle.getOrDefault(styleId, List.of());
                 BigDecimal min = null;
                 BigDecimal max = null;
+                // D-769：成本区间。minCost/maxCost 均为 null 表示该款 SKU 全部未维护成本，
+                // 前端据此显示「成本未维护」而不是按 0 计算——用 0 冒充成本会让运营
+                // 误以为在亏钱（或暴利），比不显示更危险。
+                BigDecimal minCost = null;
+                BigDecimal maxCost = null;
+                int pricedSkuCount = 0;
+                int costedSkuCount = 0;
                 int stock = 0;
                 Set<String> colors = new LinkedHashSet<>();
                 for (ProductSku k : list) {
@@ -268,6 +275,13 @@ public class ShopAdminOrchestrator {
                     if (p != null) {
                         if (min == null || p.compareTo(min) < 0) min = p;
                         if (max == null || p.compareTo(max) > 0) max = p;
+                        pricedSkuCount++;
+                    }
+                    BigDecimal c = k.getCostPrice();
+                    if (c != null && c.compareTo(BigDecimal.ZERO) > 0) {
+                        if (minCost == null || c.compareTo(minCost) < 0) minCost = c;
+                        if (maxCost == null || c.compareTo(maxCost) > 0) maxCost = c;
+                        costedSkuCount++;
                     }
                     stock += k.getStockQuantity() == null ? 0 : k.getStockQuantity();
                     if (StringUtils.hasText(k.getColor())) colors.add(k.getColor());
@@ -275,6 +289,12 @@ public class ShopAdminOrchestrator {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("minPrice", min);
                 row.put("maxPrice", max);
+                row.put("minCost", minCost);
+                row.put("maxCost", maxCost);
+                // 成本/售价维护完整度：部分 SKU 缺成本时利润不可信，需显式告知前端
+                row.put("costCoverage", list.isEmpty() ? 0
+                        : (int) Math.round(costedSkuCount * 100.0 / list.size()));
+                row.put("pricedSkuCount", pricedSkuCount);
                 row.put("totalStock", stock);
                 row.put("colorCount", colors.size());
                 row.put("skuCount", list.size());
