@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Button, Card, Input, Segmented, Space, Tag, Typography } from 'antd';
-import { ExportOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
+import { DollarOutlined, ExportOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
+import BatchAdjustPriceModal from './BatchAdjustPriceModal';
 import type { ShopConfig } from '@/services/shop/shopApi';
 import { buildListingColumns } from './columns';
 import ListingEditDrawer from './components/ListingEditDrawer';
@@ -26,6 +27,9 @@ const ShopListing: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [filter, setFilter] = useState<ListingFilter>('all');
   const [page, setPage] = useState(1);
+  // D-769：批量调价（动钱操作，勾选后才出现入口）
+  const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
@@ -149,6 +153,16 @@ const ShopListing: React.FC = () => {
               { value: 'unlisted', label: `未上架 ${rows.length - listedCount}` },
             ]}
           />
+          {selectedIds.length > 0 ? (
+            <Space size={8}>
+              <Tag color="blue" closable onClose={() => setSelectedIds([])}>
+                已选 {selectedIds.length} 款
+              </Tag>
+              <Button size="small" icon={<DollarOutlined />} onClick={() => setBatchOpen(true)}>
+                批量调价
+              </Button>
+            </Space>
+          ) : null}
           <div className="shop-listing__toolbar-spacer" />
           {truncated ? (
             <Text type="warning">款式较多，仅展示前 {rows.length} 款，请用搜索缩小范围</Text>
@@ -158,6 +172,10 @@ const ShopListing: React.FC = () => {
         <ResizableTable
           rowKey="id"
           size="small"
+            rowSelection={{
+              selectedRowKeys: selectedIds,
+              onChange: (keys) => setSelectedIds(keys),
+            }}
           columns={columns}
           dataSource={paged}
           loading={loading}
@@ -199,6 +217,18 @@ const ShopListing: React.FC = () => {
         }}
         onClose={ed.close}
         onSave={() => void ed.save()}
+      />
+      <BatchAdjustPriceModal
+        open={batchOpen}
+        styleIds={selectedIds.map(Number)}
+        styleNoOf={(id) => rows.find((r) => r.id === id)?.styleNo ?? ''}
+        onCancel={() => setBatchOpen(false)}
+        onDone={() => {
+          setBatchOpen(false);
+          setSelectedIds([]);
+          // 调价后重载，避免用旧 summary 展示过期毛利
+          void load(keyword);
+        }}
       />
     </div>
   );

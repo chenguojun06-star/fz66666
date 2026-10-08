@@ -5,6 +5,7 @@ import com.fashion.supplychain.shop.orchestration.ShopAdminOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -202,6 +203,45 @@ public class ShopAdminController {
             return Result.success(shopAdminOrchestrator.batchSaveSku(styleId, items));
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * D-769：跨款式批量调价（试算 / 执行两阶段）。
+     *
+     * <p>body: {styleIds:[1,2], mode:"SET"|"PERCENT_ADJUST", value:Number, dryRun:Boolean}
+     * <p>前端必须先 {@code dryRun=true} 拿试算结果给运营确认，再 {@code dryRun=false} 执行。
+     */
+    @PostMapping("/sku/batch-adjust-price")
+    public Result<?> batchAdjustPrice(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Object> raw = (List<Object>) body.get("styleIds");
+        List<Long> styleIds = new ArrayList<>();
+        if (raw != null) {
+            for (Object v : raw) {
+                if (v == null) continue;
+                try {
+                    styleIds.add(Long.valueOf(String.valueOf(v).trim()));
+                } catch (NumberFormatException ignored) {
+                    // 非法 ID 直接跳过，不因单个脏值让整批失败
+                }
+            }
+        }
+        String mode = body.get("mode") == null ? null : String.valueOf(body.get("mode"));
+        java.math.BigDecimal value = null;
+        Object rawValue = body.get("value");
+        if (rawValue != null && !String.valueOf(rawValue).isBlank()) {
+            try {
+                value = new java.math.BigDecimal(String.valueOf(rawValue).trim());
+            } catch (NumberFormatException e) {
+                return Result.fail(400, "调价数值格式不正确：" + rawValue);
+            }
+        }
+        boolean dryRun = !Boolean.FALSE.equals(body.get("dryRun"));
+        try {
+            return Result.success(shopAdminOrchestrator.batchAdjustPrice(styleIds, mode, value, dryRun));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
         }
     }
 

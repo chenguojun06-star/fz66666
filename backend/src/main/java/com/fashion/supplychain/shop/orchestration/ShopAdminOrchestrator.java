@@ -285,6 +285,168 @@ public class ShopAdminOrchestrator {
         return resp;
     }
 
+/**
+     * D-769：跨款式批量调价（支持「统一设为」与「按百分比调整」）。
+     *
+     * <p><b>为什么必须两阶段（试算 → 执行）</b>：批量调价是直接动钱的高危操作，
+     * 一次可能影响几十上百个 SKU。对标店小秘/聚水潭的「售价试算」，
+     * 先返回逐款的调前/调后与<b>是否会转为亏损</b>，运营确认后再执行。
+     * 不做试算直接改钱，出了错只能靠反查日志回滚，代价远高于多点一次。
+     *
+     * @param styleIds 目标款式
+     * @param mode SET=统一设为 value；PERCENT_ADJUST=在原价基础上按 value(%) 调整
+     * @param value  SET 时为绝对售价；PERCENT_ADJUST 时为百分比（10 表示 +10%，-5 表示 -5%）
+     * @param dryRun true=仅试算不落库；false=实际执行
+     * @return 逐款试算结果 + 汇总
+     */
+    public Map<String, Object> batchAdjustPrice(List<Long> styleIds, String mode,
+                                                java.math.BigDecimal value, boolean dryRun) {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Object> out = new LinkedHashMap<>();
+        List<Map<String, Object>> preview = new ArrayList<>();
+
+        if (styleIds == null || styleIds.isEmpty()) {
+            out.put("items", preview);
+            out.put("styleCount", 0);
+            out.put("skuCount", 0);
+            out.put("lossCount", 0);
+            out.put("dryRun", dryRun);
+            return out;
+        }
+        if (styleIds.size() > 200) {
+            throw new IllegalArgumentException("单次最多批量调整 200 个款式");
+        }
+        boolean isPercent = "PERCENT_ADJUST".equalsIgnoreCase(mode);
+        if (!isPercent && !"SET".equalsIgnoreCase(mode)) {
+            throw new IllegalArgumentException("不支持的调价方式：" + mode);
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("调价数值不能为空");
+        }
+        if (isPercent && value.abs().compareTo(new java.math.BigDecimal("100")) > 0) {
+            // 超过 ±100% 几乎必为误操作（如把 0.15 当 15 填成 1500）
+            throw new IllegalArgumentException("百分比调整幅度不得超过 100%，当前 " + value + "%");
+        }
+        if (!isPercent && value.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("统一设售价必须大于 0");
+        }
+
+        List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
+                .in(ProductSku::getStyleId, styleIds)
+                .eq(ProductSku::getTenantId, tenantId));
+        Map<Long, List<ProductSku>> byStyle = skus.stream()
+                .filter(k -> k.getStyleId() != null)
+                .collect(Collectors.groupingBy(ProductSku::getStyleId));
+
+        int skuCount = 0;
+        int lossCount = 0;
+        List<ProductSku> toUpdate = new ArrayList<>();
+
+        for (Long styleId : styleIds) {
+            List<ProductSku> list = byStyle.getOrDefault(styleId, List.of());
+            java.math.BigDecimal oldMin = null, oldMax = null, newMin = null, newMax = null;
+            java.math.BigDecimal oldCostMax = null, newCostMax = null;
+            int styleSkuCount = 0;
+
+            for (ProductSku k : list) {
+                styleSkuCount++;
+                skuCount++;
+                java.math.BigDecimal old = k.getSalesPrice();
+                java.math.BigDecimal cost = (k.getCostPrice() != null
+                        && k.getCostPrice().compareTo(java.math.BigDecimal.ZERO) > 0)
+                        ? k.getCostPrice() : null;
+                java.math.BigDecimal neu;
+                if (old == null || old.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    // 原价未设置：不猜它应该是多少 —— 百分比模式跳过，SET 模式按新值填
+                    if (isPercent) {
+                        continue;
+                    }
+                    neu = value;
+                } else if (isPercent) {
+                    neu = old.multiply(java.math.BigDecimal.ONE.add(
+                            value.divide(new java.math.BigDecimal("100"), 6,
+                                    java.math.RoundingMode.HALF_UP)))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                } else {
+                    neu = value;
+                }
+                if (neu == null || neu.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                oldMin = minOf(oldMin, old);
+                oldMax = maxOf(oldMax, old);
+                newMin = minOf(newMin, neu);
+                newMax = maxOf(newMax, neu);
+                oldCostMax = maxOf(oldCostMax, cost);
+                newCostMax = maxOf(newCostMax, cost);
+                if (!dryRun) {
+                    k.setSalesPrice(neu);
+                    toUpdate.add(k);
+                }
+            }
+            if (styleSkuCount == 0) {
+                continue;
+            }
+            // D-769：保守口径（调后最低售价 − 最高成本），与前端「毛利(保守)」列口径一致
+            java.math.BigDecimal profitBefore = marginProfit(oldMin, oldCostMax);
+            java.math.BigDecimal profitAfter = marginProfit(newMin, newCostMax);
+            boolean becomesLoss = profitBefore != null && profitAfter != null
+                    && profitBefore.compareTo(java.math.BigDecimal.ZERO) > 0
+                    && profitAfter.compareTo(java.math.BigDecimal.ZERO) <= 0;
+            if (becomesLoss) {
+                lossCount++;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("styleId", styleId);
+            item.put("skuCount", styleSkuCount);
+            item.put("oldMinPrice", oldMin);
+            item.put("oldMaxPrice", oldMax);
+            item.put("newMinPrice", newMin);
+            item.put("newMaxPrice", newMax);
+            item.put("oldProfit", profitBefore);
+            item.put("newProfit", profitAfter);
+            item.put("becomesLoss", becomesLoss);
+            // 成本缺失时利润不可信，明确告知而不是给 0
+            item.put("costKnown", newCostMax != null);
+            preview.add(item);
+        }
+
+        if (!dryRun && !toUpdate.isEmpty()) {
+            productSkuService.updateBatchById(toUpdate, 200);
+        }
+
+        out.put("items", preview);
+        out.put("styleCount", preview.size());
+        out.put("skuCount", skuCount);
+        out.put("lossCount", lossCount);
+        out.put("dryRun", dryRun);
+        return out;
+    }
+
+    private static java.math.BigDecimal minOf(java.math.BigDecimal a, java.math.BigDecimal b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return a.compareTo(b) < 0 ? a : b;
+    }
+
+    private static java.math.BigDecimal maxOf(java.math.BigDecimal a, java.math.BigDecimal b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return a.compareTo(b) > 0 ? a : b;
+    }
+
+    /** 保守毛利 = 最低售价 − 最高成本；任一缺失则返回 null（不用 0 冒充） */
+    private static java.math.BigDecimal marginProfit(java.math.BigDecimal minPrice,
+                                                    java.math.BigDecimal maxCost) {
+        if (minPrice == null || maxCost == null) {
+            return null;
+        }
+        if (minPrice.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return minPrice.subtract(maxCost);
+    }
+
     /**
      * 款式维度的 SKU 聚合，供店铺商品列表展示「售价区间 / 可售总量 / 颜色数」。
      * 一次 in 查询 + 内存分组，避免前端逐行 N+1。

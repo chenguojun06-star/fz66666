@@ -97,6 +97,35 @@ export interface BatchShipResult {
 }
 
 /** 款式维度的 SKU 聚合（D-768 店铺商品列表用） */
+
+/* ── D-769 批量调价 ── */
+export type BatchPriceMode = 'SET' | 'PERCENT_ADJUST';
+
+export interface BatchPriceItem {
+  styleId: number | string;
+  skuCount: number;
+  oldMinPrice?: number | null;
+  oldMaxPrice?: number | null;
+  newMinPrice?: number | null;
+  newMaxPrice?: number | null;
+  /** 保守毛利（最低售价 − 最高成本）；成本缺失时为 null */
+  oldProfit?: number | null;
+  newProfit?: number | null;
+  /** 由盈转亏 */
+  becomesLoss: boolean;
+  /** 成本是否已维护；false 时利润结论不可信 */
+  costKnown: boolean;
+}
+
+export interface BatchPricePreview {
+  items: BatchPriceItem[];
+  styleCount: number;
+  skuCount: number;
+  /** 将由盈转亏的款式数 */
+  lossCount: number;
+  dryRun: boolean;
+}
+
 export interface ShopSkuSummary {
   minPrice?: number | null;
   maxPrice?: number | null;
@@ -210,6 +239,17 @@ export const shopAdminApi = {
     api.post<{ items: Record<string, ShopSkuSummary> }>('/shop/admin/sku/summary', { styleIds }),
 
   /** 批量保存 SKU 售价 + 库存（库存为「目标值」，服务端换算增减量并留操作日志） */
+  /**
+   * D-769：跨款式批量调价。
+   * 必须先 dryRun=true 试算、确认后再 dryRun=false 执行——
+   * 直接执行一旦出错只能靠反查日志回滚。
+   */
+  batchAdjustPrice: (body: {
+    styleIds: Array<number | string>;
+    mode: BatchPriceMode;
+    value: number;
+    dryRun: boolean;
+  }) => api.post<BatchPricePreview>('/shop/admin/sku/batch-adjust-price', body),
   batchSaveSku: (styleId: number | string, items: BatchSaveSkuItem[]) =>
     api.post<BatchSaveSkuResult>('/shop/admin/sku/batch-save', { styleId, items }),
 };
