@@ -12,6 +12,14 @@ export interface ShopConfig {
   shopName: string;
   notice?: string;
   enabled: number;
+  /** D-513 配送：是否收运费（1 收 / 0 全场包邮） */
+  shippingEnabled?: number | null;
+  /** 默认运费（未达包邮门槛时收取） */
+  shippingFee?: number | null;
+  /** 满额包邮门槛：0 表示无门槛 */
+  freeShippingThreshold?: number | null;
+  /** 配送说明（买家可见） */
+  shippingNote?: string | null;
 }
 
 export interface ShopOrder {
@@ -22,6 +30,10 @@ export interface ShopOrder {
   phone: string;
   address: string;
   totalAmount: number;
+  /** 金额（不含运费） */
+  goodsAmount?: number | null;
+  /** 运费 */
+  shippingFee?: number | null;
   itemCount: number;
   status: 'PENDING_SHIP' | 'SHIPPED' | 'CANCELLED';
   receivableId?: string;
@@ -133,9 +145,16 @@ export const shopAdminApi = {
   /** 店铺配置（首次访问自动建档，slug=t{tenantId}，默认打烊） */
   getConfig: () => api.get<ShopConfig>('/shop/admin/config'),
 
-  /** 更新配置（名称/公告/打烊开关） */
-  saveConfig: (body: { shopName?: string; notice?: string; enabled?: number | boolean }) =>
-    api.post<null>('/shop/admin/config', body),
+  /** 更新配置（名称/公告/打烊开关/配送设置） */
+  saveConfig: (body: {
+    shopName?: string;
+    notice?: string;
+    enabled?: number | boolean;
+    shippingEnabled?: number | boolean;
+    shippingFee?: number;
+    freeShippingThreshold?: number;
+    shippingNote?: string;
+  }) => api.post<null>('/shop/admin/config', body),
 
   /** 上架/下架款式 */
   setListing: (styleId: number | string, listed: boolean) =>

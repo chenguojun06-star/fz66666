@@ -29,11 +29,16 @@ public class ShopAdminController {
         return Result.success(shopAdminOrchestrator.config());
     }
 
-    /** 更新店铺配置（名称/公告/打烊开关） */
+    /** 更新店铺配置（名称/公告/打烊开关/配送设置） */
     @PostMapping("/config")
     public Result<?> updateConfig(@RequestBody Map<String, Object> body) {
-        shopAdminOrchestrator.saveConfig(body);
-        return Result.success(null);
+        try {
+            shopAdminOrchestrator.saveConfig(body);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            // D-513：配送设置校验失败（如"开启收运费但运费为0"）走 400，给出可读原因
+            return Result.fail(400, e.getMessage());
+        }
     }
 
     /** 上架/下架款式 */

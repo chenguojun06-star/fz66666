@@ -97,6 +97,10 @@ public class ShopAdminOrchestrator {
             config.setSlug("t" + tenantId);
             config.setShopName("我的店铺");
             config.setEnabled(0);
+            // D-513：默认全场包邮（与 C 端页面原有「包邮」承诺一致，升级不改变老顾客预期）
+            config.setShippingEnabled(0);
+            config.setShippingFee(BigDecimal.ZERO);
+            config.setFreeShippingThreshold(BigDecimal.ZERO);
             config.setCreateTime(LocalDateTime.now());
             config.setUpdateTime(LocalDateTime.now());
             shopConfigMapper.insert(config);
@@ -120,9 +124,50 @@ public class ShopAdminOrchestrator {
                     || Boolean.parseBoolean(String.valueOf(body.get("enabled")));
             patch.setEnabled(on ? 1 : 0);
         }
+        // D-513：配送设置。规则必须自洽，故在此做校验，避免存进"收运费但运费为0"
+        // 或"门槛为负"这类无法解释的配置。
+        if (body.get("shippingEnabled") != null) {
+            boolean on = "1".equals(String.valueOf(body.get("shippingEnabled")))
+                    || Boolean.parseBoolean(String.valueOf(body.get("shippingEnabled")));
+            patch.setShippingEnabled(on ? 1 : 0);
+        }
+        if (body.get("shippingFee") != null) {
+            BigDecimal fee = parseNonNegative(body.get("shippingFee"), "运费");
+            patch.setShippingFee(fee);
+        }
+        if (body.get("freeShippingThreshold") != null) {
+            BigDecimal threshold = parseNonNegative(body.get("freeShippingThreshold"), "包邮门槛");
+            patch.setFreeShippingThreshold(threshold);
+        }
+        if (body.get("shippingNote") != null) {
+            patch.setShippingNote(String.valueOf(body.get("shippingNote")).trim());
+        }
+        // 收运费但运费为 0 = 规则无意义，直接拦截（避免"设置了却看不出效果"）
+        int willBeEnabled = patch.getShippingEnabled() != null
+                ? patch.getShippingEnabled()
+                : (existing.getShippingEnabled() == null ? 0 : existing.getShippingEnabled());
+        BigDecimal willBeFee = patch.getShippingFee() != null
+                ? patch.getShippingFee()
+                : (existing.getShippingFee() == null ? BigDecimal.ZERO : existing.getShippingFee());
+        if (willBeEnabled == 1 && willBeFee.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("已开启收取运费，请填写大于 0 的运费金额");
+        }
         patch.setUpdateTime(LocalDateTime.now());
         shopConfigMapper.updateById(patch);
         log.info("[ShopAdmin] 店铺配置已更新 tenant={}", existing.getTenantId());
+    }
+
+    /** 解析非负金额（运费/门槛），非法值直接抛错避免静默写脏配置 */
+    private BigDecimal parseNonNegative(Object v, String label) {
+        try {
+            BigDecimal d = new BigDecimal(String.valueOf(v).trim());
+            if (d.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException(label + "不能为负数");
+            }
+            return d;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(label + "格式不正确：" + v);
+        }
     }
 
     /** 上架/下架款式 */

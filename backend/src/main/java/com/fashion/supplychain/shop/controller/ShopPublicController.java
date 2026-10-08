@@ -74,6 +74,9 @@ public class ShopPublicController {
                     items);
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("orderNo", order.getOrderNo());
+            // D-513：拆出商品金额与运费，C 端下单成功页才能给出「商品 ¥X + 运费 ¥Y」明细
+            data.put("goodsAmount", order.getGoodsAmount());
+            data.put("shippingFee", order.getShippingFee());
             data.put("totalAmount", order.getTotalAmount());
             data.put("status", order.getStatus());
             return Result.success(data);

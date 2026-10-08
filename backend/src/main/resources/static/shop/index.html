@@ -211,6 +211,52 @@
   var app = document.getElementById('app');
   var shopInfo = null;
 
+  /* ── D-513 配送规则（服务端下发，前端只展示，金额一律以服务端为准） ──
+     规则与后端 ShopOrderOrchestrator.resolveShippingFee 保持一致：
+       未开启收运费 → 全场包邮
+       开启且商品金额 ≥ 包邮门槛(>0) → 包邮
+       其余 → 收默认运费
+     此前页面硬编码「包邮」，而系统没有运费概念，属于自相矛盾的展示。 */
+  function shipCfg() {
+    var s = shopInfo || {};
+    return {
+      enabled: !!s.shippingEnabled,
+      fee: Number(s.shippingFee || 0),
+      threshold: Number(s.freeShippingThreshold || 0),
+      note: s.shippingNote || ''
+    };
+  }
+  /** 金额展示：整数不带小数，非整数保留 2 位（199 / 12.50） */
+  function money(n) {
+    var v = Number(n || 0);
+    return v % 1 === 0 ? String(v) : v.toFixed(2);
+  }
+  /** 列表/详情用的配送短标签 */
+  function shipTag() {
+    var c = shipCfg();
+    if (!c.enabled) return '包邮';
+    if (c.threshold > 0) return '满' + money(c.threshold) + '包邮';
+    return '运费 ¥' + money(c.fee);
+  }
+  /** 按商品金额算本次运费（与后端同规则） */
+  function shipFeeFor(goodsAmount) {
+    var c = shipCfg();
+    if (!c.enabled) return 0;
+    if (c.threshold > 0 && goodsAmount >= c.threshold) return 0;
+    return c.fee;
+  }
+  /** 确认订单里的运费行文案（含「还差 X 元包邮」的引导） */
+  function shipLineText(goodsAmount) {
+    var c = shipCfg();
+    var fee = shipFeeFor(goodsAmount);
+    if (fee === 0) {
+      if (c.enabled && c.threshold > 0) return '已满 ¥' + money(c.threshold) + '，包邮';
+      return '包邮';
+    }
+    var gap = c.threshold - goodsAmount;
+    return '¥' + money(fee) + (gap > 0 ? '（再买 ¥' + money(gap) + ' 包邮）' : '');
+  }
+
   /* ── 工具 ── */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
@@ -355,7 +401,7 @@
           + (stock <= 0 ? '<div class="soldout"><span>已售罄</span></div>' : '')
           + '</div>'
           + '<div class="body"><div class="name">' + esc(p.styleName) + '</div>'
-          + '<div class="tags"><span class="tag free">包邮</span>'
+          + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span>'
           + '<span class="tag">现货</span>'
           + '<span class="tag">' + (p.colorCount || 1) + '色可选</span></div>'
           + '<div class="foot">' + priceHtml(p.minPrice)
@@ -415,10 +461,10 @@
 
       html += '<div class="d-price">' + priceHtml(minPrice, 'lg')
         + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
-        + '<span>包邮</span><span>7 天无理由</span></div></div>';
+        + '<span>' + esc(shipTag()) + '</span><span>7 天无理由</span></div></div>';
 
       html += '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
-        + '<div class="tags"><span class="tag free">包邮</span><span class="tag">现货速发</span>'
+        + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span><span class="tag">现货速发</span>'
         + '<span class="tag">' + colors.length + ' 色可选</span></div>'
         + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
 
@@ -553,10 +599,12 @@
     var picked = c.filter(function (x) { return x.checked !== false; });
     var amount = picked.reduce(function (s, x) { return s + x.price * x.qty; }, 0);
     var qty = picked.reduce(function (s, x) { return s + x.qty; }, 0);
+    var fee = shipFeeFor(amount);
 
     html += '<div class="cbar">'
       + '<label class="all"><input type="checkbox" id="all"' + (allChecked ? ' checked' : '') + '>全选</label>'
-      + '<div class="sum">合计 <b><span class="cny">¥</span>' + amount.toFixed(2) + '</b><div style="font-size:11px;color:#aaa">不含运费</div></div>'
+      + '<div class="sum">合计 <b><span class="cny">¥</span>' + (amount + fee).toFixed(2) + '</b>'
+      + '<div style="font-size:11px;color:#aaa">' + (fee > 0 ? '含运费 ¥' + money(fee) : esc(shipLineText(amount))) + '</div></div>'
       + '<button class="go" id="checkout"' + (picked.length ? '' : ' disabled') + '>结算(' + qty + ')</button>'
       + '</div>';
 
@@ -617,9 +665,25 @@
       + '<div class="fi" style="margin-bottom:0"><label>买家留言</label><textarea id="f_remark" placeholder="选填，如颜色偏好、发货时间要求"></textarea></div>'
       + '</div>';
 
-    html += '<div class="card" style="display:flex;justify-content:space-between;align-items:baseline">'
-      + '<span style="font-size:13px;color:#666">共 ' + c.reduce(function (s, x) { return s + x.qty; }, 0) + ' 件，应收</span>'
-      + '<span class="money" style="color:var(--tb-red);font-weight:700;font-size:20px"><span style="font-size:12px">¥</span>' + amount.toFixed(2) + '</span></div>';
+    var fee = shipFeeFor(amount);
+    var total = amount + fee;
+    var note = (shopInfo && shopInfo.shippingNote) || '';
+
+    html += '<div class="card">'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;color:#666;line-height:2">'
+      + '<span>商品金额（' + c.reduce(function (s, x) { return s + x.qty; }, 0) + ' 件）</span>'
+      + '<span>¥' + amount.toFixed(2) + '</span></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;color:#666;line-height:2">'
+      + '<span>运费</span><span>' + esc(shipLineText(amount)) + '</span></div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed #eee;margin-top:6px;padding-top:8px">'
+      + '<span style="font-size:13px;color:#666">应付</span>'
+      + '<span class="money" style="color:var(--tb-red);font-weight:700;font-size:20px"><span style="font-size:12px">¥</span>' + total.toFixed(2) + '</span></div>'
+      + '</div>';
+
+    if (note) {
+      html += '<div class="card" style="font-size:12px;color:#8a6d3b;background:#fffbe6;line-height:1.7">'
+        + '配送说明：' + esc(note) + '</div>';
+    }
 
     html += '<div style="padding:0 10px 24px"><button class="obtn" id="submit">提交订单</button>'
       + '<div style="font-size:11.5px;color:#aaa;text-align:center;margin-top:10px;line-height:1.6">提交后客服将联系您确认发货与付款方式</div></div>';
@@ -647,11 +711,18 @@
   }
 
   function renderDone(d) {
+    var goods = Number(d.goodsAmount != null ? d.goodsAmount : d.totalAmount || 0);
+    var fee = Number(d.shippingFee || 0);
+    var total = Number(d.totalAmount || (goods + fee));
+    var feeRow = fee > 0
+      ? '<br>含运费 ¥' + fee.toFixed(2) + '（商品 ¥' + goods.toFixed(2) + '）'
+      : '<br>运费：包邮';
     app.innerHTML = '<div class="pagehead"><h1>下单成功</h1></div>'
       + '<div class="done"><div class="ok">&#10003;</div>'
       + '<h2>下单成功</h2>'
       + '<p>订单号 <b>' + esc(d.orderNo) + '</b><br>'
-      + '应付 <span style="color:var(--tb-red);font-weight:700">¥' + Number(d.totalAmount).toFixed(2) + '</span><br>'
+      + '应付 <span style="color:var(--tb-red);font-weight:700">¥' + total.toFixed(2) + '</span>'
+      + feeRow + '<br>'
       + '客服会尽快联系您确认发货与付款</p>'
       + '<div style="margin-top:26px;display:flex;flex-direction:column;gap:10px">'
       + '<button class="obtn" id="mymine">查看我的订单</button>'
@@ -684,7 +755,9 @@
             + '<span class="no">' + esc(o.orderNo) + '</span>'
             + '<span class="st st-' + esc(o.status) + '">' + (ST[o.status] || o.status) + '</span></div>'
             + '<div class="mid">' + esc((o.createTime || '').replace('T', ' ').slice(0, 16)) + '</div>'
-            + '<div class="amt"><span style="font-size:12px;color:#999">共 ' + (o.itemCount || 0) + ' 件</span>'
+            + '<div class="amt"><span style="font-size:12px;color:#999">共 ' + (o.itemCount || 0) + ' 件'
+            + (Number(o.shippingFee || 0) > 0 ? ' · 含运费 ¥' + Number(o.shippingFee).toFixed(2) : ' · 包邮')
+            + '</span>'
             + '<span class="money"><span class="cny">¥</span>' + Number(o.totalAmount).toFixed(2) + '</span></div></div>';
         }).join('');
       });

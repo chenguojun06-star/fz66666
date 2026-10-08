@@ -31,8 +31,14 @@ public class ShopOrder {
     private String phone;
     private String address;
 
-    /** 订单总额（服务端按 SKU 售价计算，不信前端） */
+    /** 订单总额（= 商品金额 + 运费；服务端按 SKU 售价计算，不信前端） */
     private BigDecimal totalAmount;
+
+    /** 商品金额（不含运费） */
+    private BigDecimal goodsAmount;
+
+    /** 运费（配送费） */
+    private BigDecimal shippingFee;
 
     private Integer itemCount;
 

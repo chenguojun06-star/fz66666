@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, Modal, Segmented, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Segmented, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -62,6 +62,12 @@ const ShopManage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
 
+  // D-513 配送设置（运费规则：全场包邮 / 满额包邮 / 收固定运费）
+  const [shipEnabled, setShipEnabled] = useState(false);
+  const [shipFee, setShipFee] = useState<number | null>(null);
+  const [freeThreshold, setFreeThreshold] = useState<number | null>(null);
+  const [shipNote, setShipNote] = useState('');
+
   // 款式上架
   const [styleKw, setStyleKw] = useState('');
   const [styles, setStyles] = useState<StyleRow[]>([]);
@@ -116,6 +122,10 @@ const ShopManage: React.FC = () => {
       setShopName(cfg?.shopName || '');
       setNotice(cfg?.notice || '');
       setEnabled(cfg?.enabled === 1);
+      setShipEnabled(cfg?.shippingEnabled === 1);
+      setShipFee(cfg?.shippingFee == null ? null : Number(cfg.shippingFee));
+      setFreeThreshold(cfg?.freeShippingThreshold == null ? null : Number(cfg.freeShippingThreshold));
+      setShipNote(cfg?.shippingNote || '');
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '店铺配置加载失败');
     }
@@ -184,9 +194,25 @@ const ShopManage: React.FC = () => {
 
   const handleSaveConfig = async () => {
     if (!shopName.trim()) return message.warning('店铺名称不能为空');
+    // 规则自洽性前置校验（后端也会拦，但这里先给即时反馈）
+    if (shipEnabled && !(Number(shipFee) > 0)) {
+      return message.warning('已开启收取运费，请填写大于 0 的运费金额');
+    }
+    if (shipEnabled && Number(freeThreshold) > 0 && Number(freeThreshold) <= Number(shipFee)) {
+      return message.warning('包邮门槛应大于运费金额，否则等于一直包邮');
+    }
     setSaving(true);
     try {
-      await shopAdminApi.saveConfig({ shopName: shopName.trim(), notice: notice.trim(), enabled });
+      const res = await shopAdminApi.saveConfig({
+        shopName: shopName.trim(),
+        notice: notice.trim(),
+        enabled,
+        shippingEnabled: shipEnabled,
+        shippingFee: Number(shipFee) || 0,
+        freeShippingThreshold: Number(freeThreshold) || 0,
+        shippingNote: shipNote.trim(),
+      });
+      unwrapApiData(res, '保存失败');
       message.success('店铺配置已保存，顾客端即时生效');
       await fetchConfig();
       setPreviewKey((k) => k + 1);
@@ -597,6 +623,68 @@ const ShopManage: React.FC = () => {
                   {enabled ? '顾客可以正常下单' : '顾客只能浏览，无法下单'}
                 </Text>
               </div>
+            </div>
+            {/* D-513 配送设置：此前系统无运费概念，而 C 端页面硬编码「包邮」，
+                属于自相矛盾的展示。这里给出可配的运费规则，下单金额按规则服务端计算。 */}
+            <div className="shop-field">
+              <label>配送设置</label>
+              <div className="shop-field shop-field--inline" style={{ marginBottom: 10 }}>
+                <Switch checked={shipEnabled} onChange={setShipEnabled} />
+                <div>
+                  <div className="shop-field__label">{shipEnabled ? '按规则收运费' : '全场包邮'}</div>
+                  <Text type="secondary" className="shop-field__hint">
+                    {shipEnabled
+                      ? '未达包邮门槛的订单会加收运费'
+                      : '所有订单不收运费（顾客端显示「包邮」）'}
+                  </Text>
+                </div>
+              </div>
+              {shipEnabled && (
+                <div className="shop-ship-grid">
+                  <div>
+                    <div className="shop-field__label" style={{ marginBottom: 4 }}>默认运费（元）</div>
+                    <InputNumber
+                      value={shipFee}
+                      onChange={(v) => setShipFee(v)}
+                      min={0}
+                      precision={2}
+                      style={{ width: '100%' }}
+                      placeholder="如 12"
+                      addonBefore="¥"
+                    />
+                  </div>
+                  <div>
+                    <div className="shop-field__label" style={{ marginBottom: 4 }}>满多少包邮（元）</div>
+                    <InputNumber
+                      value={freeThreshold}
+                      onChange={(v) => setFreeThreshold(v)}
+                      min={0}
+                      precision={2}
+                      style={{ width: '100%' }}
+                      placeholder="0 = 不包邮"
+                      addonBefore="¥"
+                    />
+                  </div>
+                </div>
+              )}
+              {shipEnabled && (
+                <Text type="secondary" className="shop-field__hint" style={{ display: 'block', marginTop: 8 }}>
+                  当前规则：
+                  {Number(freeThreshold) > 0
+                    ? `商品满 ¥${Number(freeThreshold)} 包邮，否则收 ¥${Number(shipFee) || 0} 运费`
+                    : `所有订单收 ¥${Number(shipFee) || 0} 运费（不设包邮门槛）`}
+                </Text>
+              )}
+            </div>
+            <div className="shop-field">
+              <label>配送说明（顾客可见，选填）</label>
+              <Input
+                value={shipNote}
+                onChange={(e) => setShipNote(e.target.value)}
+                placeholder="如：偏远地区（新疆/西藏）需补运费，客服会联系您"
+                maxLength={120}
+                showCount
+              />
             </div>
             <div className="shop-field">
               <label>店铺链接</label>
@@ -1025,6 +1113,14 @@ const ShopManage: React.FC = () => {
               <Descriptions.Item label="订单金额" span={2}>
                 <Text strong className="shop-amount">¥ {Number(detailData.order.totalAmount).toFixed(2)}</Text>
                 <Text type="secondary">（{detailData.order.itemCount} 件）</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="商品金额">
+                ¥ {Number(detailData.order.goodsAmount ?? detailData.order.totalAmount).toFixed(2)}
+              </Descriptions.Item>
+              <Descriptions.Item label="运费">
+                {Number(detailData.order.shippingFee || 0) > 0
+                  ? <Text className="shop-amount">¥ {Number(detailData.order.shippingFee).toFixed(2)}</Text>
+                  : <Text type="secondary">包邮</Text>}
               </Descriptions.Item>
               {detailData.order.outstockNo ? (
                 <Descriptions.Item label="出库单号" span={2}>{detailData.order.outstockNo}</Descriptions.Item>

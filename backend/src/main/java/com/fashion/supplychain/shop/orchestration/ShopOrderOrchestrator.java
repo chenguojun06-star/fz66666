@@ -118,7 +118,38 @@ public class ShopOrderOrchestrator {
         data.put("shopName", config.getShopName());
         data.put("notice", config.getNotice());
         data.put("enabled", Integer.valueOf(1).equals(config.getEnabled()));
+        // D-513：配送规则下发给 C 端，用于「包邮 / 满 X 包邮 / 运费 ¥Y」的真实展示
+        // （此前页面硬编码「包邮」，与系统无运费概念自相矛盾）
+        data.put("shippingEnabled", Integer.valueOf(1).equals(config.getShippingEnabled()));
+        data.put("shippingFee", config.getShippingFee() == null ? BigDecimal.ZERO : config.getShippingFee());
+        data.put("freeShippingThreshold", config.getFreeShippingThreshold() == null
+                ? BigDecimal.ZERO : config.getFreeShippingThreshold());
+        data.put("shippingNote", config.getShippingNote());
         return data;
+    }
+
+    /**
+     * D-513：按店铺配送规则计算运费。
+     *
+     * <p>规则（简单可解释，与店铺配置页文案一致）：
+     * <ol>
+     *   <li>未开启收运费 → 0（全场包邮）</li>
+     *   <li>开启且商品金额 ≥ 包邮门槛（门槛 &gt; 0）→ 0（满额包邮）</li>
+     *   <li>其余 → 默认运费</li>
+     * </ol>
+     * 服务端计算，前端只展示不参与，避免被篡改。
+     */
+    private BigDecimal resolveShippingFee(ShopConfig config, BigDecimal goodsAmount) {
+        if (config == null || !Integer.valueOf(1).equals(config.getShippingEnabled())) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal threshold = config.getFreeShippingThreshold();
+        if (threshold != null && threshold.compareTo(BigDecimal.ZERO) > 0
+                && goodsAmount.compareTo(threshold) >= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal fee = config.getShippingFee();
+        return fee == null ? BigDecimal.ZERO : fee.max(BigDecimal.ZERO);
     }
 
     public Map<String, Object> listProducts(String slug, int page, int pageSize, String keyword) {
@@ -290,10 +321,14 @@ public class ShopOrderOrchestrator {
             oi.setAmount(price.multiply(BigDecimal.valueOf(qty)).setScale(2, java.math.RoundingMode.HALF_UP));
             orderItems.add(oi);
         }
-        BigDecimal total = orderItems.stream()
+        // D-513：商品金额与运费拆开算，订单总额 = 两者之和（应收也按总额挂账）
+        BigDecimal goodsAmount = orderItems.stream()
                 .map(ShopOrderItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal shippingFee = resolveShippingFee(config, goodsAmount)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal total = goodsAmount.add(shippingFee);
         int itemCount = orderItems.stream().mapToInt(ShopOrderItem::getQuantity).sum();
 
         // 2. 客户按手机号归并（无则新建），订单与应收都挂它
@@ -309,6 +344,8 @@ public class ShopOrderOrchestrator {
         order.setPhone(phone);
         order.setAddress(address);
         order.setTotalAmount(total);
+        order.setGoodsAmount(goodsAmount);
+        order.setShippingFee(shippingFee);
         order.setItemCount(itemCount);
         order.setStatus("PENDING_SHIP");
         order.setRemark(StringUtils.hasText(remark) ? remark : null);

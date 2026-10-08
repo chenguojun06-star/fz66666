@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -28,6 +29,18 @@ public class ShopConfig {
 
     /** 1=营业中 0=已打烊（打烊拒绝下单，浏览不受影响） */
     private Integer enabled;
+
+    /** 是否收取运费：1 收取（按规则） / 0 全场包邮 */
+    private Integer shippingEnabled;
+
+    /** 默认运费（未达包邮门槛时收取） */
+    private BigDecimal shippingFee;
+
+    /** 满额包邮门槛：商品金额达到该值即包邮；0 表示无门槛（即不包邮） */
+    private BigDecimal freeShippingThreshold;
+
+    /** 配送说明（买家可见，如「偏远地区需补运费，客服会联系您」） */
+    private String shippingNote;
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

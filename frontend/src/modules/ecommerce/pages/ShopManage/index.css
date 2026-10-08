@@ -72,6 +72,19 @@
   gap: 10px;
 }
 
+/* D-513 配送设置：运费 + 包邮门槛并排 */
+.shop-ship-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .shop-ship-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .shop-field__label {
   font-size: 14px;
   color: var(--color-text-primary);
