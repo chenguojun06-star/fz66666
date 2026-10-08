@@ -115,6 +115,11 @@
   .stepper span{width:52px;text-align:center;font-size:14px;}
   .d-desc{font-size:13px;color:#666;line-height:1.7;white-space:pre-wrap;word-break:break-word;}
   .d-spec{width:100%;border-collapse:collapse;font-size:12.5px;margin:0;}
+  /* 富文本里的图片必须自适应容器，否则会横向撑破详情页 */
+  .d-desc.rich img{max-width:100%;height:auto;display:block;margin:6px 0;border-radius:4px;}
+  .d-desc.rich p{margin:0 0 8px;}
+  .d-desc.rich table{max-width:100%;border-collapse:collapse;}
+  .d-desc.rich td,.d-desc.rich th{border:1px solid #eee;padding:4px 6px;font-size:12px;}
   .d-spec th{text-align:left;font-weight:600;color:#333;width:76px;padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;}
   .d-spec td{color:#666;padding:5px 0;line-height:1.6;word-break:break-word;}
 
@@ -261,6 +266,32 @@
   }
 
   /* ── 工具 ── */
+  /**
+   * 详情介绍的安全富文本渲染。
+   *
+   * 款式介绍在后台是用富文本存的，**主体就是 <img> 图片**（实测内容形如
+   * `<img src="/api/file/tenant-download/..." style="max-width:100%">`）。
+   * 若直接 esc() 转义，顾客会看到一串 `<img src=...>` 字面量 —— 那才是真的坏。
+   *
+   * 这里白名单放行排版与图片标签，其余（script/iframe/on* 事件/style 里的
+   * 危险表达式）一律剥离。放行 iframe 是为了兼容旧数据里可能存在的嵌入，
+   * 但仅允许 http/https。
+   */
+  function richHtml(s) {
+    if (s == null) return '';
+    var html = String(s);
+    // 先整体剥掉危险标签与其内容
+    html = html.replace(/<\s*(script|iframe|object|embed|link|meta|form|style)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+    html = html.replace(/<\s*(script|iframe|object|embed|link|meta|form|style)\b[^>]*>/gi, '');
+    // 事件属性与危险属性（onclick、onerror、srcdoc…）
+    html = html.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    html = html.replace(/\s+(srcdoc|formaction)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    // 只允许安全协议
+    html = html.replace(/\s+(href|src)\s*=\s*(["']?)\s*javascript:[^"'\s>]*/gi, '');
+    // 不允许 base64 大图内联（避免撑爆页面）与 data: 之外的未知协议
+    html = html.replace(/<\s*(?!img|p|br|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[a-z][a-z0-9]*\b/gi, '&lt;');
+    return html;
+  }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
       return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
@@ -504,7 +535,7 @@
       // 尺寸表：print_size 支持换行文本；无数据时明确写「暂无」，而不是空白
       html += '<div class="d-sec"><div class="lbl">尺寸表</div>';
       if (d.sizeChart) {
-        html += '<div class="d-desc">' + esc(d.sizeChart) + '</div>';
+        html += '<div class="d-desc rich">' + richHtml(d.sizeChart) + '</div>';
       } else {
         html += '<div class="d-desc" style="color:#bbb">暂无尺寸表'
           + '<div style="font-size:12px;margin-top:4px">可在联系商家时获取，或查看下方各尺码明细</div></div>';
@@ -514,7 +545,7 @@
       // 详情介绍
       html += '<div class="d-sec"><div class="lbl">款式详情</div>';
       if (d.description) {
-        html += '<div class="d-desc">' + esc(d.description) + '</div>';
+        html += '<div class="d-desc rich">' + richHtml(d.description) + '</div>';
       } else {
         html += '<div class="d-desc" style="color:#bbb">商家暂未填写款式详情</div>';
       }

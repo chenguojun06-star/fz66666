@@ -112,6 +112,41 @@ class ShopPublicExperienceTest {
 
     /* ─────────────── ⑥ 图片降级 ─────────────── */
 
+    /**
+     * 详情介绍在后台是<b>富文本</b>存的，主体就是图片（实测
+     * {@code <img src="/api/file/tenant-download/..." style="max-width:100%">}）。
+     * 直接 esc() 转义会让顾客看到一串 {@code <img src=...>} 字面量。
+     * 但放行 HTML 又必须防 XSS —— 顾客端是免登录公开页面。
+     */
+    @Test
+    @DisplayName("⑧ 详情介绍必须按富文本渲染图片，但必须剥离脚本与事件属性")
+    void richTextMustRenderImagesAndStripScripts() throws Exception {
+        String s = shopPage();
+        assertThat(s).as("必须提供富文本渲染函数").contains("function richHtml");
+        assertThat(s)
+                .as("详情介绍要用 richHtml 而非 esc")
+                .contains("richHtml(d.description)");
+        // 安全：必须剥离脚本类标签
+        assertThat(s)
+                .as("必须剥离 script/iframe 等危险标签")
+                .contains("script|iframe|object|embed|link|meta|form|style");
+        assertThat(s)
+                .as("必须剥离 on* 事件属性")
+                .contains("on[a-z]+\\s*=");
+        assertThat(s)
+                .as("必须拦截 javascript: 协议")
+                .contains("javascript:");
+    }
+
+    @Test
+    @DisplayName("⑨ 富文本图片必须自适应，不能横向撑破详情页")
+    void richImagesMustFitContainer() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("图片需限宽自适应")
+                .contains(".d-desc.rich img{max-width:100%");
+    }
+
     @Test
     @DisplayName("⑥ 图片必须有兜底占位，且同时覆盖加载失败与加载到空图")
     void imageMustHaveFallback() throws Exception {
