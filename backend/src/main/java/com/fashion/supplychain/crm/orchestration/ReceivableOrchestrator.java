@@ -60,6 +60,9 @@ public class ReceivableOrchestrator {
     @Autowired
     private com.fashion.supplychain.finance.orchestration.InvoiceOrchestrator invoiceOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.finance.orchestration.AccountingVoucherOrchestrator accountingVoucherOrchestrator;
+
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
@@ -469,15 +472,60 @@ public class ReceivableOrchestrator {
         }
 
         receivableService.updateById(r);
-        receivableReceiptOrchestrator.recordReceipt(r, paymentAmount, remark);
+        ReceivableReceiptLog receiptLog = receivableReceiptOrchestrator.recordReceipt(r, paymentAmount, remark);
         syncBillAggregationAfterReceipt(r, paymentAmount);
         log.info("[ReceivableOrchestrator] 应收单 {} 登记到账 {}，状态更新为 {}", id, paymentAmount, r.getStatus());
         logAppendHelper.appendMarkReceived(r, paymentAmount, UserContext.username());
+        // D-513：收款要记会计凭证（借 银行存款/库存现金、贷 应收账款），
+        // 与应付付款凭证（借 应付账款、贷 银行存款）方向相反。
+        generateReceiptVoucherSafely(r, receiptLog, paymentAmount);
         // D-753：结清时兜底补草稿——覆盖本功能上线前的历史应收（幂等，已有发票不重建）
         if ("PAID".equals(r.getStatus())) {
             invoiceOrchestrator.generateDraftFromReceivable(r);
         }
         return r;
+    }
+
+    /**
+     * D-513：生成收款凭证（客户付给我们）。
+     *
+     * <p>会计口径与付款相反：<b>借 银行存款/库存现金、贷 应收账款</b>——
+     * {@code AccountingVoucherOrchestrator.resolvePaymentSubjects} 已按 billType 区分方向，
+     * 这里只需把账单 ID 与幂等键传对。
+     *
+     * <p>幂等键用<b>收款流水 ID</b>（一次收款一张凭证），与应付侧用 paymentId 同口径，
+     * 避免原先"按 账单+金额"做幂等时两次同额部分收款互相顶掉。
+     *
+     * <p>非阻塞：凭证失败（如科目映射未配置）只告警，不影响收款主流程。
+     */
+    private void generateReceiptVoucherSafely(Receivable receivable, ReceivableReceiptLog receiptLog,
+                                              BigDecimal amount) {
+        if (accountingVoucherOrchestrator == null || receiptLog == null
+                || !StringUtils.hasText(receiptLog.getId())) {
+            return;
+        }
+        try {
+            String billId = receivable.getBillAggregationId();
+            if (!StringUtils.hasText(billId)
+                    && StringUtils.hasText(receivable.getSourceBizType())
+                    && StringUtils.hasText(receivable.getSourceBizId())
+                    && billAggregationOrchestrator != null) {
+                // 出库等上游直接建的应收单（OutstockReceivableHelper）没回填账单ID，按来源业务反查
+                com.fashion.supplychain.finance.entity.BillAggregation bill =
+                        billAggregationOrchestrator.findBySource(
+                                receivable.getSourceBizType(), receivable.getSourceBizId());
+                billId = bill == null ? null : bill.getId();
+            }
+            if (!StringUtils.hasText(billId)) {
+                log.warn("[ReceivableOrchestrator] 收款凭证跳过（应收单未关联账单）: receivableNo={}",
+                        receivable.getReceivableNo());
+                return;
+            }
+            accountingVoucherOrchestrator.generatePaymentVoucher(billId, receiptLog.getId(), amount, "OFFLINE");
+        } catch (Exception e) {
+            log.warn("[ReceivableOrchestrator] 收款凭证生成失败（不影响收款）: receivableNo={}, err={}",
+                    receivable.getReceivableNo(), e.getMessage());
+        }
     }
 
     private void syncBillAggregationAfterReceipt(Receivable receivable, BigDecimal paymentAmount) {

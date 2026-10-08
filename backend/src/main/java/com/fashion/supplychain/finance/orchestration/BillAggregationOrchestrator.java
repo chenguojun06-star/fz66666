@@ -692,6 +692,25 @@ public class BillAggregationOrchestrator {
     }
 
     /**
+     * D-513：按来源业务（sourceType + sourceId）查账单。
+     *
+     * <p>用于从应收单反查账单：出库等上游建的应收单（OutstockReceivableHelper）只带
+     * sourceBiz*、不带 billAggregationId，需要借此拿到账单 ID 才能记收款凭证。
+     */
+    public BillAggregation findBySource(String sourceType, String sourceId) {
+        if (!StringUtils.hasText(sourceType) || !StringUtils.hasText(sourceId)) {
+            return null;
+        }
+        return billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getSourceId, sourceId)
+                .eq(BillAggregation::getTenantId, TenantAssert.requireTenantId())
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+    }
+
+    /**
      * D-513：应收账单的收款闭环——委托给应收单的「登记到账」。
      *
      * <p>三步定位应收单：① 按账单ID关联 ② 按来源业务（出库单等）关联
@@ -1162,7 +1181,17 @@ public class BillAggregationOrchestrator {
      */
     private void generatePaymentVoucherSafely(BillAggregation bill, String paymentId,
                                               BigDecimal thisAmount, String paymentMethod) {
-        if (accountingVoucherOrchestrator == null || !StringUtils.hasText(paymentId)) {
+        /*
+         * D-513：不再要求 paymentId 非空。
+         * 应收（客户付给我们）没有付款记录，paymentId 为 null，但同样要记收款凭证；
+         * AccountingVoucherOrchestrator.generatePaymentVoucher 的幂等查询里本就有
+         * "无 paymentId 时退化为按 账单ID+金额" 的 else 分支（且 resolvePaymentSubjects
+         * 已按 billType 区分借贷方向）——原先这里的 !hasText(paymentId) 提前 return
+         * 与该设计自相矛盾，等于让应收收款永远拿不到凭证。
+         * 注：当前应收走 ReceivableOrchestrator.markReceived → generateReceiptVoucherSafely
+         * （幂等键用收款流水ID，更准确），此处仅为消除这个"看起来能用其实被挡掉"的陷阱。
+         */
+        if (accountingVoucherOrchestrator == null) {
             return;
         }
         try {
