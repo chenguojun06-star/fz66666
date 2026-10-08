@@ -109,3 +109,8 @@ export const BALANCE_DIRECTION_MAP: Record<string, string> = {
   DEBIT: '借',
   CREDIT: '贷',
 };
+
+/** 会计准则（库里存的是缩写码） */
+export const ACCOUNTING_STANDARD_MAP: Record<string, string> = {
+  CAS: '中国企业会计准则',
+};

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   App,
   Button,
   Card,
@@ -24,6 +25,7 @@ import {
   AccountingEntry,
   AccountingVoucher,
   AccountSubject,
+  ACCOUNTING_STANDARD_MAP,
   BALANCE_DIRECTION_MAP,
   SUBJECT_TYPE_MAP,
   VOUCHER_TYPE_MAP,
@@ -337,7 +339,7 @@ const AccountingVoucherPage: React.FC = () => {
           <Space>
             <Text strong style={{ fontSize: 15 }}>会计凭证</Text>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              账单确认自动生成记账凭证，付款/收款自动生成收付款凭证；账单冲销时对应凭证同步冲销。
+              系统自动记账的台账，无需手工录入
             </Text>
           </Space>
           <Space>
@@ -350,6 +352,28 @@ const AccountingVoucherPage: React.FC = () => {
           </Space>
         </div>
       </Card>
+
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="怎么用这个页面"
+        description={
+          <div style={{ fontSize: 13, lineHeight: 1.9 }}>
+            <div>
+              <b>凭证是自动生成的，不用你手工录：</b>
+            </div>
+            <div>· 账单点「确认」 → 记一张<b>记账凭证</b>（借 成本/费用、贷 应付账款；应收则借 应收账款、贷 收入）</div>
+            <div>· 点「付款」 → 记一张<b>收付款凭证</b>（借 应付账款、贷 银行存款）</div>
+            <div>· 客户回款点「收款」 → 记一张<b>收付款凭证</b>（借 银行存款、贷 应收账款）</div>
+            <div>· 账单被冲销 → 对应凭证自动<b>冲销</b>（生成红字凭证，原凭证保留可追溯）</div>
+            <div style={{ marginTop: 4 }}>
+              <b>你能做的：</b>「详情」看借贷明细（借方合计 = 贷方合计才算平衡）；
+              「冲销」用于记错时红冲；「补生成缺失凭证」用于把历史上漏生成的补上（可重复点）。
+            </div>
+          </div>
+        }
+      />
 
       <Tabs
         activeKey={activeTab}
@@ -500,7 +524,13 @@ const AccountingVoucherPage: React.FC = () => {
               style={{ marginBottom: 16 }}
               items={[
                 { key: 'date', label: '凭证日期', children: detailVoucher.voucherDate || '-' },
-                { key: 'std', label: '会计准则', children: detailVoucher.accountingStandard || '-' },
+                {
+                  key: 'std',
+                  label: '会计准则',
+                  children: ACCOUNTING_STANDARD_MAP[detailVoucher.accountingStandard ?? '']
+                    ?? detailVoucher.accountingStandard
+                    ?? '-',
+                },
                 { key: 'summary', label: '摘要', children: detailVoucher.summary || '-' },
                 { key: 'by', label: '制单人', children: detailVoucher.createBy || '-' },
                 {

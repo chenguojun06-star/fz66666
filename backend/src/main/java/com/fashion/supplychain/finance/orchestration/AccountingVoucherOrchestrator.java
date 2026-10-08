@@ -470,10 +470,41 @@ public class AccountingVoucherOrchestrator {
         entryService.save(entry);
     }
 
+    /**
+     * D-513：账单类型/分类的中文名 —— 凭证摘要面向财务人员，不该出现 PAYABLE/EXPENSE 这类英文码。
+     * 口径与前端 BILL_CATEGORY_MAP（services/finance/billAggregationApi.ts）保持一致。
+     */
+    private static final Map<String, String> BILL_TYPE_TEXT = Map.of(
+            "PAYABLE", "应付",
+            "RECEIVABLE", "应收");
+
+    private static final Map<String, String> BILL_CATEGORY_TEXT = Map.ofEntries(
+            Map.entry("MATERIAL", "面料"),
+            Map.entry("PRODUCT", "成品"),
+            Map.entry("EXTERNAL_FACTORY", "外发厂"),
+            Map.entry("PAYROLL", "工资"),
+            Map.entry("EXPENSE", "费用"),
+            Map.entry("SHIPMENT", "成品发货"),
+            Map.entry("DEDUCTION", "扣款"),
+            Map.entry("INVENTORY_PROFIT", "盘盈"),
+            Map.entry("INVENTORY_LOSS", "盘亏"));
+
+    /** 摘要形如「应付·费用 李老板」；原为「PAYABLE/EXPENSE 李老板」（英文码，财务看不懂）。 */
     private String buildSummary(BillAggregation bill) {
-        return (bill.getBillType() != null ? bill.getBillType() : "")
-                + "/" + (bill.getBillCategory() != null ? bill.getBillCategory() : "")
-                + (bill.getCounterpartyName() != null ? " " + bill.getCounterpartyName() : "");
+        String rawType = bill.getBillType();
+        String rawCategory = bill.getBillCategory();
+        String type = StringUtils.hasText(rawType)
+                ? BILL_TYPE_TEXT.getOrDefault(rawType, rawType) : "账单";
+        String category = StringUtils.hasText(rawCategory)
+                ? BILL_CATEGORY_TEXT.getOrDefault(rawCategory, rawCategory) : "";
+        StringBuilder sb = new StringBuilder(type);
+        if (!category.isEmpty()) {
+            sb.append('·').append(category);
+        }
+        if (StringUtils.hasText(bill.getCounterpartyName())) {
+            sb.append(' ').append(bill.getCounterpartyName());
+        }
+        return sb.toString();
     }
 
     private String generateVoucherNo() {
