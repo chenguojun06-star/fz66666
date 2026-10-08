@@ -126,6 +126,20 @@ export interface BatchPricePreview {
   dryRun: boolean;
 }
 
+
+/* ── D-770：详情页模块布局 ── */
+export interface LayoutModuleDef {
+  moduleKey: string;
+  defaultTitle: string;
+  canHide: boolean;
+}
+export interface StyleLayoutItem {
+  moduleKey: string;
+  sortOrder: number;
+  enabled: number;
+  moduleTitle?: string | null;
+}
+
 export interface ShopSkuSummary {
   minPrice?: number | null;
   maxPrice?: number | null;
@@ -255,6 +269,16 @@ export const shopAdminApi = {
     value: number;
     dryRun: boolean;
   }) => api.post<BatchPricePreview>('/shop/admin/sku/batch-adjust-price', body),
+  /** D-770：可选模块定义（哪些不可隐藏由后端裁决） */
+  layoutModules: () => api.get<LayoutModuleDef[]>('/shop/admin/layout-modules'),
+  /** D-770：读某款式的详情页布局（无记录返回默认） */
+  getStyleLayout: (styleId: number | string) =>
+    api.get<StyleLayoutItem[]>(`/shop/admin/layout/${styleId}`),
+  /** D-770：保存详情页布局（模块开关 + 上到下顺序） */
+  saveStyleLayout: (
+    styleId: number | string,
+    body: { modules: Array<{ moduleKey: string; enabled: number; sortOrder: number }> },
+  ) => api.post<{ saved: number }>(`/shop/admin/layout/${styleId}`, body),
   batchSaveSku: (styleId: number | string, items: BatchSaveSkuItem[]) =>
     api.post<BatchSaveSkuResult>('/shop/admin/sku/batch-save', { styleId, items }),
 };

@@ -4,6 +4,7 @@ import SideDrawer from '@/components/common/SideDrawer';
 import CoverColorImagesSection from './CoverColorImagesSection';
 import SkuPriceStockSection from './SkuPriceStockSection';
 import ListingInfoSection from './ListingInfoSection';
+import LayoutEditorSection from './LayoutEditorSection';
 import type { EditableSku, ListingRow } from '../types';
 
 const { Text } = Typography;
@@ -81,6 +82,7 @@ const ListingEditDrawer: React.FC<Props> = ({
             colors={colors}
           />
           <SkuPriceStockSection skus={skus} setSkus={setSkus} />
+          <LayoutEditorSection styleId={row?.id ?? null} />
           <ListingInfoSection
             listed={listed}
             toggling={toggling}
