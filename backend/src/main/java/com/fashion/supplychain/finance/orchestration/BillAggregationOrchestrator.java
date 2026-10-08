@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -700,7 +701,7 @@ public class BillAggregationOrchestrator {
      */
     private void settleReceivableViaReceipt(BillAggregation bill, BigDecimal thisAmount, String remark) {
         if (receivableOrchestrator == null) {
-            throw new RuntimeException("应收模块不可用，无法登记收款");
+            throw new BusinessException("应收模块不可用，无法登记收款");
         }
         Receivable receivable = receivableOrchestrator.findByBillAggregationId(bill.getId());
         if (receivable == null) {
@@ -710,7 +711,7 @@ public class BillAggregationOrchestrator {
             receivable = receivableOrchestrator.createFromBill(bill);
         }
         if (receivable == null) {
-            throw new RuntimeException("未找到该账单对应的应收单（通常是客户名称与客户档案不一致），"
+            throw new BusinessException("未找到该账单对应的应收单（通常是客户名称与客户档案不一致），"
                     + "请到「客户管理 → 应收账款」核对客户后再登记收款");
         }
         receivableOrchestrator.markReceived(receivable.getId(), thisAmount, remark);
