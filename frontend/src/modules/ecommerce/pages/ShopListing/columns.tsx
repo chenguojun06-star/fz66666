@@ -1,8 +1,9 @@
 import type { ColumnsType } from 'antd/es/table';
 import { Button, Popconfirm, Tag, Tooltip, Typography } from 'antd';
-import { PictureOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { ListingRow, ShopSkuSummary } from './types';
+import { diagnoseListingFromSummary, summarizeListingIssues } from './listingCompliance';
 
 const { Text } = Typography;
 
@@ -85,6 +86,53 @@ export function buildListingColumns({
         r.shopListed === 1 && r.shopListingTime
           ? (r.shopListingTime || '').replace('T', ' ').slice(0, 19)
           : <Text type="secondary">—</Text>,
+    },
+    {
+      /**
+       * D-769「刊登体检」列：对标店小秘/聚水潭的刊登质量诊断。
+       * 上架前就把「缺图 / 缺价 / 库存为 0 / 违禁词」摆在列表里，
+       * 而不是上架后被平台拒绝、运营还不知道错在哪。
+       *
+       * 只用 `/shop/admin/sku/summary` 的聚合值，不额外拉 SKU 明细，
+       * 因此体检不会给列表带来额外请求；逐 SKU 检查放在编辑抽屉里。
+       */
+      title: '刊登体检',
+      width: 150,
+      render: (_, r) => {
+        const issues = diagnoseListingFromSummary({
+          styleNo: r.styleNo,
+          styleName: r.styleName,
+          cover: r.cover,
+          minPrice: summary[String(r.id)]?.minPrice,
+          maxPrice: summary[String(r.id)]?.maxPrice,
+          totalStock: summary[String(r.id)]?.totalStock,
+          skuCount: summary[String(r.id)]?.skuCount,
+        });
+        const { canPublish, blockCount, warnCount } = summarizeListingIssues(issues);
+        if (issues.length === 0) {
+          return <Tag color="success" icon={<CheckCircleOutlined />}>可上架</Tag>;
+        }
+        const tip = (
+          <div style={{ maxWidth: 300 }}>
+            {issues.map((i) => (
+              <div key={`${i.field}-${i.message}`} style={{ marginBottom: 4 }}>
+                <span style={{ color: i.level === 'block' ? 'var(--color-error)' : 'var(--color-warning)' }}>
+                  ● {i.level === 'block' ? '必须修' : '建议改'}
+                </span>
+                <div style={{ fontWeight: 600 }}>{i.field}：{i.message}</div>
+                <div style={{ opacity: 0.85 }}>→ {i.action}</div>
+              </div>
+            ))}
+          </div>
+        );
+        return (
+          <Tooltip title={tip}>
+            <Tag color={canPublish ? 'warning' : 'error'}>
+              {canPublish ? `建议改 ${warnCount} 项` : `待修 ${blockCount} 项`}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '操作',
