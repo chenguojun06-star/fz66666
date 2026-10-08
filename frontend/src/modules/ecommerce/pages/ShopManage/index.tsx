@@ -25,6 +25,20 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: '已取消', color: 'default' },
 };
 
+/** D-513 售后状态 */
+const AFTER_SALE_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  NONE: { label: '无售后', color: 'default' },
+  APPLIED: { label: '售后待处理', color: 'orange' },
+  APPROVED: { label: '售后已同意', color: 'red' },
+  REJECTED: { label: '售后已拒绝', color: 'default' },
+};
+
+/** D-513 售后类型 */
+const AFTER_SALE_TYPE_MAP: Record<string, string> = {
+  REFUND_ONLY: '仅退款',
+  RETURN_REFUND: '退货退款',
+};
+
 interface StyleRow {
   id: number;
   styleNo: string;
@@ -84,6 +98,15 @@ const ShopManage: React.FC = () => {
   const [batchCompany, setBatchCompany] = useState('');
   const [batchNo, setBatchNo] = useState('');
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+
+  // D-513 售后（仅已发货订单）
+  const [afterSaleTarget, setAfterSaleTarget] = useState<ShopOrder | null>(null);
+  const [asType, setAsType] = useState<'REFUND_ONLY' | 'RETURN_REFUND'>('REFUND_ONLY');
+  const [asReason, setAsReason] = useState('');
+  const [asSubmitting, setAsSubmitting] = useState(false);
+  const [processTarget, setProcessTarget] = useState<ShopOrder | null>(null);
+  const [processRemark, setProcessRemark] = useState('');
+  const [processSubmitting, setProcessSubmitting] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -299,6 +322,53 @@ const ShopManage: React.FC = () => {
     }
   };
 
+  /** 登记售后（仅已发货订单） */
+  const handleApplyAfterSale = async () => {
+    if (!afterSaleTarget) return;
+    setAsSubmitting(true);
+    try {
+      unwrapApiData(
+        await shopAdminApi.applyAfterSale(afterSaleTarget.id, asType, asReason.trim() || undefined),
+        '售后登记失败',
+      );
+      message.success('售后已登记，请及时处理');
+      setAfterSaleTarget(null);
+      setAsReason('');
+      void fetchOrders(orderPage);
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '售后登记失败');
+    } finally {
+      setAsSubmitting(false);
+    }
+  };
+
+  /** 处理售后：同意（退货退款回补库存 + 撤销未收款应收）/ 拒绝 */
+  const handleProcessAfterSale = async (action: 'approve' | 'reject') => {
+    if (!processTarget) return;
+    setProcessSubmitting(true);
+    try {
+      if (action === 'approve') {
+        const res = await shopAdminApi.approveAfterSale(processTarget.id, processRemark.trim() || undefined);
+        const data = unwrapApiData<{ restoredItems: number; message: string }>(res, '处理售后失败');
+        message.success(data?.message || '已同意售后');
+      } else {
+        unwrapApiData(
+          await shopAdminApi.rejectAfterSale(processTarget.id, processRemark.trim() || undefined),
+          '拒绝售后失败',
+        );
+        message.success('已拒绝售后');
+      }
+      setProcessTarget(null);
+      setProcessRemark('');
+      void fetchOrders(orderPage);
+      void fetchStats();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '处理售后失败');
+    } finally {
+      setProcessSubmitting(false);
+    }
+  };
+
   const shopUrl = config ? `${window.location.origin}/shop/index.html?s=${config.slug}` : '';
   const listedCount = useMemo(() => styles.filter((s) => s.shopListed === 1).length, [styles]);
   const shownStyles = useMemo(() => {
@@ -375,8 +445,17 @@ const ShopManage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 95,
-      render: (v: string) => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label ?? v}</Tag>,
+      width: 140,
+      render: (v: string, r: ShopOrder) => (
+        <Space size={4} wrap>
+          <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label ?? v}</Tag>
+          {r.afterSaleStatus && r.afterSaleStatus !== 'NONE' ? (
+            <Tag color={AFTER_SALE_STATUS_MAP[r.afterSaleStatus]?.color}>
+              {AFTER_SALE_STATUS_MAP[r.afterSaleStatus]?.label ?? r.afterSaleStatus}
+            </Tag>
+          ) : null}
+        </Space>
+      ),
     },
     {
       title: '下单时间',
@@ -399,7 +478,7 @@ const ShopManage: React.FC = () => {
     },
     {
       title: '操作',
-      width: 190,
+      width: 220,
       fixed: 'right' as const,
       render: (_, r) => (
         <Space size={4} wrap>
@@ -426,6 +505,27 @@ const ShopManage: React.FC = () => {
                 取消
               </Button>
             </>
+          )}
+          {/* D-513：已发货才能走售后（未发货直接「取消」即可，两者语义不重叠） */}
+          {r.status === 'SHIPPED' && r.afterSaleStatus === 'APPLIED' && (
+            <Button
+              size="small"
+              type="link"
+              danger
+              onClick={() => { setProcessTarget(r); setProcessRemark(''); }}
+            >
+              处理售后
+            </Button>
+          )}
+          {r.status === 'SHIPPED'
+            && (!r.afterSaleStatus || r.afterSaleStatus === 'NONE' || r.afterSaleStatus === 'REJECTED') && (
+            <Button
+              size="small"
+              type="link"
+              onClick={() => { setAfterSaleTarget(r); setAsType('REFUND_ONLY'); setAsReason(''); }}
+            >
+              售后
+            </Button>
           )}
           <Button
             size="small"
@@ -797,6 +897,109 @@ const ShopManage: React.FC = () => {
         )}
       </Modal>
 
+      {/* D-513：登记售后 */}
+      <Modal
+        title="登记售后"
+        open={!!afterSaleTarget}
+        onOk={() => void handleApplyAfterSale()}
+        confirmLoading={asSubmitting}
+        onCancel={() => setAfterSaleTarget(null)}
+        okText="登记"
+        destroyOnHidden
+      >
+        {afterSaleTarget && (
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <Text type="secondary">
+              订单 {afterSaleTarget.orderNo} · {afterSaleTarget.customerName} · ¥{Number(afterSaleTarget.totalAmount).toFixed(2)}
+            </Text>
+            <div>
+              <div style={{ marginBottom: 6 }}>售后类型</div>
+              <Segmented
+                value={asType}
+                onChange={(v) => setAsType(String(v) as 'REFUND_ONLY' | 'RETURN_REFUND')}
+                options={[
+                  { value: 'REFUND_ONLY', label: '仅退款' },
+                  { value: 'RETURN_REFUND', label: '退货退款' },
+                ]}
+              />
+              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                {asType === 'RETURN_REFUND'
+                  ? '顾客退回货物：同意后会按明细回补库存。'
+                  : '顾客不退货：同意后不回补库存，仅处理款项。'}
+              </div>
+            </div>
+            <div>
+              <div style={{ marginBottom: 4 }}>售后原因</div>
+              <Input.TextArea
+                value={asReason}
+                onChange={(e) => setAsReason(e.target.value)}
+                placeholder="如：尺码不合适 / 有色差 / 顾客拍错"
+                maxLength={200}
+                showCount
+                autoSize={{ minRows: 2, maxRows: 4 }}
+              />
+            </div>
+            <Alert
+              type="info"
+              showIcon
+              message="关于退款"
+              description={<span style={{ fontSize: 12 }}>系统不做资金出账：同意后会自动撤销未收款的挂账应收；已收款的需你线下退款后，到「收付款中心」核销。</span>}
+            />
+          </Space>
+        )}
+      </Modal>
+
+      {/* D-513：处理售后（同意 / 拒绝） */}
+      <Modal
+        title="处理售后"
+        open={!!processTarget}
+        onCancel={() => setProcessTarget(null)}
+        destroyOnHidden
+        footer={[
+          <Button key="reject" danger loading={processSubmitting} onClick={() => void handleProcessAfterSale('reject')}>
+            拒绝
+          </Button>,
+          <Button key="approve" type="primary" loading={processSubmitting} onClick={() => void handleProcessAfterSale('approve')}>
+            同意售后
+          </Button>,
+        ]}
+      >
+        {processTarget && (
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
+            <Text type="secondary">
+              订单 {processTarget.orderNo} · {processTarget.customerName} · ¥{Number(processTarget.totalAmount).toFixed(2)}
+            </Text>
+            <Descriptions column={1} size="small" bordered>
+              <Descriptions.Item label="售后类型">
+                {AFTER_SALE_TYPE_MAP[processTarget.afterSaleType || ''] || processTarget.afterSaleType || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="售后原因">{processTarget.afterSaleReason || '-'}</Descriptions.Item>
+            </Descriptions>
+            <div>
+              <div style={{ marginBottom: 4 }}>处理备注</div>
+              <Input.TextArea
+                value={processRemark}
+                onChange={(e) => setProcessRemark(e.target.value)}
+                placeholder="同意时可留空；拒绝时建议写明原因"
+                maxLength={200}
+                showCount
+                autoSize={{ minRows: 2, maxRows: 4 }}
+              />
+            </div>
+            <Alert
+              type="warning"
+              showIcon
+              message="同意的后果"
+              description={<span style={{ fontSize: 12 }}>
+                {processTarget.afterSaleType === 'RETURN_REFUND'
+                  ? '① 按订单明细回补库存 ② 撤销未收款的挂账应收（已收款需线下退款后核销）'
+                  : '① 不回补库存（货不退） ② 撤销未收款的挂账应收（已收款需线下退款后核销）'}
+              </span>}
+            />
+          </Space>
+        )}
+      </Modal>
+
       {/* D-513：订单详情 */}
       <Drawer
         title="订单详情"
@@ -880,6 +1083,20 @@ const ShopManage: React.FC = () => {
                     {(detailData.order.cancelTime || '').replace('T', ' ').slice(0, 19)}
                   </Descriptions.Item>
                   <Descriptions.Item label="取消原因">{detailData.order.cancelReason || '-'}</Descriptions.Item>
+                </>
+              ) : null}
+              {detailData.order.afterSaleStatus && detailData.order.afterSaleStatus !== 'NONE' ? (
+                <>
+                  <Descriptions.Item label="售后状态">
+                    <Tag color={AFTER_SALE_STATUS_MAP[detailData.order.afterSaleStatus]?.color}>
+                      {AFTER_SALE_STATUS_MAP[detailData.order.afterSaleStatus]?.label ?? detailData.order.afterSaleStatus}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="售后类型">
+                    {AFTER_SALE_TYPE_MAP[detailData.order.afterSaleType || ''] || detailData.order.afterSaleType || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="售后原因">{detailData.order.afterSaleReason || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="处理备注">{detailData.order.afterSaleRemark || '-'}</Descriptions.Item>
                 </>
               ) : null}
               <Descriptions.Item label="商家备注">{detailData.order.remark || '-'}</Descriptions.Item>

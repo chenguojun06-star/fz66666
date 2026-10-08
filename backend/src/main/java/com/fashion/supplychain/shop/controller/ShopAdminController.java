@@ -136,6 +136,48 @@ public class ShopAdminController {
     }
 
     /**
+     * D-513：登记售后（仅已发货订单）。
+     * body: {type: REFUND_ONLY|RETURN_REFUND, reason?}
+     */
+    @PostMapping("/orders/{id}/after-sale/apply")
+    public Result<?> applyAfterSale(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String type = body.get("type") == null ? null : String.valueOf(body.get("type"));
+        String reason = body.get("reason") == null ? null : String.valueOf(body.get("reason"));
+        try {
+            shopAdminOrchestrator.applyAfterSale(id, type, reason);
+            return Result.successMessage("售后已登记");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * D-513：同意售后（退货退款会回补库存；未收款应收自动撤销）。
+     * body: {remark?}
+     */
+    @PostMapping("/orders/{id}/after-sale/approve")
+    public Result<?> approveAfterSale(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String remark = body == null || body.get("remark") == null ? null : String.valueOf(body.get("remark"));
+        try {
+            return Result.success(shopAdminOrchestrator.approveAfterSale(id, remark));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-513：拒绝售后。body: {remark?} */
+    @PostMapping("/orders/{id}/after-sale/reject")
+    public Result<?> rejectAfterSale(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String remark = body == null || body.get("remark") == null ? null : String.valueOf(body.get("remark"));
+        try {
+            shopAdminOrchestrator.rejectAfterSale(id, remark);
+            return Result.successMessage("已拒绝售后");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
      * 店铺商品运营：批量保存 SKU 售价 + 库存（D-768）。
      * body: {styleId, items:[{skuId, salesPrice, stockQuantity}]}；字段缺省表示不改。
      * 库存为「设为目标值」，服务端换算增减量并留操作日志（不走出入库台账）。

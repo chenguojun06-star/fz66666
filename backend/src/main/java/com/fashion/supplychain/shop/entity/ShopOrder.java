@@ -60,6 +60,21 @@ public class ShopOrder {
     /** 取消时间 */
     private LocalDateTime cancelTime;
 
+    /** 售后状态：NONE / APPLIED（已登记待处理）/ APPROVED（已同意）/ REJECTED（已拒绝） */
+    private String afterSaleStatus;
+
+    /** 售后类型：REFUND_ONLY（仅退款）/ RETURN_REFUND（退货退款） */
+    private String afterSaleType;
+
+    /** 售后原因（顾客诉求） */
+    private String afterSaleReason;
+
+    /** 商家处理备注 */
+    private String afterSaleRemark;
+
+    /** 售后登记时间 */
+    private LocalDateTime afterSaleTime;
+
     private String remark;
 
     private Integer deleteFlag;

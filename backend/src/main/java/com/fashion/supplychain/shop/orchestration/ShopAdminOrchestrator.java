@@ -459,6 +459,149 @@ public class ShopAdminOrchestrator {
                 order.getOrderNo(), order.getTenantId(), items.size(), cancelReason);
     }
 
+    // ── D-513：售后（退款 / 退货退款）────────────────────────────────────────
+    // 设计边界：**未发货**用「取消订单」（已实现）；**已发货**才走售后，两者不重叠。
+    // 系统无在线支付通道，「同意退款」是**记账层面**动作（冲销挂账应收 + 退货则回补库存），
+    // 实际打款由商家线下完成。
+
+    /**
+     * 登记售后（商家代顾客登记）。
+     *
+     * @param type REFUND_ONLY 仅退款（货不退，不回补库存）/ RETURN_REFUND 退货退款（回补库存）
+     */
+    public void applyAfterSale(String orderId, String type, String reason) {
+        ShopOrder order = requireOrder(orderId);
+        if (!"SHIPPED".equals(order.getStatus())) {
+            throw new IllegalArgumentException("只有「已发货」的订单可登记售后；未发货请直接使用「取消订单」");
+        }
+        if (!"REFUND_ONLY".equals(type) && !"RETURN_REFUND".equals(type)) {
+            throw new IllegalArgumentException("请选择售后类型（仅退款 / 退货退款）");
+        }
+        String current = StringUtils.hasText(order.getAfterSaleStatus()) ? order.getAfterSaleStatus() : "NONE";
+        if ("APPLIED".equals(current)) {
+            throw new IllegalArgumentException("该订单已有待处理的售后，请先处理完再登记");
+        }
+        if ("APPROVED".equals(current)) {
+            throw new IllegalArgumentException("该订单售后已处理完成，不能重复登记");
+        }
+
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setAfterSaleStatus("APPLIED");
+        patch.setAfterSaleType(type);
+        patch.setAfterSaleReason(StringUtils.hasText(reason) ? reason.trim() : null);
+        patch.setAfterSaleTime(LocalDateTime.now());
+        shopOrderMapper.updateById(patch);
+
+        OperationLogAppendUtil.writeLog("店铺管理", "登记售后",
+                String.format("订单 %s 登记售后（%s）：%s", order.getOrderNo(),
+                        "RETURN_REFUND".equals(type) ? "退货退款" : "仅退款",
+                        StringUtils.hasText(reason) ? reason.trim() : "未填写原因"),
+                order.getId(), order.getOrderNo());
+        log.info("[ShopAdmin] 登记售后 orderNo={} type={}", order.getOrderNo(), type);
+    }
+
+    /**
+     * 同意售后：退货退款则回补库存；挂账应收未收款则撤销（已收款需线下退款后在收付款中心核销）。
+     *
+     * @return 处理结果说明（含"需线下退款"等提示，前端直接展示）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> approveAfterSale(String orderId, String remark) {
+        ShopOrder order = requireOrder(orderId);
+        String current = StringUtils.hasText(order.getAfterSaleStatus()) ? order.getAfterSaleStatus() : "NONE";
+        if (!"APPLIED".equals(current)) {
+            throw new IllegalArgumentException("该订单没有待处理的售后");
+        }
+
+        boolean returnRefund = "RETURN_REFUND".equals(order.getAfterSaleType());
+        int restored = 0;
+
+        // 1) 退货退款：按下单明细回补库存（生成退回入库台账）
+        if (returnRefund) {
+            List<ShopOrderItem> items = shopOrderItemMapper.selectList(
+                    new LambdaQueryWrapper<ShopOrderItem>()
+                            .eq(ShopOrderItem::getOrderId, order.getId())
+                            .eq(ShopOrderItem::getTenantId, UserContext.tenantId()));
+            for (ShopOrderItem it : items) {
+                if (!StringUtils.hasText(it.getSkuCode()) || it.getQuantity() == null || it.getQuantity() <= 0) {
+                    continue;
+                }
+                Map<String, Object> params = new LinkedHashMap<>();
+                params.put("skuCode", it.getSkuCode());
+                params.put("quantity", it.getQuantity());
+                params.put("sourceType", "return_in");
+                params.put("warehouseLocation", "默认仓");
+                params.put("remark", "店铺订单退货退回 " + order.getOrderNo());
+                finishedWarehouseOperationOrchestrator.freeInbound(params);
+                restored++;
+            }
+        }
+
+        // 2) 应收：未收款直接撤销；已收款保留（无支付通道，需线下退款后到收付款中心核销）
+        String receivableNote = "";
+        if (StringUtils.hasText(order.getReceivableId())) {
+            Receivable receivable = receivableOrchestrator.getById(order.getReceivableId());
+            BigDecimal received = receivable == null || receivable.getReceivedAmount() == null
+                    ? BigDecimal.ZERO : receivable.getReceivedAmount();
+            if (received.compareTo(BigDecimal.ZERO) <= 0) {
+                try {
+                    receivableOrchestrator.delete(order.getReceivableId());
+                    receivableNote = "挂账应收已撤销。";
+                } catch (Exception e) {
+                    log.warn("[ShopAdmin] 售后撤销应收失败: orderNo={}, err={}", order.getOrderNo(), e.getMessage());
+                    receivableNote = "挂账应收撤销失败，请手动核对。";
+                }
+            } else {
+                receivableNote = String.format("该订单已收款 ¥%s，系统不做资金出账，"
+                        + "请线下退款后在「收付款中心」核销该应收。", received.toPlainString());
+            }
+        }
+
+        String finalRemark = StringUtils.hasText(remark) ? remark.trim() : null;
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setAfterSaleStatus("APPROVED");
+        patch.setAfterSaleRemark(finalRemark);
+        shopOrderMapper.updateById(patch);
+
+        String action = returnRefund ? "退货退款" : "仅退款";
+        OperationLogAppendUtil.writeLog("店铺管理", "同意售后",
+                String.format("订单 %s 同意%s%s%s", order.getOrderNo(), action,
+                        returnRefund ? "（已回补库存 " + restored + " 条）" : "（货不退，不回补库存）",
+                        StringUtils.hasText(receivableNote) ? "；" + receivableNote : ""),
+                order.getId(), order.getOrderNo());
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("restoredItems", restored);
+        resp.put("message", action + "已同意。"
+                + (returnRefund ? "库存已回补 " + restored + " 条。" : "")
+                + receivableNote);
+        log.info("[ShopAdmin] 同意售后 orderNo={} type={} 回补库存={}条",
+                order.getOrderNo(), order.getAfterSaleType(), restored);
+        return resp;
+    }
+
+    /** 拒绝售后 */
+    public void rejectAfterSale(String orderId, String remark) {
+        ShopOrder order = requireOrder(orderId);
+        String current = StringUtils.hasText(order.getAfterSaleStatus()) ? order.getAfterSaleStatus() : "NONE";
+        if (!"APPLIED".equals(current)) {
+            throw new IllegalArgumentException("该订单没有待处理的售后");
+        }
+        String finalRemark = StringUtils.hasText(remark) ? remark.trim() : "未填写拒绝原因";
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setAfterSaleStatus("REJECTED");
+        patch.setAfterSaleRemark(finalRemark);
+        shopOrderMapper.updateById(patch);
+
+        OperationLogAppendUtil.writeLog("店铺管理", "拒绝售后",
+                "订单 " + order.getOrderNo() + " 售后已拒绝：" + finalRemark,
+                order.getId(), order.getOrderNo());
+        log.info("[ShopAdmin] 拒绝售后 orderNo={} reason={}", order.getOrderNo(), finalRemark);
+    }
+
     /** 商家备注（买家看不到，仅内部记录） */
     public void updateOrderRemark(String orderId, String remark) {
         ShopOrder order = requireOrder(orderId);

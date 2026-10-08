@@ -36,6 +36,16 @@ export interface ShopOrder {
   cancelReason?: string | null;
   /** 取消时间（取消后） */
   cancelTime?: string | null;
+  /** 售后状态：NONE / APPLIED（待处理）/ APPROVED（已同意）/ REJECTED（已拒绝） */
+  afterSaleStatus?: string | null;
+  /** 售后类型：REFUND_ONLY（仅退款）/ RETURN_REFUND（退货退款） */
+  afterSaleType?: string | null;
+  /** 售后原因 */
+  afterSaleReason?: string | null;
+  /** 商家处理备注 */
+  afterSaleRemark?: string | null;
+  /** 售后登记时间 */
+  afterSaleTime?: string | null;
   remark?: string;
   createTime: string;
 }
@@ -157,6 +167,18 @@ export const shopAdminApi = {
 
   /** 订单概览统计 */
   orderStats: () => api.get<ShopOrderStats>('/shop/admin/orders/stats'),
+
+  /** 登记售后（仅已发货订单；type: REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款） */
+  applyAfterSale: (orderId: string, type: 'REFUND_ONLY' | 'RETURN_REFUND', reason?: string) =>
+    api.post<null>(`/shop/admin/orders/${orderId}/after-sale/apply`, { type, reason }),
+
+  /** 同意售后（退货退款会回补库存；未收款应收自动撤销；返回处理说明） */
+  approveAfterSale: (orderId: string, remark?: string) =>
+    api.post<{ restoredItems: number; message: string }>(`/shop/admin/orders/${orderId}/after-sale/approve`, { remark }),
+
+  /** 拒绝售后 */
+  rejectAfterSale: (orderId: string, remark?: string) =>
+    api.post<null>(`/shop/admin/orders/${orderId}/after-sale/reject`, { remark }),
 
   /** 款式维度 SKU 聚合：售价区间 / 可售总量 / 颜色数（列表展示用，避免逐行 N+1） */
   skuSummary: (styleIds: Array<number | string>) =>
