@@ -24,9 +24,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 会计凭证编排器 — 从账单自动生成会计凭证（借贷平衡）
@@ -377,6 +380,58 @@ public class AccountingVoucherOrchestrator {
                 .eq(AccountSubject::getEnabled, 1)
                 .orderByAsc(AccountSubject::getSubjectCode)
                 .list();
+    }
+
+    /**
+     * D-513：补生成缺失的记账凭证（历史补账）。
+     *
+     * <p>背景：会计科目映射长期只配了 1 号租户，其余租户账单确认时凭证生成必然失败
+     * （只记 WARN 降级）——于是历史上有大量已确认账单没有凭证。映射补齐后，
+     * 由本方法一次性把这些缺的凭证补上；此后新账单确认会自动生成，无需再补。
+     *
+     * <p>幂等：已存在 JOURNAL 凭证的账单直接跳过（generateVoucherFromBill 内部也做同样判断），
+     * 可重复点击。单张失败只告警不影响其余，返回本次新生成的张数。
+     */
+    public int backfillMissingVouchers() {
+        Long tenantId = TenantAssert.requireTenantId();
+        List<BillAggregation> confirmed = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .in(BillAggregation::getStatus, List.of("CONFIRMED", "SETTLING", "SETTLED"))
+                .orderByAsc(BillAggregation::getCreateTime)
+                .last("LIMIT 300")
+                .list();
+        if (confirmed.isEmpty()) {
+            return 0;
+        }
+        Set<String> billIds = confirmed.stream()
+                .map(BillAggregation::getId)
+                .collect(Collectors.toCollection(HashSet::new));
+        Set<String> alreadyHas = voucherService.lambdaQuery()
+                .eq(AccountingVoucher::getTenantId, tenantId)
+                .eq(AccountingVoucher::getDeleteFlag, 0)
+                .eq(AccountingVoucher::getVoucherType, VOUCHER_TYPE_JOURNAL)
+                .in(AccountingVoucher::getBillAggregationId, billIds)
+                .list()
+                .stream()
+                .map(AccountingVoucher::getBillAggregationId)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        int created = 0;
+        for (BillAggregation bill : confirmed) {
+            if (alreadyHas.contains(bill.getId())) {
+                continue;
+            }
+            try {
+                generateVoucherFromBill(bill.getId());
+                created++;
+            } catch (Exception e) {
+                log.warn("[AccountingVoucher] 补生成凭证跳过: billNo={}, err={}",
+                        bill.getBillNo(), e.getMessage());
+            }
+        }
+        log.info("[AccountingVoucher] 补生成记账凭证: 候选={}, 新生成={}", confirmed.size(), created);
+        return created;
     }
 
     // ==================== 内部方法 ====================

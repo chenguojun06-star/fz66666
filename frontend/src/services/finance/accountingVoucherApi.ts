@@ -81,6 +81,9 @@ export const accountingVoucherApi = {
   reverseVoucher: (id: number): Promise<unknown> =>
     api.post<unknown>(`/finance/accounting/voucher/reverse/${id}`),
 
+  /** 补生成缺失的记账凭证（历史补账，幂等，返回本次新生成张数） */
+  backfillVouchers: (): Promise<unknown> => api.post<unknown>('/finance/accounting/voucher/backfill'),
+
   /** 会计科目列表 */
   listSubjects: (): Promise<unknown> => api.get<unknown>('/finance/accounting/subjects'),
 };

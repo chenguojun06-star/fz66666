@@ -69,6 +69,7 @@ const AccountingVoucherPage: React.FC = () => {
 
   // 详情抽屉
   const [detailOpen, setDetailOpen] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailVoucher, setDetailVoucher] = useState<AccountingVoucher | null>(null);
   const [detailEntries, setDetailEntries] = useState<AccountingEntry[]>([]);
@@ -169,6 +170,34 @@ const AccountingVoucherPage: React.FC = () => {
     },
     [modal, message, fetchVouchers, detailVoucher],
   );
+
+  /**
+   * D-513：补生成缺失的记账凭证。
+   * 会计科目映射补齐之前已确认的历史账单不会自动生成凭证，这里一次性补上；
+   * 后端幂等（已存在凭证的账单跳过），可重复点击。
+   */
+  const handleBackfill = useCallback(() => {
+    modal.confirm({
+      title: '补生成缺失凭证',
+      content:
+        '将为「已确认但还没有记账凭证」的账单补生成凭证（历史补账）。'
+        + '已生成过的会自动跳过，可重复执行。确定继续？',
+      okText: '开始补生成',
+      onOk: async () => {
+        setBackfilling(true);
+        try {
+          const res = await accountingVoucherApi.backfillVouchers();
+          const created = unwrapApiData<number>(res, '补生成凭证失败');
+          message.success(`已补生成 ${created ?? 0} 张凭证`);
+          void fetchVouchers();
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '补生成凭证失败');
+        } finally {
+          setBackfilling(false);
+        }
+      },
+    });
+  }, [modal, message, fetchVouchers]);
 
   const voucherColumns: ColumnsType<AccountingVoucher> = [
     {
@@ -311,9 +340,14 @@ const AccountingVoucherPage: React.FC = () => {
               账单确认自动生成记账凭证，付款/收款自动生成收付款凭证；账单冲销时对应凭证同步冲销。
             </Text>
           </Space>
-          <Button icon={<ReloadOutlined />} onClick={() => void fetchVouchers()} loading={loading}>
-            刷新
-          </Button>
+          <Space>
+            <Button onClick={handleBackfill} loading={backfilling}>
+              补生成缺失凭证
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={() => void fetchVouchers()} loading={loading}>
+              刷新
+            </Button>
+          </Space>
         </div>
       </Card>
 

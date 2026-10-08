@@ -34,6 +34,15 @@ public class AccountingVoucherController {
         return Result.success(accountingVoucherOrchestrator.generateVoucherFromBill(billAggregationId));
     }
 
+    /**
+     * D-513：补生成缺失的记账凭证（历史补账）。
+     * 用于会计科目映射补齐之前就已确认、因而没生成凭证的历史账单；幂等可重复点击。
+     */
+    @PostMapping("/voucher/backfill")
+    public Result<Integer> backfillVouchers() {
+        return Result.success(accountingVoucherOrchestrator.backfillMissingVouchers());
+    }
+
     /** 查询凭证列表（按凭证日期范围过滤） */
     @GetMapping("/voucher/list")
     public Result<List<AccountingVoucher>> listVouchers(
