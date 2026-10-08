@@ -61,12 +61,19 @@ public class BillAggregationController {
         return Result.success(billAggregationOrchestrator.batchConfirm(billIds));
     }
 
-    /** 结清账单 */
+    /**
+     * 结清账单。
+     *
+     * <p>D-513：应付账单 = 我们付出去；应收账单 = 客户付给我们——
+     * 后端会自动转走「登记收款」链路（回写应收单、写收款流水、收满生成发票草稿）。
+     * {@code remark} 仅在应收收款时记入收款流水备注。
+     */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/settle")
     public Result<Void> settleBill(@PathVariable String id,
-                                   @RequestParam(required = false) BigDecimal settledAmount) {
-        billAggregationOrchestrator.settleBill(id, settledAmount);
+                                   @RequestParam(required = false) BigDecimal settledAmount,
+                                   @RequestParam(required = false) String remark) {
+        billAggregationOrchestrator.settleBill(id, settledAmount, remark);
         return Result.success(null);
     }
 

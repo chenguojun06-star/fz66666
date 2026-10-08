@@ -503,15 +503,23 @@ public class BillAggregationOrchestrator {
     }
 
     /**
-     * D-472 批量结清（详情页"批量付款 / 整月合并付款"）：事务内逐笔按全额结清，
-     * 不可结清（待确认/已结清/已取消）的账单跳过并记日志，与 batchConfirm 容错模式一致。
+     * D-472 批量结清（详情页"批量付款 / 整月合并付款"）：逐笔按全额结清，
+     * 不可结清（待确认/已结清/已取消）的账单跳过并记日志。
+     *
+     * <p>D-513：与 {@link #batchConfirm} 同样改为<b>逐条独立事务</b>（REQUIRES_NEW）。
+     * 原实现整批一个事务 + try/catch 跳过失败项，但 settleBill 内部会调其它
+     * {@code @Transactional} 方法（生成凭证、派生应收等），任一失败都会把共享事务
+     * 标记 rollback-only，外层 catch 失效 → 提交阶段抛 UnexpectedRollbackException
+     * → 整批 500（与批量确认同一个坑）。
      */
-    @Transactional(rollbackFor = Exception.class)
     public int batchSettle(List<String> billIds) {
+        if (billIds == null || billIds.isEmpty()) {
+            return 0;
+        }
         int count = 0;
         for (String id : billIds) {
             try {
-                settleBill(id, null);
+                requiresNewTx.executeWithoutResult(status -> settleBill(id, null));
                 count++;
             } catch (Exception e) {
                 log.warn("[BillAggregation] 批量结清跳过: id={}, reason={}", id, e.getMessage());
@@ -590,8 +598,20 @@ public class BillAggregationOrchestrator {
     /**
      * 结清账单（CONFIRMED → SETTLED）
      */
-    @Transactional(rollbackFor = Exception.class)
     public void settleBill(String billId, BigDecimal settledAmount) {
+        settleBill(billId, settledAmount, null);
+    }
+
+    /**
+     * 结清账单（CONFIRMED → SETTLED）；{@code remark} 仅应收收款时写入收款流水备注。
+     *
+     * <p>D-513：<b>应收账单（客户付给我们）走「登记收款」链路</b>——委托给应收单的
+     * {@code markReceived}，由它回写账单已结清金额、写收款流水、收满时生成发票草稿。
+     * 原先应收也走通用「付款」链路，只更新账单本身、完全不碰 {@code t_receivable}，
+     * 会造成「账单已结清、应收单仍待收」的两套账不一致，且不产生收款流水与发票。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void settleBill(String billId, BigDecimal settledAmount, String remark) {
         BillAggregation bill = getBillOrThrow(billId);
         // D-473：待确认账单允许直接付款——内部先自动确认（会同步生成结算任务与凭证），
         // 避免财务必须"先点确认、再点付款"两步走，也避免直接付款被拒。
@@ -628,6 +648,12 @@ public class BillAggregationOrchestrator {
                 log.warn("[BillAggregation] 幂等检查失败（降级放行，可能重复提交）: err={}", e.getMessage());
             }
         }
+        // D-513：应收账单改走「登记收款」，保证账单与应收单两套账一致
+        if (isReceivableBill(bill)) {
+            settleReceivableViaReceipt(bill, thisTime, remark);
+            return;
+        }
+
         SettlementResult result = resolveSettlement(total, already, thisTime);
         boolean fullyPaid = result.isFullyPaid();
 
@@ -657,6 +683,54 @@ public class BillAggregationOrchestrator {
         if (fullyPaid) {
             syncUpstreamPaid(bill);
         }
+    }
+
+    /** D-513：是否为应收账单（客户付给我们）。 */
+    private boolean isReceivableBill(BillAggregation bill) {
+        return "RECEIVABLE".equalsIgnoreCase(String.valueOf(bill.getBillType()));
+    }
+
+    /**
+     * D-513：应收账单的收款闭环——委托给应收单的「登记到账」。
+     *
+     * <p>三步定位应收单：① 按账单ID关联 ② 按来源业务（出库单等）关联
+     * ③ 现场派生（内部会做"账单对方ID → 客户档案名称全等匹配"两级解析）。
+     * 三者都拿不到时抛出可读错误，引导财务到「客户管理 → 应收账款」核对客户，
+     * 而不是像以前那样静默地只改账单、留下两套对不上的账。
+     */
+    private void settleReceivableViaReceipt(BillAggregation bill, BigDecimal thisAmount, String remark) {
+        if (receivableOrchestrator == null) {
+            throw new RuntimeException("应收模块不可用，无法登记收款");
+        }
+        Receivable receivable = receivableOrchestrator.findByBillAggregationId(bill.getId());
+        if (receivable == null) {
+            receivable = receivableOrchestrator.findBySourceBiz(bill.getSourceType(), bill.getSourceId());
+        }
+        if (receivable == null) {
+            receivable = receivableOrchestrator.createFromBill(bill);
+        }
+        if (receivable == null) {
+            throw new RuntimeException("未找到该账单对应的应收单（通常是客户名称与客户档案不一致），"
+                    + "请到「客户管理 → 应收账款」核对客户后再登记收款");
+        }
+        receivableOrchestrator.markReceived(receivable.getId(), thisAmount, remark);
+
+        // markReceived → syncBillAggregationAfterReceipt 已回写 settledAmount，收满会自动转「已结清」；
+        // 这里补齐"部分收款"的挂账状态与操作人，保持与应付付款后的展示口径一致。
+        BillAggregation latest = getBillOrThrow(bill.getId());
+        if (!BillConstants.isTerminalStatus(latest.getStatus())) {
+            BigDecimal amount = latest.getAmount() != null ? latest.getAmount() : BigDecimal.ZERO;
+            BigDecimal settled = latest.getSettledAmount() != null ? latest.getSettledAmount() : BigDecimal.ZERO;
+            if (settled.compareTo(amount) < 0) {
+                latest.setStatus(BillConstants.STATUS_SETTLING);
+            }
+            latest.setSettledById(UserContext.userId());
+            latest.setSettledByName(UserContext.username());
+            latest.setSettledAt(LocalDateTime.now());
+            billAggregationService.updateById(latest);
+        }
+        log.info("[BillAggregation] 应收账单登记收款: billNo={}, receivableNo={}, 本次={}, 状态={}",
+                bill.getBillNo(), receivable.getReceivableNo(), thisAmount, latest.getStatus());
     }
 
     /**

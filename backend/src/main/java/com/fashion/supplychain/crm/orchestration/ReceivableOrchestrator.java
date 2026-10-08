@@ -195,6 +195,27 @@ public class ReceivableOrchestrator {
                 .one();
     }
 
+    /**
+     * D-513：按来源业务（sourceBizType + sourceBizId）查应收单。
+     *
+     * <p>用于账单侧反向定位：出库等上游在推送账单的同时可能已由
+     * {@code OutstockReceivableHelper} 建过应收单（那条记录只带 sourceBiz*、不带
+     * billAggregationId），仅按账单ID查会漏掉它、进而重复建单或报错。
+     */
+    public Receivable findBySourceBiz(String sourceBizType, String sourceBizId) {
+        if (!StringUtils.hasText(sourceBizType) || !StringUtils.hasText(sourceBizId)) {
+            return null;
+        }
+        Long tenantId = UserContext.tenantId();
+        return receivableService.lambdaQuery()
+                .eq(Receivable::getSourceBizType, sourceBizType)
+                .eq(Receivable::getSourceBizId, sourceBizId)
+                .eq(Receivable::getDeleteFlag, 0)
+                .eq(Receivable::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
+    }
+
     public Map<String, Object> getDetail(String id) {
         Receivable receivable = getById(id);
         if (receivable == null) {

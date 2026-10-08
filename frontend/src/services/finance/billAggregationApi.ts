@@ -162,9 +162,13 @@ export const billAggregationApi = {
   batchConfirm: (ids: string[]) =>
     api.post('/finance/bill-aggregation/batch-confirm', ids),
 
-  /** 结算账单 */
-  settleBill: (id: string, settledAmount: number) =>
-    api.post(`/finance/bill-aggregation/${id}/settle`, null, { params: { settledAmount } }),
+  /**
+   * 结算账单。
+   * D-513：应付 = 我们付出去；应收 = 客户付给我们（后端自动走「登记收款」链路，
+   * 回写应收单、写收款流水、收满生成发票草稿）。remark 仅应收收款时记入收款流水备注。
+   */
+  settleBill: (id: string, settledAmount: number, remark?: string) =>
+    api.post(`/finance/bill-aggregation/${id}/settle`, null, { params: { settledAmount, remark } }),
 
   /** 取消账单 */
   cancelBill: (id: string, reason: string) =>

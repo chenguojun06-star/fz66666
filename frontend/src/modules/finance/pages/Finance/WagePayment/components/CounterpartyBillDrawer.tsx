@@ -5,6 +5,7 @@ import {
   Button,
   DatePicker,
   Drawer,
+  Input,
   InputNumber,
   Modal,
   Select,
@@ -96,7 +97,18 @@ export default function CounterpartyBillDrawer({
   // 单笔付款弹窗（金额默认全额可改——对齐"终审金额可编辑"口径）
   const [settleTarget, setSettleTarget] = useState<BillAggregation | null>(null);
   const [settleAmount, setSettleAmount] = useState<number | null>(null);
+  const [settleRemark, setSettleRemark] = useState('');
   const [settleSubmitting, setSettleSubmitting] = useState(false);
+
+  /*
+   * D-513：应收（客户付给我们）与应付（我们付出去）措辞必须区分——
+   * 对客户账单写「付款」会让人以为是我们付钱给客户。
+   * 判定口径：对方类型 CUSTOMER，或账单类型 RECEIVABLE（两者在库里 1:1 对应）。
+   */
+  const isReceivable =
+    (target?.counterpartyType || '').toUpperCase() === 'CUSTOMER'
+    || bills.some((b) => b.billType === 'RECEIVABLE');
+  const payVerb = isReceivable ? '收款' : '付款';
 
   // 驳回（单笔与批量共用，bills 长度区分）
   const [rejectTargets, setRejectTargets] = useState<BillAggregation[]>([]);
@@ -190,32 +202,37 @@ export default function CounterpartyBillDrawer({
     [bills, selectedKeys],
   );
 
-  /** 单笔付款（结清） */
+  /** 单笔付款 / 收款（结清） */
   const handleSettleOne = async () => {
     if (!settleTarget) return;
     const amt = Number(settleAmount ?? settleTarget.amount ?? 0);
     if (!(amt > 0)) {
-      message.error('结清金额必须大于0');
+      message.error(`${payVerb}金额必须大于0`);
       return;
     }
     setSettleSubmitting(true);
     try {
-      await billAggregationApi.settleBill(settleTarget.id, amt);
-      message.success(`已结清 ${settleTarget.billNo || ''}`);
+      await billAggregationApi.settleBill(settleTarget.id, amt, settleRemark.trim() || undefined);
+      message.success(
+        isReceivable
+          ? `已登记收款 ${settleTarget.billNo || ''}`
+          : `已结清 ${settleTarget.billNo || ''}`,
+      );
       setSettleTarget(null);
+      setSettleRemark('');
       afterChange();
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '结清失败');
+      message.error(e instanceof Error ? e.message : `${payVerb}失败`);
     } finally {
       setSettleSubmitting(false);
     }
   };
 
-  /** 批量付款（对勾选的可结清账单按全额结清） */
+  /** 批量付款 / 收款（对勾选的可结清账单按全额结清） */
   const handleBatchSettle = () => {
     const rows = selectedBills.filter((b) => SETTLEABLE.includes(b.status));
     if (rows.length === 0) {
-      message.warning('勾选中没有可付款（已确认未结清）的账单');
+      message.warning(`勾选中没有可${payVerb}（已确认未结清）的账单`);
       return;
     }
     const sum = rows.reduce(
@@ -223,7 +240,7 @@ export default function CounterpartyBillDrawer({
       0,
     );
     modal.confirm({
-      title: '批量付款',
+      title: `批量${payVerb}`,
       // D-474：同样列出明细，付款前看清每一笔
       content: (
         <div>
@@ -242,13 +259,13 @@ export default function CounterpartyBillDrawer({
           {rows.length > 10 && (
             <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
           )}
-          <div style={{ marginTop: 8 }}>确认付款？</div>
+          <div style={{ marginTop: 8 }}>确认{payVerb}？</div>
         </div>
       ),
-      okText: '确认付款',
+      okText: `确认${payVerb}`,
       onOk: async () => {
         await billAggregationApi.batchSettle(rows.map((b) => b.id));
-        message.success(`已批量结清 ${rows.length} 笔`);
+        message.success(`已批量${payVerb} ${rows.length} 笔`);
         afterChange();
       },
     });
@@ -356,7 +373,7 @@ export default function CounterpartyBillDrawer({
       const rows = records.filter((b) => SETTLEABLE.includes(b.status));
       if (rows.length === 0) {
         message.warning(
-          month ? `${month.format('YYYY-MM')} 没有 待付款（已确认） 的账单` : '该对象没有 待付款（已确认） 的账单',
+          month ? `${month.format('YYYY-MM')} 没有 待${payVerb}（已确认） 的账单` : `该对象没有 待${payVerb}（已确认） 的账单`,
         );
         return;
       }
@@ -365,7 +382,7 @@ export default function CounterpartyBillDrawer({
         0,
       );
       modal.confirm({
-        title: '合并付款',
+        title: `合并${payVerb}`,
         // D-474：列出将被结清的每一笔，避免把"打算留尾款"的账单一并付掉
         content: (
           <div>
@@ -385,10 +402,10 @@ export default function CounterpartyBillDrawer({
             {rows.length > 10 && (
               <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
             )}
-            <div style={{ marginTop: 8 }}>确认付款？</div>
+            <div style={{ marginTop: 8 }}>确认{payVerb}？</div>
           </div>
         ),
-        okText: '确认付款',
+        okText: `确认${payVerb}`,
         onOk: async () => {
           await billAggregationApi.batchSettle(rows.map((b) => b.id));
           message.success(`已合并结清 ${rows.length} 笔`);
@@ -396,7 +413,7 @@ export default function CounterpartyBillDrawer({
         },
       });
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '加载待付账单失败');
+      message.error(e instanceof Error ? e.message : `加载待${payVerb}账单失败`);
     } finally {
       setActionSubmitting(false);
     }
@@ -574,7 +591,7 @@ export default function CounterpartyBillDrawer({
                 setSettleAmount(Math.max(0, Number(r.amount ?? 0) - Number(r.settledAmount ?? 0)));
               }}
             >
-              付款
+              {payVerb}
             </Button>
           )}
           {REJECTABLE.includes(r.status) && (
@@ -738,7 +755,7 @@ export default function CounterpartyBillDrawer({
           disabled={selectedKeys.length === 0 || actionSubmitting}
           onClick={handleBatchSettle}
         >
-          批量付款
+          批量{payVerb}
         </Button>
         <Button
           danger
@@ -753,7 +770,7 @@ export default function CounterpartyBillDrawer({
           loading={actionSubmitting}
           onClick={() => void handleMergeSettle()}
         >
-          合并付款{month ? `（${month.format('YYYY-MM')}）` : '（全部月份）'}
+          合并{payVerb}{month ? `（${month.format('YYYY-MM')}）` : '（全部月份）'}
         </Button>
       </Space>
 
@@ -806,13 +823,13 @@ export default function CounterpartyBillDrawer({
         </div>
       )}
 
-      {/* 单笔付款弹窗 */}
+      {/* 单笔付款 / 收款弹窗 */}
       <Modal
-        title="付款（可只付一部分）"
+        title={`${payVerb}（可只${isReceivable ? '收' : '付'}一部分）`}
         open={!!settleTarget}
         onOk={() => void handleSettleOne()}
         confirmLoading={settleSubmitting}
-        onCancel={() => setSettleTarget(null)}
+        onCancel={() => { setSettleTarget(null); setSettleRemark(''); }}
         destroyOnHidden
       >
         {settleTarget && (
@@ -826,17 +843,18 @@ export default function CounterpartyBillDrawer({
                 账单金额 <Text strong>{fmtMoney(settleTarget.amount)}</Text>
               </Text>
               <Text type="secondary">
-                已付 <Text style={{ color: 'var(--color-success)' }}>{fmtMoney(settleTarget.settledAmount)}</Text>
+                {isReceivable ? '已收' : '已付'}{' '}
+                <Text style={{ color: 'var(--color-success)' }}>{fmtMoney(settleTarget.settledAmount)}</Text>
               </Text>
               <Text type="secondary">
-                剩余未付{' '}
+                剩余未{isReceivable ? '收' : '付'}{' '}
                 <Text strong style={{ color: 'var(--color-error)' }}>
                   {fmtMoney(Math.max(0, Number(settleTarget.amount ?? 0) - Number(settleTarget.settledAmount ?? 0)))}
                 </Text>
               </Text>
             </Space>
             <Space>
-              <Text>本次付款金额</Text>
+              <Text>本次{payVerb}金额</Text>
               <InputNumber
                 value={settleAmount}
                 onChange={(v) => setSettleAmount(v)}
@@ -847,8 +865,23 @@ export default function CounterpartyBillDrawer({
                 addonBefore="¥"
               />
             </Space>
+            {/* D-513：收款备注写进收款流水；应付不显示，避免改动既有交互 */}
+            {isReceivable && (
+              <Space>
+                <Text>收款备注</Text>
+                <Input
+                  value={settleRemark}
+                  onChange={(e) => setSettleRemark(e.target.value)}
+                  placeholder="选填，如：微信转账 / 银行转账尾号1234"
+                  style={{ width: 320 }}
+                  maxLength={100}
+                />
+              </Space>
+            )}
             <Text type="secondary" style={{ fontSize: 13 }}>
-              可以只付一部分：付不满不会关闭这笔账，剩余金额继续挂在该对象名下，状态转为「结算中」，下个月可继续扣。
+              {isReceivable
+                ? '可以只收一部分：收不满不会关闭这笔账，剩余金额继续挂在该客户名下，状态转为「结算中」，后续可继续登记收款；收满后自动结清并生成发票草稿。'
+                : '可以只付一部分：付不满不会关闭这笔账，剩余金额继续挂在该对象名下，状态转为「结算中」，下个月可继续扣。'}
             </Text>
           </Space>
         )}
