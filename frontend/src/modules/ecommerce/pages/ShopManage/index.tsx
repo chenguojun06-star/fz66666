@@ -67,6 +67,11 @@ const ShopManage: React.FC = () => {
   const [shipFee, setShipFee] = useState<number | null>(null);
   const [freeThreshold, setFreeThreshold] = useState<number | null>(null);
   const [shipNote, setShipNote] = useState('');
+  // D-769：服务承诺（商家显式开关，默认全不承诺）
+  const [returnDays, setReturnDays] = useState<number>(0);
+  const [promiseInStock, setPromiseInStock] = useState(false);
+  const [promiseAuthentic, setPromiseAuthentic] = useState(false);
+  const [promiseExtra, setPromiseExtra] = useState('');
 
   // 款式上架
   const [styleKw, setStyleKw] = useState('');
@@ -126,6 +131,10 @@ const ShopManage: React.FC = () => {
       setShipFee(cfg?.shippingFee == null ? null : Number(cfg.shippingFee));
       setFreeThreshold(cfg?.freeShippingThreshold == null ? null : Number(cfg.freeShippingThreshold));
       setShipNote(cfg?.shippingNote || '');
+      setReturnDays(cfg?.returnDays ?? 0);
+      setPromiseInStock(cfg?.promiseInStock === 1);
+      setPromiseAuthentic(cfg?.promiseAuthentic === 1);
+      setPromiseExtra(cfg?.promiseExtra || '');
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '店铺配置加载失败');
     }
@@ -209,6 +218,10 @@ const ShopManage: React.FC = () => {
         shippingFee: Number(shipFee) || 0,
         freeShippingThreshold: Number(freeThreshold) || 0,
         shippingNote: shipNote.trim(),
+        returnDays: returnDays ?? 0,
+        promiseInStock,
+        promiseAuthentic,
+        promiseExtra: promiseExtra.trim(),
       });
       unwrapApiData(res, '保存失败');
       message.success('店铺配置已保存，顾客端即时生效');
@@ -673,6 +686,51 @@ const ShopManage: React.FC = () => {
                     : `所有订单收 ¥${Number(shipFee) || 0} 运费（不设包邮门槛）`}
                 </Text>
               )}
+            </div>
+
+            {/* D-769：服务承诺 —— 商家显式开关。
+                此前顾客端把「7 天无理由」「现货速发」写死在页面上，
+                商家既不能配置、系统也没有退货政策数据支撑，属空头承诺：
+                写了就要兑现。现改为默认全不承诺，按需开启。 */}
+            <div className="shop-field">
+              <div className="shop-field__label" style={{ marginBottom: 4 }}>服务承诺</div>
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 10 }}
+                message="承诺写了就要能兑现"
+                description="未开启的承诺不会在顾客端显示。只勾选你确实能做到的；无理由退货需填写真实天数。"
+              />
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <Space>
+                  <Switch checked={returnDays > 0} onChange={(v) => setReturnDays(v ? 7 : 0)} />
+                  <span>无理由退货</span>
+                  {returnDays > 0 ? (
+                    <InputNumber
+                      value={returnDays}
+                      onChange={(v) => setReturnDays(Number(v) || 0)}
+                      min={1}
+                      max={90}
+                      style={{ width: 96 }}
+                      addonAfter="天"
+                    />
+                  ) : null}
+                </Space>
+                <Space>
+                  <Switch checked={promiseInStock} onChange={setPromiseInStock} />
+                  <span>现货速发（有库存即发）</span>
+                </Space>
+                <Space>
+                  <Switch checked={promiseAuthentic} onChange={setPromiseAuthentic} />
+                  <span>正品保障</span>
+                </Space>
+                <Input
+                  value={promiseExtra}
+                  onChange={(e) => setPromiseExtra(e.target.value)}
+                  placeholder="其它承诺，逗号分隔，如：支持一件代发、当天打样"
+                  maxLength={255}
+                />
+              </Space>
             </div>
             <div className="shop-field">
               <label>配送说明（顾客可见，选填）</label>

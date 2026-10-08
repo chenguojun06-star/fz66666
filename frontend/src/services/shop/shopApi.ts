@@ -183,6 +183,11 @@ export const shopAdminApi = {
     shippingFee?: number;
     freeShippingThreshold?: number;
     shippingNote?: string;
+  /** D-769：服务承诺。returnDays=0 表示不承诺；开关默认全关 */
+  returnDays?: number;
+  promiseInStock?: number | boolean;
+  promiseAuthentic?: number | boolean;
+  promiseExtra?: string | null;
   }) => api.post<null>('/shop/admin/config', body),
 
   /** 上架/下架款式 */

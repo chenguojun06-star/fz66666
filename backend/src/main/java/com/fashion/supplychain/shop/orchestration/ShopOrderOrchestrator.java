@@ -125,6 +125,13 @@ public class ShopOrderOrchestrator {
         data.put("freeShippingThreshold", config.getFreeShippingThreshold() == null
                 ? BigDecimal.ZERO : config.getFreeShippingThreshold());
         data.put("shippingNote", config.getShippingNote());
+        // D-769：服务承诺透出给顾客端。不透出则前端永远读到 undefined，
+        // 页面就会退化成「什么都不显示」——这正是要避免的静默失效。
+        // 只在真正承诺时才给非 0 值，顾客端据此决定是否展示。
+        data.put("returnDays", config.getReturnDays() == null ? 0 : config.getReturnDays());
+        data.put("promiseInStock", Integer.valueOf(1).equals(config.getPromiseInStock()));
+        data.put("promiseAuthentic", Integer.valueOf(1).equals(config.getPromiseAuthentic()));
+        data.put("promiseExtra", config.getPromiseExtra());
         return data;
     }
 

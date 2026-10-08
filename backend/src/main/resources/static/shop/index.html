@@ -292,6 +292,33 @@
     html = html.replace(/<\s*(?!img|p|br|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[a-z][a-z0-9]*\b/gi, '&lt;');
     return html;
   }
+  /**
+   * D-769：服务承诺标签（按商家配置渲染，绝不凭空承诺）。
+   *
+   * 承诺是**有法律后果的**：写了「7 天无理由」就要能兑现，兑现不了即纠纷/投诉。
+   * 所以这里只在商家**显式开启且填了天数**时才输出对应文案，
+   * 未开启一律不出现 —— 顾客看不到商家没做过的承诺。
+   */
+  function promiseTags() {
+    // 核实过 /shop/public/{slug}/info 返回的就是配置对象本身，没有 config 嵌套
+    var c = shopInfo || {};
+    var out = '';
+    // 无理由：只认 returnDays > 0；0 视为不承诺
+    var rd = Number(c.returnDays || 0);
+    if (rd > 0) out += '<span>' + rd + ' 天无理由退货</span>';
+    // 现货速发
+    if (Number(c.promiseInStock || 0) === 1) out += '<span>现货速发</span>';
+    // 正品保障
+    if (Number(c.promiseAuthentic || 0) === 1) out += '<span>正品保障</span>';
+    // 自定义其它承诺（商家自己填的，按逗号拆开，最多显示 3 条）
+    var extra = String(c.promiseExtra || '').trim();
+    if (extra) {
+      var items = extra.split(/[,，]/).map(function (t) { return t.trim(); })
+        .filter(function (t) { return t; }).slice(0, 3);
+      for (var i = 0; i < items.length; i++) out += '<span>' + esc(items[i]) + '</span>';
+    }
+    return out;
+  }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
       return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
@@ -493,12 +520,17 @@
       var html = '<div class="d-hero"><div id="heroImg">' + thumbHtml(d.cover)
         + '</div><button class="navbtn" id="bk">&#8249;</button></div>';
 
+      // D-769：不再写死「7 天无理由」。该承诺写死在页面上、商家无法配置、
+      // 系统里也没有退货政策数据支撑 —— 属于空头承诺，兑现不了就是纠纷。
+      // 现改为按商家在店铺配置里显式开启的承诺渲染。
+      var promiseHtml = promiseTags();
       html += '<div class="d-price">' + priceHtml(minPrice, 'lg')
         + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
-        + '<span>' + esc(shipTag()) + '</span><span>7 天无理由</span></div></div>';
+        + '<span>' + esc(shipTag()) + '</span>' + promiseHtml + '</div></div>';
 
       html += '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
-        + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span><span class="tag">现货速发</span>'
+        + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span>'
+        + promiseHtml
         + '<span class="tag">' + colors.length + ' 色可选</span></div>'
         + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
 

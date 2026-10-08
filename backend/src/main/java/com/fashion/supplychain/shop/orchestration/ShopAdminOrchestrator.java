@@ -152,9 +152,50 @@ public class ShopAdminOrchestrator {
         if (willBeEnabled == 1 && willBeFee.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("已开启收取运费，请填写大于 0 的运费金额");
         }
+
+        /* ── D-769：服务承诺开关 ── */
+        if (body.get("returnDays") != null) {
+            int days;
+            try {
+                days = Integer.parseInt(String.valueOf(body.get("returnDays")).trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("无理由退货天数必须是数字");
+            }
+            if (days < 0 || days > 90) {
+                throw new IllegalArgumentException("无理由退货天数需在 0~90 之间，0 表示不承诺");
+            }
+            patch.setReturnDays(days);
+        }
+        if (body.get("promiseInStock") != null) {
+            patch.setPromiseInStock(flagOf(body.get("promiseInStock")));
+        }
+        if (body.get("promiseAuthentic") != null) {
+            patch.setPromiseAuthentic(flagOf(body.get("promiseAuthentic")));
+        }
+        if (body.get("promiseExtra") != null) {
+            String extra = String.valueOf(body.get("promiseExtra")).trim();
+            if (extra.length() > 255) {
+                throw new IllegalArgumentException("其它服务承诺最多 255 字");
+            }
+            patch.setPromiseExtra(extra.isEmpty() ? null : extra);
+        }
+        // 无理由退货的「开关」就是天数本身：0 = 不承诺，>0 = 承诺该天数。
+        // 因此不存在「开了却没填天数」的状态 —— 上一版曾写过一个
+        // `willReturnDays == 1 && willReturnDays <= 0` 的校验，
+        // 那是恒假条件（死代码），会让后人误以为这里有守卫，实际没有。已删除。
         patch.setUpdateTime(LocalDateTime.now());
         shopConfigMapper.updateById(patch);
         log.info("[ShopAdmin] 店铺配置已更新 tenant={}", existing.getTenantId());
+    }
+
+
+    /** 把 true/1/"true" 统一转成 1/0，避免前端各处分叉写法 */
+    private static int flagOf(Object v) {
+        if (v == null) {
+            return 0;
+        }
+        String s = String.valueOf(v).trim();
+        return ("1".equals(s) || "true".equalsIgnoreCase(s)) ? 1 : 0;
     }
 
     /** 解析非负金额（运费/门槛），非法值直接抛错避免静默写脏配置 */

@@ -42,6 +42,20 @@ public class ShopConfig {
     /** 配送说明（买家可见，如「偏远地区需补运费，客服会联系您」） */
     private String shippingNote;
 
+    /* ── D-769：服务承诺（商家显式开关，不做空头承诺）── */
+
+    /** 无理由退货天数；0 = 不承诺。开启时前端必须要求填写天数 */
+    private Integer returnDays;
+
+    /** 现货速发承诺开关；0 = 不承诺 */
+    private Integer promiseInStock;
+
+    /** 正品保障承诺开关；0 = 不承诺 */
+    private Integer promiseAuthentic;
+
+    /** 其它服务承诺（逗号分隔的自由文本），为空则不展示 */
+    private String promiseExtra;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
