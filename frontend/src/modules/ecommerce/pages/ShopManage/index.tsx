@@ -194,12 +194,10 @@ const ShopManage: React.FC = () => {
 
   const handleSaveConfig = async () => {
     if (!shopName.trim()) return message.warning('店铺名称不能为空');
-    // 规则自洽性前置校验（后端也会拦，但这里先给即时反馈）
+    // 规则自洽性前置校验（后端也会拦，但这里先给即时反馈）：
+    // 只拦"逻辑上说不通"的配置；包邮门槛与运费的高低属于商家定价策略，不做限制。
     if (shipEnabled && !(Number(shipFee) > 0)) {
       return message.warning('已开启收取运费，请填写大于 0 的运费金额');
-    }
-    if (shipEnabled && Number(freeThreshold) > 0 && Number(freeThreshold) <= Number(shipFee)) {
-      return message.warning('包邮门槛应大于运费金额，否则等于一直包邮');
     }
     setSaving(true);
     try {
