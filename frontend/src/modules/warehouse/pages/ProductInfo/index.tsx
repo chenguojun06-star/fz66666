@@ -62,6 +62,7 @@ const ProductInfoPage: React.FC = () => {
     openEdit,
     handleInbound,
     handlePrintTag,
+    handleToggleStatus,
   });
 
   return (

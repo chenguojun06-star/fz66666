@@ -26,6 +26,12 @@ export interface ShopOrder {
   status: 'PENDING_SHIP' | 'SHIPPED' | 'CANCELLED';
   receivableId?: string;
   outstockNo?: string;
+  /** 快递公司（发货后） */
+  expressCompany?: string | null;
+  /** 快递单号（发货后） */
+  expressNo?: string | null;
+  /** 发货时间（发货后） */
+  shipTime?: string | null;
   remark?: string;
   createTime: string;
 }
@@ -87,6 +93,10 @@ export const shopAdminApi = {
       '/shop/admin/orders',
       params,
     ),
+
+  /** 订单发货（待发货 → 已发货；快递公司与单号选填，自提/同城配送可不填） */
+  shipOrder: (orderId: string, body?: { expressCompany?: string; expressNo?: string }) =>
+    api.post<null>(`/shop/admin/orders/${orderId}/ship`, body ?? {}),
 
   /** 款式维度 SKU 聚合：售价区间 / 可售总量 / 颜色数（列表展示用，避免逐行 N+1） */
   skuSummary: (styleIds: Array<number | string>) =>

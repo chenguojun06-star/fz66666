@@ -14,6 +14,8 @@ interface ColumnHandlers {
   openEdit: (record: StyleInfo) => void;
   handleInbound: (record: StyleInfo) => void;
   handlePrintTag: (record: StyleInfo) => void;
+  /** D-513：启用/停用/恢复启用（报废款式走恢复启用） */
+  handleToggleStatus: (record: StyleInfo) => void;
 }
 
 export const buildColumns = (handlers: ColumnHandlers) => [
@@ -74,11 +76,17 @@ export const buildColumns = (handlers: ColumnHandlers) => [
   {
     title: '操作', key: 'actions', width: 180, fixed: 'right' as const,
     render: (_: unknown, record: StyleInfo) => {
+      const scrapped = String(record.status || '').trim().toUpperCase() === 'SCRAPPED';
       const actions: RowAction[] = [
         { key: 'detail', label: '详情', primary: true, onClick: () => handlers.openDrawer(record) },
         { key: 'edit', label: '编辑', onClick: () => handlers.openEdit(record) },
         { key: 'inbound', label: '入库', onClick: () => handlers.handleInbound(record) },
         { key: 'print', label: '吊牌', onClick: () => handlers.handlePrintTag(record) },
+        // D-513：报废款式此前在商品资料页既不能编辑、也没有恢复入口（点启用必然 400），
+        // 这里给出「恢复启用」，与详情抽屉同一动作。
+        scrapped
+          ? { key: 'unscrap', label: '恢复启用', onClick: () => handlers.handleToggleStatus(record) }
+          : { key: 'status', label: record.status === 'ENABLED' ? '停用' : '启用', onClick: () => handlers.handleToggleStatus(record) },
       ];
       return <RowActions actions={actions} />;
     },

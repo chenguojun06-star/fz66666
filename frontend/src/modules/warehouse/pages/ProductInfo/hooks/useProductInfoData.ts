@@ -219,18 +219,35 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     }
   };
 
+  /**
+   * D-513：启用 / 停用 / 恢复启用。
+   *
+   * <p>此前实现是 `PUT /style/info {id, status}` —— 两个致命问题：
+   * <ol>
+   *   <li>只带 id+status，缺 styleNo/styleName → 后端 validateStyleInfo 直接 400「请输入款号」，
+   *       <b>任何款式都启用不了</b>；</li>
+   *   <li>报废款式即使补上 styleNo 也会被 ensureNotScrapped 拦截（400「该开发样已报废」），
+   *       而「启用」按钮对报废款式照样显示 → 用户点了永远失败。</li>
+   * </ol>
+   * 现在改为：报废款式走专用恢复接口 {@code /style/info/{id}/unscrap}，
+   * 其余走专用状态接口 {@code PUT /style/info/{id}/status}（不走整单 update，避免误触发全字段校验）。
+   */
   const handleToggleStatus = async (record: StyleInfo) => {
-    const newStatus = record.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
+    const scrapped = String(record.status || '').trim().toUpperCase() === 'SCRAPPED';
     try {
-      const res = await api.put('/style/info', { id: record.id, status: newStatus });
-      if ((res as any).code === 200) {
-        message.success(newStatus === 'ENABLED' ? '已启用' : '已停用');
+      const res = scrapped
+        ? await api.post(`/style/info/${record.id}/unscrap`)
+        : await api.put(`/style/info/${record.id}/status`, null, {
+            params: { status: record.status === 'ENABLED' ? 'DISABLED' : 'ENABLED' },
+          });
+      if ((res as { code?: number }).code === 200) {
+        message.success(scrapped ? '已恢复为启用状态，现在可以编辑和下单' : (record.status === 'ENABLED' ? '已停用' : '已启用'));
         fetchList();
       } else {
-        message.error((res as any).message || '操作失败');
+        message.error((res as { message?: string }).message || '操作失败');
       }
-    } catch {
-      message.error('操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     }
   };
 

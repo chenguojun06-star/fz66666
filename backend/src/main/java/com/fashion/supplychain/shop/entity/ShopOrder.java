@@ -45,6 +45,15 @@ public class ShopOrder {
     /** 销售出库单号（多款时为首单号，其余在明细/出库台账） */
     private String outstockNo;
 
+    /** 快递公司（发货时填写；自提/同城配送可空） */
+    private String expressCompany;
+
+    /** 快递单号（发货时填写） */
+    private String expressNo;
+
+    /** 发货时间（状态置为 SHIPPED 时写入） */
+    private LocalDateTime shipTime;
+
     private String remark;
 
     private Integer deleteFlag;

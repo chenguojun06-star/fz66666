@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Drawer, Descriptions, Form, Space, Popconfirm, Table, Tag } from 'antd';
+import { Button, Drawer, Descriptions, Form, Space, Popconfirm, Table } from 'antd';
 import { EditOutlined, LoginOutlined, PrinterOutlined, SwapOutlined } from '@ant-design/icons';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
@@ -151,12 +151,27 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
               <Button icon={<EditOutlined />} onClick={() => { onEdit(d); }}>编辑</Button>
               <Button icon={<LoginOutlined />} onClick={() => onInbound(d)}>入库</Button>
               <Button icon={<PrinterOutlined />} onClick={() => onPrintTag(d)}>吊牌</Button>
-              <Popconfirm
-                title={d.status === 'ENABLED' ? '确定停用该成品？' : '确定启用该成品？'}
-                onConfirm={() => onToggleStatus(d)}
-              >
-                <Button icon={<SwapOutlined />}>{d.status === 'ENABLED' ? '停用' : '启用'}</Button>
-              </Popconfirm>
+              {/*
+                D-513：报废款式不能走「启用/停用」（后端明确拒绝已报废款式启停），
+                只提供「恢复启用」（取消报废）。此前报废款式照样显示「启用」，
+                点了必然 400，用户以为功能坏了 —— 现在按状态给出正确入口。
+              */}
+              {d.status === 'SCRAPPED' ? (
+                <Popconfirm
+                  title="确定恢复启用该成品？"
+                  description="恢复后可继续编辑和下单（等同取消报废）。"
+                  onConfirm={() => onToggleStatus(d)}
+                >
+                  <Button icon={<SwapOutlined />}>恢复启用</Button>
+                </Popconfirm>
+              ) : (
+                <Popconfirm
+                  title={d.status === 'ENABLED' ? '确定停用该成品？' : '确定启用该成品？'}
+                  onConfirm={() => onToggleStatus(d)}
+                >
+                  <Button icon={<SwapOutlined />}>{d.status === 'ENABLED' ? '停用' : '启用'}</Button>
+                </Popconfirm>
+              )}
             </Space>
           )
         ) : undefined

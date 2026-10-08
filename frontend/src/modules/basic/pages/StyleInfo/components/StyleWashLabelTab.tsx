@@ -145,8 +145,10 @@ const StyleWashLabelTab: React.FC<Props> = ({
       } else {
         message.error(res.message || '保存失败');
       }
-    } catch {
-      message.error('保存失败');
+    } catch (e: unknown) {
+      // D-513：此前统一吞成「保存失败」，用户无法知道真实原因
+      // （如「该开发样已报废，无法继续流转」），只能反复重试。
+      message.error(e instanceof Error && e.message ? e.message : '保存失败');
     } finally {
       setSaving(false);
     }

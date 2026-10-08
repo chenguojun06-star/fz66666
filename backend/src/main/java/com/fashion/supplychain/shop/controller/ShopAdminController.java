@@ -54,6 +54,24 @@ public class ShopAdminController {
     }
 
     /**
+     * D-513：店铺订单发货（待发货 → 已发货）。
+     * body: {expressCompany?, expressNo?}（自提/同城配送可不填）。
+     */
+    @PostMapping("/orders/{id}/ship")
+    public Result<?> shipOrder(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String expressCompany = body == null || body.get("expressCompany") == null
+                ? null : String.valueOf(body.get("expressCompany"));
+        String expressNo = body == null || body.get("expressNo") == null
+                ? null : String.valueOf(body.get("expressNo"));
+        try {
+            shopAdminOrchestrator.shipOrder(id, expressCompany, expressNo);
+            return Result.successMessage("已发货");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
      * 店铺商品运营：批量保存 SKU 售价 + 库存（D-768）。
      * body: {styleId, items:[{skuId, salesPrice, stockQuantity}]}；字段缺省表示不改。
      * 库存为「设为目标值」，服务端换算增减量并留操作日志（不走出入库台账）。

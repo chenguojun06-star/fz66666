@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Empty, Input, Segmented, Space, Switch, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Input, Modal, Segmented, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -61,6 +61,12 @@ const ShopManage: React.FC = () => {
   const [orderStatus, setOrderStatus] = useState<string>('');
   const [orderKw, setOrderKw] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
+
+  // 发货弹窗（D-513：此前订单无任何发货入口，待发货订单永远发不出去）
+  const [shipTarget, setShipTarget] = useState<ShopOrder | null>(null);
+  const [shipCompany, setShipCompany] = useState('');
+  const [shipNo, setShipNo] = useState('');
+  const [shipSubmitting, setShipSubmitting] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -149,6 +155,30 @@ const ShopManage: React.FC = () => {
     }
   };
 
+  /**
+   * D-513：订单发货。C 端下单时已扣库存/挂应收，商家只需登记发货信息把订单推进到「已发货」。
+   * 快递公司与单号选填（自提/同城配送可不填）。
+   */
+  const handleShip = async () => {
+    if (!shipTarget) return;
+    setShipSubmitting(true);
+    try {
+      await shopAdminApi.shipOrder(shipTarget.id, {
+        expressCompany: shipCompany.trim() || undefined,
+        expressNo: shipNo.trim() || undefined,
+      });
+      message.success(`订单 ${shipTarget.orderNo} 已发货`);
+      setShipTarget(null);
+      setShipCompany('');
+      setShipNo('');
+      void fetchOrders(orderPage);
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '发货失败');
+    } finally {
+      setShipSubmitting(false);
+    }
+  };
+
   const shopUrl = config ? `${window.location.origin}/shop/index.html?s=${config.slug}` : '';
   const listedCount = useMemo(() => styles.filter((s) => s.shopListed === 1).length, [styles]);
   const shownStyles = useMemo(() => {
@@ -233,6 +263,42 @@ const ShopManage: React.FC = () => {
       dataIndex: 'createTime',
       width: 165,
       render: (v: string) => (v || '').replace('T', ' ').slice(0, 19),
+    },
+    {
+      title: '快递',
+      width: 170,
+      render: (_, r) =>
+        r.status === 'SHIPPED' && (r.expressNo || r.expressCompany) ? (
+          <Text className="u-fs-12">
+            {r.expressCompany ? `${r.expressCompany} ` : ''}
+            {r.expressNo || ''}
+          </Text>
+        ) : (
+          <Text type="secondary" className="u-fs-12">-</Text>
+        ),
+    },
+    {
+      title: '操作',
+      width: 100,
+      fixed: 'right' as const,
+      render: (_, r) =>
+        r.status === 'PENDING_SHIP' ? (
+          <Button
+            size="small"
+            type="primary"
+            onClick={() => {
+              setShipTarget(r);
+              setShipCompany('');
+              setShipNo('');
+            }}
+          >
+            发货
+          </Button>
+        ) : (
+          <Text type="secondary" className="u-fs-12">
+            {r.status === 'SHIPPED' ? '已发货' : '已取消'}
+          </Text>
+        ),
     },
   ];
 
@@ -432,6 +498,48 @@ const ShopManage: React.FC = () => {
           />
         </Card>
       )}
+
+      <Modal
+        title="订单发货"
+        open={!!shipTarget}
+        onOk={() => void handleShip()}
+        confirmLoading={shipSubmitting}
+        onCancel={() => setShipTarget(null)}
+        okText="确认发货"
+        destroyOnHidden
+      >
+        {shipTarget && (
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
+            <Text type="secondary">
+              订单 {shipTarget.orderNo} · {shipTarget.customerName} · {shipTarget.phone}
+            </Text>
+            <Text type="secondary" className="u-fs-12">
+              收货地址：{shipTarget.address}
+            </Text>
+            <div>
+              <div style={{ marginBottom: 4 }}>快递公司</div>
+              <Input
+                value={shipCompany}
+                onChange={(e) => setShipCompany(e.target.value)}
+                placeholder="如：顺丰 / 中通 / 圆通（自提可留空）"
+                maxLength={32}
+              />
+            </div>
+            <div>
+              <div style={{ marginBottom: 4 }}>快递单号</div>
+              <Input
+                value={shipNo}
+                onChange={(e) => setShipNo(e.target.value)}
+                placeholder="快递单号（自提/同城配送可留空）"
+                maxLength={32}
+              />
+            </div>
+            <Text type="secondary" className="u-fs-12">
+              库存与应收在下单时已自动处理，此处只登记发货信息，确认后订单转为「已发货」。
+            </Text>
+          </Space>
+        )}
+      </Modal>
     </div>
   );
 };

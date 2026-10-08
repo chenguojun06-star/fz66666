@@ -272,6 +272,47 @@ public class ShopAdminOrchestrator {
                         .orderByDesc(ShopOrder::getCreateTime));
     }
 
+    /**
+     * D-513：店铺订单发货（待发货 → 已发货）。
+     *
+     * <p>为什么需要：C 端下单时库存已在 {@code ShopOrderOrchestrator.placeOrder} 里扣减、
+     * 出库台账与应收也已生成，但管理端此前<b>没有任何发货入口</b> ——
+     * 订单永远停在 PENDING_SHIP，电商闭环断在最后一环。本方法补齐该动作。
+     *
+     * <p>约束：仅 PENDING_SHIP 可发货（已发货/已取消重复发货直接报错，不静默改状态）；
+     * 快递公司与单号选填（自提/同城配送可不填）。
+     */
+    public void shipOrder(String orderId, String expressCompany, String expressNo) {
+        Long tenantId = UserContext.tenantId();
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        ShopOrder order = shopOrderMapper.selectById(orderId);
+        if (order == null || !tenantId.equals(order.getTenantId())
+                || Integer.valueOf(1).equals(order.getDeleteFlag())) {
+            throw new IllegalArgumentException("订单不存在或无权操作");
+        }
+        if (!"PENDING_SHIP".equals(order.getStatus())) {
+            throw new IllegalArgumentException("当前状态不可发货："
+                    + ("SHIPPED".equals(order.getStatus()) ? "该订单已发货" : "该订单已取消"));
+        }
+
+        ShopOrder patch = new ShopOrder();
+        patch.setId(order.getId());
+        patch.setStatus("SHIPPED");
+        patch.setExpressCompany(StringUtils.hasText(expressCompany) ? expressCompany.trim() : null);
+        patch.setExpressNo(StringUtils.hasText(expressNo) ? expressNo.trim() : null);
+        patch.setShipTime(LocalDateTime.now());
+        shopOrderMapper.updateById(patch);
+
+        OperationLogAppendUtil.writeLog("店铺管理", "订单发货",
+                String.format("订单 %s 发货%s", order.getOrderNo(),
+                        StringUtils.hasText(expressNo) ? "（" + expressCompany + " " + expressNo + "）" : ""),
+                order.getId(), order.getOrderNo());
+        log.info("[ShopAdmin] 店铺订单发货 orderNo={} tenant={} 快递={} {}",
+                order.getOrderNo(), tenantId, expressCompany, expressNo);
+    }
+
     private int parseInt(Object v, int def) {
         if (v == null) return def;
         try {
