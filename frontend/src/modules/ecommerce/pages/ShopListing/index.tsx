@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Input, Segmented, Space, Tag, Typography } from 'antd';
 import { DollarOutlined, ExportOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -31,12 +31,29 @@ const ShopListing: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const initialLoadDone = React.useRef(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const onSaved = useCallback(() => {
     // 保存后重拉列表：售价/库存聚合会随之更新
     void load(keyword);
   }, [load, keyword]);
+
+  /**
+   * D-769：页面首次进入时加载列表。
+   * 此前本页**完全没有 useEffect**，打开就是空的（已上架 0 / 全部 0 / 空表格），
+   * 必须手动点「刷新」才出数据——因为 load() 只在点击/保存后被调用。
+   * 空列表不是 bug 的假象，而是首屏根本没发请求。
+   */
+  useEffect(() => {
+    // 用 ref 记录「是否已在首屏加载过」：
+    // 既避免把 load 放进依赖导致 keyword 变化时重复请求，
+    // 也不新增规范豁免注释（前端质量基线只许减少不许增加，
+    // 且该基线按字面量计数，注释里提到指令名同样会被计入）。
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+    void load('');
+  }, [load]);
 
   const ed = useListingEditor(onSaved);
 
