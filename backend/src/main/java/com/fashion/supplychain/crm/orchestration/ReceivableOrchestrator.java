@@ -339,8 +339,39 @@ public class ReceivableOrchestrator {
         if (existing != null) {
             return existing;
         }
+
+        /*
+         * D-513：客户解析改为两级，与 OutstockReceivableHelper 同口径。
+         *
+         * 背景（生产 500 的根因）：
+         *   成品出库单 t_product_outstock 只登记 customer_name（无 customer_id 列），
+         *   推送账单时 counterparty_id 因此为空；而 t_receivable.customer_id 是
+         *   NOT NULL 且无默认值 → MyBatis-Plus 对 null 字段不写列 → 插入报
+         *   "Field 'customer_id' doesn't have a default value"。
+         *   该异常会标记整个事务 rollback-only，导致 batchConfirm 的
+         *   try/catch 失效，最终 UnexpectedRollbackException → 前端 500。
+         *
+         * 修法：① 优先用账单携带的对方ID；② 缺失时按对方名称在租户内全等匹配客户档案。
+         *       两者都拿不到时不抛异常（派生是确认账单的副作用，不应阻断确认本身），
+         *       仅告警跳过——与 OutstockReceivableHelper 的处理保持一致。
+         */
+        String customerId = bill.getCounterpartyId();
+        if (!StringUtils.hasText(customerId) && StringUtils.hasText(bill.getCounterpartyName())) {
+            Customer byName = resolveCustomerByExactName(bill.getCounterpartyName(), UserContext.tenantId());
+            if (byName != null) {
+                customerId = byName.getId();
+                log.info("[BillAggregation] 账单未携带对方ID，按对方名称匹配客户档案: billNo={}, name={}, customerId={}",
+                        bill.getBillNo(), bill.getCounterpartyName(), customerId);
+            }
+        }
+        if (!StringUtils.hasText(customerId)) {
+            log.warn("[BillAggregation] 无法确定客户（账单无对方ID且名称未匹配到客户档案），跳过应收派生: billNo={}, name={}",
+                    bill.getBillNo(), bill.getCounterpartyName());
+            return null;
+        }
+
         Receivable r = new Receivable();
-        r.setCustomerId(bill.getCounterpartyId());
+        r.setCustomerId(customerId);
         r.setCustomerName(bill.getCounterpartyName());
         r.setOrderId(bill.getOrderId());
         r.setOrderNo(StringUtils.hasText(bill.getOrderNo()) ? bill.getOrderNo() : bill.getSourceNo());
@@ -352,6 +383,38 @@ public class ReceivableOrchestrator {
         r.setSourceBizNo(bill.getSourceNo());
         r.setBillAggregationId(bill.getId());
         return create(r);
+    }
+
+    /**
+     * 按对方名称在租户内<b>全等匹配</b>客户档案。
+     *
+     * <p>⚠️ 刻意用全等（eq）而非 like：like 会把「甲公司」的账单误挂到「甲公司分公司」，
+     * 重蹈 E-P0-1 跨客户数据泄露的覆辙。同名多客户时告警并取最早创建的一条。
+     * <p>与 {@code OutstockReceivableHelper.resolveCustomerByExactName} 同口径。
+     */
+    private Customer resolveCustomerByExactName(String customerName, Long tenantId) {
+        if (!StringUtils.hasText(customerName) || tenantId == null) {
+            return null;
+        }
+        String name = customerName.trim();
+        long count = customerService.lambdaQuery()
+                .eq(Customer::getCompanyName, name)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .count();
+        if (count == 0) {
+            return null;
+        }
+        if (count > 1) {
+            log.warn("[BillAggregation] 客户档案存在 {} 个同名客户「{}」，取第一个（建议在客户档案里去重）", count, name);
+        }
+        return customerService.lambdaQuery()
+                .eq(Customer::getCompanyName, name)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .orderByAsc(Customer::getCreateTime)
+                .last("LIMIT 1")
+                .one();
     }
 
     /**

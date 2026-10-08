@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.BillAggregation;
@@ -21,7 +22,11 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import jakarta.annotation.PostConstruct;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -79,6 +84,18 @@ public class BillAggregationOrchestrator {
 
     @Autowired(required = false)
     private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    /** D-513：批量确认时逐条独立事务，避免单条失败把整批标记为 rollback-only */
+    private TransactionTemplate requiresNewTx;
+
+    @PostConstruct
+    private void initRequiresNewTx() {
+        requiresNewTx = new TransactionTemplate(transactionManager);
+        requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
@@ -544,13 +561,24 @@ public class BillAggregationOrchestrator {
 
     /**
      * 批量确认
+     *
+     * <p>D-513：每条账单在<b>独立事务</b>（REQUIRES_NEW）中确认。
+     *
+     * <p>背景（生产 500 的根因之一）：原实现把整批包在一个事务里、用 try/catch 跳过失败项，
+     * 但 confirmBill 内部还会调用其它 {@code @Transactional} 方法（派生应收/应付、生成凭证）；
+     * 其中任何一个抛异常，Spring 都会把<b>共享事务</b>标记为 rollback-only —— 此时外层
+     * catch 已无意义，提交阶段必然抛 {@code UnexpectedRollbackException}，整批返回 500
+     * （生产实测：派生应收报 customer_id 无默认值 → 6 条批量确认全部 500）。
+     * 改为逐条 REQUIRES_NEW 后，「跳过失败项、其余照常成功」才真正成立。
      */
-    @Transactional(rollbackFor = Exception.class)
     public int batchConfirm(List<String> billIds) {
+        if (billIds == null || billIds.isEmpty()) {
+            return 0;
+        }
         int count = 0;
         for (String id : billIds) {
             try {
-                confirmBill(id);
+                requiresNewTx.executeWithoutResult(status -> confirmBill(id));
                 count++;
             } catch (Exception e) {
                 log.warn("[BillAggregation] 批量确认跳过: id={}, reason={}", id, e.getMessage());
@@ -1455,8 +1483,11 @@ public class BillAggregationOrchestrator {
                     return;
                 }
                 if (receivableOrchestrator.findByBillAggregationId(bill.getId()) == null) {
-                    receivableOrchestrator.createFromBill(bill);
-                    log.info("[BillAggregation] 已派生应收任务: billNo={}", bill.getBillNo());
+                    // D-513：客户无法确定时 createFromBill 返回 null（跳过派生，不阻断确认）
+                    Receivable created = receivableOrchestrator.createFromBill(bill);
+                    if (created != null) {
+                        log.info("[BillAggregation] 已派生应收任务: billNo={}", bill.getBillNo());
+                    }
                 }
             }
         } catch (Exception e) {

@@ -115,7 +115,12 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
           {statusCfg && <Tag color={statusCfg.color}>{statusCfg.text}</Tag>}
         </Space>
       }
-      width={720}
+      /*
+       * D-513：原 width={720} 太窄——下方「关联付款记录」表 scroll={{ x: 920 }}
+       * 需要的宽度比抽屉还大，被迫横向滚动，看着很挤。
+       * 改为「最宽 1100、窄屏最多占 92% 视口」，保证表格能完整展开。
+       */
+      width="min(1100px, 92vw)"
       open={open}
       onClose={onClose}
       destroyOnHidden
@@ -181,7 +186,8 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
           )}
           <Descriptions
             className="bill-detail-desc"
-            column={2}
+            /* D-513：抽屉变宽后恢复三列（原代码里已有 span={3} 的条目，本就按三列设计） */
+            column={3}
             bordered
             style={{ marginBottom: 16 }}
             styles={{
