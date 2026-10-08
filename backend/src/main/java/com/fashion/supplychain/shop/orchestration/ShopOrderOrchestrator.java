@@ -64,6 +64,9 @@ public class ShopOrderOrchestrator {
     private StyleInfoService styleInfoService;
 
     @Autowired
+    private com.fashion.supplychain.shop.orchestration.ShopStyleLayoutService styleLayoutService;
+
+    @Autowired
     private ProductSkuService productSkuService;
 
     @Autowired
@@ -269,6 +272,16 @@ public class ShopOrderOrchestrator {
         putIfPresent(data, "fabricComposition", style.getFabricComposition());
         putIfPresent(data, "fabricParts", style.getFabricCompositionParts());
         putIfPresent(data, "sizeChart", style.getPrintSize());
+        putIfPresent(data, "washInstructions", style.getWashInstructions());
+        // D-770：详情页模块布局（商家自定义上到下顺序与开关）
+        data.put("layout", styleLayoutService.layoutOf(styleId).stream().map(l -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("moduleKey", l.getModuleKey());
+            m.put("sortOrder", l.getSortOrder());
+            m.put("enabled", l.getEnabled());
+            m.put("moduleTitle", l.getModuleTitle());
+            return m;
+        }).collect(java.util.stream.Collectors.toList()));
         putIfPresent(data, "season", style.getSeason());
         return data;
     }

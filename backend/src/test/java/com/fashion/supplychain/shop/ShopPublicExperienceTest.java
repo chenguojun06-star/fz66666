@@ -71,28 +71,48 @@ class ShopPublicExperienceTest {
     @DisplayName("③ 详情页必须有面料信息、尺寸表、款式详情三个模块")
     void detailPageMustHaveStandardSections() throws Exception {
         String s = shopPage();
-        assertThat(s).as("面料信息模块").contains("面料信息");
+        // D-770 起改为模块化布局，模块标题随之调整：
+        // 「面料信息」→「商品参数」（与主流电商的参数表叫法一致）
+        assertThat(s).as("商品参数模块").contains("商品参数");
         assertThat(s).as("面料成分展示").contains("fabricComposition");
+        assertThat(s).as("上市季节展示").contains("上市季节");
         assertThat(s).as("尺寸表模块").contains("尺寸表");
         assertThat(s).as("尺寸表数据源").contains("sizeChart");
         assertThat(s).as("款式详情模块").contains("款式详情");
         assertThat(s).as("详情介绍数据源").contains("description");
+        assertThat(s).as("洗涤说明模块").contains("洗涤说明");
     }
 
     @Test
     @DisplayName("④ 缺失资料必须显示「暂无」，不得留空或编造内容")
     void missingDetailMustSayNoneInsteadOfBlank() throws Exception {
         String s = shopPage();
+        /**
+         * D-770 行为变更（有意为之）：缺失资料现在**整块不显示**，而不是显示
+         * 「暂无尺码表」。理由：淘宝/1688 等主流电商都不会给顾客看
+         * 「暂无尺码表」这种占位说明 —— 顾客只关心有内容的部分。
+         *
+         * 这与 CLAUDE.md 铁律 9 并不冲突：铁律禁的是「把缺失写成 0 /
+         * 假装有」，而这里是「不渲染空块」，同样没有编造任何内容。
+         * 缺失信息由管理端的「刊登体检」列提示，而不是甩给顾客。
+         *
+         * 真正的守护点是：**不得渲染出空白块** —— 商家开了模块却没资料时，
+         * 必须整块跳过，而不是留一个只有标题的空section。
+         */
         assertThat(s)
-                .as("尺寸表缺失时必须显式说明")
-                .contains("暂无尺寸表");
+                .as("无数据的模块必须返回空串（整块跳过），不得渲染空块")
+                .contains("return '';");
         assertThat(s)
-                .as("详情介绍缺失时必须显式说明")
-                .contains("商家暂未填写款式详情");
-        // 空值/空白字符串都不应进入渲染分支
+                .as("参数模块无任何资料时跳过")
+                .contains("if (!rows.length) return ''");
         assertThat(s)
-                .as("面料信息仅在有值时才渲染")
-                .contains("if (d.fabricComposition)");
+                .as("洗涤说明无数据时跳过")
+                .contains("if (!d.washInstructions) return ''");
+        assertThat(s)
+                .as("分发器只拼接非空模块")
+                .contains("if (parts[order[j]]) html += parts[order[j]]");
+        // 面料成分仅在有值时才进表
+        assertThat(s).as("面料成分仅在有值时才渲染").contains("if (d.fabricComposition)");
     }
 
     @Test

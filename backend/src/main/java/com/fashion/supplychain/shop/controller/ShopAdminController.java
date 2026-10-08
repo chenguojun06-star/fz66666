@@ -2,6 +2,7 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.orchestration.ShopAdminOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopStyleLayoutService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,10 +19,14 @@ import java.util.Map;
 @RequestMapping("/api/shop/admin")
 public class ShopAdminController {
 
+    private final ShopStyleLayoutService shopStyleLayoutService;
+
     private final ShopAdminOrchestrator shopAdminOrchestrator;
 
-    public ShopAdminController(ShopAdminOrchestrator shopAdminOrchestrator) {
+    public ShopAdminController(ShopAdminOrchestrator shopAdminOrchestrator,
+                                ShopStyleLayoutService shopStyleLayoutService) {
         this.shopAdminOrchestrator = shopAdminOrchestrator;
+        this.shopStyleLayoutService = shopStyleLayoutService;
     }
 
     /** 我的店铺配置（无则建，slug 默认 t{tenantId}，默认打烊） */
@@ -204,6 +209,51 @@ public class ShopAdminController {
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
         }
+    }
+
+    /** D-770：读取某款式的详情页模块布局（无记录返回默认） */
+    @GetMapping("/layout/{styleId}")
+    public Result<?> getLayout(@PathVariable Long styleId) {
+        try {
+            return Result.success(shopStyleLayoutService.layoutOf(styleId));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-770：保存详情页模块布局（模块开关 + 上到下顺序） */
+    @PostMapping("/layout/{styleId}")
+    public Result<?> saveLayout(@PathVariable Long styleId,
+                                @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Object> raw = (List<Object>) body.get("modules");
+        List<Map<String, Object>> modules = new ArrayList<>();
+        if (raw != null) {
+            for (Object o : raw) {
+                if (o instanceof Map<?, ?> m) {
+                    modules.add((Map<String, Object>) m);
+                }
+            }
+        }
+        try {
+            int n = shopStyleLayoutService.saveLayout(styleId, modules);
+            return Result.success(Map.of("saved", n));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** D-770：可选模块定义与哪些不可隐藏（管理端渲染用） */
+    @GetMapping("/layout-modules")
+    public Result<?> layoutModules() {
+        List<Map<String, Object>> defs = new ArrayList<>();
+        for (String key : ShopStyleLayoutService.knownModules()) {
+            defs.add(Map.of(
+                    "moduleKey", key,
+                    "defaultTitle", ShopStyleLayoutService.defaultTitle(key),
+                    "canHide", ShopStyleLayoutService.canHide(key)));
+        }
+        return Result.success(defs);
     }
 
     /**

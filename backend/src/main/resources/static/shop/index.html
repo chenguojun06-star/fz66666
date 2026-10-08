@@ -423,6 +423,60 @@
     });
   }
 
+  /* ══════════════ D-770：详情页模块化布局 ══════════════
+   *
+   * 参照主流电商（淘宝/1688/拼多多）的做法：详情页不是写死的版式，
+   * 而是一组固定模块，商家可勾选启用哪些、并调整上到下顺序。
+   *
+   * 每个模块渲染为空字符串时自动跳过 —— 商家开了但没填资料，
+   * 不该给顾客看到空白块（CLAUDE.md 铁律 9：缺失不能伪装成有）。
+   */
+  var DETAIL_MODULES = ['gallery', 'price', 'title', 'promise', 'color', 'size',
+                        'quantity', 'params', 'detail', 'wash', 'purchase'];
+
+  /** 按 layout 拿到启用模块的自上而下顺序；无 layout 时用默认顺序全开 */
+  function detailModuleOrder(d) {
+    var out = [];
+    var lay = (d && d.layout && d.layout.length) ? d.layout : null;
+    if (lay) {
+      var known = {};
+      for (var i = 0; i < lay.length; i++) {
+        var key = lay[i] && lay[i].moduleKey;
+        if (!key || DETAIL_MODULES.indexOf(key) < 0) continue;
+        known[key] = lay[i];
+      }
+      var sorted = Object.keys(known).sort(function (a, b) {
+        return (Number(known[a].sortOrder) || 0) - (Number(known[b].sortOrder) || 0);
+      });
+      for (var k = 0; k < sorted.length; k++) {
+        var it = known[sorted[k]];
+        // enabled 为 0 则跳过；缺失视作启用（老数据兼容）
+        if (it.enabled === 0 || it.enabled === false) continue;
+        out.push(sorted[k]);
+      }
+    } else {
+      out = DETAIL_MODULES.slice();
+    }
+    return out;
+  }
+
+  function renderDetailModules(d, order) {
+    var parts = {};
+    for (var i = 0; i < order.length; i++) {
+      var key = order[i];
+      var fn = DETAIL_RENDERERS[key];
+      if (!fn) continue;
+      var out = '';
+      try { out = fn(d) || ''; } catch (e) { out = ''; }
+      if (out) parts[key] = out;
+    }
+    var html = '';
+    for (var j = 0; j < order.length; j++) {
+      if (parts[order[j]]) html += parts[order[j]];
+    }
+    return html;
+  }
+
   function paintHome() {
     var info = shopInfo || {};
     var enables = !!info.enabled;
@@ -517,73 +571,94 @@
       var colorImgMap = d.colorImages || {};
       function heroUrlFor(color) { return (color && colorImgMap[color]) || d.cover || ''; }
 
-      var html = '<div class="d-hero"><div id="heroImg">' + thumbHtml(d.cover)
-        + '</div><button class="navbtn" id="bk">&#8249;</button></div>';
-
-      // D-769：不再写死「7 天无理由」。该承诺写死在页面上、商家无法配置、
-      // 系统里也没有退货政策数据支撑 —— 属于空头承诺，兑现不了就是纠纷。
-      // 现改为按商家在店铺配置里显式开启的承诺渲染。
+      // D-770：按商家自定义的模块顺序渲染；无布局配置时用默认顺序
+      var order = detailModuleOrder(d);
       var promiseHtml = promiseTags();
-      html += '<div class="d-price">' + priceHtml(minPrice, 'lg')
-        + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
-        + '<span>' + esc(shipTag()) + '</span>' + promiseHtml + '</div></div>';
 
-      html += '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
-        + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span>'
-        + promiseHtml
-        + '<span class="tag">' + colors.length + ' 色可选</span></div>'
-        + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
+      /** 各模块渲染函数：返回空串表示「本模块无内容」，自动跳过，
+       *  避免商家开了模块却没填资料时给顾客看到空白块。 */
+      var DETAIL_RENDERERS = {
+        gallery: function (d) {
+          // 图片轮播：主图 + 各颜色图（库里已有 135 张颜色图，此前完全没被用起来）
+          var imgs = [];
+          if (d.cover) imgs.push(d.cover);
+          var ci = d.colorImages || {};
+          for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
+          if (!imgs.length) return '';
+          return '<div class="d-hero"><div id="heroImg">' + thumbHtml(imgs[0])
+            + '</div>' + (imgs.length > 1 ? '<button class="navbtn" id="bk">&#8249;</button>' : '') + '</div>';
+        },
+        price: function (d) {
+          return '<div class="d-price">' + priceHtml(minPrice, 'lg')
+            + '<div class="sub"><span>' + (totalStock > 0 ? '现货 ' + totalStock + ' 件' : '暂时缺货') + '</span>'
+            + '<span>' + esc(shipTag()) + '</span>' + promiseTags() + '</div></div>';
+        },
+        title: function (d) {
+          return '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
+            + '<div class="tags"><span class="tag free">' + esc(shipTag()) + '</span>'
+            + promiseTags()
+            + '<span class="tag">' + colors.length + ' 色可选</span></div>'
+            + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
+        },
+        promise: function (d) {
+          var t = promiseTags();
+          // 没开启任何承诺时不渲染空模块
+          return t ? '<div class="d-sec"><div class="lbl">服务承诺</div>'
+            + '<div class="tags">' + t + '</div></div>' : '';
+        },
+        color: function (d) {
+          if (!colors.length) return '';
+          return '<div class="d-sec"><div class="lbl">颜色 <span class="hint" id="hint">请选择颜色</span></div>'
+            + '<div class="opts" id="colors">'
+            + colors.map(function (c) { return '<button class="opt" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join('')
+            + '</div></div>';
+        },
+        size: function (d) {
+          return '<div class="d-sec"><div class="lbl">尺码</div><div class="opts" id="sizes">'
+            + '<span style="font-size:12.5px;color:#bbb">请先选择颜色</span></div></div>';
+        },
+        quantity: function (d) {
+          return '<div class="d-sec"><div class="lbl" style="justify-content:space-between">数量'
+            + '<span class="stepper"><button id="qm">&#8722;</button><span id="qv">1</span><button id="qp">&#65291;</button></span>'
+            + '</div></div>';
+        },
+        params: function () {
+          var rows = [];
+          if (d.fabricComposition) rows.push(['面料成分', d.fabricComposition]);
+          if (d.fabricParts) rows.push(['成分细节', d.fabricParts]);
+          if (d.season) rows.push(['上市季节', d.season]);
+          if (!rows.length) return '';
+          var h = '<div class="d-sec"><div class="lbl">商品参数</div><table class="d-spec">';
+          for (var i = 0; i < rows.length; i++) {
+            h += '<tr><th>' + esc(rows[i][0]) + '</th><td>' + esc(rows[i][1]) + '</td></tr>';
+          }
+          return h + '</table></div>';
+        },
+        detail: function (d) {
+          var h = '';
+          if (d.sizeChart) {
+            h += '<div class="d-sec"><div class="lbl">尺寸表</div>'
+              + '<div class="d-desc rich">' + richHtml(d.sizeChart) + '</div></div>';
+          }
+          if (d.description) {
+            h += '<div class="d-sec"><div class="lbl">款式详情</div>'
+              + '<div class="d-desc rich">' + richHtml(d.description) + '</div></div>';
+          }
+          if (d.remark) {
+            h += '<div class="d-sec"><div class="lbl">商品说明</div>'
+              + '<div class="d-desc">' + esc(d.remark) + '</div></div>';
+          }
+          return h;
+        },
+        wash: function (d) {
+          if (!d.washInstructions) return '';
+          return '<div class="d-sec"><div class="lbl">洗涤说明</div>'
+            + '<div class="d-desc">' + esc(d.washInstructions) + '</div></div>';
+        },
+        purchase: function () { return ''; } // 购买条在下方单独渲染（固定底部栏）
+      };
 
-      html += '<div class="d-sec"><div class="lbl">颜色 <span class="hint" id="hint">请选择颜色</span></div>'
-        + '<div class="opts" id="colors">'
-        + colors.map(function (c) { return '<button class="opt" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join('')
-        + '</div></div>';
-
-      html += '<div class="d-sec"><div class="lbl">尺码</div><div class="opts" id="sizes">'
-        + '<span style="font-size:12.5px;color:#bbb">请先选择颜色</span></div></div>';
-
-      html += '<div class="d-sec"><div class="lbl" style="justify-content:space-between">数量'
-        + '<span class="stepper"><button id="qm">&#8722;</button><span id="qv">1</span><button id="qp">&#65291;</button></span>'
-        + '</div></div>';
-
-      // ── D-769：详情页信息模块（对标淘宝/1688）──
-      // 之前详情页只有「图 + 颜色 + 尺码 + 数量 + 商品说明」，
-      // 而面料成分 / 尺寸表 / 详情介绍 明明在库里（description / fabric_composition /
-      // print_size），却从未透出给顾客端 —— 这是与专业详情页差距最明显的地方。
-      // 缺失的模块显示「暂无」，不编造内容，也不留空白让人以为加载失败。
-      var specRows = [];
-      if (d.fabricComposition) specRows.push(['面料成分', d.fabricComposition]);
-      if (d.fabricParts) specRows.push(['成分细节', d.fabricParts]);
-      if (d.season) specRows.push(['上市季节', d.season]);
-      if (specRows.length) {
-        html += '<div class="d-sec"><div class="lbl">面料信息</div>'
-          + '<table class="d-spec">';
-        for (var si = 0; si < specRows.length; si++) {
-          html += '<tr><th>' + esc(specRows[si][0]) + '</th><td>' + esc(specRows[si][1]) + '</td></tr>';
-        }
-        html += '</table></div>';
-      }
-
-      // 尺寸表：print_size 支持换行文本；无数据时明确写「暂无」，而不是空白
-      html += '<div class="d-sec"><div class="lbl">尺寸表</div>';
-      if (d.sizeChart) {
-        html += '<div class="d-desc rich">' + richHtml(d.sizeChart) + '</div>';
-      } else {
-        html += '<div class="d-desc" style="color:#bbb">暂无尺寸表'
-          + '<div style="font-size:12px;margin-top:4px">可在联系商家时获取，或查看下方各尺码明细</div></div>';
-      }
-      html += '</div>';
-
-      // 详情介绍
-      html += '<div class="d-sec"><div class="lbl">款式详情</div>';
-      if (d.description) {
-        html += '<div class="d-desc rich">' + richHtml(d.description) + '</div>';
-      } else {
-        html += '<div class="d-desc" style="color:#bbb">商家暂未填写款式详情</div>';
-      }
-      html += '</div>';
-
-      if (d.remark) html += '<div class="d-sec"><div class="lbl">商品说明</div><div class="d-desc">' + esc(d.remark) + '</div></div>';
+      var html = renderDetailModules(d, order);
 
       var closed = shopInfo && !shopInfo.enabled;
       html += '<div class="d-bar">'
