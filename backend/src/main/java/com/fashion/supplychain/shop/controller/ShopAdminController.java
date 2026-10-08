@@ -67,7 +67,9 @@ public class ShopAdminController {
             shopAdminOrchestrator.shipOrder(id, expressCompany, expressNo);
             return Result.successMessage("已发货");
         } catch (IllegalArgumentException e) {
-            return Result.fail(e.getMessage());
+            // 业务校验失败用 400（与 GlobalExceptionHandler 对 BusinessException 的口径一致），
+            // 避免混进 500 干扰监控
+            return Result.fail(400, e.getMessage());
         }
     }
 

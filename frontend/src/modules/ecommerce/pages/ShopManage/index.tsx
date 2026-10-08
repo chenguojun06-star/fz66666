@@ -14,7 +14,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
 import type { ShopConfig, ShopOrder } from '@/services/shop/shopApi';
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 import './index.css';
 
 const { Text, Paragraph } = Typography;
@@ -146,7 +146,9 @@ const ShopManage: React.FC = () => {
 
   const handleToggleListing = async (row: StyleRow, listed: boolean) => {
     try {
-      await shopAdminApi.setListing(row.id, listed);
+      // 注意：api 客户端对「HTTP 200 + 业务 code!=200」不抛错，只返回信封体；
+      // 必须用 unwrapApiData 判 code，否则失败也会提示成功（后端 setListing 失败走 Result.fail）。
+      unwrapApiData(await shopAdminApi.setListing(row.id, listed), '操作失败');
       message.success(`「${row.styleName || row.styleNo}」已${listed ? '上架' : '下架'}`);
       setStyles((prev) => prev.map((s) => (s.id === row.id ? { ...s, shopListed: listed ? 1 : 0 } : s)));
       setPreviewKey((k) => k + 1);
@@ -163,10 +165,13 @@ const ShopManage: React.FC = () => {
     if (!shipTarget) return;
     setShipSubmitting(true);
     try {
-      await shopAdminApi.shipOrder(shipTarget.id, {
-        expressCompany: shipCompany.trim() || undefined,
-        expressNo: shipNo.trim() || undefined,
-      });
+      unwrapApiData(
+        await shopAdminApi.shipOrder(shipTarget.id, {
+          expressCompany: shipCompany.trim() || undefined,
+          expressNo: shipNo.trim() || undefined,
+        }),
+        '发货失败',
+      );
       message.success(`订单 ${shipTarget.orderNo} 已发货`);
       setShipTarget(null);
       setShipCompany('');
