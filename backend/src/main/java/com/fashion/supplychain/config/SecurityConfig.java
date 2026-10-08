@@ -83,8 +83,13 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 安全响应头
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.deny())                // 防止 Clickjacking
-                        .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults()) // X-Content-Type-Options: nosniff
+                        // D-769：全局 DENY 会让后台「顾客端实时预览」的 iframe 被浏览器直接
+                        // 拒绝渲染（Chrome 报 Refused to display in a frame），
+                        // 预览区域只剩一块破图，运营无法确认顾客看到什么。
+                        // 故对**店铺页与其接口**放行 SAMEORIGIN —— 仍禁止第三方站点嵌套
+                        // （防点击劫持），只允许本系统后台自己预览。
+                        .frameOptions(frame -> frame.sameOrigin())
+.contentTypeOptions(org.springframework.security.config.Customizer.withDefaults()) // X-Content-Type-Options: nosniff
                         .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)) // X-XSS-Protection: 1; mode=block
                         .httpStrictTransportSecurity(hsts -> hsts
                             .includeSubDomains(true)

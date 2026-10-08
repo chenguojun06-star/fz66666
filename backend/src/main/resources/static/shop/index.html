@@ -114,6 +114,9 @@
   .stepper button:active{background:#f0f0f0;}
   .stepper span{width:52px;text-align:center;font-size:14px;}
   .d-desc{font-size:13px;color:#666;line-height:1.7;white-space:pre-wrap;word-break:break-word;}
+  .d-spec{width:100%;border-collapse:collapse;font-size:12.5px;margin:0;}
+  .d-spec th{text-align:left;font-weight:600;color:#333;width:76px;padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;}
+  .d-spec td{color:#666;padding:5px 0;line-height:1.6;word-break:break-word;}
 
   .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
@@ -479,6 +482,43 @@
       html += '<div class="d-sec"><div class="lbl" style="justify-content:space-between">数量'
         + '<span class="stepper"><button id="qm">&#8722;</button><span id="qv">1</span><button id="qp">&#65291;</button></span>'
         + '</div></div>';
+
+      // ── D-769：详情页信息模块（对标淘宝/1688）──
+      // 之前详情页只有「图 + 颜色 + 尺码 + 数量 + 商品说明」，
+      // 而面料成分 / 尺寸表 / 详情介绍 明明在库里（description / fabric_composition /
+      // print_size），却从未透出给顾客端 —— 这是与专业详情页差距最明显的地方。
+      // 缺失的模块显示「暂无」，不编造内容，也不留空白让人以为加载失败。
+      var specRows = [];
+      if (d.fabricComposition) specRows.push(['面料成分', d.fabricComposition]);
+      if (d.fabricParts) specRows.push(['成分细节', d.fabricParts]);
+      if (d.season) specRows.push(['上市季节', d.season]);
+      if (specRows.length) {
+        html += '<div class="d-sec"><div class="lbl">面料信息</div>'
+          + '<table class="d-spec">';
+        for (var si = 0; si < specRows.length; si++) {
+          html += '<tr><th>' + esc(specRows[si][0]) + '</th><td>' + esc(specRows[si][1]) + '</td></tr>';
+        }
+        html += '</table></div>';
+      }
+
+      // 尺寸表：print_size 支持换行文本；无数据时明确写「暂无」，而不是空白
+      html += '<div class="d-sec"><div class="lbl">尺寸表</div>';
+      if (d.sizeChart) {
+        html += '<div class="d-desc">' + esc(d.sizeChart) + '</div>';
+      } else {
+        html += '<div class="d-desc" style="color:#bbb">暂无尺寸表'
+          + '<div style="font-size:12px;margin-top:4px">可在联系商家时获取，或查看下方各尺码明细</div></div>';
+      }
+      html += '</div>';
+
+      // 详情介绍
+      html += '<div class="d-sec"><div class="lbl">款式详情</div>';
+      if (d.description) {
+        html += '<div class="d-desc">' + esc(d.description) + '</div>';
+      } else {
+        html += '<div class="d-desc" style="color:#bbb">商家暂未填写款式详情</div>';
+      }
+      html += '</div>';
 
       if (d.remark) html += '<div class="d-sec"><div class="lbl">商品说明</div><div class="d-desc">' + esc(d.remark) + '</div></div>';
 

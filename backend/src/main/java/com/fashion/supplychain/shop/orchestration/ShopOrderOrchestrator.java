@@ -197,6 +197,18 @@ public class ShopOrderOrchestrator {
         return resp;
     }
 
+
+    /** 详情资料透出：空值不 put，前端据此显示「暂无」而不是渲染出空白块 */
+    private static void putIfPresent(Map<String, Object> data, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        if (value instanceof CharSequence cs && cs.toString().isBlank()) {
+            return;
+        }
+        data.put(key, value);
+    }
+
     public Map<String, Object> productDetail(String slug, Long styleId) {
         ShopConfig config = resolveBySlug(slug);
         if (config == null) {
@@ -240,6 +252,17 @@ public class ShopOrderOrchestrator {
         data.put("remark", style.getRemark());
         data.put("skus", skuRows);
         data.put("colorImages", colorImages);
+        // D-769：顾客端详情页缺失面料成分/尺寸表/详情介绍。
+        // 这些字段 t_style_info 里早已存在（description / fabric_composition /
+        // print_size / season / collar / sleeve …），只是从未透出给顾客端，
+        // 导致详情页只有图 + 颜色尺码 + 价格 —— 与淘宝/1688 的详情页差距明显。
+        // 只透出「已经在库里、不需要新录入」的资料，不编造任何内容；
+        // 未维护的字段返回 null，前端显示「暂无」而不是留空或填占位说明。
+        putIfPresent(data, "description", style.getDescription());
+        putIfPresent(data, "fabricComposition", style.getFabricComposition());
+        putIfPresent(data, "fabricParts", style.getFabricCompositionParts());
+        putIfPresent(data, "sizeChart", style.getPrintSize());
+        putIfPresent(data, "season", style.getSeason());
         return data;
     }
 
