@@ -631,6 +631,89 @@ public class ShopOrderOrchestrator {
     }
 
 
+    /** 括号里的第一个数字：M(165/88A) → 165；无括号数字返回 -1 */
+    private static final java.util.regex.Pattern SIZE_NUM =
+            java.util.regex.Pattern.compile("(\\d+)");
+
+    /** 纯字母码段的相对顺序（数值越大越靠后） */
+    private static final Map<String, Long> SIZE_LABEL_RANK = Map.ofEntries(
+            Map.entry("XXXS", 1L), Map.entry("XXS", 2L), Map.entry("XS", 3L),
+            Map.entry("S", 4L), Map.entry("M", 5L), Map.entry("L", 6L),
+            Map.entry("XL", 7L), Map.entry("XXL", 8L), Map.entry("XXXL", 9L),
+            Map.entry("4XL", 10L), Map.entry("5XL", 11L),
+            // 童装常见码
+            Map.entry("80", 12L), Map.entry("90", 13L), Map.entry("100", 14L),
+            Map.entry("110", 15L), Map.entry("120", 16L), Map.entry("130", 17L),
+            Map.entry("140", 18L), Map.entry("150", 19L), Map.entry("160", 20L));
+
+    /** 认不出顺序时统一排最后 */
+    private static final long SIZE_UNKNOWN = Long.MAX_VALUE;
+
+    /**
+     * 尺码排序第一键：括号里的数字。
+     *
+     * <p>国标服装尺码 {@code M(165/88A)} 里的 165 是身高/胸围，随码数单调递增，
+     * 直接就是天然顺序 —— 比任何按字母排序都可靠（字母排会把 XL 排到 XS 前）。
+     *
+     * <p>取不到（如纯字母码 {@code M}、或 {@code D(定制码)}）返回
+     * {@link #SIZE_UNKNOWN}，交给第二键处理，<b>不猜</b>。
+     */
+    private static long sizeBodyKey(String text) {
+        if (!StringUtils.hasText(text)) {
+            return SIZE_UNKNOWN;
+        }
+        java.util.regex.Matcher m = SIZE_NUM.matcher(text.trim());
+        if (m.find()) {
+            try {
+                return Long.parseLong(m.group(1));
+            } catch (NumberFormatException ignored) {
+                return SIZE_UNKNOWN;
+            }
+        }
+        return SIZE_UNKNOWN;
+    }
+
+    /**
+     * 尺码排序第二键：码段字母顺序。
+     *
+     * <p>用于两种情况：①括号数字并列（如 M(165/88A) 与 L(165/92A) 都是 165，
+     * 此时靠码段 M&lt;L 区分）；②整款都是纯字母码（XS/S/M/L/XL）。
+     */
+    private static long sizeLabelKey(String text) {
+        if (!StringUtils.hasText(text)) {
+            return SIZE_UNKNOWN;
+        }
+        java.util.regex.Matcher head =
+                java.util.regex.Pattern.compile("^[A-Z]+").matcher(text.trim().toUpperCase());
+        if (head.find()) {
+            Long rank = SIZE_LABEL_RANK.get(head.group());
+            if (rank != null) {
+                return rank;
+            }
+        }
+        return SIZE_UNKNOWN;
+    }
+
+    /** 该款式的 sort_order 是否真的排过序（全空或全相同都算「没排过」） */
+    private static boolean hasDistinctSortOrder(List<ProductSku> skus) {
+        if (skus == null || skus.size() < 2) {
+            return false;
+        }
+        Integer first = null;
+        for (ProductSku k : skus) {
+            Integer v = k.getSortOrder();
+            if (v == null || v <= 0) {
+                continue;
+            }
+            if (first == null) {
+                first = v;
+            } else if (!first.equals(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * D-780：从 SKU 矩阵自动生成尺码表。
      *
@@ -644,12 +727,27 @@ public class ShopOrderOrchestrator {
         if (skus == null || skus.isEmpty()) {
             return null;
         }
-        // 保持库里 sort_order 的自然顺序（XS→S→M→L），不要自己按字母排
-        // —— 按字母排会把 XL 排到 XS 前面，服装类目这是硬伤。
+        // D-780 尺码顺序：先看 sort_order，但**不能只靠它**。
+        //
+        // 实测生产库：216 个 SKU 里 155 个 sort_order 是 0/空，32 个款式整组相同，
+        // 也就是说近七成款式根本没排过序，只按 sort_order 排的话尺码表会是乱的
+        //（实测 BV26Q2W1208B 出来是 L,M,S,XL,XS）。
+        // 运营不会为了看尺码表去补 sort_order，所以这里从**尺码本身**推导顺序：
+        //   1) 带括号数字的（M(165/88A)）→ 取数字，165 随码数单调递增，天然有序
+        //   2) 纯字母码的（XS/S/M/L/XL）→ 用标准码段顺序
+        //   3) 认不出（如「D(定制码)」）→ 排最后，绝不猜
+        final boolean hasUsableSortOrder = hasDistinctSortOrder(skus);
         List<ProductSku> ordered = new ArrayList<>(skus);
-        ordered.sort(Comparator.comparing(
-                (ProductSku k) -> k.getSortOrder() == null ? Integer.MAX_VALUE : k.getSortOrder(),
-                Comparator.naturalOrder()));
+        if (hasUsableSortOrder) {
+            // 运营真的排过序 → 尊重他的排序
+            ordered.sort(Comparator.comparingInt(
+                    k -> k.getSortOrder() == null ? Integer.MAX_VALUE : k.getSortOrder()));
+        } else {
+            // 没排过序 → 从尺码本身推导顺序（数字优先，数字并列时用码段字母兜底）
+            ordered.sort(Comparator
+                    .comparingLong((ProductSku k) -> sizeBodyKey(k.getSize()))
+                    .thenComparingLong(k -> sizeLabelKey(k.getSize())));
+        }
 
         LinkedHashSet<String> sizes = new LinkedHashSet<>();
         LinkedHashSet<String> colors = new LinkedHashSet<>();

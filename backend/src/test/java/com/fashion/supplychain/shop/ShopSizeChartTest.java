@@ -153,4 +153,62 @@ class ShopSizeChartTest {
         }
         assertThat(order).containsExactly("M", "L");
     }
+
+    /* ── 以下三项来自线上实测的教训 ── */
+
+    @Test
+    @DisplayName("⑧ sort_order 全是 0（线上 BV26Q2W1208B 实况）时，必须从尺码本身推导顺序")
+    void zeroSortOrderMustFallBackToSizeDerivation() throws Exception {
+        // 实测线上：该款 5 个 SKU 的 sort_order 全是 0，
+        // 只按 sort_order 排会得到 L,M,S,XL,XS 这种顺序 —— 尺码表首屏就乱。
+        Map<String, Object> chart = callBuild(List.of(
+                spec("白色", "L(165/92A)", 1777, 44, 0),
+                spec("白色", "M(165/88A)", 1777, 44, 0),
+                spec("白色", "S(160/84A)", 1777, 44, 0),
+                spec("白色", "XL(170/96A)", 1777, 44, 0),
+                spec("白色", "XS(155/80A)", 1777, 44, 0)));
+        List<String> order = sizesOf(chart);
+        assertThat(order).containsExactly(
+                "XS(155/80A)", "S(160/84A)", "M(165/88A)", "L(165/92A)", "XL(170/96A)");
+    }
+
+    @Test
+    @DisplayName("⑨ 括号数字相同时（如 M/L 都标 165）要再用字母码段兜底")
+    void sameBodyNumberFallsBackToLabelRank() throws Exception {
+        Map<String, Object> chart = callBuild(List.of(
+                spec("白", "L(165/92A)", 100, 5, 0),
+                spec("白", "M(165/88A)", 100, 5, 0),
+                spec("白", "XS(165/80A)", 100, 5, 0)));
+        // 三个码括号里第一个数字都是 165 → 必须靠码段字母再排一次
+        assertThat(sizesOf(chart)).containsExactly(
+                "XS(165/80A)", "M(165/88A)", "L(165/92A)");
+    }
+
+    @Test
+    @DisplayName("⑩ sort_order 真的有排过时，必须尊重运营的排序，不覆盖")
+    void explicitSortOrderMustWin() throws Exception {
+        Map<String, Object> chart = callBuild(List.of(
+                spec("绿", "XL", 100, 5, 1),
+                spec("绿", "XS", 100, 5, 2),
+                spec("绿", "M", 100, 5, 3)));
+        assertThat(sizesOf(chart)).containsExactly("XL", "XS", "M");
+    }
+
+    @Test
+    @DisplayName("⑪ 定制码等认不出的码必须排最后，绝不猜")
+    void unknownSizeGoesLast() throws Exception {
+        Map<String, Object> chart = callBuild(List.of(
+                spec("绿", "D(定制码)", 100, 5, 0),
+                spec("绿", "XL", 100, 5, 0),
+                spec("绿", "S", 100, 5, 0)));
+        assertThat(sizesOf(chart)).containsExactly("S", "XL", "D(定制码)");
+    }
+
+    private static List<String> sizesOf(Map<String, Object> chart) {
+        List<String> order = new ArrayList<>();
+        for (Map<String, Object> r : rows(chart)) {
+            order.add((String) r.get("size"));
+        }
+        return order;
+    }
 }
