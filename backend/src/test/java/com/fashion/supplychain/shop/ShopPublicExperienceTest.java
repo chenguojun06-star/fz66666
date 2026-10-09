@@ -353,6 +353,54 @@ class ShopPublicExperienceTest {
     }
 
     /**
+ * D-780：尺码表。
+ *
+ * <p>实测生产库 112 款里只有 4 款填了 print_size（3.6%），那 4 条还是
+ * 「XS」「M」这种单个码 —— 根本不是尺码表。这功能从未被真正用过。
+ * 而 SKU 里本来就躺着完整矩阵，所以改为自动生成，运营零录入。
+ */
+    @Test
+    @DisplayName("㉑ 尺码表必须能从 SKU 矩阵自动生成，且前端按矩阵表渲染")
+    void sizeChartMustAutoGenerateFromSkuMatrix() throws Exception {
+        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(java)
+                .as("必须从 SKU 聚合出尺码表")
+                .contains("buildSizeChart");
+        assertThat(java)
+                .as("人工填了才用人工的，没填才自动生成（不能覆盖商家自定义量体表）")
+                .contains("sizeChartSource");
+        assertThat(java)
+                .as("自动表要打标记，前端才能与富文本尺码表区分")
+                .contains("sku-matrix");
+        assertThat(java)
+                .as("尺码顺序必须沿用 sort_order，不能按字母排")
+                .contains("getSortOrder");
+
+        String s = shopPage();
+        assertThat(s).as("必须有尺码表渲染函数").contains("function sizeChartHtml");
+        assertThat(s).as("矩阵表要有样式").contains(".size-tbl");
+        assertThat(s)
+                .as("无库存要标售罄，不能让顾客以为有货")
+                .contains("售罄");
+        assertThat(s)
+                .as("该颜色没这个码时显示「—」，不能留空")
+                .contains("class=\"na\">—");
+    }
+
+    /**
+     * D-780 回归：原先 sizeChart 一律当富文本渲染，
+     * 而新的自动尺码表是对象，直接 richHtml(对象) 会渲染出 [object Object]。
+     */
+    @Test
+    @DisplayName("㉒ 尺码表不得再用 richHtml 渲染对象")
+    void sizeChartMustNotBeRenderedAsRichTextObject() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("自动尺码表走 sizeChartHtml，不得再 richHtml(d.sizeChart) 无条件渲染")
+                .doesNotContain("richHtml(d.sizeChart)");
+    }
+
+    /**
      * D-777 回归：整改时我在标题区写死了「现货速发」标签，
      * 既与承诺块里的同一条重复，又把承诺写死成商家没配置过的空头承诺
      * —— 这正是 D-770 已经清除过的做法，不能再犯。

@@ -157,6 +157,17 @@
   .d-spec td{color:#333;padding:7px 0;line-height:1.6;word-break:break-word;border-bottom:1px solid #f7f7f7;}
   .d-spec tr:last-child td{border-bottom:none;}
 
+  /* 尺码表（D-780）：横向可滚，避免多色时把详情页撑破 */
+  .size-tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .size-tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:100%;}
+  .size-tbl th,.size-tbl td{border:1px solid #f0f0f0;padding:7px 6px;text-align:center;white-space:nowrap;}
+  .size-tbl thead th{background:#fafafa;color:#333;font-weight:600;}
+  .size-tbl tbody th{background:#fafafa;color:#333;font-weight:600;text-align:center;min-width:56px;}
+  .size-tbl td{color:#555;}
+  .size-tbl td.soldout{color:#bbb;text-decoration:line-through;}
+  .size-tbl td.na{color:#ddd;}
+  .size-tbl td .cny{font-size:10.5px;color:#999;}
+
   .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
   .d-bar .mini svg{width:20px;height:20px;fill:#666;}
@@ -717,6 +728,53 @@
     return html;
   }
 
+  /**
+   * 尺码表渲染（D-780）
+   *
+   * 两种来源：
+   * 1) sizeChartSource='auto' → 后端从 SKU 矩阵自动生成的「颜色 × 尺码 × 价格」表
+   * 2) 商家自己填的 print_size 富文本
+   *
+   * 自动表必须按「列=尺码、行=颜色」呈现 —— 这是服装类目的通用读法；
+   * 且尺码顺序沿用库里顺序（XS→S→M→L），不能按字母排，
+   * 按字母排会把 XL 排到 XS 前面。
+   * 无库存的规格显示「售罄」而不是留空：留空会被理解成"没这个码"。
+   */
+  function sizeChartHtml(d) {
+    var c = d.sizeChart;
+    if (!c) return '';
+    // 自动生成的矩阵表
+    if (c.type === 'sku-matrix' && c.colors && c.rows && c.rows.length) {
+      var colors = c.colors, rows = c.rows;
+      var h = '<div class="d-sec"><div class="lbl">尺寸表'
+        + '<span class="hint">' + esc(d.sizeChartSource === 'auto' ? '按颜色与尺码自动生成' : '') + '</span></div>'
+        + '<div class="size-tbl-wrap"><table class="size-tbl"><thead><tr><th>尺码</th>';
+      for (var i = 0; i < colors.length; i++) {
+        h += '<th>' + esc(colors[i]) + '</th>';
+      }
+      h += '</tr></thead><tbody>';
+      for (var j = 0; j < rows.length; j++) {
+        var r = rows[j];
+        h += '<tr><th>' + esc(r.size) + '</th>';
+        for (var k = 0; k < colors.length; k++) {
+          var cell = r[colors[k]];
+          if (!cell) {
+            h += '<td class="na">—</td>';
+          } else if (cell.soldOut) {
+            h += '<td class="soldout">售罄</td>';
+          } else {
+            h += '<td>' + (cell.price != null ? '<span class="cny">¥</span>' + Number(cell.price).toFixed(0) : '') + '</td>';
+          }
+        }
+        h += '</tr>';
+      }
+      return h + '</tbody></table></div></div>';
+    }
+    // 商家自定义的富文本尺码表
+    return '<div class="d-sec"><div class="lbl">尺寸表</div>'
+      + '<div class="d-desc rich">' + richHtml(c) + '</div></div>';
+  }
+
   function paintHome() {
     var info = shopInfo || {};
     var enables = !!info.enabled;
@@ -913,11 +971,10 @@ title: function (d) {
         },
         detail: function (d) {
           var h = '';
-          if (d.sizeChart) {
-            h += '<div class="d-sec"><div class="lbl">尺寸表</div>'
-              + '<div class="d-desc rich">' + richHtml(d.sizeChart) + '</div></div>';
-          }
-          if (d.description) {
+          h += sizeChartHtml(d);
+          // D-781：款式详情若是生产工艺/工序资料，顾客端不展示（服务端已判定）。
+          // 这里只是最后一道闸，不替代服务端判断。
+          if (d.description && d.descriptionVisibleToCustomer !== false) {
             h += '<div class="d-sec"><div class="lbl">款式详情</div>'
               + '<div class="d-desc rich">' + richHtml(d.description) + '</div></div>';
           }

@@ -315,6 +315,50 @@ export function diagnoseListingFromSummary(input: {
   return issues;
 }
 
+/* ─────────────────── 生产工艺内容识别（D-781） ─────────────────── */
+
+/**
+ * 工序/工艺类特征词。
+ *
+ * ⚠️ 与后端 `ProductionContentDetector` 的 PROCESS_MARKERS **必须保持一致** ——
+ * 后端负责真正隐藏，前端这份只用于给运营即时提示。
+ * 改一处就要改另一处，否则会出现「前端说没问题、后端偷偷藏起来了」。
+ */
+const PROCESS_MARKERS = [
+  '大货工艺', '工艺要求', '工艺说明', '裁剪', '缝纫', '制版', '打版', '放码',
+  '裁床', '车缝', '钉珠', '绣花', '印花', '洗水', '整烫', '包装工艺',
+  '工序', '生产线', '车位', '产线', '面辅料清单', '工艺单',
+];
+
+const PROCESS_MIN_HITS = 2;
+const PROCESS_MIN_LENGTH = 40;
+
+/**
+ * 判断一段文本是不是生产工艺/工序资料。
+ *
+ * 线上实测款式 BR25CQ0573B 的款式详情里存的是「大货工艺要求 / 裁剪 / 缝纫 /
+ * 印花 / 钉珠 / 包装工艺」—— 这些是给车间看的，出现在顾客端详情页
+ * 既看不懂、也属内部资料外泄。
+ *
+ * 口径刻意保守：命中 ≥2 个特征词、且正文长度 ≥40 才判定，
+ * 避免把正常商品描述里顺带提一句「印花工艺」的真实卖点误杀。
+ */
+export function looksLikeProductionContent(text?: string | null): boolean {
+  if (!text) return false;
+  const plain = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length < PROCESS_MIN_LENGTH) return false;
+  let hits = 0;
+  for (const m of PROCESS_MARKERS) {
+    if (plain.includes(m)) hits++;
+  }
+  return hits >= PROCESS_MIN_HITS;
+}
+
+/** 运营看到的说明文案（与后端 hideReason 保持一致） */
+export const PRODUCTION_CONTENT_HINT =
+  '这段像是生产工艺/工序资料，顾客端会自动隐藏（车间与工厂内部仍可见）。'
+  + '想对顾客展示的话，请改写成商品卖点描述。';
+
 /** 诊断汇总：是否存在阻断上架的问题 */
 export function summarizeListingIssues(issues: ListingIssue[]): {
   canPublish: boolean;

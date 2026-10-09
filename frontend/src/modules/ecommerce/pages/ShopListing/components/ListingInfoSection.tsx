@@ -1,5 +1,6 @@
 import React from 'react';
-import { Input, Space, Switch, Tag, Typography } from 'antd';
+import { Alert, Input, Space, Switch, Tag, Typography } from 'antd';
+import { looksLikeProductionContent, PRODUCTION_CONTENT_HINT } from '../listingCompliance';
 
 const { Text } = Typography;
 
@@ -20,7 +21,10 @@ interface Props {
  */
 const ListingInfoSection: React.FC<Props> = ({
   listed, onToggleListing, toggling, remark, setRemark,
-}) => (
+}) => {
+  // D-781：边写边提示，别等保存后才发现顾客端看不到
+  const isProcessContent = looksLikeProductionContent(remark);
+  return (
   <div className="shop-edit__block">
     <div className="shop-listing__block-title">店铺状态</div>
     <Space size={10} align="center">
@@ -46,7 +50,17 @@ const ListingInfoSection: React.FC<Props> = ({
       showCount
       autoSize={{ minRows: 3, maxRows: 8 }}
     />
+    {isProcessContent ? (
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginTop: 8 }}
+        message="这段会被顾客端隐藏"
+        description={PRODUCTION_CONTENT_HINT}
+      />
+    ) : null}
   </div>
-);
+  );
+};
 
 export default ListingInfoSection;

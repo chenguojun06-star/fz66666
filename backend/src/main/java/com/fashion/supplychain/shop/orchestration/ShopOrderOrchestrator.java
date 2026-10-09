@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,6 +282,12 @@ public class ShopOrderOrchestrator {
         // 只透出「已经在库里、不需要新录入」的资料，不编造任何内容；
         // 未维护的字段返回 null，前端显示「暂无」而不是留空或填占位说明。
         putIfPresent(data, "description", style.getDescription());
+        // D-781：款式详情里存的是生产工艺/工序资料时，顾客端不展示。
+        // 只隐藏、不删数据 —— 这份资料对车间和工厂是有用的。
+        if (style.getDescription() != null && !style.getDescription().isBlank()) {
+            data.put("descriptionVisibleToCustomer",
+                    !ProductionContentDetector.looksLikeProductionContent(style.getDescription()));
+        }
         putIfPresent(data, "fabricComposition", style.getFabricComposition());
         // D-777：fabric_parts 存的是 JSON 结构（[{"part":"上装","materials":"..."}]），
         // 原样透出会让顾客在页面上看到一串代码。这里在服务端解析成
@@ -331,6 +339,25 @@ public class ShopOrderOrchestrator {
         putIfPresent(data, "categoryText", enumText(style.getCategory()));
         putIfPresent(data, "seasonText", enumText(style.getSeason()));
         putIfPresent(data, "sizeChart", style.getPrintSize());
+        // D-780：尺码表缺失时**从 SKU 矩阵自动生成**，不让运营再手录一遍。
+        //
+        // 实测生产库：112 款里只有 4 款填了 print_size（3.6%），而那 4 条填的
+        // 还是「XS」「M」这种单个码，根本不是尺码表 —— 说明这个功能从未被真正用过。
+        // 但 SKU 表里本来就躺着完整的「颜色 × 尺码 × 价格 × 库存」矩阵，
+        // 直接聚合出来就是一张能用的尺码表，运营零录入。
+        //
+        // 口径：人工填了 print_size 就用人工的（那是商家自定义的量体表，
+        // 不能被自动表覆盖）；没填才用自动生成的，并标明来源让前端知道
+        // 该不该提示运营去完善。
+        if (!StringUtils.hasText(style.getPrintSize())) {
+            Map<String, Object> auto = buildSizeChart(skus);
+            if (auto != null) {
+                data.put("sizeChart", auto);
+                data.put("sizeChartSource", "auto");
+            }
+        } else {
+            data.put("sizeChartSource", "manual");
+        }
         // 洗涤说明：优先独立字段，没有则用成分明细里带的 washNote 兜底
         if (style.getWashInstructions() != null && !style.getWashInstructions().isBlank()) {
             putIfPresent(data, "washInstructions", style.getWashInstructions());
@@ -603,6 +630,81 @@ public class ShopOrderOrchestrator {
         shopAddressService.delete(config.getTenantId(), phone, id);
     }
 
+
+    /**
+     * D-780：从 SKU 矩阵自动生成尺码表。
+     *
+     * <p>结构（顾客视角的标准尺码表）：列为尺码、行为颜色，
+     * 单元格显示价格；无库存的规格明确标「售罄」而不是留空 ——
+     * 留空会被理解成"没这个码"，而"售罄"才是真实状态。
+     *
+     * @return 可直接渲染的尺码表；SKU 不足一档时返回 null（不生成半截表）
+     */
+    private static Map<String, Object> buildSizeChart(List<ProductSku> skus) {
+        if (skus == null || skus.isEmpty()) {
+            return null;
+        }
+        // 保持库里 sort_order 的自然顺序（XS→S→M→L），不要自己按字母排
+        // —— 按字母排会把 XL 排到 XS 前面，服装类目这是硬伤。
+        List<ProductSku> ordered = new ArrayList<>(skus);
+        ordered.sort(Comparator.comparing(
+                (ProductSku k) -> k.getSortOrder() == null ? Integer.MAX_VALUE : k.getSortOrder(),
+                Comparator.naturalOrder()));
+
+        LinkedHashSet<String> sizes = new LinkedHashSet<>();
+        LinkedHashSet<String> colors = new LinkedHashSet<>();
+        for (ProductSku k : ordered) {
+            if (StringUtils.hasText(k.getSize())) {
+                sizes.add(k.getSize().trim());
+            }
+            if (StringUtils.hasText(k.getColor())) {
+                colors.add(k.getColor().trim());
+            }
+        }
+        if (sizes.isEmpty()) {
+            return null;
+        }
+        if (colors.isEmpty()) {
+            colors.add("默认"); // 只有尺码没颜色时，也要能出表
+        }
+
+        // (size, color) → 该格
+        Map<String, Map<String, Object>> cell = new LinkedHashMap<>();
+        for (ProductSku k : ordered) {
+            if (!StringUtils.hasText(k.getSize())) {
+                continue;
+            }
+            String color = StringUtils.hasText(k.getColor()) ? k.getColor().trim() : "默认";
+            cell.computeIfAbsent(k.getSize().trim(), x -> new LinkedHashMap<>()).put(color, k);
+        }
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (String size : sizes) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("size", size);
+            Map<String, Object> byColor = cell.getOrDefault(size, Map.of());
+            for (String color : colors) {
+                ProductSku k = (ProductSku) byColor.get(color);
+                if (k == null) {
+                    row.put(color, null); // 该颜色没有这个码
+                    continue;
+                }
+                int stock = k.getStockQuantity() == null ? 0 : k.getStockQuantity();
+                Map<String, Object> v = new LinkedHashMap<>();
+                v.put("price", k.getSalesPrice());
+                v.put("stock", stock);
+                v.put("soldOut", stock <= 0);
+                row.put(color, v);
+            }
+            rows.add(row);
+        }
+
+        Map<String, Object> chart = new LinkedHashMap<>();
+        chart.put("type", "sku-matrix");
+        chart.put("colors", new ArrayList<>(colors));
+        chart.put("rows", rows);
+        return chart;
+    }
 
     /** 英文枚举 → 中文文案；认不出时原样返回，不臆造 */
     private static String enumText(String code) {
