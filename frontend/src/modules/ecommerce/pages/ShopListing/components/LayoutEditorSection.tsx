@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { unwrap } from '../unwrap';
 import {
   ArrowDownOutlined, ArrowUpOutlined, HolderOutlined,
 } from '@ant-design/icons';
@@ -44,10 +45,19 @@ export function LayoutEditorSection({ styleId }: { styleId: number | null }) {
         shopAdminApi.layoutModules(),
         shopAdminApi.getStyleLayout(styleId),
       ]);
-      const defList = (defs || []) as Array<{ moduleKey: string; defaultTitle: string; canHide: boolean }>;
-      const layList = (layout || []) as Array<{ moduleKey: string; enabled: number; sortOrder: number }>;
-      const layMap = new Map(layList.map((l) => [l.moduleKey, l]));
-      const merged: ModuleItem[] = defList.map((d, i) => ({
+      // ⚠️ 必须 unwrap：axios 拦截器 return response.data，返回的是**完整信封**
+      // {code,message,data,requestId}，不是数组本身。
+      // 直接 (defs || []).map 会得到 "u.map is not a function"（信封对象没有 map），
+      // 整个「详情页布局」区块加载失败。再加 Array.isArray 兜底，
+      // 免得接口形态再变时又炸在渲染层。
+      const defList = unwrap<unknown>(defs);
+      const layList = unwrap<unknown>(layout);
+      const defArr: Array<{ moduleKey: string; defaultTitle: string; canHide: boolean }> =
+        Array.isArray(defList) ? defList : [];
+      const layArr: Array<{ moduleKey: string; enabled: number; sortOrder: number }> =
+        Array.isArray(layList) ? layList : [];
+      const layMap = new Map(layArr.map((l) => [l.moduleKey, l]));
+      const merged: ModuleItem[] = defArr.map((d, i) => ({
         moduleKey: d.moduleKey,
         defaultTitle: d.defaultTitle,
         canHide: d.canHide,
