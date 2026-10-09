@@ -298,6 +298,20 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         return computeArrivalStats(list);
     }
 
+    /**
+     * ⚠️ D-513 警示：本方法是「封顶到预采购数」的口径（{@code min(实际到货, 预采购数)}）。
+     *
+     * <p>只适合「不允许超过计划」的展示型场景（例如到货率不超过 100%）。
+     * <b>任何「核算金额 / 成本 / 应付」的场景都不得使用</b> —— 供应商多送时会被截掉，
+     * 导致少算货款、成本少算、利润虚高（D-513 曾因此让物料对账与利润都少算）。
+     *
+     * <p>核算金额请统一按「实际到货数量」：
+     * <ul>
+     *   <li>采购单金额：{@code MaterialPurchaseHelper.calcTotalAmountByArrived(unitPrice, arrivedQuantity)}</li>
+     *   <li>物料对账数量：{@code MaterialReconciliationOrchestrator.resolveEffectiveQuantity}</li>
+     *   <li>利润材料成本：{@code MaterialPurchaseServiceImpl.computeArrivalStats}</li>
+     * </ul>
+     */
     @Override
     public BigDecimal computeEffectiveArrivedQuantity(BigDecimal purchaseQty, BigDecimal arrivedQty) {
         if (purchaseQty == null || purchaseQty.compareTo(BigDecimal.ZERO) <= 0) {
@@ -365,31 +379,43 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 }
                 BigDecimal pq = p.getPurchaseQuantity() == null ? BigDecimal.ZERO : p.getPurchaseQuantity();
                 BigDecimal aq = p.getArrivedQuantity() == null ? BigDecimal.ZERO : p.getArrivedQuantity();
-                if (pq.compareTo(BigDecimal.ZERO) <= 0) {
+                BigDecimal uq = p.getUsedQuantity() == null ? BigDecimal.ZERO : p.getUsedQuantity();
+
+                /*
+                 * D-513：一律按「实际到货」核算，**不再封顶到预采购数**。
+                 *
+                 * 修复前的 `computeEffectiveArrivedQuantity(pq, aq.max(uq))` = min(实际, 预采购数)，
+                 * 会吃掉供应商多送的部分（送 224 只按 223.311 计成本）→ 成本少算、利润虚高。
+                 * 本方法产出的 arrivedAmount 是【利润核算的材料成本】与【订单采购统计】的唯一来源，
+                 * 口径必须与物料对账一致：都按实际到货。
+                 *
+                 * 实际到货 = max(到货量, 已用量)：仓库路径（自由入库+领料出库）下 arrivedQuantity
+                 * 不更新，usedQuantity 才是实物事实（沿用 D-076 口径，仅去掉封顶）。
+                 */
+                BigDecimal actualArrived = aq.max(uq).max(BigDecimal.ZERO);
+
+                // 预采购数与实际到货都为 0 才跳过。此前「预采购数 <= 0 就 continue」会让
+                // 「无计划但有实际到货」的采购整条漏算成本。
+                if (actualArrived.compareTo(BigDecimal.ZERO) <= 0 && pq.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
 
-                BigDecimal clampedArrived = aq.max(BigDecimal.ZERO).min(pq);
-                // P2-5（D-076）：到货率需含仓库领料完成 —— 仓库路径（自由入库+领料出库）
-                // 下 arrivedQuantity 不更新，usedQuantity 才是实物事实；取 max 后封顶采购量
-                BigDecimal uq = p.getUsedQuantity() == null ? BigDecimal.ZERO : p.getUsedQuantity();
-                BigDecimal eff = computeEffectiveArrivedQuantity(pq, aq.max(uq));
-
                 plannedQty = plannedQty.add(pq);
-                arrivedQty = arrivedQty.add(clampedArrived);
-                effectiveArrivedQty = effectiveArrivedQty.add(eff);
+                arrivedQty = arrivedQty.add(actualArrived);
+                effectiveArrivedQty = effectiveArrivedQty.add(actualArrived);
 
                 BigDecimal up = p.getUnitPrice();
                 if (up != null) {
                     if (pq.compareTo(BigDecimal.ZERO) > 0) {
                         plannedAmount = plannedAmount.add(up.multiply(pq));
                     }
-                    if (eff.compareTo(BigDecimal.ZERO) > 0) {
-                        arrivedAmount = arrivedAmount.add(up.multiply(eff));
+                    if (actualArrived.compareTo(BigDecimal.ZERO) > 0) {
+                        arrivedAmount = arrivedAmount.add(up.multiply(actualArrived));
                     }
                 } else {
+                    // 单价缺失时用采购单金额兜底（该金额本身即「单价 × 实际到货」）
                     BigDecimal ta = p.getTotalAmount();
-                    if (ta != null) {
+                    if (ta != null && ta.compareTo(BigDecimal.ZERO) > 0) {
                         arrivedAmount = arrivedAmount.add(ta);
                     }
                 }

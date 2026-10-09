@@ -168,9 +168,19 @@ public class OrderProfitOrchestrator {
                 ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(baseQty))
                 : BigDecimal.ZERO;
 
-        BigDecimal profit = revenue.subtract(materialPlannedCost).subtract(processingCost);
+        /*
+         * D-513：利润一律按「实际到货成本」核算，不再用计划成本。
+         *
+         * 修复前：profit = 收入 − materialPlannedCost（预采购数 × 单价）− 加工费，
+         * 而同一方法里已经算出了 materialArrivedCost 却只用于展示 —— 口径分裂：
+         * 计划采购 375 米、实际到货 375.5 米时，成本按 375 算 → 成本少算、利润虚高。
+         * 且 actualUnitCost 名字写着"实际"，算的却是计划成本，名实不符。
+         *
+         * 计划成本仍以 materialPlannedCost 字段返回，需要预算口径的调用方可直接用。
+         */
+        BigDecimal profit = revenue.subtract(materialArrivedCost).subtract(processingCost);
         BigDecimal unitRevenue = safeDivide(revenue, baseQty);
-        BigDecimal actualUnitCost = safeDivide(materialPlannedCost.add(processingCost), baseQty);
+        BigDecimal actualUnitCost = safeDivide(materialArrivedCost.add(processingCost), baseQty);
         BigDecimal unitProfit = safeDivide(profit, baseQty);
         BigDecimal marginPercent = BigDecimal.ZERO;
         if (revenue.compareTo(BigDecimal.ZERO) > 0) {
@@ -271,9 +281,10 @@ public class OrderProfitOrchestrator {
                 ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(r.baseQty))
                 : BigDecimal.ZERO;
 
-        r.profit = r.revenue.subtract(materialPlannedCost).subtract(r.processingCost);
+        // D-513：与 computeOrderProfit 同一口径 —— 利润与单位实际成本都按「实际到货成本」
+        r.profit = r.revenue.subtract(materialArrivedCost).subtract(r.processingCost);
         r.unitRevenue = safeDivide(r.revenue, r.baseQty);
-        r.actualUnitCost = safeDivide(materialPlannedCost.add(r.processingCost), r.baseQty);
+        r.actualUnitCost = safeDivide(materialArrivedCost.add(r.processingCost), r.baseQty);
         r.unitProfit = safeDivide(r.profit, r.baseQty);
         r.marginPercent = BigDecimal.ZERO;
         if (r.revenue.compareTo(BigDecimal.ZERO) > 0) {
@@ -456,11 +467,15 @@ public class OrderProfitOrchestrator {
                 BigDecimal amt = null;
                 BigDecimal up = p.getUnitPrice();
                 if (up != null) {
-                    BigDecimal pq = p.getPurchaseQuantity() == null ? BigDecimal.ZERO : p.getPurchaseQuantity();
+                    // D-513：材料成本一律按「实际到货」算，不再封顶到预采购数。
+                    // 原先走 computeEffectiveArrivedQuantity（= min(实际, 计划)），供应商多送的部分
+                    // 被吃掉 → 成本少算、利润虚高。口径与物料对账、computeArrivalStats 保持一致：
+                    // 实际到货 = max(到货量, 已用量)（仓库路径下 usedQuantity 才是实物事实）。
                     BigDecimal aq = p.getArrivedQuantity() == null ? BigDecimal.ZERO : p.getArrivedQuantity();
-                    BigDecimal eff = materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
-                    if (eff.compareTo(BigDecimal.ZERO) <= 0) continue;
-                    amt = up.multiply(eff);
+                    BigDecimal uq = p.getUsedQuantity() == null ? BigDecimal.ZERO : p.getUsedQuantity();
+                    BigDecimal actualArrived = aq.max(uq).max(BigDecimal.ZERO);
+                    if (actualArrived.compareTo(BigDecimal.ZERO) <= 0) continue;
+                    amt = up.multiply(actualArrived);
                 } else {
                     BigDecimal ta = p.getTotalAmount();
                     if (ta == null || ta.compareTo(BigDecimal.ZERO) <= 0) continue;
