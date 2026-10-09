@@ -179,11 +179,21 @@ public class MaterialPurchaseReturnHelper {
         patch.setId(existed.getId());
         patch.setReturnConfirmed(1);
         patch.setReturnQuantity(returnQuantity);
-        // 口径统一（D-464，取代 D-129）：totalAmount = **实际到货数量** × 单价，
-        // 回料确认只更新回料数量，不改写总额（到货量没变，金额就不该变）。
+        /*
+         * D-513 修复：回料确认 = 登记「实际到货数量」，必须同步回写到货量列。
+         *
+         * 此前只写 returnQuantity、**不回写 arrivedQuantity**，于是 arrivedQuantity 停留在
+         * confirmComplete 的兜底值（= 预采购数）。下游全部按预采购数取值，后果：
+         *   ① 物料对账的「实到数量」= 预采购数 → 供应商多送/少送都按计划数结算，货款算错；
+         *   ② 采购列表还得靠 repairRecords 临时把 arrivedQuantity 顶成 returnQuantity 才显示正确，
+         *      列表与对账两处口径不一致；
+         *   ③ 本方法紧接着算的 totalAmount 又用「实际到货 × 单价」，而实际到货根本没落库，自相矛盾。
+         */
+        patch.setArrivedQuantity(returnQuantity);
+        // 金额按「实际到货数量 × 单价」重算（与 D-464 声明口径一致；此前用旧 arrivedQuantity 算，与声明不符）
         patch.setTotalAmount(
                 com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
-                        .calcTotalAmountByArrived(existed));
+                        .calcTotalAmountByArrived(existed.getUnitPrice(), returnQuantity));
         patch.setStatus(returnQuantity.compareTo(BigDecimal.ZERO) > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status);
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);
@@ -222,6 +232,8 @@ public class MaterialPurchaseReturnHelper {
                     .eq(MaterialPurchase::getId, purchaseId)
                     .set(MaterialPurchase::getReturnConfirmed, 1)
                     .set(MaterialPurchase::getReturnQuantity, rq)
+                    // D-513：降级路径同样要回写到货量，否则两条路径结果不一致
+                    .set(MaterialPurchase::getArrivedQuantity, rq)
                     .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(rq))
                     .set(MaterialPurchase::getStatus, newStatus)
                     .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)

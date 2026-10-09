@@ -87,8 +87,19 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
     private Integer productionCompletedQuantity;
 
     /**
+     * D-513：关联采购单的「预采购数」（不落库，列表展示用）。
+     * 与「实到数量」（quantity）并排展示，便于核对
+     * 「计划采购多少 / 实际到货多少 / 按哪个结算」。
+     */
+    @TableField(exist = false)
+    private BigDecimal purchaseQuantity;
+
+    /**
      * 对账数量（D-410：INT → BigDecimal，DECIMAL(12,4)）
      * 对账单金额 = 单价 × 本数量，INT 会把 1.32 米截断成 1 → 少付货款。
+     *
+     * <p>D-513 口径澄清：本字段 = <b>实际到货数量</b>（优先回料确认量，
+     * 其次采购到货量，均不封顶到预采购数），不是预采购数。
      */
     private BigDecimal quantity;
 

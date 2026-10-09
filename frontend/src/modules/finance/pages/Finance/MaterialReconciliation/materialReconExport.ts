@@ -27,7 +27,7 @@ export const fileStamp = () => {
 };
 
 export const buildMaterialReconCsv = (rows: any[], user?: any) => {
-  const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '采购类型', '订单号', '款号', '实到数量', '单位', '采购单价', '采购汇总', '采购完成', '采购员', '入库日期', '库区', '状态'];
+  const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '采购类型', '订单号', '款号', '预采购数', '实到数量', '单位', '采购单价', '采购汇总', '采购完成', '采购员', '入库日期', '库区', '状态'];
   const lines = [header.map(escapeCsvCell).join(',')];
   for (const r of rows) {
     const st = getMaterialReconStatusConfig(r?.status);
@@ -44,6 +44,7 @@ export const buildMaterialReconCsv = (rows: any[], user?: any) => {
       sourceTypeText,
       String(r?.orderNo || '').trim(),
       String(r?.styleNo || '').trim(),
+      r?.purchaseQuantity == null ? '-' : String(r.purchaseQuantity),
       String(quantity),
       String(r?.unit || '').trim(),
       canViewPrice(user) ? unitPrice.toFixed(2) : '***',

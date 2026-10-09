@@ -142,7 +142,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
       ),
     },
     {
-      title: '采购数量',
+      title: '预采购数',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,

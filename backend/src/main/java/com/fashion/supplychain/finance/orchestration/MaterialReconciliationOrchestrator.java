@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -117,6 +119,8 @@ public class MaterialReconciliationOrchestrator {
         Map<String, String> unitByPurchaseId = new HashMap<>();
         Map<String, BigDecimal> unitPriceByPurchaseId = new HashMap<>();
         Map<String, BigDecimal> arrivedQuantityByPurchaseId = new HashMap<>();
+        /** D-513：预采购数，与实到数量并排展示便于核对 */
+        Map<String, BigDecimal> purchaseQuantityByPurchaseId = new HashMap<>();
         Map<String, String> sourceTypeByPurchaseId = new HashMap<>();
     }
 
@@ -143,6 +147,9 @@ public class MaterialReconciliationOrchestrator {
                         if (p.getArrivedQuantity() != null) {
                             // D-410：不再 intValue()，1.32 米必须原样进入对账数量
                             data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity());
+                        }
+                        if (p.getPurchaseQuantity() != null) {
+                            data.purchaseQuantityByPurchaseId.put(pid, p.getPurchaseQuantity());
                         }
                         if (StringUtils.hasText(p.getSourceType())) {
                             data.sourceTypeByPurchaseId.put(pid, p.getSourceType().trim());
@@ -175,6 +182,8 @@ public class MaterialReconciliationOrchestrator {
                 if (purchaseUnitPrice != null) {
                     r.setUnitPrice(purchaseUnitPrice);
                 }
+                // D-513：带上预采购数（仅展示），与实到数量并排，避免"按哪个数结算"看不出
+                r.setPurchaseQuantity(data.purchaseQuantityByPurchaseId.get(pid));
             }
         }
     }
@@ -700,8 +709,8 @@ public class MaterialReconciliationOrchestrator {
                 unitPrice = BigDecimal.ZERO;
             }
         }
-        // 金额一律按「单价 × 对账数量」重算：对账数量是封顶到货量（D-410 起支持小数），
-        // 直接沿用采购全额会造成部分到货时应付虚增
+        // 金额一律按「单价 × 对账数量（= 实际到货）」重算：
+        // 直接沿用采购全额会造成部分到货时应付虚增；对账数量口径见 resolveEffectiveQuantity
         BigDecimal qtyForAmount = qty == null ? BigDecimal.ZERO : qty;
         totalAmount = unitPrice.multiply(qtyForAmount).setScale(2, RoundingMode.HALF_UP);
         return new BigDecimal[]{unitPrice, totalAmount};
@@ -910,21 +919,124 @@ public class MaterialReconciliationOrchestrator {
         }
     }
 
+    /**
+     * D-513：按「实际到货数量」重算<b>待核实</b>对账。
+     *
+     * <p>用途：修历史数据 —— 「回料确认未回写到货量」期间生成的对账，数量/金额取的是预采购数。
+     * 代码侧已修复写入口径（回料确认同步回写 arrived_quantity）与读取口径（不封顶），
+     * 但**存量对账不会自愈**，需要一次性重算。
+     *
+     * <p>安全边界（为什么可以重算）：
+     * <ul>
+     *   <li>只处理 {@code status=pending}（待核实）—— 数字尚未被任何人核实/审批，属草稿性质；</li>
+     *   <li>不新建对账，不动已核实/已审批/已拒绝的记录；</li>
+     *   <li>只改数量与金额，不动状态、对账人、审核人等痕迹；</li>
+     *   <li>返回逐条变更明细（旧值 → 新值），便于人工核对，不做静默修改。</li>
+     * </ul>
+     */
+    public Map<String, Object> recomputePendingFromActualArrival() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialReconciliation> pendings = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .eq(MaterialReconciliation::getStatus, "pending")
+                .isNotNull(MaterialReconciliation::getPurchaseId)
+                .list();
+
+        List<Map<String, Object>> changes = new ArrayList<>();
+        int scanned = 0;
+        int changed = 0;
+        int skipped = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (MaterialReconciliation r : pendings) {
+            scanned++;
+            MaterialPurchase purchase = materialPurchaseService.getById(r.getPurchaseId());
+            if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
+                skipped++;
+                continue;
+            }
+            BigDecimal qty = resolveEffectiveQuantity(purchase);
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                skipped++;
+                continue;
+            }
+            BigDecimal[] prices = resolvePrices(purchase, qty);
+            BigDecimal oldQty = r.getQuantity() == null ? BigDecimal.ZERO : r.getQuantity();
+            BigDecimal oldTotal = r.getTotalAmount() == null ? BigDecimal.ZERO : r.getTotalAmount();
+            if (qty.compareTo(oldQty) == 0 && prices[1].compareTo(oldTotal) == 0) {
+                continue;
+            }
+            BigDecimal deduction = r.getDeductionAmount() == null ? BigDecimal.ZERO : r.getDeductionAmount();
+            MaterialReconciliation patch = new MaterialReconciliation();
+            patch.setId(r.getId());
+            patch.setQuantity(qty);
+            patch.setUnitPrice(prices[0]);
+            patch.setTotalAmount(prices[1]);
+            patch.setFinalAmount(prices[1].subtract(deduction));
+            patch.setUpdateTime(now);
+            if (UserContext.get() != null && StringUtils.hasText(UserContext.get().getUserId())) {
+                patch.setUpdateBy(UserContext.get().getUserId().trim());
+            }
+            materialReconciliationService.updateById(patch);
+            changed++;
+
+            Map<String, Object> c = new LinkedHashMap<>();
+            c.put("reconciliationNo", r.getReconciliationNo());
+            c.put("materialName", r.getMaterialName());
+            c.put("oldQuantity", oldQty);
+            c.put("newQuantity", qty);
+            c.put("oldTotalAmount", oldTotal);
+            c.put("newTotalAmount", prices[1]);
+            changes.add(c);
+        }
+        log.info("[MaterialReconciliation] 按实际到货重算待核实对账: 扫描={} 修正={} 跳过={}",
+                scanned, changed, skipped);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("scanned", scanned);
+        resp.put("changed", changed);
+        resp.put("skipped", skipped);
+        resp.put("changes", changes);
+        return resp;
+    }
+
+    /**
+     * D-513：对账的「实到数量」必须取<b>实际到货数量</b>，而不是预采购数。
+     *
+     * <p>修复前口径：{@code computeEffectiveArrivedQuantity(pq, aq)} = {@code aq.min(pq)}，
+     * 即「到货量封顶到预采购数」。两个问题：
+     * <ol>
+     *   <li>历史数据里 arrivedQuantity 常等于预采购数（回料确认未回写，见
+     *       MaterialPurchaseReturnHelper D-513 修复），于是对账取值恒等于预采购数，
+     *       供应商多送按计划数结算，<b>少算货款</b>；</li>
+     *   <li>即便到货量正确，封顶也会把「多送」的部分算掉（送 224 只按 223.311 结算）。</li>
+     * </ol>
+     *
+     * <p>现在的取值优先级：
+     * <ol>
+     *   <li>回料确认量 returnQuantity（returnConfirmed=1）—— 人工确认的实际到货，最可信；</li>
+     *   <li>arrivedQuantity（实际到货）—— <b>不封顶</b>；</li>
+     *   <li>purchaseQuantity（预采购数）—— 仅当上面都没有时兜底。</li>
+     * </ol>
+     */
     private BigDecimal resolveEffectiveQuantity(MaterialPurchase purchase) {
         if (purchase == null) {
             return BigDecimal.ZERO;
         }
-        BigDecimal aq = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
-        BigDecimal pq = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
-        if (pq.compareTo(BigDecimal.ZERO) > 0) {
-            try {
-                return materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
-            } catch (Exception e) {
-                BigDecimal clamped = aq.min(pq);
-                return clamped.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : clamped;
-            }
+        // 1) 回料确认量 = 人工登记的实际到货
+        BigDecimal rq = purchase.getReturnQuantity() == null ? BigDecimal.ZERO : purchase.getReturnQuantity();
+        if (Integer.valueOf(1).equals(purchase.getReturnConfirmed()) && rq.compareTo(BigDecimal.ZERO) > 0) {
+            return rq;
         }
-        return aq.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : aq;
+        // 2) 到货量（不封顶：供应商多送要按实结算，否则少付供应商货款）
+        BigDecimal aq = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
+        if (aq.compareTo(BigDecimal.ZERO) > 0) {
+            return aq;
+        }
+        // 3) 兜底：预采购数
+        BigDecimal pq = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        return pq.compareTo(BigDecimal.ZERO) > 0 ? pq : BigDecimal.ZERO;
     }
 
     private String resolveNotBlank(String v, String fallback) {

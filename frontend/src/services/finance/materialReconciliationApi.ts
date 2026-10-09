@@ -30,6 +30,29 @@ export const materialReconciliationApi = {
     return await api.post<ApiResponse<number>>('/finance/material-reconciliation/backfill');
   },
 
+  /**
+   * D-513：按「实际到货数量」重算**待核实**对账的数量与金额。
+   *
+   * 修历史数据用：回料确认曾未回写到货量，导致对账按「预采购数」取值（少算货款）。
+   * 代码已修复口径，但存量对账不会自愈，需一次性重算。
+   * 只处理 status=pending（待核实）的记录，返回逐条变更明细（旧值→新值）。
+   */
+  recomputeFromActualArrival: async () => {
+    return await api.post<ApiResponse<{
+      scanned: number;
+      changed: number;
+      skipped: number;
+      changes: Array<{
+        reconciliationNo?: string;
+        materialName?: string;
+        oldQuantity?: number;
+        newQuantity?: number;
+        oldTotalAmount?: number;
+        newTotalAmount?: number;
+      }>;
+    }>>('/finance/material-reconciliation/recompute-from-actual-arrival');
+  },
+
   returnMaterialReconciliation: async (id: string, reason: string) => {
     return await api.post<ApiResponse<null>>(`/finance/material-reconciliation/${id}/status-action`, undefined, {
       params: { action: 'return', reason }

@@ -340,7 +340,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           <Form.Item label="物料">{receiveModalRecord?.materialName || receiveModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="物料编码">{receiveModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${receiveModalRecord?.color || '-'} / ${receiveModalRecord?.specifications || '-'}`}</Form.Item>
-          <Form.Item label="采购数量">{receiveModalRecord?.purchaseQuantity || 0} {receiveModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="预采购数">{receiveModalRecord?.purchaseQuantity || 0} {receiveModalRecord?.unit || ''}</Form.Item>
           <Form.Item
             label="实际到货数量"
             name="quantity"
@@ -369,7 +369,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           <Form.Item label="物料">{inboundModalRecord?.materialName || inboundModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="物料编码">{inboundModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${inboundModalRecord?.color || '-'} / ${inboundModalRecord?.specifications || '-'}`}</Form.Item>
-          <Form.Item label="采购数量">{inboundModalRecord?.purchaseQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="预采购数">{inboundModalRecord?.purchaseQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item label="已到货数量">{inboundModalRecord?.arrivedQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item label="待到货数量">{inboundModalRecord ? Math.max(0, Number(inboundModalRecord.purchaseQuantity || 0) - Number(inboundModalRecord.arrivedQuantity || 0)) : 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item

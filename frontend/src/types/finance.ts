@@ -22,6 +22,9 @@ export interface MaterialReconciliation extends Record<string, unknown> {
   styleId?: string;
   styleNo?: string;
   styleName?: string;
+  /** D-513：预采购数（关联采购单的计划量，仅展示，用于与实到数量对照） */
+  purchaseQuantity?: number | null;
+  /** D-513：实到数量（= 实际到货数量，对账金额按此计算） */
   quantity: number;
   productionCompletedQuantity?: number;
   unitPrice: number;

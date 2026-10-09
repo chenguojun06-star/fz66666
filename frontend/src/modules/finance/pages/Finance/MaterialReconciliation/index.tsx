@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { App, Button, Card, Collapse, DatePicker, Empty, Select, Space, Statistic, Tag, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined, DownloadOutlined, InfoCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
@@ -37,6 +37,7 @@ const MaterialReconciliation: React.FC = () => {
   // D-252：补生成存量对账。修复工厂类型判定口径后，历史采购单的对账仍需手动触发一次；
   // 否则修复只对新采购生效，用户看到的依旧是「大货采购全都不在对账里」。
   const [backfilling, setBackfilling] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
   // D-360f：采购单据抽屉（行级查看）+ 批量下载
   const [docDrawerOpen, setDocDrawerOpen] = useState(false);
   const [docDrawerOrderNo, setDocDrawerOrderNo] = useState<string | undefined>(undefined);
@@ -160,6 +161,91 @@ const MaterialReconciliation: React.FC = () => {
 
   // D-252：补生成存量物料对账。历史采购单此前因工厂类型判定口径问题（factory_type 为 NULL
   // 被误判成外发）导致对账被整批跳过，修复口径后需由本操作补回，否则用户看到的数据依旧缺失。
+  /**
+   * D-513：按「实际到货数量」重算待核实对账。
+   *
+   * 修历史数据：回料确认曾未把实际到货回写到货量列，对账取值落在「预采购数」上，
+   * 供应商多送/少送都按计划数结算 → 少算货款。代码已修口径，但存量对账不会自愈。
+   * 只重算「待核实」记录，已核实/已审批不动、也不新建对账，结果逐条列出便于核对。
+   */
+  const handleRecompute = () => {
+    modal.confirm({
+      width: '34vw',
+      title: '按实际到货重算待核实对账',
+      content: (
+        <div style={{ lineHeight: 1.9, fontSize: 13 }}>
+          将把「待核实」对账的<b>数量与金额</b>按<b>实际到货数量</b>重算一遍。
+          <br />
+          （原先取的是预采购数，与实际到货不一致时会少算/多算货款）
+          <br />
+          <span style={{ color: 'var(--color-text-secondary)' }}>
+            仅处理「待核实」：已核实 / 已审批的对账不动，也不会新建对账。完成后会列出逐条变更。
+          </span>
+        </div>
+      ),
+      okText: '开始重算',
+      cancelText: '取消',
+      onOk: async () => {
+        setRecomputing(true);
+        try {
+          const res = await materialReconciliationApi.recomputeFromActualArrival();
+          const d = (res as { data?: {
+            scanned?: number; changed?: number; skipped?: number;
+            changes?: Array<Record<string, unknown>>;
+          } })?.data || {};
+          const scanned = Number(d.scanned ?? 0);
+          const changed = Number(d.changed ?? 0);
+          const changes = Array.isArray(d.changes) ? d.changes : [];
+          if (changed === 0) {
+            message.success(`已扫描 ${scanned} 条待核实对账，数量与金额均无需修正`);
+          } else {
+            modal.info({
+              width: '56vw',
+              title: `重算完成：修正 ${changed} 条`,
+              content: (
+                <div style={{ maxHeight: 340, overflow: 'auto' }}>
+                  <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    扫描 {scanned} 条待核实对账，共修正 {changed} 条：
+                  </div>
+                  <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--color-bg-subtle)' }}>
+                        <th align="left">对账单号</th>
+                        <th align="left">物料</th>
+                        <th align="right">原数量</th>
+                        <th align="right">新数量</th>
+                        <th align="right">原金额</th>
+                        <th align="right">新金额</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {changes.map((c, i) => (
+                        <tr key={i}>
+                          <td>{String(c.reconciliationNo ?? '')}</td>
+                          <td>{String(c.materialName ?? '')}</td>
+                          <td align="right">{String(c.oldQuantity ?? '')}</td>
+                          <td align="right"><b>{String(c.newQuantity ?? '')}</b></td>
+                          <td align="right">¥{Number(c.oldTotalAmount ?? 0).toFixed(2)}</td>
+                          <td align="right"><b>¥{Number(c.newTotalAmount ?? 0).toFixed(2)}</b></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ),
+              okText: '知道了',
+            });
+          }
+          await fetchList(false);
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '重算失败');
+        } finally {
+          setRecomputing(false);
+        }
+      },
+    });
+  };
+
   const handleBackfill = () => {
     modal.confirm({
       width: '32vw',
@@ -394,6 +480,11 @@ const MaterialReconciliation: React.FC = () => {
               <Tooltip title="按最新规则重新扫描已到货的采购单，补回缺失的对账单（已存在的只更新、不重复创建）">
                 <Button ghost disabled={backfilling} onClick={handleBackfill} icon={<ReloadOutlined />}>
                   补生成对账
+                </Button>
+              </Tooltip>
+              <Tooltip title="把「待核实」对账的数量与金额按【实际到货数量】重算（原先取的是预采购数，会少算货款）">
+                <Button ghost disabled={recomputing} onClick={handleRecompute} icon={<SyncOutlined />}>
+                  按实际到货重算
                 </Button>
               </Tooltip>
             </Space>

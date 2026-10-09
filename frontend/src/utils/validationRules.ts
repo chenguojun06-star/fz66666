@@ -207,12 +207,13 @@ export const ValidationRules: ValidationRuleMap = {
   },
   // 物料采购数量
   purchaseQuantity: {
-    name: '采购数量',
+    // D-513：该字段是「计划采购量」，实际到货以到货数量为准，故正名为「预采购数」
+    name: '预采购数',
     required: true,
     type: 'number',
     min: 0.01,
     max: 999999,
-    message: '采购数量必须在 0.01-999999 之间',
+    message: '预采购数必须在 0.01-999999 之间',
   },
   // 物料单价
   unitPrice: {

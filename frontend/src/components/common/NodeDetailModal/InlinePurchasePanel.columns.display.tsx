@@ -61,7 +61,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
     },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 70, render: (v: unknown) => v || '-' },
     {
-      title: '采购数量',
+      title: '预采购数',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,

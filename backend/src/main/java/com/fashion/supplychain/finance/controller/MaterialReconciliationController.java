@@ -95,6 +95,18 @@ public class MaterialReconciliationController {
         return Result.success(materialReconciliationOrchestrator.backfill());
     }
 
+    /**
+     * D-513：按「实际到货数量」重算待核实对账。
+     *
+     * <p>修历史数据用：回料确认未回写到货量期间生成的对账，数量/金额取的是预采购数。
+     * 只重算 status=pending（待核实）的记录，返回逐条变更明细（旧值→新值）。
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/recompute-from-actual-arrival")
+    public Result<?> recomputeFromActualArrival() {
+        return Result.success(materialReconciliationOrchestrator.recomputePendingFromActualArrival());
+    }
+
     public static class UpdateStatusRequest {
         @NotBlank(message = "id不能为空")
         private String id;

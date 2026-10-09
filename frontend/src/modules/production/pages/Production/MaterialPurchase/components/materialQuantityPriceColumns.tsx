@@ -12,7 +12,10 @@ import type { UseMaterialColumnsParams } from './materialColumnsTypes';
 export const buildQuantityPriceColumns = (_params: UseMaterialColumnsParams): ColumnsType<MaterialPurchaseType> => {
   return [
     {
-      title: '采购数量',
+      // D-513 正名：这是「计划采购量」，实际到货以「到货数量」为准。
+      // 原先叫「采购数量」与「到货数量」并列，容易被理解成实际采购量，
+      // 而物料对账曾误按此列取值（少算货款），故明确为「预采购数」。
+      title: '预采购数',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,

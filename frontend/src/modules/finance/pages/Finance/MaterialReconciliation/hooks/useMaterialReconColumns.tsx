@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Tag } from 'antd';
+import { Button, Tag, Tooltip } from 'antd';
 import type { MaterialReconType } from '@/types/finance';
 import { getMaterialReconStatusConfig } from '@/constants/finance';
 import { formatDateTime } from '@/utils/datetime';
@@ -37,7 +37,31 @@ export const useMaterialReconColumns = ({
     { title: '采购类型', dataIndex: 'sourceType', key: 'sourceType', width: 100, render: (value: string) => { if (value === 'sample') return <Tag color="purple">样衣采购</Tag>; if (value === 'order') return <Tag color="blue">大货采购</Tag>; return <Tag color="green">批量采购</Tag>; } },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140 },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 110 },
-    { title: '实到数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const, render: (value: number, record: any) => `${value || 0}${record?.unit ? ' ' + record.unit : ''}` },
+    {
+      // D-513：把「预采购数」摆在「实到数量」前面，一眼看清
+      // 「计划采购多少 → 实际到货多少 → 按哪个数结算」
+      title: '预采购数',
+      dataIndex: 'purchaseQuantity',
+      key: 'purchaseQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (value: number | null | undefined, record: any) =>
+        value == null ? '-' : `${value}${record?.unit ? ' ' + record.unit : ''}`,
+    },
+    {
+      title: '实到数量',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 100,
+      align: 'right' as const,
+      render: (value: number, record: any) => {
+        const text = `${value || 0}${record?.unit ? ' ' + record.unit : ''}`;
+        // 到货与预采购数不一致时高亮，提醒核对（多送/少送都该被看见）
+        const pq = record?.purchaseQuantity;
+        const diff = pq != null && Number(pq) !== Number(value || 0);
+        return diff ? <Tooltip title={`预采购数 ${pq}，实到 ${value || 0}（不一致，请核对）`}><span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{text}</span></Tooltip> : text;
+      },
+    },
     { title: '采购单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 110, align: 'right' as const, render: (value: number, record: any) => { if (!canViewPrice(user)) return '***'; return `¥${value?.toFixed(2) || '0.00'}${record?.unit ? '/' + record.unit : ''}`; } },
     { title: '采购汇总', key: 'purchaseTotal', width: 120, align: 'right' as const, render: (_: any, record: any) => { if (!canViewPrice(user)) return '***'; const total = Number(record?.quantity || 0) * Number(record?.unitPrice || 0); return <span style={{ color: total > 0 ? 'var(--color-primary)' : undefined }}>¥{total.toFixed(2)}</span>; } },
     { title: '采购完成', dataIndex: 'reconciliationDate', key: 'reconciliationDate', width: 120, render: (value: unknown) => formatDateTime(value) },
