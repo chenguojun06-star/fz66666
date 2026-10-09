@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Card, Form, message, Tabs, Button, Space, Dropdown } from 'antd';
+import { Card, Form, message, Tabs, Button, Space, Dropdown, Modal } from 'antd';
 import { RobotOutlined, PlusOutlined, DownOutlined, ExportOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
@@ -11,8 +11,11 @@ import PurchaseReturnTab from './components/PurchaseReturnTab';
 import SmartSourcingDrawer from './components/SmartSourcingDrawer';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { usePurchaseCartActions, usePurchaseCart } from '@/hooks/usePurchaseCart';
+import api from '@/utils/api';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
+import { normalizeStatus } from './hooks/purchaseActionsHelpers';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildStatCards } from './statCardsConfig';
 import TitleExtraTooltip from './TitleExtraTooltip';
 import PurchaseModals from './PurchaseModals';
@@ -68,12 +71,14 @@ const MaterialPurchase: React.FC = () => {
     openDialog: _openDialog, openDialogSafe, closeDialog,
     handleSubmit, handleSavePreview,
     receivePurchaseTask, confirmReturnPurchaseTask,
+    openReturnConfirm,
     openReturnReset, submitReturnConfirm, submitReturnReset,
     handleReceiveAll, handleSmartReceiveSuccess: _handleSmartReceiveSuccess, handleBatchReturn,
     openPurchaseSheet, downloadPurchaseSheet,
     openQuickEditSafe, handleQuickEditSave,
     isSamplePurchaseView,
     confirmComplete, confirmCompleteSubmitting,
+    confirmCompleteFrom,
     confirmCompleteModalOpen, closeConfirmCompleteModal, submitConfirmComplete, confirmCompleteTargets,
   } = useMaterialPurchase();
 
@@ -141,6 +146,101 @@ const MaterialPurchase: React.FC = () => {
     await batchAddItems(requests);
     setCartDrawerOpen(true);
   }, [batchAddItems]);
+
+  // 订单级冻结判断（不看采购行自身状态：COMPLETED 采购行仍允许回料，与详情页口径一致）
+  const isOrderFrozen = useCallback((r: MaterialPurchaseType) =>
+    isOrderFrozenForRecord({ orderNo: r.orderNo, orderId: r.orderId, sourceType: r.sourceType } as Record<string, unknown>),
+  [isOrderFrozenForRecord]);
+
+  // 列表页批量领取：选中行过滤待采购(pending)且订单未冻结，走后端 /batch-receive
+  const handleBatchReceiveRows = useCallback((records: MaterialPurchaseType[]) => {
+    const pending = records.filter((r) =>
+      String(r.id || '').trim()
+      && normalizeStatus(r.status) === MATERIAL_PURCHASE_STATUS.PENDING
+      && !isOrderFrozen(r));
+    if (!pending.length) {
+      message.info('选中行中没有可领取的待采购任务');
+      return;
+    }
+    const receiverName = String(user?.name || user?.username || '').trim();
+    if (!receiverName) { message.error('未填写领取人'); return; }
+    const receiverId = String(user?.id || '').trim();
+    const skipped = records.length - pending.length;
+    Modal.confirm({
+      width: '46vw',
+      title: '确认批量领取',
+      content: (
+        <div>
+          <p>将领取以下 <strong>{pending.length}</strong> 项待采购任务（有库存自动出库，无库存按外采登记）：</p>
+          {skipped > 0 && <p className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>另有 {skipped} 项非待采购或订单已完成，将自动跳过</p>}
+          <div className="u-ov-auto u-mt-8 u-fs-13" style={{ maxHeight: 260 }}>
+            {pending.map((p, i) => (
+              <div key={String(p.id)} className="u-d-flex u-jc-between u-ai-center u-gap-8" style={{ padding: '6px 0', borderBottom: i < pending.length - 1 ? '1px solid var(--color-border-light)' : 'none' }}>
+                <span className="u-flex-1">
+                  <div className="u-fw-500">{p.materialName || p.materialCode}</div>
+                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {[p.orderNo, p.materialCode, p.color].filter(Boolean).join(' | ') || '-'}
+                  </div>
+                </span>
+                <span className="u-ws-nowrap" style={{ color: 'var(--color-primary)' }}>
+                  {p.purchaseQuantity}{p.unit || ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      okText: '确认领取',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await api.post<{ code: number; message?: string; data?: { successCount?: number; skipCount?: number; failCount?: number; failMessages?: string[] } }>(
+            '/production/purchase/batch-receive',
+            { purchaseIds: pending.map((r) => String(r.id)), receiverId, receiverName },
+          );
+          if (res.code === 200) {
+            const { successCount = 0, skipCount = 0, failCount = 0, failMessages = [] } = res.data || {};
+            if (failCount > 0) {
+              message.warning(`领取完成：成功 ${successCount} 项，跳过 ${skipCount} 项，失败 ${failCount} 项（${failMessages[0] || ''}）`);
+            } else {
+              message.success(`领取完成：成功 ${successCount} 项${skipCount ? `，跳过 ${skipCount} 项` : ''}`);
+            }
+            fetchMaterialPurchaseList();
+          } else {
+            message.error(res.message || '批量领取失败');
+          }
+        } catch (err: unknown) {
+          message.error(err instanceof Error ? err.message : '批量领取失败');
+        }
+      },
+    });
+  }, [user, isOrderFrozen, fetchMaterialPurchaseList]);
+
+  // 列表页批量回料确认：与采购节点弹窗同口径 D-368（非取消、未回料确认、到货数量>0），
+  // 复用 ReturnConfirmModal 多行编辑回料数弹窗
+  const handleBatchReturnRows = useCallback((records: MaterialPurchaseType[]) => {
+    const targets = records.filter((r) =>
+      String(r.id || '').trim()
+      && normalizeStatus(r.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
+      && Number(r.returnConfirmed || 0) !== 1
+      && Number(r.arrivedQuantity || 0) > 0
+      && !isOrderFrozen(r));
+    if (!targets.length) {
+      message.info('选中行中没有可回料确认的采购任务（需先登记到货）');
+      return;
+    }
+    openReturnConfirm(targets);
+  }, [isOrderFrozen, openReturnConfirm]);
+
+  // 列表页批量确认完成：与详情页共用 ConfirmCompleteModal（物料去向选择）
+  const handleBatchCompleteRows = useCallback((records: MaterialPurchaseType[]) => {
+    const targets = records.filter((r) => !isOrderFrozen(r));
+    if (!targets.length) {
+      message.info('选中行中没有待确认完成的采购任务');
+      return;
+    }
+    confirmCompleteFrom(targets);
+  }, [isOrderFrozen, confirmCompleteFrom]);
 
   // （已将原有单订单分析迁移到 SmartSourcingDrawer 组件内部 V1 Tab）
   //   handleAnalyzeNetDemand / handlePushToCart 仅保留引用兼容性
@@ -277,6 +377,9 @@ const MaterialPurchase: React.FC = () => {
                       isSupervisorOrAbove={isSupervisorOrAbove}
                       onOpenDetail={openDetailPage}
                       onBatchAddToCart={handleBatchAddToCart}
+                      onBatchReceive={handleBatchReceiveRows}
+                      onBatchReturn={handleBatchReturnRows}
+                      onBatchComplete={handleBatchCompleteRows}
                     />
         </PageLayout>
         </>

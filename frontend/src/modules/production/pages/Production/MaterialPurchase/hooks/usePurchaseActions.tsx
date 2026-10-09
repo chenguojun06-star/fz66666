@@ -132,6 +132,7 @@ export function usePurchaseActions({
   // 确认完成（批量）+ 物料去向选择
   const {
     confirmComplete,
+    confirmCompleteFrom,
     confirmCompleteSubmitting,
     confirmCompleteModalOpen,
     closeConfirmCompleteModal,
@@ -166,7 +167,7 @@ export function usePurchaseActions({
     handleReceiveAll, handleSmartReceiveSuccess, handleBatchReturn,
     openQuickEditSafe, handleQuickEditSave,
     handleExport,
-    confirmComplete, confirmCompleteSubmitting,
+    confirmComplete, confirmCompleteFrom, confirmCompleteSubmitting,
     confirmCompleteModalOpen, closeConfirmCompleteModal, submitConfirmComplete, confirmCompleteTargets,
     isSamplePurchaseView, normalizeStatus,
   };

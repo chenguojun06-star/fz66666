@@ -88,6 +88,9 @@ interface MaterialTableProps {
   isSupervisorOrAbove?: boolean;
   onOpenDetail?: (styleNo: string, orderNo?: string) => void;
   onBatchAddToCart?: (records: MaterialPurchaseType[]) => void;
+  onBatchReceive?: (records: MaterialPurchaseType[]) => void;
+  onBatchReturn?: (records: MaterialPurchaseType[]) => void;
+  onBatchComplete?: (records: MaterialPurchaseType[]) => void;
 }
 
 const MaterialTable: React.FC<MaterialTableProps> = ({
@@ -115,6 +118,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   isSupervisorOrAbove,
   onOpenDetail,
   onBatchAddToCart,
+  onBatchReceive,
+  onBatchReturn,
+  onBatchComplete,
 }) => {
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<MaterialPurchaseType[]>([]);
@@ -201,6 +207,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         selectedRows={selectedRows}
         onClear={() => setSelectedRows([])}
         onBatchAddToCart={onBatchAddToCart}
+        onBatchReceive={onBatchReceive}
+        onBatchReturn={onBatchReturn}
+        onBatchComplete={onBatchComplete}
       />
       <div className="u-d-flex u-jc-end u-mb-8">
         <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsOpen(true)}>

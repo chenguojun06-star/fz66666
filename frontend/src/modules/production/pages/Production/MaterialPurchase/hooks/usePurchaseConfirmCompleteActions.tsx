@@ -36,8 +36,11 @@ export function usePurchaseConfirmCompleteActions({
 }: UsePurchaseConfirmCompleteActionsOptions) {
   const [confirmCompleteSubmitting, setConfirmCompleteSubmitting] = useState(false);
   const [confirmCompleteModalOpen, setConfirmCompleteModalOpen] = useState(false);
+  // 外部指定的目标集（如采购管理列表页选中行）；null 时回落到详情页 detailPurchases 口径
+  const [overrideTargets, setOverrideTargets] = useState<MaterialPurchaseType[] | null>(null);
 
-  const confirmCompleteTargets = detailPurchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+  const confirmCompleteTargets = overrideTargets
+    ?? detailPurchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
 
   /** 点击"确认完成"按钮：先弹物料去向选择，不再直接提交 */
   const confirmComplete = () => {
@@ -45,9 +48,20 @@ export function usePurchaseConfirmCompleteActions({
     setConfirmCompleteModalOpen(true);
   };
 
+  /** 按指定行打开确认完成弹窗（采购管理列表页选中行批量完成，与详情页同一弹窗） */
+  const confirmCompleteFrom = (targets: MaterialPurchaseType[]) => {
+    const list = targets.filter((t) =>
+      String(t?.id || '').trim()
+      && normalizeStatus(t.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+    if (!list.length) { message.info('选中行中没有待确认完成的采购任务'); return; }
+    setOverrideTargets(list);
+    setConfirmCompleteModalOpen(true);
+  };
+
   const closeConfirmCompleteModal = () => {
     if (confirmCompleteSubmitting) return;
     setConfirmCompleteModalOpen(false);
+    setOverrideTargets(null);
   };
 
   const submitConfirmComplete = async (options: ConfirmCompleteOptions) => {
@@ -76,6 +90,7 @@ export function usePurchaseConfirmCompleteActions({
         : options.movementAction === 'direct_use' ? '，已记采购直用流水' : '';
       message.success(`确认完成成功${actionText}`);
       setConfirmCompleteModalOpen(false);
+      setOverrideTargets(null);
       await fetchMaterialPurchaseList();
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '确认完成失败');
@@ -91,6 +106,7 @@ export function usePurchaseConfirmCompleteActions({
 
   return {
     confirmComplete,
+    confirmCompleteFrom,
     confirmCompleteSubmitting,
     confirmCompleteModalOpen,
     closeConfirmCompleteModal,
