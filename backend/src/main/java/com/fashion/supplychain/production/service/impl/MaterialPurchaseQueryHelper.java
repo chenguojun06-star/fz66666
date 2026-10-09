@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -335,7 +336,7 @@ public class MaterialPurchaseQueryHelper {
 
     private void applyKeywordSearch(LambdaQueryWrapper<MaterialPurchase> wrapper, String orderNo, Long tenantId) {
         if (!StringUtils.hasText(orderNo)) return;
-        String keyword = orderNo.trim();
+        String keyword = ParamUtils.escapeLikeValue(orderNo.trim());
         List<String> matchedOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
@@ -360,12 +361,14 @@ public class MaterialPurchaseQueryHelper {
     private void applyBasicFilters(LambdaQueryWrapper<MaterialPurchase> wrapper,
             String purchaseNo, String materialCode, String materialName, String styleNo,
             String status, String receiverId, String receiverName, String orderNo) {
-        wrapper.like(StringUtils.hasText(purchaseNo), MaterialPurchase::getPurchaseNo, purchaseNo)
-                .like(StringUtils.hasText(materialCode), MaterialPurchase::getMaterialCode, materialCode)
-                .like(StringUtils.hasText(materialName), MaterialPurchase::getMaterialName, materialName)
-                .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, styleNo)
+        // D-777：所有 like 值统一转义 % / _ / \，防止占位符或用户输入被当 LIKE 通配符
+        // （款号传 '_' 会生成 LIKE '%_%' 匹配全租户，表现为"一条采购单里一堆物料"）
+        wrapper.like(StringUtils.hasText(purchaseNo), MaterialPurchase::getPurchaseNo, ParamUtils.escapeLikeValue(purchaseNo))
+                .like(StringUtils.hasText(materialCode), MaterialPurchase::getMaterialCode, ParamUtils.escapeLikeValue(materialCode))
+                .like(StringUtils.hasText(materialName), MaterialPurchase::getMaterialName, ParamUtils.escapeLikeValue(materialName))
+                .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, ParamUtils.escapeLikeValue(styleNo))
                 .eq(StringUtils.hasText(receiverId), MaterialPurchase::getReceiverId, receiverId)
-                .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, receiverName)
+                .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, ParamUtils.escapeLikeValue(receiverName))
                 .and(StringUtils.hasText(status), w -> {
                     // 状态分组必须与 MaterialPurchaseQueryHelper.computeStatusStats 保持一致
                     // 任何新增状态必须同时更新此处和 computeStatusStats，否则会出现"统计数≠列表数"的 P0 bug

@@ -190,22 +190,23 @@ public class ProductionOrderQueryOrchestrator {
         Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         wrapper.eq("tenant_id", currentTenantId)
                 .eq(StringUtils.hasText(qp.orderNo), "order_no", qp.orderNo)
-                .like(StringUtils.hasText(qp.styleNo), "style_no", qp.styleNo)
-                .like(StringUtils.hasText(qp.factoryName), "factory_name", qp.factoryName)
+                // D-777：like 值转义 % / _ / \——款号占位符 '_' 不转义会变成 LIKE '%_%' 匹配全租户
+                .like(StringUtils.hasText(qp.styleNo), "style_no", ParamUtils.escapeLikeValue(qp.styleNo))
+                .like(StringUtils.hasText(qp.factoryName), "factory_name", ParamUtils.escapeLikeValue(qp.factoryName))
             .and(StringUtils.hasText(qp.keyword), w -> w
-                .like("order_no", qp.keyword)
+                .like("order_no", ParamUtils.escapeLikeValue(qp.keyword))
                 .or()
-                .like("style_no", qp.keyword)
+                .like("style_no", ParamUtils.escapeLikeValue(qp.keyword))
                 .or()
-                .like("factory_name", qp.keyword))
+                .like("factory_name", ParamUtils.escapeLikeValue(qp.keyword)))
                 .eq(StringUtils.hasText(qp.urgencyLevel), "urgency_level", qp.urgencyLevel)
                 .eq(StringUtils.hasText(qp.plateType), "plate_type", qp.plateType)
                 .eq(StringUtils.hasText(qp.orgUnitId), "org_unit_id", qp.orgUnitId)
                 .eq(StringUtils.hasText(qp.parentOrgUnitId), "parent_org_unit_id", qp.parentOrgUnitId)
                 .eq(StringUtils.hasText(qp.factoryType), "factory_type", qp.factoryType)
-                .like(StringUtils.hasText(qp.merchandiser), "merchandiser", qp.merchandiser)
+                .like(StringUtils.hasText(qp.merchandiser), "merchandiser", ParamUtils.escapeLikeValue(qp.merchandiser))
                 .eq(StringUtils.hasText(qp.customerId), "customer_id", qp.customerId)
-                .like(StringUtils.hasText(qp.customerName), "customer_name", qp.customerName)
+                .like(StringUtils.hasText(qp.customerName), "customer_name", ParamUtils.escapeLikeValue(qp.customerName))
                 .eq("delete_flag", 0)
                 .ne(!"true".equalsIgnoreCase(qp.includeScrapped), "status", "scrapped");
 

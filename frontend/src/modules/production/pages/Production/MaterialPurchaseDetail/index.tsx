@@ -41,7 +41,14 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = propOrderNo ?? searchParams.get('orderNo') ?? '';
-  const styleNo = propStyleNo ?? styleNoParam ?? '';
+  // D-777：'_' 是无款号采购单（样衣/批次）跳转时的路由占位符，不是真实款号，
+  // 归一化为空——否则它会作为 styleNo 进入后端 like 查询（SQL 里 '_' 是单字符通配符，
+  // LIKE '%_%' 会匹配全租户所有有款号的采购，表现为详情页"一堆物料"）
+  const rawStyleNo = propStyleNo ?? styleNoParam ?? '';
+  const styleNo = rawStyleNo === '_' ? '' : rawStyleNo;
+  // D-777：无款号采购单按采购单号跳转（/production/material/_?purchaseNo=PUR...），
+  // 此参数此前无人读取，导致详情页退化为按占位符查询
+  const purchaseNo = searchParams.get('purchaseNo') ?? '';
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const { message } = App.useApp();
@@ -72,7 +79,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     sampleBomLocked, sampleBomCompletedTime,
     sampleOrderLines,
     loadData,
-  } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
+  } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId, purchaseNo);
 
   // D-664b：批量按钮禁用原因统一动态生成（全入口共用 getBatchActionDisabledReason）。
   // 禁用时显示真实原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不再写死误导文案。

@@ -17,6 +17,7 @@ export type MaterialPurchaseListResponse = ApiResult<PageResult<MaterialPurchase
 
 export interface PurchaseListParams {
   orderNo?: string;
+  purchaseNo?: string;
   styleNo?: string;
   sourceType?: string;
   page: number;

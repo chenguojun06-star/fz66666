@@ -60,6 +60,19 @@ public final class ParamUtils {
         return StringUtils.hasText(s) ? s : null;
     }
 
+    /**
+     * D-777：LIKE 查询值转义——把 % / _ / \ 转成字面量，防止用户输入（或前端占位符 '_'）
+     * 被当作 SQL LIKE 通配符。例：款号占位符 '_' 不转义会生成 LIKE '%_%'，
+     * 匹配全租户所有含任意字符的款号，表现为"一条采购单里一堆物料"。
+     * MySQL LIKE 默认以反斜杠为转义符，直接可用。
+     */
+    public static String escapeLikeValue(String v) {
+        if (v == null) {
+            return null;
+        }
+        return v.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     public static int toIntSafe(Object v) {
         if (v == null) {
             return 0;

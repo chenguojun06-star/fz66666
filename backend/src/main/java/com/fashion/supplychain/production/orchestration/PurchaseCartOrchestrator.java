@@ -8,7 +8,9 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.dto.*;
 import com.fashion.supplychain.production.entity.PurchaseCart;
 import com.fashion.supplychain.production.entity.PurchaseCartItem;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartItemMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.service.PurchaseCartService;
@@ -55,6 +57,9 @@ public class PurchaseCartOrchestrator {
 
     @Autowired
     private StyleInfoMapper styleInfoMapper;
+
+    @Autowired
+    private ProductionOrderMapper productionOrderMapper;
     
     @Transactional(rollbackFor = Exception.class)
     public AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request) {
@@ -822,16 +827,85 @@ public class PurchaseCartOrchestrator {
             String sourceNo = sourceIds.iterator().next();
             if ("sample".equalsIgnoreCase(type)) {
                 purchase.setSourceType("sample");
-                // 样衣关联通过 sourceNo 保留在 remark 中，MaterialPurchaseOrchestrator.saveAndSync 会读取
+                // D-777：回填款式快照（styleId/styleNo/styleName/styleCover）——
+                // sourceNo 是款号（如 BV26Q2C1216A），此前只把来源留在 remark 不回填字段，
+                // 导致购物车生成的样衣采购单款号为空、列表显示'-'（BOM 生成路径有款号，唯独这条路漏）
+                fillStyleSnapshotByStyleNo(purchase, sourceNo, tenantId);
                 log.info("[PurchaseCart] 采购单关联样衣: sourceNo={}", sourceNo);
             } else if ("order".equalsIgnoreCase(type)) {
                 purchase.setSourceType("order");
+                // D-777：回填 orderId/orderNo，savePurchaseAndUpdateOrder 的 ensureSnapshot
+                // 会按订单再补齐 styleId/styleNo/styleName，与 BOM 生成路径（buildPurchaseFromBom）口径一致
+                fillOrderSnapshotByOrderNo(purchase, sourceNo, tenantId);
                 log.info("[PurchaseCart] 采购单关联订单: orderNo={}", sourceNo);
             } else {
                 purchase.setSourceType("batch");
             }
         } else {
             purchase.setSourceType("batch");
+        }
+    }
+
+    /**
+     * D-777：按款号回填采购单款式快照（tenantId 隔离，P0 #4）。
+     * 只补缺失字段，不覆盖已有值；查不到款式时保持原样，不影响下单主流程。
+     */
+    private void fillStyleSnapshotByStyleNo(MaterialPurchase purchase, String styleNo, Long tenantId) {
+        if (!StringUtils.hasText(styleNo)) {
+            return;
+        }
+        try {
+            StyleInfo style = styleInfoMapper.selectOne(new LambdaQueryWrapper<StyleInfo>()
+                    .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .eq(StyleInfo::getTenantId, tenantId)
+                    .last("LIMIT 1"));
+            if (style == null) {
+                log.warn("[PurchaseCart] 样衣采购回填款式快照未命中: styleNo={}, tenantId={}", styleNo, tenantId);
+                return;
+            }
+            if (!StringUtils.hasText(purchase.getStyleId())) {
+                purchase.setStyleId(String.valueOf(style.getId()));
+            }
+            if (!StringUtils.hasText(purchase.getStyleNo())) {
+                purchase.setStyleNo(style.getStyleNo());
+            }
+            if (!StringUtils.hasText(purchase.getStyleName())) {
+                purchase.setStyleName(style.getStyleName());
+            }
+            if (!StringUtils.hasText(purchase.getStyleCover()) && StringUtils.hasText(style.getCover())) {
+                purchase.setStyleCover(style.getCover());
+            }
+        } catch (Exception e) {
+            log.warn("[PurchaseCart] 样衣采购回填款式快照失败: styleNo={}", styleNo, e);
+        }
+    }
+
+    /**
+     * D-777：按订单号回填采购单订单关联（tenantId 隔离，P0 #4）。
+     * 补 orderId/orderNo 后，ensureSnapshot 会再补齐款式快照。
+     */
+    private void fillOrderSnapshotByOrderNo(MaterialPurchase purchase, String orderNo, Long tenantId) {
+        if (!StringUtils.hasText(orderNo)) {
+            return;
+        }
+        try {
+            ProductionOrder order = productionOrderMapper.selectOne(new LambdaQueryWrapper<ProductionOrder>()
+                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .last("LIMIT 1"));
+            if (order == null) {
+                log.warn("[PurchaseCart] 订单采购回填关联未命中: orderNo={}, tenantId={}", orderNo, tenantId);
+                return;
+            }
+            if (!StringUtils.hasText(purchase.getOrderId())) {
+                purchase.setOrderId(order.getId());
+            }
+            if (!StringUtils.hasText(purchase.getOrderNo())) {
+                purchase.setOrderNo(order.getOrderNo());
+            }
+        } catch (Exception e) {
+            log.warn("[PurchaseCart] 订单采购回填关联失败: orderNo={}", orderNo, e);
         }
     }
 }

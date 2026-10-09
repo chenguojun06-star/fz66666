@@ -55,7 +55,8 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
         purchaseNo: '',
         supplierId: '',
         orderNo: sampleMode ? '' : (orderNoParam || order?.orderNo || ''),
-        styleNo: styleNoParam,
+        // D-777：purchaseNo 直达模式下款号参数为空，新增行从现有采购记录回填款号
+        styleNo: styleNoParam || purchaseList.find((p) => p.styleNo)?.styleNo || '',
         sourceType: sampleMode ? 'sample' : 'order',
         materialType: 'fabricA',
         materialCode: '',
@@ -91,7 +92,8 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
       purchaseNo: '',
       supplierId: '',
       orderNo: sampleMode ? '' : (orderNoParam || order?.orderNo || ''),
-      styleNo: styleNoParam,
+      // D-777：purchaseNo 直达模式下款号参数为空，新增行从现有采购记录回填款号
+      styleNo: styleNoParam || purchaseList.find((p) => p.styleNo)?.styleNo || '',
       sourceType: sampleMode ? 'sample' : 'order',
       materialType: 'fabricA',
       materialCode: '',
@@ -110,7 +112,7 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
       status: MATERIAL_PURCHASE_STATUS.PENDING,
     } as MaterialPurchase;
     setEditableData((prev) => [...prev, newRow]);
-  }, [orderNoParam, order?.orderNo, styleNoParam, sampleMode]);
+  }, [orderNoParam, order?.orderNo, styleNoParam, purchaseList, sampleMode]);
 
   const handleUpdateRow = useCallback((rowId: string, field: keyof MaterialPurchase, value: unknown) => {
     setEditableData((prev) =>

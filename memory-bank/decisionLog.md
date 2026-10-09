@@ -3797,4 +3797,22 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **遗留**：`t_user.user_type` 仍是休眠字段（Java 未读），可后续用于统一账号类型判断；组织架构页的工厂节点成员展示会随过滤变为空，工厂成员管理统一走 供应商管理→工厂成员 入口（既有设计）。
 
+## D-777：采购单"一堆物料"与款号缺失——LIKE 通配符注入 + 购物车回填漏项（2026-10-09）
+
+**上下文**：用户看到面料采购列表第一条 `PUR20260905133435478821` 点进去"里面一堆物料"，质疑"不是按照订单一个款一个款的吗"，要求数据库核实 + "全部要注意数据这些问题"（批准三方案全修）。
+
+**根因（云端 DB + 代码双线核实）**：
+1. **"一堆物料"= SQL LIKE 通配符注入**：无款号采购单跳详情页路由是 `/production/material/_?purchaseNo=...`，但详情页**从不读 purchaseNo 参数**，`'_'` 被当款号传后端 `like(style_no,'_')` → `LIKE '%_%'`（`_` 是单字符通配符）→ 匹配全租户 228 行有款号采购。实测全库 245 条采购中 17 条无款号
+2. **款号缺失 = 购物车生成路径漏回填**：`PUR...478821` 是样衣采购（source_type=sample，remark 内 `sourceNo=BV26Q2C1216A`=香槟金亚麻外套 t_style_info id=160），`PurchaseCartOrchestrator.enrichPurchaseFromSourceItems` 只设 sourceType **不回填 style_no**；全库 108 条样衣采购 106 条有款号（BOM 生成路径 `buildPurchaseFromBom` 完整设置），漏的正好 2 条 = 购物车路径生成的
+
+**修复（三线防御）**：
+1. **前端详情页读 purchaseNo 精确查询**（5 文件）：`index.tsx` 把 `'_'` 占位符归一化为空 + 读 `searchParams.get('purchaseNo')` 传入 hook；`usePurchaseDetailData` 查询参数优先级 purchaseNo > orderNo > styleNo；`types.ts` PurchaseListParams 加 purchaseNo；页头款号/新增行款号从采购记录回填；`usePurchaseDetailEdit` 新增行 styleNo 兜底
+2. **后端 LIKE 转义（根源防护）**：`ParamUtils.escapeLikeValue()`（转义 `%`/`_`/`\`）套用到 `MaterialPurchaseQueryHelper.applyBasicFilters/applyKeywordSearch` 与 `ProductionOrderQueryOrchestrator.buildQueryWrapper` 全部 like 值（styleNo/keyword/factoryName/merchandiser/customerName/purchaseNo/materialCode/materialName/receiverName）
+3. **购物车写入回填（根治）**：`enrichPurchaseFromSourceItems` 新增 `fillStyleSnapshotByStyleNo`（sample：sourceNo=款号 → 反查 StyleInfo 补 styleId/styleNo/styleName/styleCover，带 tenantId）+ `fillOrderSnapshotByOrderNo`（order：sourceNo=订单号 → 反查 ProductionOrder 补 orderId/orderNo，ensureSnapshot 再补款式快照）；只补缺失字段不覆盖、查不到不影响下单主流程
+4. **存量回填**：云端 SQL 按 `t_style_info` JOIN 回填 `PUR...478821`/`PUR...535366` 两条（style_id=160/BV26Q2C1216A/香槟金亚麻外套/cover），WHERE 带 tenant_id=2 + delete_flag=0 + 仅补空值，已回读验证
+
+**验证**：mvn compile 0 错误、tsc --noEmit 0 错误、云端 UPDATE 2 行 + 回读正确（test-runner-mcp 不可用，P0 #23 降级原生命令）。
+
+**教训**：① 路由占位符 `'_'` 这类非业务值绝不能进 SQL LIKE；② 同一业务对象的多条写入路径（BOM 生成 vs 购物车生成）字段口径必须一致，新增路径要对照参照实现（`buildPurchaseFromBom`）逐字段核对。
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md

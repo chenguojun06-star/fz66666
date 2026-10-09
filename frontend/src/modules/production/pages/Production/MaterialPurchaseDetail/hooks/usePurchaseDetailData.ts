@@ -64,6 +64,7 @@ export function usePurchaseDetailData(
   orderNoParam: string,
   sampleMode?: boolean,
   styleIdParam?: string | number,
+  purchaseNoParam?: string,
 ): PurchaseDetailDataState {
   const { message } = App.useApp();
 
@@ -122,12 +123,14 @@ export function usePurchaseDetailData(
   }, [purchaseList, requiredFields]);
 
   const loadData = useCallback(async () => {
-    if (!styleNoParam) return;
+    // D-777：三种入口至少一个才有可查询的键——款号 / 订单号 / 采购单号
+    if (!styleNoParam && !orderNoParam && !purchaseNoParam) return;
     setLoading(true);
     let orderRecord: ProductionOrder | null = null;
     try {
       // 样衣采购场景：跳过订单查询，避免无谓的 HTTP 请求与"订单不存在"警告
-      if (!sampleMode) {
+      // D-777：无款号（按采购单号直达）同样跳过——空 styleNo 查订单会命中租户内任意首单，页头张冠李戴
+      if (!sampleMode && styleNoParam) {
         try {
           const orderRes = await api.get<ApiResult<PageResult<ProductionOrder>>>('/production/order/list', {
             params: { styleNo: styleNoParam, page: 1, pageSize: 1 },
@@ -143,11 +146,14 @@ export function usePurchaseDetailData(
       }
 
       // 样衣场景直接按 sourceType='sample' + styleNo 过滤，避免拉到订单采购数据
+      // D-777：优先级 采购单号 > 订单号 > 款号——purchaseNo 是精确单号查询，避免款号占位符进 like
       const params: PurchaseListParams = sampleMode
         ? { styleNo: styleNoParam, sourceType: 'sample' as any, page: 1, pageSize: 1000 }
-        : orderNoParam
-          ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
-          : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
+        : purchaseNoParam
+          ? { purchaseNo: purchaseNoParam, page: 1, pageSize: 1000 }
+          : orderNoParam
+            ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
+            : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
 
       const fetchRecords = async (): Promise<MaterialPurchase[]> => {
         const purchaseRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', { params });
@@ -261,7 +267,7 @@ export function usePurchaseDetailData(
     } finally {
       setLoading(false);
     }
-  }, [styleNoParam, orderNoParam, sampleMode, styleIdParam, message]);
+  }, [styleNoParam, orderNoParam, purchaseNoParam, sampleMode, styleIdParam, message]);
 
   useEffect(() => {
     loadData();
@@ -278,7 +284,8 @@ export function usePurchaseDetailData(
   );
 
   const headerOrderNo = order?.orderNo || orderNoParam || '';
-  const headerStyleNo = order?.styleNo || styleNoParam || '';
+  // D-777：purchaseNo 直达模式下页头款号从采购记录回填（跳转路由款号是 '_' 占位符已归一化为空）
+  const headerStyleNo = order?.styleNo || styleNoParam || purchaseList.find((p) => p.styleNo)?.styleNo || '';
   const headerStyleName = order?.styleName || sampleStyle.styleName || '';
   const headerStyleId = order?.styleId;
   const headerStyleCover = order?.styleCover || sampleStyle.styleCover || null;

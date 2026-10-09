@@ -2,11 +2,20 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-09（D-776 外部账号隔离收口；D-775/774/773/772 代码完成未提交）
+> 最后更新：2026-10-09（D-777 采购单"一堆物料"/款号缺失修复，代码完成未提交；D-776 已推送 2589a828e；D-775/774/773/772 代码完成未提交）
 
 ## 已完成
 
-### 2026-10-09 D-776 外部账号不混入内部账号体系（代码完成未提交）
+### 2026-10-09 D-777 采购单"一堆物料"与款号缺失修复（代码完成未提交）
+
+- [x] 核实：'_' 占位符进后端 `LIKE '%_%'` 匹配全租户 228 行 = "一堆物料"根因；PUR...478821 为样衣采购，购物车路径漏回填 style_no
+- [x] 前端：详情页读 purchaseNo 精确查询（'_' 归一化为空 + 参数优先级 purchaseNo>orderNo>styleNo + 款号回填），5 文件
+- [x] 后端：`ParamUtils.escapeLikeValue` 转义 `%`/`_`/`\`，套用 MaterialPurchaseQueryHelper + ProductionOrderQueryOrchestrator 全部 like 值
+- [x] 后端：`enrichPurchaseFromSourceItems` 回填款式/订单快照（fillStyleSnapshotByStyleNo + fillOrderSnapshotByOrderNo），根治购物车路径漏填
+- [x] 云端数据回填 2 条（PUR...478821 / PUR...535366 → BV26Q2C1216A 香槟金亚麻外套），回读验证通过
+- [x] 验证：mvn compile 0 错误、tsc --noEmit 0 错误（P0 #23 降级原生命令）
+
+### 2026-10-09 D-776 外部账号不混入内部账号体系（已推送 2589a828e）
 
 - [x] 核实：面辅料供应商账号独立表 `t_supplier_user` 物理隔离（与 t_user 零交集，独立登录端点）；外发工厂账号在 `t_user` 以 factory_id + is_factory_owner 打标（3 条）
 - [x] 核实：`user_type` 为休眠字段（Java 零读取），云端数据与 factory_id 100% 等价，沿用 factory_id 口径
