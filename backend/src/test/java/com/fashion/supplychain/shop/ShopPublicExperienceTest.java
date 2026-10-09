@@ -328,6 +328,32 @@ class ShopPublicExperienceTest {
     }
 
     /**
+     * D-777 回归：整改时我在标题区写死了「现货速发」标签，
+     * 既与承诺块里的同一条重复，又把承诺写死成商家没配置过的空头承诺
+     * —— 这正是 D-770 已经清除过的做法，不能再犯。
+     */
+    @Test
+    @DisplayName("⑮-b 标题区不得写死任何承诺文案")
+    void titleMustNotHardcodePromiseText() throws Exception {
+        String s = shopPage();
+        int m = s.indexOf("var DETAIL_RENDERERS = {");
+        String body = s.substring(m, Math.min(m + 6000, s.length()));
+        int titleStart = body.indexOf("title: function");
+        int promiseStart = body.indexOf("promise: function");
+        assertThat(titleStart).as("应有 title 模块").isGreaterThan(0);
+        assertThat(promiseStart).as("应有 promise 模块").isGreaterThan(0);
+        String titleMod = body.substring(titleStart, promiseStart);
+        for (String phrase : List.of("现货速发", "7天无理由", "正品保障", "包邮")) {
+            assertThat(titleMod)
+                    .as("标题区不得写死承诺文案：" + phrase)
+                    .doesNotContain(phrase);
+        }
+        assertThat(titleMod)
+                .as("承诺只能来自商家配置 promiseTags()")
+                .contains("promiseTags()");
+    }
+
+    /**
      * 固定购买栏盖住最后一块内容（实测「面料成分」行被压掉一半），
      * 根源是内容区没有为固定栏预留底部空间。
      */
