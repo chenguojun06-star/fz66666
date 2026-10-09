@@ -234,6 +234,42 @@
        开启且商品金额 ≥ 包邮门槛(>0) → 包邮
        其余 → 收默认运费
      此前页面硬编码「包邮」，而系统没有运费概念，属于自相矛盾的展示。 */
+  /**
+   * 确保店铺配置已加载后再执行回调（多个入口都可能需要）。
+   *
+   * <p>此前只有首页会拉 /info，详情页/购物车等直接访问时不拉，
+   * 于是 shopInfo 为 null —— 页面不会报错，只是**按错误数据渲染**
+   * （如一律显示「包邮」），这属于最容易被忽略的静默数据错误。
+   *
+   * <p>并发去重：多个模块同时调用只发一次请求。
+   */
+  var shopInfoLoading = null;
+  function ensureShopInfo(cb) {
+    if (shopInfo) { cb(); return; }
+    if (shopInfoLoading) {
+      shopInfoLoading.then(cb);
+      return;
+    }
+    shopInfoLoading = fetch(API + '/' + slug + '/info')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.code === 200) {
+          shopInfo = d.data;
+          SLUG = slug;
+        } else {
+          shopInfo = shopInfo || {};
+        }
+        shopInfoLoading = null;
+        return shopInfo;
+      })
+      .catch(function () {
+        // 取不到配置也不能挡住浏览：降级为空配置，页面继续渲染
+        shopInfo = shopInfo || {};
+        shopInfoLoading = null;
+      })
+      .then(cb);
+  }
+
   function shipCfg() {
     var s = shopInfo || {};
     return {
@@ -564,11 +600,19 @@
     return out;
   }
 
-  function renderDetailModules(d, order) {
+  /**
+   * @param renderers 模块渲染函数表。**必须显式传入**：
+   *   各模块渲染器依赖详情页的局部变量（minPrice/totalStock/colors 等），
+   *   定义在 renderDetail 内部，无法提升为模块级常量。
+   *   上一版在此处直接引用 DETAIL_RENDERERS，触发 ReferenceError：
+   *   错误被 route() 上层吞掉，症状是详情页永远停在「加载中…」，且控制台无报错。
+   */
+  function renderDetailModules(d, order, renderers) {
+    renderers = renderers || {};
     var parts = {};
     for (var i = 0; i < order.length; i++) {
       var key = order[i];
-      var fn = DETAIL_RENDERERS[key];
+      var fn = renderers[key];
       if (!fn) continue;
       var out = '';
       try { out = fn(d) || ''; } catch (e) { out = ''; }
@@ -665,7 +709,12 @@
   /* ── 商品详情 ── */
   function renderDetail(styleId) {
     app.innerHTML = '<div class="loading"><span class="spin"></span>加载中…</div>';
-    get(API + '/' + slug + '/products/' + styleId, function (d) {
+    // D-770 修复：详情页此前**从不请求 /info**，直接刷新或从外部链接进入时
+    // shopInfo 为 null —— shipCfg() 会静默按「包邮/0 运费」渲染，
+    // 导致详情页显示错误的配送信息（不报错，只是数据错）。
+    // 无论从首页跳转还是直接打开链接，都先确保店铺配置已加载。
+    ensureShopInfo(function () {
+      get(API + '/' + slug + '/products/' + styleId, function (d) {
       var skus = d.skus || [];
       var byColor = {};
       skus.forEach(function (k) { var c = k.color || '默认'; (byColor[c] = byColor[c] || []).push(k); });
@@ -765,7 +814,7 @@
         purchase: function () { return ''; } // 购买条在下方单独渲染（固定底部栏）
       };
 
-      var html = renderDetailModules(d, order);
+      var html = renderDetailModules(d, order, DETAIL_RENDERERS);
 
       var closed = shopInfo && !shopInfo.enabled;
       html += '<div class="d-bar">'
@@ -853,6 +902,7 @@
         var n = cartCount();
         if (b) { if (n) b.textContent = n; else b.remove(); }
       }
+    });
     });
   }
 

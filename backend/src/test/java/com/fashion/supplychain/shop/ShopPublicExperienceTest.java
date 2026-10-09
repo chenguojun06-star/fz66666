@@ -43,6 +43,59 @@ class ShopPublicExperienceTest {
 
     /* ─────────────── ① 预览破图 ─────────────── */
 
+    /**
+     * 线上事故回归（D-770 引入）：详情页整页卡在「加载中…」，控制台无任何报错。
+     *
+     * <p><b>为何难以发现</b>：把详情页从写死的线性 HTML 改成模块化渲染时，
+     * {@code renderDetailModules} 里直接引用了定义在 {@code renderDetail} 内部的
+     * {@code DETAIL_RENDERERS} 局部变量 → ReferenceError。
+     * 该异常发生在 {@code route()} 调用链里被上层 try/catch 吞掉，
+     * 于是页面停在「加载中…」、<b>控制台一个字都不报</b>，
+     * 首页却完全正常（首页不走这段），只有进详情页才复现。
+     */
+    @Test
+    @DisplayName("⑪ 模块渲染器必须显式传入，不得在另一个函数里直接引用局部变量")
+    void renderersMustBePassedExplicitly() throws Exception {
+        String s = shopPage();
+        int def = s.indexOf("function renderDetailModules");
+        assertThat(def).as("应存在分发函数").isGreaterThan(0);
+        String body = s.substring(def, Math.min(def + 900, s.length()));
+        assertThat(body)
+                .as("分发函数必须接收 renderers 参数")
+                .contains("renderDetailModules(d, order, renderers)");
+        assertThat(body)
+                .as("只能从入参取渲染器，不能引用外部 DETAIL_RENDERERS")
+                .contains("renderers[key]");
+        assertThat(body)
+                .as("入参缺失时降级为空表，而不是抛 ReferenceError")
+                .contains("renderers = renderers || {}");
+        assertThat(s)
+                .as("调用处必须把局部渲染器传进去")
+                .contains("renderDetailModules(d, order, DETAIL_RENDERERS)");
+    }
+
+    /**
+     * 详情页此前**从不请求 /info**（只有首页会拉），导致从链接直接进入或刷新时
+     * {@code shopInfo} 为 null —— 页面不报错，但会**按错误数据渲染**
+     * （如一律显示「包邮」）。这类「不崩但数据错」最难发现。
+     */
+    @Test
+    @DisplayName("⑫ 详情页渲染前必须确保店铺配置已加载（避免按错误配送数据渲染）")
+    void detailMustEnsureShopInfo() throws Exception {
+        String s = shopPage();
+        assertThat(s).as("必须提供 ensureShopInfo").contains("function ensureShopInfo");
+        assertThat(s)
+                .as("取不到配置也不能挡住浏览，要降级继续渲染")
+                .contains("取不到配置也不能挡住浏览");
+        assertThat(s).as("并发去重：多个模块调用只发一次请求").contains("shopInfoLoading");
+        int m = s.indexOf("function renderDetail(");
+        assertThat(m).as("应存在 renderDetail").isGreaterThan(0);
+        String body = s.substring(m, Math.min(m + 900, s.length()));
+        assertThat(body)
+                .as("详情页必须先确保 info 再取商品数据")
+                .contains("ensureShopInfo(function ()");
+    }
+
     @Test
     @DisplayName("① 不得全局 DENY 嵌套——否则后台顾客端预览必然破图")
     void mustNotDenyFramingGlobally() throws Exception {
