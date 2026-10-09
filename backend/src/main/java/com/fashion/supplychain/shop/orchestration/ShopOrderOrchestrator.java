@@ -2,6 +2,8 @@ package com.fashion.supplychain.shop.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
@@ -49,6 +51,9 @@ public class ShopOrderOrchestrator {
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final AtomicInteger NO_SEQ = new AtomicInteger(0);
+
+    /** 成分明细是 JSON 文本，解析用（无状态，共享一个实例即可） */
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private ShopConfigMapper shopConfigMapper;
@@ -276,9 +281,62 @@ public class ShopOrderOrchestrator {
         // 未维护的字段返回 null，前端显示「暂无」而不是留空或填占位说明。
         putIfPresent(data, "description", style.getDescription());
         putIfPresent(data, "fabricComposition", style.getFabricComposition());
-        putIfPresent(data, "fabricParts", style.getFabricCompositionParts());
+        // D-777：fabric_parts 存的是 JSON 结构（[{"part":"上装","materials":"..."}]），
+        // 原样透出会让顾客在页面上看到一串代码。这里在服务端解析成
+        // 「部位 → 材质」的可读列表，解析失败则**不下发**，由前端整块跳过。
+        //
+        // 顺带修一个「数据在库里但顾客永远看不到」的问题：实测真实数据里
+        // 成分明细的最后一行带 washNote（如「不可添加漂白剂／40度高温水洗」），
+        // 而 wash_instructions 列却是 NULL —— 洗涤说明其实已经录进去了，
+        // 只是从没被透出。这里把它作为 wash_instructions 的兜底。
+        String washFromParts = null;
+        try {
+            String parts = style.getFabricCompositionParts();
+            if (parts != null && !parts.isBlank()) {
+                JsonNode arr = objectMapper.readTree(parts);
+                if (arr.isArray() && !arr.isEmpty()) {
+                    // 同一部位可能拆成多行（如上装：面料/里布/百分比各一行），
+                    // 直接一行行渲染会出现四行都叫「上装」，观感很差 → 按部位合并。
+                    Map<String, StringBuilder> byPart = new LinkedHashMap<>();
+                    for (JsonNode node : arr) {
+                        String part = node.path("part").asText("").trim();
+                        String materials = node.path("materials").asText("").trim();
+                        String washNote = node.path("washNote").asText("").trim();
+                        if (!washNote.isEmpty() && washFromParts == null) {
+                            washFromParts = washNote;
+                        }
+                        if (materials.isEmpty()) {
+                            continue;
+                        }
+                        String key = part.isEmpty() ? "整体" : part;
+                        StringBuilder sb = byPart.computeIfAbsent(key, k -> new StringBuilder());
+                        if (sb.length() > 0) {
+                            sb.append('；');
+                        }
+                        sb.append(materials);
+                    }
+                    if (!byPart.isEmpty()) {
+                        List<Map<String, Object>> readable = new ArrayList<>();
+                        byPart.forEach((part, sb) ->
+                                readable.add(Map.of("part", part, "materials", sb.toString())));
+                        data.put("fabricPartList", readable);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 解析失败不是致命问题：整块跳过即可，绝不能把原始 JSON 抛给顾客
+            log.debug("[ShopPublic] 成分细节解析失败，已跳过该模块", e);
+        }
+        // 品类/季节：库里存的是英文枚举（SUMMER / WOMAN），顾客端要中文
+        putIfPresent(data, "categoryText", enumText(style.getCategory()));
+        putIfPresent(data, "seasonText", enumText(style.getSeason()));
         putIfPresent(data, "sizeChart", style.getPrintSize());
-        putIfPresent(data, "washInstructions", style.getWashInstructions());
+        // 洗涤说明：优先独立字段，没有则用成分明细里带的 washNote 兜底
+        if (style.getWashInstructions() != null && !style.getWashInstructions().isBlank()) {
+            putIfPresent(data, "washInstructions", style.getWashInstructions());
+        } else {
+            putIfPresent(data, "washInstructions", washFromParts);
+        }
         // D-770：详情页模块布局（商家自定义上到下顺序与开关）
         data.put("layout", styleLayoutService.layoutOf(styleId).stream().map(l -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -543,6 +601,26 @@ public class ShopOrderOrchestrator {
             throw new IllegalArgumentException("店铺不存在");
         }
         shopAddressService.delete(config.getTenantId(), phone, id);
+    }
+
+
+    /** 英文枚举 → 中文文案；认不出时原样返回，不臆造 */
+    private static String enumText(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        String c = code.trim();
+        return switch (c.toUpperCase()) {
+            case "SPRING" -> "春季";
+            case "SUMMER" -> "夏季";
+            case "AUTUMN" -> "秋季";
+            case "WINTER" -> "冬季";
+            case "WOMAN" -> "女装";
+            case "MAN" -> "男装";
+            case "KIDS", "CHILDREN" -> "童装";
+            case "UNISEX" -> "中性";
+            default -> c;
+        };
     }
 
 }

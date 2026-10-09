@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -236,5 +237,202 @@ class ShopPublicExperienceTest {
         String s = shopPage();
         // 占位使用统一文案，不是一个空 div
         assertThat(s).as("无图占位应有可读文案").contains("暂无图片");
+    }
+
+    /* ─────────────── ⑬~⑰ 详情页专业度整改（D-777） ─────────────── */
+
+    /**
+     * <b>线上事故（已实测复现）</b>：14 个上架款式里有 <b>9 个只有 1 张图</b>，
+     * 而返回按钮 {@code #bk} 只在「图片数 &gt; 1」时才渲染，
+     * 于是 {@code document.getElementById('bk').onclick = back} 抛 TypeError。
+     *
+     * <p><b>为什么像坏掉但不报错</b>：这行之后的所有绑定（加购/立即购买/
+     * 购物车入口/颜色/数量）全部不执行，页面<b>看起来完全正常</b>，
+     * 但按钮点了毫无反应；异常被外层吞掉，控制台 0 报错。
+     * 浏览器实测：{@code addcartHasHandler=false, buynowHasHandler=false}。
+     */
+    @Test
+    @DisplayName("⑬ 单图款式不得整页失效——事件绑定必须容错，且返回入口恒在")
+    void singleImageStyleMustNotKillPurchaseButtons() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("必须提供容错绑定助手（元素缺失不得中断后续绑定）")
+                .contains("function on(");
+        assertThat(s)
+                .as("助手语义：元素不存在就跳过，而不是抛 TypeError")
+                .contains("if (el) el.onclick");
+
+        // 禁止裸的 getElementById(...).onclick —— 这是本次事故的根因写法
+        assertThat(Pattern.compile("document\\.getElementById\\([^)]*\\)\\.onclick\\s*=").matcher(s).find())
+                .as("不得再出现裸的 getElementById(x).onclick 赋值")
+                .isFalse();
+
+        // 返回入口不再依赖「图片数 > 1」才存在
+        assertThat(s)
+                .as("详情页返回入口必须恒定渲染，不能由图片数决定")
+                .contains("id=\"dk\"");
+    }
+
+    /**
+     * 图片区此前把全部图片收进数组却只渲染 {@code imgs[0]}，
+     * 多图等于没做 —— 与「多图轮播」这个卖点名不副实。
+     */
+    @Test
+    @DisplayName("⑭ 图片必须是真轮播：多图 + 指示点 + 序号，而非只显示第一张")
+    void galleryMustBeRealCarousel() throws Exception {
+        String s = shopPage();
+        assertThat(s).as("必须有轮播渲染函数").contains("function carouselHtml");
+        assertThat(s).as("必须渲染图片指示点").contains("carousel-dots");
+        assertThat(s).as("必须渲染第 N/M 张计数").contains("carousel-idx");
+        assertThat(s).as("必须把所有图片交给轮播，而不是只取第一张")
+                .contains("carouselHtml(");
+        assertThat(s)
+                .as("轮播必须有切换逻辑")
+                .contains("function galleryGo");
+    }
+
+    /**
+     * 实测线上承诺文案<b>出现 3 次</b>：价格行、标题标签行、独立的「服务承诺」块。
+     * 顾客看到的是三份一样的图标文字，观感廉价。
+     */
+    @Test
+    @DisplayName("⑮ 服务承诺只能渲染一次，不得在价格/标题/独立块重复三遍")
+    void promiseMustRenderOnlyOnce() throws Exception {
+        String s = shopPage();
+        int m = s.indexOf("var DETAIL_RENDERERS = {");
+        assertThat(m).as("应存在渲染器表").isGreaterThan(0);
+        String body = s.substring(m, Math.min(m + 6000, s.length()));
+
+        int priceStart = body.indexOf("price: function");
+        int titleStart = body.indexOf("title: function");
+        int promiseStart = body.indexOf("promise: function");
+        int colorStart = body.indexOf("color: function");
+        assertThat(priceStart).as("应有 price 模块").isGreaterThan(0);
+        assertThat(titleStart).as("应有 title 模块").isGreaterThan(0);
+        assertThat(promiseStart).as("应有 promise 模块").isGreaterThan(0);
+        assertThat(colorStart).as("应有 color 模块").isGreaterThan(0);
+
+        String priceMod = body.substring(priceStart, titleStart);
+        String titleMod = body.substring(titleStart, promiseStart);
+        String promiseMod = body.substring(promiseStart, colorStart);
+
+        assertThat(priceMod)
+                .as("价格区不得再塞承诺（它属于标题区）")
+                .doesNotContain("promiseTags()");
+        assertThat(promiseMod)
+                .as("独立承诺块必须做去重判断，不能与标题区同时输出")
+                .contains("promiseStandalone");
+        assertThat(titleMod)
+                .as("标题区只在独立承诺块缺席时才补承诺标签")
+                .contains("promiseStandalone");
+    }
+
+    /**
+     * 固定购买栏盖住最后一块内容（实测「面料成分」行被压掉一半），
+     * 根源是内容区没有为固定栏预留底部空间。
+     */
+    @Test
+    @DisplayName("⑯ 固定购买栏不得遮挡详情内容")
+    void fixedBarMustNotCoverContent() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("详情页内容区必须为固定购买栏预留底部空间")
+                .contains("padding-bottom:calc(");
+        assertThat(s).as("必须有独立的底部占位元素").contains("d-bar-space");
+    }
+
+    /**
+     * CLAUDE.md 铁律 5：禁止渐变，必须用 Design Token 纯色。
+     * 详情页此前有 3 处 linear-gradient。
+     */
+    @Test
+    @DisplayName("⑰ 详情页样式不得使用渐变（铁律 5：纯色 + Design Token）")
+    void detailStyleMustNotUseGradient() throws Exception {
+        String s = shopPage();
+        int m = s.indexOf("/* ── 详情页");
+        assertThat(m).as("应存在详情页样式段").isGreaterThan(0);
+        int end = s.indexOf("/* ── 购物车 ── */", m);
+        assertThat(end).as("详情页样式段应有结束标记").isGreaterThan(m);
+        String detailCss = s.substring(m, end);
+        assertThat(detailCss)
+                .as("详情页不得出现渐变")
+                .doesNotContain("linear-gradient");
+        assertThat(detailCss)
+                .as("详情页不得出现 radial-gradient")
+                .doesNotContain("radial-gradient");
+    }
+
+    /**
+     * 品类/季节在库里是英文枚举（SUMMER / WOMAN），顾客端曾直接显示 "SUMMER"。
+     */
+    @Test
+    @DisplayName("⑱ 顾客端不得出现英文枚举")
+    void mustNotShowRawEnglishEnum() throws Exception {
+        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(java)
+                .as("必须把英文枚举转中文再下发")
+                .contains("seasonText")
+                .contains("categoryText");
+        assertThat(java)
+                .as("认不出的枚举要原样返回，不能臆造中文")
+                .contains("default -> c");
+
+        String s = shopPage();
+        assertThat(s)
+                .as("参数区必须用中文化后的字段")
+                .contains("d.seasonText")
+                .contains("d.categoryText");
+        assertThat(s)
+                .as("参数区不得再直接渲染原始 JSON 字段 fabricParts")
+                .doesNotContain("d.fabricParts)");
+    }
+
+    /**
+     * fabric_parts 存的是 JSON 结构（{@code [{"part":"上装","materials":"..."}]}），
+     * 原样透出等于把代码展示给顾客。
+     */
+    @Test
+    @DisplayName("⑲ 成分明细必须结构化下发，不得把原始 JSON 透给顾客")
+    void fabricPartsMustBeParsedServerSide() throws Exception {
+        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(java)
+                .as("必须解析成可读列表")
+                .contains("fabricPartList");
+        assertThat(java)
+                .as("不再透传原始 JSON 字段")
+                .doesNotContain("putIfPresent(data, \"fabricParts\"");
+        assertThat(java)
+                .as("解析失败要降级跳过，不能把异常抛给顾客")
+                .contains("成分细节解析失败");
+        // 真实数据实测：同一个部位会拆成多行（如上装：面料/3%氨纶/里布 各一行），
+        // 不合并的话顾客会看到四行都叫「上装」
+        assertThat(java)
+                .as("同一部位的多行材质必须合并成一行")
+                .contains("byPart")
+                .contains("computeIfAbsent");
+        // materials 为空的行不能产生空参数行（实测数据里确实存在这种行）
+        assertThat(java)
+                .as("材质为空的行要跳过")
+                .contains("if (materials.isEmpty())");
+    }
+
+    /**
+     * 实测真实数据：成分明细最后一行带 {@code washNote}（洗涤说明），
+     * 而 {@code wash_instructions} 列却是 NULL ——
+     * 洗涤说明其实早就录进去了，却从没给顾客看过。
+     */
+    @Test
+    @DisplayName("⑳ 洗涤说明要能从成分明细里的 washNote 兜底取出")
+    void washNoteMustFallbackToWashInstructions() throws Exception {
+        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(java)
+                .as("必须读取 washNote")
+                .contains("washNote");
+        assertThat(java)
+                .as("独立字段为空时用 washNote 兜底")
+                .contains("washFromParts");
+        assertThat(java)
+                .as("兜底仍走 putIfPresent，空值不下发")
+                .contains("putIfPresent(data, \"washInstructions\", washFromParts)");
     }
 }

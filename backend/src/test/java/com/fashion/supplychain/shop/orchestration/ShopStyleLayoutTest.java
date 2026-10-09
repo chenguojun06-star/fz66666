@@ -143,9 +143,15 @@ class ShopStyleLayoutTest {
         assertThat(s)
                 .as("主图 + 各颜色图合并，且去重避免重复")
                 .contains("if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k])");
+        // D-777 行为变更：原来「无图就整个模块跳过」，但那会让 #bk 返回按钮不存在，
+        // 进而打断后面所有事件绑定（线上 64% 的上架款式加购/购买全失效）。
+        // 现在无论有无图片都必须渲染返回入口，只是没有 cell。
         assertThat(s)
-                .as("无图时整个模块跳过")
-                .contains("if (!imgs.length) return ''");
+                .as("无图时仍要给出返回入口，不能让后续事件绑定被打断")
+                .contains("carouselHtml([], true)");
+        assertThat(s)
+                .as("有图时同样带返回入口")
+                .contains("carouselHtml(imgs, true)");
     }
 
     @Test
