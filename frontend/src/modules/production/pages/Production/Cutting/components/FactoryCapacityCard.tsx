@@ -37,7 +37,8 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       {stat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{stat.overdueCount}</b> 单</span> : null}
     </div>
     <div className="u-d-flex u-gap-12 u-fwrap-wrap u-mt-4" style={{ paddingTop: 4, borderTop: '1px dashed var(--color-border, var(--color-border-light))' }}>
-      <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 人</span>
+      {/* activeWorkers 实为 distinct operator_id（扫码账号数），非真实人数 */}
+      <span title="统计近30天有扫码记录的账号数；若车间共用扫码账号，数值会小于实际人数">活跃扫码账号 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 个</span>
       {stat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{stat.avgDailyOutput}</b> 件/天{stat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
       {stat.estimatedCompletionDays > 0 ? (
         <span>

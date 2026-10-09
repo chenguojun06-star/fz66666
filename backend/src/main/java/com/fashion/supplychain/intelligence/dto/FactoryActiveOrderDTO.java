@@ -37,4 +37,6 @@ public class FactoryActiveOrderDTO {
     private String merchandiser;
     /** 风险等级：safe / warning / danger */
     private String riskLevel;
+    /** 是否"已完成待关单"（progress>=100 但状态未流转到 completed/closed），前端显示"待关单"而非逾期高危 */
+    private boolean completedPendingClosure;
 }

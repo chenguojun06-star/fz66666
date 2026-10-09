@@ -69,6 +69,8 @@ export interface PreOrderDeliveryPredictionResponse {
   orderQuantity: number;
   factoryPendingQuantity: number;
   factoryDailyVelocity: number;
+  /** 近14天有生产记录的天数（<=4 表示样本不足，预测仅供参考） */
+  velocityActiveDays?: number;
   optimisticDate: string;
   mostLikelyDate: string;
   pessimisticDate: string;
@@ -118,6 +120,8 @@ export interface FactoryActiveOrderDTO {
   urgencyLevel?: string;
   merchandiser?: string;
   riskLevel: 'safe' | 'warning' | 'danger';
+  /** 是否"已完成待关单"（progress>=100 但状态未流转），前端显示"待关单"而非逾期高危 */
+  completedPendingClosure?: boolean;
 }
 
 export interface ProfitEstimationResponse {

@@ -167,15 +167,22 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
       render: (v: string) => v ? dayjs(v).format('MM-DD') : '-',
     },
     {
-      title: '剩余天数', dataIndex: 'daysToDeadline', key: 'daysToDeadline', width: 80,
-      render: (v: number) => {
+      title: '剩余天数', dataIndex: 'daysToDeadline', key: 'daysToDeadline', width: 110,
+      render: (v: number, record: FactoryActiveOrderDTO) => {
+        // 已完成待关单：进度100%但状态未流转，不再按逾期展示（2026-10-09 数据口径修复）
+        if (record.completedPendingClosure) {
+          return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 600 }}>已完成待关单</span>;
+        }
         const color = v < 0 ? 'var(--color-danger)' : v <= 7 ? 'var(--color-warning)' : 'var(--color-text-secondary)';
         return <span style={{ color, fontWeight: 600 }}>{v < 0 ? `逾期${-v}天` : `${v}天`}</span>;
       },
     },
     {
-      title: '风险', dataIndex: 'riskLevel', key: 'riskLevel', width: 70,
-      render: (v: string) => {
+      title: '风险', dataIndex: 'riskLevel', key: 'riskLevel', width: 80,
+      render: (v: string, record: FactoryActiveOrderDTO) => {
+        if (record.completedPendingClosure) {
+          return <Tag style={{ color: 'var(--color-info)', borderColor: 'var(--color-info)', background: 'transparent' }}>待关单</Tag>;
+        }
         const meta = { safe: { c: 'var(--color-success)', t: '正常' }, warning: { c: 'var(--color-warning)', t: '关注' }, danger: { c: 'var(--color-danger)', t: '高危' } }[v] || { c: 'var(--color-text-quaternary)', t: '-' };
         return <Tag style={{ color: meta.c, borderColor: meta.c, background: 'transparent' }}>{meta.t}</Tag>;
       },
@@ -211,6 +218,11 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             {prediction?.confidence != null && (
               <span className="u-ml-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                 置信度 {prediction.confidence}%
+                {prediction.confidence < 60 && prediction.velocityActiveDays != null && prediction.velocityActiveDays > 0 && (
+                  <span style={{ color: 'var(--color-warning)' }}>
+                    （近14天仅 {prediction.velocityActiveDays} 天有生产记录，样本不足，仅供参考）
+                  </span>
+                )}
               </span>
             )}
           </div>

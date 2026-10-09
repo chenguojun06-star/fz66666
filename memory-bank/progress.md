@@ -851,4 +851,13 @@
 - [ ] 待用户：微信开发者工具上传小程序后真机验收（服务器 autodeploy 只重建 backend/frontend，
       小程序改动不会触发服务器构建，登录页部署版本号也不会变，属正常）
 
+## 2026-10-09 D-772 下单页工厂预测/推荐数据口径五项修复（代码完成，未提交）
+- [x] A 前端3处工厂匹配改精确优先+最长命中（新建 utils/factoryMatch.ts）
+- [x] D 在手量口径统一（新建 OrderWorkloadHelper：剩余量+已完成待关单+TERMINAL_STATUSES）
+- [x] B 日均产能三处统一为 总扫码÷活跃天数（废弃 EWMA / ÷30自然日）
+- [x] C 置信度按活跃天数封顶（≥10→90 / ≥5→75 / 否则55）+ 前端样本不足提示
+- [x] E 「生产人数」3处改「活跃扫码账号」（distinct operator_id 非真实人数）
+- [x] 验证：tsc 0 错误 + mvn compile 通过
+- [ ] 待用户确认后提交；遗留拍板项见 activeContext D-772（completed_quantity 不同步 / t_factory 无配置产能行 / qualityScore 无区分度）
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md

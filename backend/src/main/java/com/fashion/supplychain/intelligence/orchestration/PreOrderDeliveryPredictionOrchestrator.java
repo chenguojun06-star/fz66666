@@ -61,9 +61,11 @@ public class PreOrderDeliveryPredictionOrchestrator {
                     + request.getOrderQuantity();
             resp.setFactoryPendingQuantity(pendingQty);
 
-            // 2. 工厂级日均产能
-            double velocity = factoryVelocityCalculator.computeFactoryVelocity(factoryName);
+            // 2. 工厂级日均产能（统一口径：总扫码 ÷ 活跃天数），并记录样本天数
+            FactoryVelocityCalculator.VelocitySample sample = factoryVelocityCalculator.computeVelocitySample(factoryName);
+            double velocity = sample.velocity();
             resp.setFactoryDailyVelocity(Math.round(velocity * 10.0) / 10.0);
+            resp.setVelocityActiveDays(sample.activeDays());
 
             if (velocity <= 0) {
                 resp.setRationale("该工厂近14天无扫码记录，无法预测产能。建议参考工厂配置产能或先创建订单后用订单级预测。");
@@ -110,15 +112,19 @@ public class PreOrderDeliveryPredictionOrchestrator {
                 }
             }
 
-            // 7. 置信度
-            int confidence = p80Opt.isPresent()
+            // 7. 置信度（2026-10-09 修复：以有效样本天数为上限，样本越稀疏置信度越低）
+            //    原公式 min(90, 40+velocity) 只要 velocity>=50 就恒为 90%，与数据质量无关，已废弃
+            int activeDays = sample.activeDays();
+            int dataCeiling = activeDays >= 10 ? 90 : activeDays >= 5 ? 75 : 55;
+            int rawConfidence = p80Opt.isPresent()
                     ? Math.min(85, 45 + (int) velocity)
                     : Math.min(90, 40 + (int) velocity);
-            resp.setConfidence(confidence);
+            resp.setConfidence(Math.min(rawConfidence, dataCeiling));
             resp.setRationale(String.format(
-                    "工厂近14天日均产能 %.1f 件/天，在手总负载 %d 件（含本单 %d 件），"
-                  + "预计 %d ~ %d 天完成全部排队订单%s",
-                    velocity, pendingQty, request.getOrderQuantity(), optDays, pesDays, p80Hint));
+                    "工厂近14天日均产能 %.1f 件/天（14天中 %d 天有生产记录），在手总负载 %d 件（含本单 %d 件），"
+                  + "预计 %d ~ %d 天完成全部排队订单%s%s",
+                    velocity, activeDays, pendingQty, request.getOrderQuantity(), optDays, pesDays, p80Hint,
+                    activeDays < 5 ? "；生产样本不足，预测仅供参考" : ""));
 
             // 8. 时间线节点
             resp.setTimelineNodes(buildTimeline(today, optDays, blendedMlDays, pesDays, request.getPlannedDeadline()));

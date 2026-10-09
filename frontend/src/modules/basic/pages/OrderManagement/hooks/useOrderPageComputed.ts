@@ -10,6 +10,7 @@ import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from '../util
 import type { SizePriceRecord } from '../utils/orderIntelligence';
 import { splitOptions, mergeDistinctOptions, parseSizeColorConfig } from '../utils/orderFormHelpers';
 import { normalizeSizeKey, displaySizeLabel } from './useOrderBomCalc';
+import { matchFactoryByName } from '@/utils/factoryMatch';
 
 interface UseOrderPageComputedParams {
   bomList: StyleBom[];
@@ -60,7 +61,8 @@ export function useOrderPageComputed({
       if (!dept) return null;
       const deptName = dept.nodeName || dept.pathNames || '';
       if (!deptName) return null;
-      return factoryCapacities.find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName)) ?? null;
+      // 2026-10-09 修复：精确优先 + 最长命中，避免「生产部1」错配到「生产部」（详见 utils/factoryMatch.ts）
+      return matchFactoryByName(factoryCapacities, deptName);
     }
     return null;
   }, [factoryMode, watchedFactoryId, watchedOrgUnitId, factoryCapacities, factories, departments]);

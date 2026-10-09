@@ -61,11 +61,22 @@ export function useAnomalyDetection({
       if (exactOrder) return exactOrder;
     }
 
-    const factoryMatchedOrder = productionList.find((record) => {
-      const factoryName = String(record.factoryName || '').trim();
-      return !!factoryName && !!targetName && (factoryName === targetName || targetName.includes(factoryName) || factoryName.includes(targetName));
-    });
-    if (factoryMatchedOrder) return factoryMatchedOrder;
+    // 2026-10-09 修复：工厂名精确匹配优先，未命中再取最长子串命中（避免「生产部」错配「生产部1」的订单）
+    if (targetName) {
+      const exactFactoryOrders = productionList.filter(
+        (record) => String(record.factoryName || '').trim() === targetName,
+      );
+      if (exactFactoryOrders.length > 0) return exactFactoryOrders[0];
+      const substringCandidates = productionList.filter((record) => {
+        const factoryName = String(record.factoryName || '').trim();
+        return !!factoryName && (targetName.includes(factoryName) || factoryName.includes(targetName));
+      });
+      if (substringCandidates.length > 0) {
+        return substringCandidates.reduce((best, record) =>
+          String(record.factoryName || '').trim().length > String(best.factoryName || '').trim().length ? record : best,
+        );
+      }
+    }
 
     return null;
   }, [productionList]);

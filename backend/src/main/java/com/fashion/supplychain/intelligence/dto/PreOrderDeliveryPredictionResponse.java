@@ -22,8 +22,10 @@ public class PreOrderDeliveryPredictionResponse {
     private int orderQuantity;
     /** 工厂当前在手总件数（含本单预估） */
     private long factoryPendingQuantity;
-    /** 工厂级日均产能（件/天，基于近14天扫码聚合） */
+    /** 工厂级日均产能（件/天，近14天总扫码 ÷ 有生产记录的天数） */
     private double factoryDailyVelocity;
+    /** 近14天有生产记录的天数（置信度/样本充分性评估，<=4 表示样本不足） */
+    private int velocityActiveDays;
     /** 乐观预测日期 yyyy-MM-dd */
     private String optimisticDate;
     /** 最可能预测日期 */

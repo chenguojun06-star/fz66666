@@ -24,15 +24,15 @@ import java.util.stream.Collectors;
  * 与 DeliveryPredictionOrchestrator.computeWeightedVelocity(orderId) 区别：
  * 这里聚合该工厂所有在制订单的扫码记录，而非单订单。
  *
- * <p>算法与 DeliveryPredictionOrchestrator 对齐（保持一致性）：
- * EWMA(α=0.33) + 趋势检测(最小二乘,±25%) + 季节性修正(周末70%)
+ * <p>日均产能口径（2026-10-09 统一）：窗口内总扫码件数 ÷ 有生产记录的天数，
+ * 与 FactoryCapacityOrchestrator（产能卡片）、CapacityGapOrchestrator（缺口分析）一致，
+ * 供 PreOrderDeliveryPredictionOrchestrator 做交期预测与置信度评估。
  */
 @Component
 @Slf4j
 public class FactoryVelocityCalculator {
 
     private static final int WINDOW_DAYS = 14;
-    private static final double ALPHA = 0.33;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -44,13 +44,29 @@ public class FactoryVelocityCalculator {
     private IntelligencePredictionLogMapper predictionLogMapper;
 
     /**
-     * 计算工厂级日均产能（基于近14天该工厂所有在制订单的扫码聚合）
+     * 工厂速度采样：日均产能 + 有效生产天数（窗口内有扫码的天数）。
+     *
+     * @param velocity    日均产能（件/天），<=0 表示无扫码数据
+     * @param activeDays  窗口内有生产记录的天数（置信度评估用）
+     * @param windowDays  统计窗口天数
+     */
+    public record VelocitySample(double velocity, int activeDays, int windowDays) {
+    }
+
+    /**
+     * 计算工厂级日均产能（基于近14天该工厂所有在制订单的扫码聚合）。
+     *
+     * <p>2026-10-09 口径统一：= 窗口内总扫码件数 ÷ 有生产记录的天数（活跃天数），
+     * 与产能卡片（FactoryCapacityOrchestrator）和产能缺口分析（CapacityGapOrchestrator）
+     * 使用同一口径，避免同一工厂出现 106.7 / 1600 / 1737.1 三个不同"日均产能"。
+     * 原 EWMA+趋势+季节算法会把单日爆发平滑成"持续产能"（14天仅2天生产却报 1737 件/天），
+     * 已废弃；样本是否充分改由 activeDays 暴露给置信度评估。
      *
      * @param factoryName 工厂名
-     * @return 日均产能（件/天），<=0 表示无扫码数据
+     * @return 速度采样（velocity <=0 表示无扫码数据）
      */
-    public double computeFactoryVelocity(String factoryName) {
-        if (factoryName == null || factoryName.isBlank()) return 0;
+    public VelocitySample computeVelocitySample(String factoryName) {
+        if (factoryName == null || factoryName.isBlank()) return new VelocitySample(0, 0, WINDOW_DAYS);
 
         // 1. 查该工厂所有在制订单ID
         QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
@@ -58,7 +74,7 @@ public class FactoryVelocityCalculator {
            .eq("factory_name", factoryName)
            .eq("delete_flag", 0);
         List<ProductionOrder> orders = productionOrderService.list(oqw);
-        if (orders.isEmpty()) return 0;
+        if (orders.isEmpty()) return new VelocitySample(0, 0, WINDOW_DAYS);
 
         Set<String> orderIds = orders.stream()
                 .map(o -> String.valueOf(o.getId()))
@@ -66,8 +82,8 @@ public class FactoryVelocityCalculator {
 
         // 2. 拉取近14天扫码记录
         LocalDateTime now = LocalDateTime.now();
-        double[] dailyQty = new double[WINDOW_DAYS];
-        boolean hasAnyData = false;
+        double totalQty = 0;
+        int activeDays = 0;
         for (int i = 0; i < WINDOW_DAYS; i++) {
             LocalDateTime dayStart = now.minusDays(WINDOW_DAYS - i).toLocalDate().atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
@@ -79,61 +95,37 @@ public class FactoryVelocityCalculator {
                .between("scan_time", dayStart, dayEnd);
             long dayQty = scanRecordService.list(sqw).stream()
                     .mapToLong(r -> r.getQuantity() != null ? r.getQuantity() : 0).sum();
-            dailyQty[i] = dayQty;
-            if (dayQty > 0) hasAnyData = true;
-        }
-        if (!hasAnyData) return 0;
-
-        // 3. EWMA 平滑
-        double ewma = 0;
-        int firstValidIdx = -1;
-        for (int i = 0; i < WINDOW_DAYS; i++) {
-            if (dailyQty[i] > 0) {
-                ewma = dailyQty[i];
-                firstValidIdx = i;
-                break;
+            if (dayQty > 0) {
+                totalQty += dayQty;
+                activeDays++;
             }
         }
-        if (firstValidIdx < 0) return 0;
-        for (int i = firstValidIdx + 1; i < WINDOW_DAYS; i++) {
-            if (dailyQty[i] > 0) {
-                ewma = ALPHA * dailyQty[i] + (1 - ALPHA) * ewma;
-            } else {
-                ewma = ewma * 0.95;
-            }
-        }
+        if (activeDays == 0) return new VelocitySample(0, 0, WINDOW_DAYS);
 
-        // 4. 趋势检测（最小二乘斜率）
-        int validDays = 0;
-        double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-        for (int i = 0; i < WINDOW_DAYS; i++) {
-            if (dailyQty[i] > 0) {
-                double x = i, y = dailyQty[i];
-                sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x;
-                validDays++;
-            }
-        }
-        double trendBoost = 0;
-        if (validDays >= 3 && ewma > 0) {
-            double slope = (validDays * sumXY - sumX * sumY) / (validDays * sumX2 - sumX * sumX);
-            double relativeSlope = slope / ewma;
-            trendBoost = Math.max(-0.25, Math.min(0.25, relativeSlope * 3.0));
-        }
-
-        // 5. 季节性修正（未来7天周末占比）
-        int weekendDays = 0;
-        for (int i = 1; i <= 7; i++) {
-            int dow = now.plusDays(i).getDayOfWeek().getValue();
-            if (dow == 6 || dow == 7) weekendDays++;
-        }
-        double seasonFactor = 1.0 - (weekendDays / 7.0) * 0.30;
-
-        double velocity = ewma * (1 + trendBoost) * seasonFactor;
-        return Math.max(0, velocity);
+        // 3. 统一口径：总扫码 ÷ 活跃天数
+        double velocity = totalQty / activeDays;
+        return new VelocitySample(Math.max(0, velocity), activeDays, WINDOW_DAYS);
     }
 
     /**
-     * 工厂当前在手总件数（所有在制订单的 orderQuantity 之和）
+     * 计算工厂级日均产能（兼容入口，详见 {@link #computeVelocitySample}）
+     *
+     * @param factoryName 工厂名
+     * @return 日均产能（件/天），<=0 表示无扫码数据
+     */
+    public double computeFactoryVelocity(String factoryName) {
+        return computeVelocitySample(factoryName).velocity();
+    }
+
+    /**
+     * 计算工厂在手总剩余件数（所有非终止状态在制订单的剩余量之和）。
+     *
+     * <p>2026-10-09 口径修复：
+     * <ul>
+     *   <li>终止状态统一用 OrderStatusConstants.TERMINAL_STATUSES（原仅排除 completed/scrapped/closed，
+     *       漏 cancelled/archived，与其他查询口径不一致）</li>
+     *   <li>取"剩余量"而非 order_quantity 总数：progress=100% 已完成未关单的订单不再被算进在手负载</li>
+     * </ul>
      */
     public long computeFactoryPendingQuantity(String factoryName) {
         if (factoryName == null || factoryName.isBlank()) return 0;
@@ -141,9 +133,10 @@ public class FactoryVelocityCalculator {
         qw.eq("tenant_id", UserContext.tenantId())
            .eq("factory_name", factoryName)
            .eq("delete_flag", 0)
-           .notIn("status", Arrays.asList("completed", "scrapped", "closed"));
+           .notIn("status", com.fashion.supplychain.common.constant.OrderStatusConstants.TERMINAL_STATUSES);
         return productionOrderService.list(qw).stream()
-                .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+                .filter(o -> !OrderWorkloadHelper.isCompletedPendingClosure(o))
+                .mapToLong(OrderWorkloadHelper::remainingQuantity)
                 .sum();
     }
 

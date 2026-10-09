@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.FactoryActiveOrderDTO;
+import com.fashion.supplychain.intelligence.helper.OrderWorkloadHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.RequiredArgsConstructor;
@@ -77,21 +78,23 @@ public class FactoryActiveOrderOrchestrator {
         dto.setCustomerName(o.getCustomerName());
         dto.setOrderQuantity(o.getOrderQuantity());
         dto.setCompletedQuantity(o.getCompletedQuantity());
-        int total = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
-        int completed = o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0;
-        dto.setRemainingQuantity(Math.max(0, total - completed));
+        // 2026-10-09 口径修复：剩余量按 progress 推算（completed_quantity 与进度不同步，progress=80% 时 completed 可能为 0）
+        dto.setRemainingQuantity(OrderWorkloadHelper.remainingQuantity(o));
         dto.setProductionProgress(o.getProductionProgress());
         dto.setStatus(o.getStatus());
         dto.setUrgencyLevel(o.getUrgencyLevel());
         dto.setMerchandiser(o.getMerchandiser());
+        // "已完成待关单"（progress=100% 但状态未流转）：不再按逾期判高危
+        boolean completedPendingClosure = OrderWorkloadHelper.isCompletedPendingClosure(o);
+        dto.setCompletedPendingClosure(completedPendingClosure);
 
         if (o.getPlannedEndDate() != null) {
             dto.setPlannedEndDate(o.getPlannedEndDate().format(DATE_FMT));
             int days = (int) ChronoUnit.DAYS.between(today, o.getPlannedEndDate().toLocalDate());
             dto.setDaysToDeadline(days);
-            dto.setRiskLevel(classifyRisk(days, o.getProductionProgress()));
+            dto.setRiskLevel(completedPendingClosure ? "safe" : classifyRisk(days, o.getProductionProgress()));
         } else {
-            dto.setRiskLevel(classifyRisk(30, o.getProductionProgress()));
+            dto.setRiskLevel(completedPendingClosure ? "safe" : classifyRisk(30, o.getProductionProgress()));
         }
         return dto;
     }

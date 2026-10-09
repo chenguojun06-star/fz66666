@@ -3720,4 +3720,24 @@ chip 可见人群对齐，否则"看得到点不进"。
 - 自检 205 项全通过
 **原则沉淀**：多选列表（勾选场景）不适合用单选 search-picker —— 加**本地搜索框**过滤渲染集即可，选中状态落在原数组上。
 
+## D-772：下单页工厂预测/推荐数据口径五项修复（2026-10-09）
+
+**上下文**：用户选「生产部1」（4单在产）却显示「1单400件/日产1600/推荐63分」。SSH 云端 MySQL 核实全部数字属「生产部」。
+
+**根因（5个）**：
+1. 前端工厂名**双向子串模糊匹配 + find 首个命中**：「生产部1」.includes("生产部") 命中「生产部」。引入于 `1abe9bf84`（2026-04-26），`dbbbda837` 大拆分原样搬运
+2. 在手量 Σorder_quantity 把 progress=100% 未关单订单算进去 → "逾期27天建议转单"误报
+3. 同一日均产能三个口径：卡片÷活跃天数(1600)、预测 EWMA(1737.1)、缺口÷30自然日(106.7)
+4. 置信度 `min(90,40+velocity)`：velocity≥50 恒90%，与数据质量无关
+5. 「生产人数」= distinct operator_id，共用扫码账号恒1
+
+**决策**：
+- A：新建 `frontend/src/utils/factoryMatch.ts`（精确优先→最长子串命中），3处统一替换
+- D：新建 `intelligence/helper/OrderWorkloadHelper`（progress≥100=已完成待关单；remainingQuantity 按 progress 排算），FactoryVelocityCalculator/CapacityGapOrchestrator/FactoryActiveOrder 统一走它；终止状态统一 `OrderStatusConstants.TERMINAL_STATUSES`
+- B：废弃 EWMA×趋势×季节，统一"总扫码÷活跃天数"（FactoryVelocityCalculator.computeVelocitySample record）
+- C：置信度按活跃天数封顶（≥10→90/≥5→75/否则55）+ velocityActiveDays 透传前端提示样本不足
+- E：「生产人数」→「活跃扫码账号」+ tooltip 说明
+
+**踩坑**：无（tsc/mvn 一次通过）。**遗留**：completed_quantity 与 progress 不同步（数据问题）、t_factory 缺内部车间配置产能行、qualityScore 按 activeWorkers≥5 给分共用账号时无区分度——均需拍板，本次未动。
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md

@@ -5,6 +5,7 @@ import { factoryApi } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { Factory, OrganizationUnit } from '@/types/system';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
+import { matchFactoryByName } from '@/utils/factoryMatch';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
 import {
   type CuttingFactoryMode,
@@ -102,7 +103,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       if (!dept) return null;
       const deptName = dept.nodeName || dept.pathNames || '';
       if (!deptName) return null;
-      return factoryCapacities.find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName)) ?? null;
+      // 2026-10-09 修复：精确优先 + 最长命中，避免「生产部1」错配到「生产部」（详见 utils/factoryMatch.ts）
+      return matchFactoryByName(factoryCapacities, deptName);
     }
     return null;
   }, [createFactoryMode, createFactoryId, createOrgUnitId, factoryCapacities, createFactoryOptions, createInternalUnitOptions]);
