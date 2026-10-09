@@ -2,7 +2,9 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.entity.ShopOrder;
+import com.fashion.supplychain.shop.orchestration.ShopConsumerTokenSupport;
 import com.fashion.supplychain.shop.orchestration.ShopOrderOrchestrator;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,8 +24,12 @@ public class ShopPublicController {
 
     private final ShopOrderOrchestrator shopOrderOrchestrator;
 
-    public ShopPublicController(ShopOrderOrchestrator shopOrderOrchestrator) {
+    private final ShopConsumerTokenSupport consumerTokenSupport;
+
+    public ShopPublicController(ShopOrderOrchestrator shopOrderOrchestrator,
+                                ShopConsumerTokenSupport consumerTokenSupport) {
         this.shopOrderOrchestrator = shopOrderOrchestrator;
+        this.consumerTokenSupport = consumerTokenSupport;
     }
 
     /** 店铺门面信息（名称/公告/是否营业） */
@@ -61,17 +67,21 @@ public class ShopPublicController {
 
     /** 游客下单：手机号归并客户 → 扣库存出库 → 挂账应收（收款线下/收付款中心核销） */
     @PostMapping("/{slug}/orders")
-    public Result<?> placeOrder(@PathVariable String slug, @RequestBody Map<String, Object> body) {
+    public Result<?> placeOrder(@PathVariable String slug, @RequestBody Map<String, Object> body,
+                                HttpServletRequest request) {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            // P0：已登录的平台消费者下单时绑定账号（未登录则 null，行为与原来一致）
+            String consumerId = consumerTokenSupport.resolveConsumerId(request);
             ShopOrder order = shopOrderOrchestrator.placeOrder(
                     slug,
                     str(body.get("customerName")),
                     str(body.get("phone")),
                     str(body.get("address")),
                     str(body.get("remark")),
-                    items);
+                    items,
+                    consumerId);
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("orderNo", order.getOrderNo());
             // D-513：拆出商品金额与运费，C 端下单成功页才能给出「商品 ¥X + 运费 ¥Y」明细

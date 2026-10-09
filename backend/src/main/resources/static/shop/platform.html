@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ff5000">
+<title>云裳智链 · 商城</title>
+<style>
+  :root{
+    --o:#ff5000; --o2:#ff7a1a; --bg:#f4f4f4; --card:#fff;
+    --text:#1a1a1a; --sub:#999; --line:#f0f0f0; --r:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;padding-bottom:20px;}
+  img{display:block;} button{font-family:inherit;cursor:pointer;}
+  input{font-family:inherit;}
+
+  .top{position:sticky;top:0;z-index:30;background:linear-gradient(135deg,var(--o),var(--o2));
+       padding:12px 12px 12px;padding-top:calc(12px + env(safe-area-inset-top));}
+  .top .r1{display:flex;align-items:center;gap:10px;}
+  .top .brand{color:#fff;font-size:17px;font-weight:700;flex:1;letter-spacing:.5px;}
+  .top .mine{border:none;background:rgba(255,255,255,.95);color:var(--o);font-size:12.5px;
+             font-weight:600;border-radius:14px;padding:6px 14px;}
+  .search{display:flex;align-items:center;background:#fff;border-radius:18px;overflow:hidden;height:36px;margin-top:10px;}
+  .search input{flex:1;border:none;outline:none;font-size:14px;height:100%;padding:0 12px;background:transparent;}
+  .search button{border:none;background:var(--o);color:#fff;height:100%;padding:0 18px;font-size:14px;font-weight:600;}
+
+  .cats{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 4px;-webkit-overflow-scrolling:touch;}
+  .cats::-webkit-scrollbar{display:none;}
+  .chip{flex:none;background:#fff;border:1px solid var(--line);color:#555;font-size:12.5px;
+        border-radius:14px;padding:5px 13px;white-space:nowrap;}
+  .chip.on{background:var(--o);border-color:var(--o);color:#fff;font-weight:600;}
+
+  .sec{padding:6px 12px 0;}
+  .sec h2{font-size:14px;font-weight:700;margin:10px 0 8px;display:flex;align-items:center;gap:6px;}
+  .sec h2 i{width:3px;height:13px;background:var(--o);border-radius:2px;display:inline-block;}
+
+  .shops{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
+  .shops::-webkit-scrollbar{display:none;}
+  .shop{flex:none;width:150px;background:#fff;border-radius:var(--r);padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+  .shop .nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .shop .mt{font-size:11.5px;color:var(--sub);margin-top:5px;}
+  .shop .mt b{color:var(--o);}
+  .shop .tag{display:inline-block;font-size:10.5px;border-radius:8px;padding:1px 6px;margin-top:6px;}
+  .shop .tag.on{background:#fff2e8;color:var(--o);}
+  .shop .tag.off{background:#f2f2f2;color:#999;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px;}
+  .pc{background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+  .pc .th{position:relative;width:100%;aspect-ratio:1/1;background:#f2f2f2;overflow:hidden;}
+  .pc .th img{width:100%;height:100%;object-fit:cover;}
+  .pc .th .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#cfcfcf;font-size:26px;}
+  .pc .th .shopTag{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.55);color:#fff;
+                   font-size:10.5px;border-radius:8px;padding:2px 7px;max-width:80%;white-space:nowrap;
+                   overflow:hidden;text-overflow:ellipsis;}
+  .pc .in{padding:8px 9px 10px;}
+  .pc .nm{font-size:13px;line-height:1.35;height:35px;overflow:hidden;}
+  .pc .pr{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px;}
+  .pc .pr .p{color:var(--o);font-weight:700;font-size:15px;}
+  .pc .pr .p small{font-size:11px;font-weight:600;}
+  .pc .pr .s{font-size:11px;color:var(--sub);}
+
+  .more{text-align:center;padding:14px 12px 4px;}
+  .more button{border:1px solid var(--line);background:#fff;color:#666;font-size:13px;
+               border-radius:16px;padding:8px 26px;}
+  .empty{text-align:center;color:var(--sub);font-size:13px;padding:40px 20px;line-height:1.7;}
+  .empty .big{font-size:34px;margin-bottom:8px;}
+
+  /* ── 我的（抽屉） ── */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:none;}
+  .mask.show{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg);
+         border-radius:14px 14px 0 0;max-height:88vh;overflow-y:auto;transform:translateY(102%);
+         transition:transform .26s ease;padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+  .sheet.show{transform:translateY(0);}
+  .sheet .hd{position:sticky;top:0;background:#fff;padding:14px 16px;display:flex;align-items:center;
+             justify-content:space-between;border-bottom:1px solid var(--line);z-index:2;}
+  .sheet .hd b{font-size:15px;}
+  .sheet .hd .x{border:none;background:none;font-size:20px;color:#bbb;line-height:1;}
+
+  .tabs{display:flex;background:#fff;margin:10px 12px 0;border-radius:var(--r);overflow:hidden;}
+  .tabs div{flex:1;text-align:center;padding:11px 0;font-size:14px;color:#666;}
+  .tabs div.on{color:var(--o);font-weight:700;box-shadow:inset 0 -2px 0 var(--o);}
+  .form{background:#fff;margin:10px 12px;border-radius:var(--r);padding:6px 14px 16px;}
+  .form label{display:block;font-size:12.5px;color:#666;margin:12px 0 6px;}
+  .form input{width:100%;border:1px solid var(--line);border-radius:8px;height:42px;padding:0 12px;font-size:14px;outline:none;}
+  .form input:focus{border-color:var(--o);}
+  .form .btn{width:100%;border:none;background:linear-gradient(135deg,var(--o),var(--o2));color:#fff;
+             height:44px;border-radius:22px;font-size:15px;font-weight:700;margin-top:18px;}
+  .form .hint{font-size:11.5px;color:var(--sub);margin-top:10px;line-height:1.6;}
+
+  .meCard{background:#fff;margin:10px 12px;border-radius:var(--r);padding:14px 16px;}
+  .meCard .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:13.5px;}
+  .meCard .row+.row{border-top:1px solid var(--line);}
+  .meCard .row .k{color:#888;}
+  .meCard .row .v{font-weight:600;}
+  .meCard .logout{width:100%;border:1px solid var(--line);background:#fff;color:#e34d4d;
+                  height:40px;border-radius:20px;font-size:13.5px;margin-top:12px;}
+
+  .order{background:#fff;margin:10px 12px;border-radius:var(--r);padding:12px 14px;}
+  .order .o1{display:flex;justify-content:space-between;font-size:12.5px;color:#888;}
+  .order .o2{margin-top:7px;font-size:13.5px;line-height:1.5;}
+  .order .o3{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;}
+  .order .o3 .p{color:var(--o);font-weight:700;font-size:15px;}
+  .order .st{font-size:11.5px;border-radius:8px;padding:2px 8px;}
+  .st.PENDING_SHIP{background:#fff2e8;color:var(--o);}
+  .st.SHIPPED{background:#e8f5ec;color:#1a9c52;}
+  .st.CANCELLED{background:#f2f2f2;color:#999;}
+
+  .addr{background:#fff;margin:10px 12px;border-radius:var(--r);padding:12px 14px;}
+  .addr .a1{font-size:13.5px;font-weight:600;}
+  .addr .a1 .def{font-size:10.5px;background:var(--o);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;}
+  .addr .a2{font-size:12.5px;color:#666;margin-top:5px;line-height:1.5;}
+  .addr .a3{display:flex;gap:14px;margin-top:9px;font-size:12.5px;}
+  .addr .a3 a{color:var(--o);text-decoration:none;}
+  .addr .a3 a.del{color:#bbb;}
+  .addBtn{display:block;margin:12px;width:calc(100% - 24px);border:1px dashed var(--o);background:#fff8f3;
+          color:var(--o);height:42px;border-radius:10px;font-size:13.5px;font-weight:600;}
+  .toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.78);
+         color:#fff;font-size:13.5px;border-radius:8px;padding:10px 16px;z-index:99;display:none;max-width:80%;}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="r1">
+    <div class="brand">云裳智链 · 商城</div>
+    <button class="mine" onclick="Mine.open()">我的</button>
+  </div>
+  <div class="search">
+    <input id="kw" placeholder="搜索商品 / 款号" onkeydown="if(event.key==='Enter')Home.search()">
+    <button onclick="Home.search()">搜索</button>
+  </div>
+</div>
+
+<div class="cats" id="cats"></div>
+
+<div class="sec">
+  <h2><i></i>店铺</h2>
+  <div class="shops" id="shops"></div>
+</div>
+
+<div class="sec"><h2><i></i><span id="listTitle">全部商品</span></h2></div>
+<div class="grid" id="grid"></div>
+<div class="more" id="more" style="display:none"><button onclick="Home.loadMore()">加载更多</button></div>
+
+<div class="mask" id="mask" onclick="Mine.close()"></div>
+<div class="sheet" id="sheet">
+  <div class="hd"><b id="sheetTitle">我的</b><button class="x" onclick="Mine.close()">&times;</button></div>
+  <div id="sheetBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var API = '/api/shop/public';
+var TOKEN_KEY = 'shop_consumer_token';
+var USER_KEY = 'shop_consumer';
+var state = { page: 1, pageSize: 20, keyword: '', category: '', total: 0, loading: false };
+
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = 'none'; }, 2000);
+}
+function money(v){ return v === null || v === undefined ? '—' : '¥' + Number(v).toFixed(2); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* ── 请求 ── */
+function apiGet(path){
+  return fetch(API + path, { headers: authHeaders() })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if (d.code !== 200) throw new Error(d.message || '请求失败'); return d.data; });
+}
+function apiPost(path, body){
+  return fetch(API + path, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify(body || {})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if (d.code !== 200) throw new Error(d.message || '请求失败'); return d.data; });
+}
+function authHeaders(){
+  var t = localStorage.getItem(TOKEN_KEY);
+  return t ? { 'X-Shop-Token': t } : {};
+}
+
+/* ── 首页 ── */
+var Home = {
+  init: function(){
+    apiGet('/platform/home').then(function(d){
+      renderCats(d.categories || []);
+      renderShops(d.shops || []);
+    }).catch(function(e){ toast(e.message); });
+    this.reset();
+  },
+  reset: function(){
+    state.page = 1; state.total = 0; $('grid').innerHTML = '';
+    this.load(false);
+  },
+  search: function(){
+    state.keyword = ($('kw').value || '').trim();
+    state.page = 1; $('grid').innerHTML = '';
+    this.load(false);
+  },
+  pickCat: function(cat, el){
+    state.category = (state.category === cat) ? '' : cat;
+    var chips = document.querySelectorAll('#cats .chip');
+    for (var i = 0; i < chips.length; i++) {
+      var c = chips[i].getAttribute('data-c') || '';
+      chips[i].className = 'chip' + (c === (state.category || '') ? ' on' : '');
+    }
+    $('listTitle').textContent = state.category ? ('类目：' + state.category) : '全部商品';
+    this.reset();
+  },
+  load: function(more){
+    if (state.loading) return;
+    state.loading = true;
+    var q = '/platform/products?page=' + state.page + '&pageSize=' + state.pageSize
+          + (state.keyword ? '&keyword=' + encodeURIComponent(state.keyword) : '')
+          + (state.category ? '&category=' + encodeURIComponent(state.category) : '');
+    apiGet(q).then(function(d){
+      state.total = d.total || 0;
+      var rows = d.records || [];
+      var html = rows.map(card).join('');
+      if (more) $('grid').insertAdjacentHTML('beforeend', html);
+      else $('grid').innerHTML = html;
+      if (!state.total) {
+        $('grid').innerHTML = '<div class="empty" style="grid-column:1/3"><div class="big">&#128717;</div>'
+          + '暂时没有上架的商品<br><span style="font-size:12px">商家上架后会出现在这里</span></div>';
+      }
+      $('more').style.display = ($('grid').children.length < state.total) ? 'block' : 'none';
+    }).catch(function(e){ toast(e.message); })
+      .then(function(){ state.loading = false; });
+  },
+  loadMore: function(){ state.page += 1; this.load(true); }
+};
+
+function card(p){
+  var img = p.cover
+    ? '<img src="' + esc(p.cover) + '" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<div class=&quot;ph&quot;>&#128717;</div>\'">'
+    : '<div class="ph">&#128717;</div>';
+  var url = '/shop/index.html?s=' + encodeURIComponent(p.slug || '') + '#/p/' + p.styleId;
+  return '<div class="pc" onclick="location.href=\'' + url + '\'">'
+    + '<div class="th">' + img + '<div class="shopTag">' + esc(p.shopName || '') + '</div></div>'
+    + '<div class="in">'
+    + '<div class="nm">' + esc(p.styleName || p.styleNo || '未命名商品') + '</div>'
+    + '<div class="pr"><span class="p"><small>¥</small>' + (p.minPrice == null ? '—' : Number(p.minPrice).toFixed(2)) + '</span>'
+    + '<span class="s">' + (p.totalStock || 0) + ' 件可售</span></div>'
+    + '</div></div>';
+}
+
+function renderCats(cats){
+  if (!cats.length) { $('cats').innerHTML = ''; return; }
+  var html = '<div class="chip on" data-c="" onclick="Home.pickCat(\'\', this)">全部</div>';
+  html += cats.map(function(c){
+    return '<div class="chip" data-c="' + esc(c.category) + '" onclick="Home.pickCat(\'' + esc(c.category).replace(/'/g, "\\'") + '\', this)">'
+      + esc(c.category) + ' (' + c.cnt + ')</div>';
+  }).join('');
+  $('cats').innerHTML = html;
+}
+
+function renderShops(shops){
+  if (!shops.length) {
+    $('shops').innerHTML = '<div class="empty" style="padding:16px 0">还没有店铺</div>';
+    return;
+  }
+  $('shops').innerHTML = shops.map(function(s){
+    return '<div class="shop" onclick="location.href=\'/shop/index.html?s=' + encodeURIComponent(s.slug) + '\'">'
+      + '<div class="nm">' + esc(s.shopName) + '</div>'
+      + '<div class="mt"><b>' + (s.productCount || 0) + '</b> 件商品</div>'
+      + '<span class="tag ' + (s.enabled ? 'on' : 'off') + '">' + (s.enabled ? '营业中' : '已打烊') + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+/* ── 我的 ── */
+var Mine = {
+  tab: 'login',
+  open: function(){
+    $('mask').className = 'mask show';
+    $('sheet').className = 'sheet show';
+    if (localStorage.getItem(TOKEN_KEY)) this.renderMe();
+    else this.renderAuth();
+  },
+  close: function(){ $('mask').className = 'mask'; $('sheet').className = 'sheet'; },
+  switchTab: function(t){ this.tab = t; this.renderAuth(); },
+
+  renderAuth: function(){
+    $('sheetTitle').textContent = '登录 / 注册';
+    var isLogin = this.tab === 'login';
+    $('sheetBody').innerHTML =
+      '<div class="tabs">'
+      + '<div class="' + (isLogin ? 'on' : '') + '" onclick="Mine.switchTab(\'login\')">登录</div>'
+      + '<div class="' + (isLogin ? '' : 'on') + '" onclick="Mine.switchTab(\'register\')">注册</div>'
+      + '</div>'
+      + '<div class="form">'
+      + '<label>手机号</label><input id="f-phone" maxlength="11" inputmode="numeric" placeholder="请输入手机号">'
+      + '<label>密码</label><input id="f-pwd" type="password" maxlength="32" placeholder="6-32 位密码">'
+      + (isLogin ? '' : '<label>昵称（选填）</label><input id="f-nick" maxlength="16" placeholder="怎么称呼您">')
+      + '<button class="btn" onclick="Mine.submit()">' + (isLogin ? '登录' : '注册并登录') + '</button>'
+      + '<div class="hint">' + (isLogin
+          ? '登录后可在所有店铺下单、跨店查看订单、复用收货地址。不登录也能下单。'
+          : '注册一个平台账号，在所有店铺通用。') + '</div>'
+      + '</div>';
+  },
+  submit: function(){
+    var phone = ($('f-phone').value || '').trim();
+    var pwd = $('f-pwd').value || '';
+    if (!/^1[3-9]\d{9}$/.test(phone)) return toast('请输入正确的手机号');
+    if (pwd.length < 6) return toast('密码至少 6 位');
+    var isLogin = this.tab === 'login';
+    var path = isLogin ? '/auth/login' : '/auth/register';
+    var body = { phone: phone, password: pwd };
+    if (!isLogin) body.nickname = ($('f-nick').value || '').trim();
+    apiPost(path, body).then(function(d){
+      localStorage.setItem(TOKEN_KEY, d.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(d.consumer || {}));
+      toast(isLogin ? '登录成功' : '注册成功');
+      Mine.renderMe();
+    }).catch(function(e){ toast(e.message); });
+  },
+  logout: function(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    toast('已退出登录');
+    this.renderAuth();
+  },
+
+  renderMe: function(){
+    $('sheetTitle').textContent = '我的';
+    $('sheetBody').innerHTML = '<div class="empty">加载中…</div>';
+    apiGet('/me').then(function(u){
+      $('sheetBody').innerHTML =
+        '<div class="meCard">'
+        + '<div class="row"><span class="k">昵称</span><span class="v">' + esc(u.nickname || '—') + '</span></div>'
+        + '<div class="row"><span class="k">手机号</span><span class="v">' + esc(mask(u.phone)) + '</span></div>'
+        + '<button class="logout" onclick="Mine.logout()">退出登录</button>'
+        + '</div>'
+        + '<div class="sec" style="padding:0 12px"><h2><i></i>我的订单（跨店）</h2></div>'
+        + '<div id="orders"><div class="empty">加载中…</div></div>'
+        + '<div class="sec" style="padding:0 12px"><h2><i></i>收货地址</h2></div>'
+        + '<div id="addrs"><div class="empty">加载中…</div></div>'
+        + '<button class="addBtn" onclick="Mine.addAddr()">+ 新增收货地址</button>';
+      Mine.loadOrders();
+      Mine.loadAddrs();
+    }).catch(function(e){
+      toast(e.message);
+      localStorage.removeItem(TOKEN_KEY);
+      Mine.renderAuth();
+    });
+  },
+  loadOrders: function(){
+    apiGet('/me/orders').then(function(list){
+      if (!list || !list.length) {
+        $('orders').innerHTML = '<div class="empty">还没有订单</div>'; return;
+      }
+      var names = { PENDING_SHIP: '待发货', SHIPPED: '已发货', CANCELLED: '已取消' };
+      $('orders').innerHTML = list.map(function(o){
+        return '<div class="order">'
+          + '<div class="o1"><span>' + esc(o.shopName || '店铺') + '</span><span>' + esc(fmtTime(o.createTime)) + '</span></div>'
+          + '<div class="o2">' + esc(o.orderNo) + ' · ' + (o.itemCount || 0) + ' 件<br>'
+          + esc(o.customerName || '') + ' ' + esc(mask(o.phone)) + '</div>'
+          + '<div class="o3"><span class="p">' + money(o.totalAmount) + '</span>'
+          + '<span class="st ' + esc(o.status) + '">' + (names[o.status] || o.status) + '</span></div>'
+          + '</div>';
+      }).join('');
+    }).catch(function(e){ $('orders').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+  },
+  loadAddrs: function(){
+    apiGet('/me/addresses').then(function(list){
+      if (!list || !list.length) {
+        $('addrs').innerHTML = '<div class="empty">还没有收货地址</div>'; return;
+      }
+      $('addrs').innerHTML = list.map(function(a){
+        return '<div class="addr">'
+          + '<div class="a1">' + esc(a.consignee) + ' ' + esc(a.phone)
+          + (a.isDefault === 1 ? '<span class="def">默认</span>' : '') + '</div>'
+          + '<div class="a2">' + esc([a.province, a.city, a.district, a.detailAddr].filter(Boolean).join(' ')) + '</div>'
+          + '<div class="a3">'
+          + (a.isDefault === 1 ? '' : '<a href="javascript:;" onclick="Mine.setDefault(\'' + a.id + '\')">设为默认</a>')
+          + '<a class="del" href="javascript:;" onclick="Mine.delAddr(\'' + a.id + '\')">删除</a>'
+          + '</div></div>';
+      }).join('');
+    }).catch(function(e){ $('addrs').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+  },
+  setDefault: function(id){
+    apiPost('/me/addresses/' + id + '/default').then(function(){ toast('已设为默认'); Mine.loadAddrs(); })
+      .catch(function(e){ toast(e.message); });
+  },
+  delAddr: function(id){
+    if (!confirm('确认删除该地址？')) return;
+    apiPost('/me/addresses/' + id + '/delete').then(function(){ toast('已删除'); Mine.loadAddrs(); })
+      .catch(function(e){ toast(e.message); });
+  },
+  addAddr: function(){
+    $('sheetTitle').textContent = '新增收货地址';
+    $('sheetBody').innerHTML =
+      '<div class="form">'
+      + '<label>收货人</label><input id="a-name" maxlength="20" placeholder="姓名">'
+      + '<label>手机号</label><input id="a-phone" maxlength="11" inputmode="numeric" placeholder="11 位手机号">'
+      + '<label>省 / 市 / 区</label>'
+      + '<div style="display:flex;gap:8px">'
+      + '<input id="a-prov" placeholder="省" style="flex:1">'
+      + '<input id="a-city" placeholder="市" style="flex:1">'
+      + '<input id="a-dist" placeholder="区" style="flex:1">'
+      + '</div>'
+      + '<label>详细地址</label><input id="a-detail" maxlength="120" placeholder="街道、门牌号等">'
+      + '<button class="btn" onclick="Mine.saveAddr()">保存</button>'
+      + '<div class="hint">保存后可在所有店铺下单时复用。</div>'
+      + '</div>';
+  },
+  saveAddr: function(){
+    var name = ($('a-name').value || '').trim();
+    var phone = ($('a-phone').value || '').trim();
+    var detail = ($('a-detail').value || '').trim();
+    if (!name) return toast('请填写收货人');
+    if (!/^1[3-9]\d{9}$/.test(phone)) return toast('请填写正确的手机号');
+    if (!detail) return toast('请填写详细地址');
+    apiPost('/me/addresses', {
+      consignee: name, phone: phone, detailAddr: detail,
+      province: ($('a-prov').value || '').trim(),
+      city: ($('a-city').value || '').trim(),
+      district: ($('a-dist').value || '').trim(),
+      isDefault: true
+    }).then(function(){
+      toast('已保存');
+      $('sheetTitle').textContent = '我的';
+      Mine.renderMe();
+    }).catch(function(e){ toast(e.message); });
+  }
+};
+
+function mask(p){
+  if (!p) return '';
+  var s = String(p);
+  return s.length >= 7 ? s.substring(0, 3) + '****' + s.substring(s.length - 4) : s;
+}
+function fmtTime(t){
+  if (!t) return '';
+  return String(t).replace('T', ' ').substring(0, 16);
+}
+
+Home.init();
+</script>
+</body>
+</html>

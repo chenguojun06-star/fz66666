@@ -122,6 +122,8 @@ export const paths = {
   ecommercePlatform: '/ecommerce/platform',
   shopAdmin: '/ecommerce/shop',
   shopListing: '/ecommerce/shop-listing',
+  // P0：平台级商城总览（仅平台超管可见）
+  platformShopOverview: '/ecommerce/platform-shop',
   cockpit: '/cockpit',
   cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
@@ -495,6 +497,8 @@ export const permissionCodes = {
   ecommerceCenter: 'MENU_ECOMMERCE',
   shopAdmin: 'MENU_ECOMMERCE',
   shopListing: 'MENU_ECOMMERCE',
+  // P0：平台商城总览复用电商权限码 + superAdminOnly 双重限制，无需新增 DB 权限迁移
+  platformShopOverview: 'MENU_ECOMMERCE',
   ecommercePlatform: 'MENU_ECOMMERCE',
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
@@ -613,6 +617,8 @@ export const menuConfig: MenuSection[] = [
       { label: '店铺管理', path: paths.shopAdmin, icon: React.createElement(ShopOutlined) },
       // D-768：店铺商品运营（改图 / 改售价库存 / 上下架）
       { label: '商品上架管理', path: paths.shopListing, icon: React.createElement(ShoppingCartOutlined) },
+      // P0：平台级商城总览（全站店铺/在架商品/注册用户/订单，只读；仅平台超管）
+      { label: '平台商城总览', path: paths.platformShopOverview, icon: React.createElement(AppstoreOutlined), superAdminOnly: true },
     ],
   },
   {

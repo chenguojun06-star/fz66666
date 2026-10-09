@@ -31,6 +31,9 @@
   .sf-top .shopname{color:#fff;font-size:16px;font-weight:600;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .sf-top .follow{border:none;background:rgba(255,255,255,.95);color:var(--tb-orange);font-size:12px;font-weight:600;border-radius:14px;padding:5px 14px;}
   .sf-top .follow.on{background:rgba(255,255,255,.22);color:#fff;}
+  /* P0：回平台商城的入口（本店只是平台里的一家店） */
+  .sf-top .mall{border:none;background:rgba(255,255,255,.22);color:#fff;font-size:12px;font-weight:600;
+                border-radius:14px;padding:5px 12px;text-decoration:none;white-space:nowrap;}
   .sf-search{display:flex;align-items:center;background:#fff;border-radius:18px;overflow:hidden;height:36px;}
   .sf-search .ico{padding:0 8px 0 12px;color:var(--tb-sub);font-size:14px;}
   .sf-search input{flex:1;border:none;outline:none;font-size:14px;height:100%;background:transparent;}
@@ -437,14 +440,23 @@
       + ' onload="if(this.naturalWidth<=1||this.naturalHeight<=1)this.outerHTML=' + PH_ATTR + '"'
       + ' onerror="this.outerHTML=' + PH_ATTR + '">';
   }
+  /* P0：已登录的平台消费者，下单/查单时带上账号令牌（未登录则不带，行为不变） */
+  function shopHeaders(extra) {
+    var h = extra || {};
+    try {
+      var t = localStorage.getItem('shop_consumer_token');
+      if (t) h['X-Shop-Token'] = t;
+    } catch (e) {}
+    return h;
+  }
   function get(url, ok) {
-    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    fetch(url, { headers: shopHeaders() }).then(function (r) { return r.json(); }).then(function (d) {
       if (d && d.code === 200) ok(d.data);
       else toast((d && d.message) || '加载失败');
     }).catch(function () { toast('网络异常，请稍后再试'); });
   }
   function post(url, body, ok) {
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    fetch(url, { method: 'POST', headers: shopHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) })
       .then(function (r) { return r.json(); }).then(function (d) {
         if (d && d.code === 200) ok(d.data);
         else toast((d && d.message) || '操作失败');
@@ -576,7 +588,10 @@
 
     html += '<div class="sf-top">'
       + '<div class="row1"><span class="shopname">' + esc(info.shopName || '小店') + '</span>'
-      + '<button class="follow' + (isFollowed() ? ' on' : '') + '" id="follow">' + (isFollowed() ? '已关注' : '+ 关注') + '</button></div>'
+      + '<span style="display:flex;gap:8px;align-items:center">'
+      + '<a class="mall" href="/shop/platform.html">商城</a>'
+      + '<button class="follow' + (isFollowed() ? ' on' : '') + '" id="follow">' + (isFollowed() ? '已关注' : '+ 关注') + '</button>'
+      + '</span></div>'
       + '<div class="sf-search"><span class="ico">&#128269;</span>'
       + '<input id="kw" placeholder="搜索店铺内的款式 / 货号" value="' + esc(home.kw) + '">'
       + '<button class="go" id="dosearch">搜索</button></div>'

@@ -50,6 +50,10 @@ EXEMPT_ENTITY_PATTERNS = [
     r'RoleTemplate',  # 角色模板（系统级预设，与 Role 同类）
     r'Menu',
     r'AppStore',
+    # P0 平台级电商：C 端消费者账号与收货地址簿是**平台级**数据（一人一号、跨店通用），
+    # 表里本就没有 tenant_id，并已在 TenantInterceptor.EXCLUDED_TABLES 登记为全局表。
+    # 若给它们加 tenant_id，反而会把「平台账号」退回成「每租户各一份账号」。
+    r'ShopConsumer',
 ]
 
 

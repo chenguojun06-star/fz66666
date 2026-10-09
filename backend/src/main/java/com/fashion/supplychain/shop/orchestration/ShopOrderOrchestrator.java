@@ -310,6 +310,22 @@ public class ShopOrderOrchestrator {
     public ShopOrder placeOrder(String slug, String customerName, String phone,
                                 String address, String remark,
                                 List<Map<String, Object>> items) {
+        return placeOrder(slug, customerName, phone, address, remark, items, null);
+    }
+
+    /**
+     * 店铺下单全链（P0 版：可绑定平台消费者账号）。
+     *
+     * <p>{@code consumerId} 非空时写入 {@code t_shop_order.consumer_id}，
+     * 顾客即可在平台「我的订单」跨店查看；为空时与免登录下单行为完全一致。
+     *
+     * <p>注意：事务注解在重载的两个方法上都要有 —— 6 参版本是控制器入口，
+     * 7 参版本被它内部调用时注解不生效（自调用不走代理），此时靠外层事务兜住。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ShopOrder placeOrder(String slug, String customerName, String phone,
+                                String address, String remark,
+                                List<Map<String, Object>> items, String consumerId) {
         ShopConfig config = resolveBySlug(slug);
         if (config == null) {
             throw new IllegalArgumentException("店铺不存在");
@@ -324,12 +340,13 @@ public class ShopOrderOrchestrator {
             throw new IllegalArgumentException("购物车为空");
         }
 
-        return runAsTenant(config.getTenantId(), () -> doPlaceOrder(config, customerName, phone, address, remark, items));
+        return runAsTenant(config.getTenantId(),
+                () -> doPlaceOrder(config, customerName, phone, address, remark, items, consumerId));
     }
 
     private ShopOrder doPlaceOrder(ShopConfig config, String customerName, String phone,
                                    String address, String remark,
-                                   List<Map<String, Object>> items) {
+                                   List<Map<String, Object>> items, String consumerId) {
         Long tenantId = config.getTenantId();
 
         // 1. 逐项校验：SKU 存在、款式已上架、库存充足；金额服务端计算
@@ -386,6 +403,7 @@ public class ShopOrderOrchestrator {
                 + String.format("%02d", NO_SEQ.incrementAndGet() % 100));
         order.setTenantId(tenantId);
         order.setCustomerId(customer.getId());
+        order.setConsumerId(StringUtils.hasText(consumerId) ? consumerId : null);
         order.setCustomerName(customerName);
         order.setPhone(phone);
         order.setAddress(address);

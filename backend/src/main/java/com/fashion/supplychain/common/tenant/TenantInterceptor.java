@@ -38,7 +38,11 @@ public class TenantInterceptor implements InnerInterceptor {
             "t_param_config", "t_serial_rule", "t_app_store",
             "t_tenant_permission_ceiling", "t_user_permission_override",
             "t_integration_callback_log",
-            "t_cron_job"
+            "t_cron_job",
+            // P0 平台级电商：平台 C 端账号与地址簿是**平台级**数据（无 tenant_id），
+            // 必须排除，否则在带租户上下文的线程里查询会拼出 `AND tenant_id = X`
+            // 而该列并不存在 → SQL 直接报错。
+            "t_shop_consumer", "t_shop_consumer_address"
     );
 
     /**

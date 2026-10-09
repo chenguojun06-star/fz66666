@@ -325,4 +325,56 @@ export interface ShopStyleInfoRow {
   shopListingTime?: string | null;
 }
 
+/**
+ * P0：平台级商城只读总览（仅平台超管可见）。
+ *
+ * <p>资金各租户直收、平台不抽成，故这里**只做展示**：全站店铺、在架商品、
+ * 注册用户、订单计数与最近订单，供平台方掌握全站情况。
+ */
+export interface PlatformShopCounters {
+  shopCount: number;
+  openShopCount: number;
+  listedStyleCount: number;
+  consumerCount: number;
+  orderCount: number;
+  orderAmount: number;
+}
+
+export interface PlatformShopRow {
+  tenantId: number;
+  slug: string;
+  shopName: string;
+  notice?: string | null;
+  enabled: boolean;
+  productCount: number;
+}
+
+export interface PlatformShopOrderRow {
+  orderNo: string;
+  tenantId: number;
+  customerName: string;
+  totalAmount: number;
+  itemCount: number;
+  status: string;
+  createTime: string;
+  shopName?: string | null;
+  slug?: string | null;
+}
+
+export interface PlatformShopOverview {
+  counters: PlatformShopCounters;
+  shops: PlatformShopRow[];
+  recentOrders: PlatformShopOrderRow[];
+}
+
+export const platformShopApi = {
+  /**
+   * 平台总览（仅平台超管；非超管后端返回 code=403）。
+   *
+   * 注意返回的是 Result 信封（api 客户端不因业务 code≠200 抛错），
+   * 调用方必须用 unwrapApiData 取 data，否则失败也会被当成成功。
+   */
+  overview: () => api.get<unknown>('/shop/admin/platform/overview'),
+};
+
 export default shopAdminApi;

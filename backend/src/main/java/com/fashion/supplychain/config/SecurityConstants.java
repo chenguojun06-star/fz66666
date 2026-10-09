@@ -6,6 +6,14 @@ public final class SecurityConstants {
 
     private SecurityConstants() {}
 
+    /**
+     * P0 平台级电商：C 端消费者令牌的角色名。
+     *
+     * <p>放在这里（而不是 shop 包）是为了让 {@code auth.TokenAuthFilter} 能引用它
+     * 做「拒绝消费者令牌冒充员工」的判据，同时避免 auth → shop 的反向包依赖。
+     */
+    public static final String SHOP_CONSUMER_ROLE = "shop_consumer";
+
     public static final List<String> ADMIN_ROLES = List.of(
             "ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员"
     );

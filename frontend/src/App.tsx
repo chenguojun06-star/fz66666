@@ -25,7 +25,7 @@ import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
-import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing } from './modules/ecommerce';
+import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
 
@@ -294,6 +294,7 @@ const AppRoutes: React.FC = () => {
           <Route path={`${paths.ecommercePlatform}/:platformCode`} element={<RouteErrorBoundary pageName="平台详情"><Suspense fallback={routeFallback}><PlatformDetail /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.shopAdmin} element={<RouteErrorBoundary pageName="店铺管理"><Suspense fallback={routeFallback}><ShopManage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.shopListing} element={<RouteErrorBoundary pageName="商品上架管理"><Suspense fallback={routeFallback}><ShopListing /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.platformShopOverview} element={<RouteErrorBoundary pageName="平台商城总览"><Suspense fallback={routeFallback}><PlatformShopOverview /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpit} element={<RouteErrorBoundary pageName="智能驾驶舱"><Suspense fallback={routeFallback}><CockpitPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.intelligenceCenter} element={<RouteErrorBoundary pageName="智能中心"><Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense></RouteErrorBoundary>} />

@@ -27,6 +27,9 @@ public class ShopOrder {
     /** 按手机号归并的 CRM 客户ID */
     private String customerId;
 
+    /** P0：下单的平台消费者ID（登录用户下单时写入；未登录为 null，行为与免登录一致） */
+    private String consumerId;
+
     private String customerName;
     private String phone;
     private String address;

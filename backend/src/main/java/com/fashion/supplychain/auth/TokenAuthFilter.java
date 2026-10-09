@@ -75,6 +75,19 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             }
 
             TokenSubject subject = authTokenService == null ? null : authTokenService.verifyAndParse(token);
+            /*
+             * P0 平台级电商：C 端消费者令牌（roleName=shop_consumer）与员工身份体系隔离。
+             * 消费者令牌正常只走 X-Shop-Token 请求头，本过滤器根本看不到；
+             * 这里显式拒绝是**双保险** —— 万一有人把它塞进 Authorization，
+             * 也绝不能被当成「已登录员工」放进 SecurityContext（否则任何只要求
+             * isAuthenticated() 的接口都会对 C 端顾客敞开）。
+             */
+            if (subject != null
+                    && com.fashion.supplychain.config.SecurityConstants.SHOP_CONSUMER_ROLE
+                            .equals(subject.getRoleName())) {
+                log.warn("[TokenAuthFilter] 拒绝消费者令牌冒充员工身份: userId={}", subject.getUserId());
+                subject = null;
+            }
             // 校验密码版本号：改密后旧 token 立即失效
             if (subject != null && StringUtils.hasText(subject.getUserId()) && stringRedisTemplate != null) {
                 long failTs = redisFailedSince.get();
