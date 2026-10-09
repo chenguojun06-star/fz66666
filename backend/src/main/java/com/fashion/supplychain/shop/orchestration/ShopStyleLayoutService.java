@@ -53,6 +53,9 @@ public class ShopStyleLayoutService {
         MODULE_DEFS.put("priceNote", "价格说明");
         MODULE_DEFS.put("detail", "详情介绍");
         MODULE_DEFS.put("faq", "常见问题");
+        // D-783：评价放在洗涤之前 —— 买家看评价的时机通常在「看完说明、准备下单」，
+        // 而不是滚到最底。
+        MODULE_DEFS.put("reviews", "商品评价");
         MODULE_DEFS.put("wash", "洗涤说明");
         MODULE_DEFS.put("purchase", "购买与加入购物车");
     }

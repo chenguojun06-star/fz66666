@@ -182,6 +182,40 @@
   .d-faq-item[open] summary::after{transform:translateY(-50%) rotate(90deg);}
   .d-faq-a{font-size:12.5px;color:#666;line-height:1.7;padding:0 0 12px;}
 
+  /* D-783：评价 */
+  .d-stars{display:inline-flex;gap:1px;}
+  .d-star{color:#ddd;font-size:14px;line-height:1;}
+  .d-star.on{color:#ff9500;}
+  .d-review-sum{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid #f5f5f5;margin-bottom:10px;}
+  .d-review-avg{font-size:30px;font-weight:700;color:#ff9500;line-height:1;}
+  .d-review-cnt{font-size:12px;color:#999;margin-top:4px;}
+  .d-review-item{padding:10px 0;border-bottom:1px solid #f7f7f7;}
+  .d-review-item:last-child{border-bottom:none;}
+  .d-review-head{display:flex;align-items:center;gap:8px;}
+  .d-review-name{font-size:12.5px;color:#333;font-weight:600;}
+  .d-review-time{font-size:11.5px;color:#bbb;}
+  .d-review-txt{font-size:13px;color:#555;line-height:1.7;margin-top:5px;}
+  .d-review-empty{font-size:12.5px;color:#bbb;padding:10px 0;text-align:center;}
+  .d-review-act{margin:10px 0 4px;}
+  .d-review-btn{width:100%;border:none;border-radius:20px;background:var(--tb-orange);color:#fff;font-size:14px;font-weight:600;padding:10px 0;}
+  .d-review-btn.ghost{background:#fff;color:var(--tb-orange);border:1px solid var(--tb-orange);}
+  .d-review-tip{display:block;font-size:12px;color:#999;text-align:center;padding:8px 0;}
+
+  /* 弹窗（登录/评价共用） */
+  .d-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .d-modal-card{background:#fff;border-radius:12px;padding:20px;width:100%;max-width:340px;}
+  .d-modal-title{font-size:16px;font-weight:600;margin-bottom:14px;text-align:center;}
+  .d-modal-input{width:100%;border:1px solid #e5e5e5;border-radius:6px;padding:10px;font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;}
+  .d-modal-input:focus{border-color:var(--tb-orange);}
+  textarea.d-modal-input{resize:vertical;line-height:1.6;}
+  .d-modal-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#666;margin:2px 0 14px;}
+  .d-modal-acts{display:flex;gap:10px;}
+  .d-modal-btn{flex:1;border:none;border-radius:20px;font-size:14.5px;font-weight:600;padding:10px 0;}
+  .d-modal-btn.ghost{background:#f5f5f5;color:#666;}
+  .d-modal-btn.primary{background:var(--tb-orange);color:#fff;}
+  .d-modal-switch{text-align:center;font-size:12.5px;color:#999;margin-top:12px;}
+  .d-rate{text-align:center;margin-bottom:14px;}
+
   .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
   .d-bar .mini svg{width:20px;height:20px;fill:#666;}
@@ -539,18 +573,59 @@
     } catch (e) {}
     return h;
   }
-  function get(url, ok) {
+
+  /* ══════════════ 顾客账号（D-783） ══════════════
+   * 此前页面会读 shop_consumer_token，但**从来没有写入过** ——
+   * 没有登录界面，令牌是死代码，于是「评价/我的订单」这类需要身份的
+   * 功能在顾客端根本没法用。
+   * 这里补上登录/注册与登出，令牌沿用既有存储键，
+   * 下单时 shopHeaders 会自动带上。 */
+  function consumerToken() {
+    try { return localStorage.getItem('shop_consumer_token') || ''; } catch (e) { return ''; }
+  }
+  function consumerName() {
+    try { return localStorage.getItem('shop_consumer_name') || ''; } catch (e) { return ''; }
+  }
+  function setConsumerSession(token, name) {
+    try {
+      localStorage.setItem('shop_consumer_token', token);
+      if (name) localStorage.setItem('shop_consumer_name', name);
+    } catch (e) {}
+  }
+  function clearConsumerSession() {
+    try {
+      localStorage.removeItem('shop_consumer_token');
+      localStorage.removeItem('shop_consumer_name');
+    } catch (e) {}
+  }
+  function isLoggedIn() { return !!consumerToken(); }
+  /**
+     * 读请求。
+     * @param fail 可选失败回调。传入时**不弹 toast**，由调用方自行决定怎么表现
+     *             （评价列表这类"取不到就显示占位"的地方不该弹错误打扰顾客）。
+     */
+  function get(url, ok, fail) {
     fetch(url, { headers: shopHeaders() }).then(function (r) { return r.json(); }).then(function (d) {
       if (d && d.code === 200) ok(d.data);
+      else if (fail) fail(d && d.message);
       else toast((d && d.message) || '加载失败');
-    }).catch(function () { toast('网络异常，请稍后再试'); });
+    }).catch(function () {
+      if (fail) fail('网络异常');
+      else toast('网络异常，请稍后再试');
+    });
   }
-  function post(url, body, ok) {
+
+  /** 写请求；fail 存在时不弹 toast，由调用方处理 */
+  function post(url, body, ok, fail) {
     fetch(url, { method: 'POST', headers: shopHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) })
       .then(function (r) { return r.json(); }).then(function (d) {
         if (d && d.code === 200) ok(d.data);
+        else if (fail) fail(d && d.message);
         else toast((d && d.message) || '操作失败');
-      }).catch(function () { toast('网络异常，请稍后再试'); });
+      }).catch(function () {
+        if (fail) fail('网络异常');
+        else toast('网络异常，请稍后再试');
+      });
   }
   function go(hash) { location.hash = hash; }
   function back() { if (history.length > 1) history.back(); else go('#/'); }
@@ -616,6 +691,240 @@
     var idx = document.getElementById('cidx');
     if (idx) idx.textContent = (i + 1) + '/' + total;
     return i;
+  }
+
+  /* ══════════════ 评价（D-783） ══════════════ */
+
+  /** 星级渲染（只读展示用） */
+  function starsHtml(rating) {
+    var n = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+    var h = '';
+    for (var i = 1; i <= 5; i++) {
+      h += '<span class="d-star' + (i <= n ? ' on' : '') + '">&#9733;</span>';
+    }
+    return '<span class="d-stars">' + h + '</span>';
+  }
+
+  /**
+   * 评价区块渲染。
+   *
+   * <p><b>能不能评价由服务端说话</b>：后端只允许「已发货订单里的商品」评价，
+   * 且一单一款一条不可修改。这里只负责把可评价的入口显示出来，
+   * 真正提交时仍由服务端二次校验 —— 前端校验一律只是体验，不是安全边界。
+   */
+  function reviewsBoxHtml() {
+    return '<div class="d-sec" id="reviewSec"><div class="lbl">商品评价</div>'
+      + '<div id="reviewBox"><div class="d-review-empty">加载中…</div></div></div>';
+  }
+
+  /** 拉评价列表 + 判断当前顾客能不能评价 */
+  function loadReviews(styleId, styleNo) {
+    var box = document.getElementById('reviewBox');
+    if (!box) return;
+    get('/api/shop/public/platform/styles/' + encodeURIComponent(styleId) + '/reviews?limit=20',
+      function (data) {
+        var rating = Number(data.rating || 0);
+        var count = Number(data.count || 0);
+        var records = data.records || [];
+        var h = '';
+        if (count > 0) {
+          h += '<div class="d-review-sum">'
+            + '<div class="d-review-avg">' + rating.toFixed(1) + '</div>'
+            + '<div>' + starsHtml(rating)
+            + '<div class="d-review-cnt">' + count + ' 条评价</div></div></div>';
+        }
+        // 「写评价」入口：登录后才知道能不能评价
+        h += '<div class="d-review-act" id="reviewAct"></div>';
+
+        if (!records.length) {
+          h += '<div class="d-review-empty">'
+            + (count > 0 ? '' : '还没有评价') + '</div>';
+        } else {
+          for (var i = 0; i < records.length; i++) {
+            var r = records[i];
+            var txt = r.content;
+            // 匿名评价不展示任何身份信息
+            var who = Number(r.anonymous) === 1 ? '匿名顾客' : (r.nickname || r.consumerId || '顾客');
+            h += '<div class="d-review-item">'
+              + '<div class="d-review-head">' + starsHtml(r.rating)
+              + '<span class="d-review-name">' + esc(who) + '</span>'
+              + '<span class="d-review-time">' + esc((r.createTime || '').replace('T', ' ').slice(0, 10)) + '</span>'
+              + '</div>'
+              + (txt ? '<div class="d-review-txt">' + esc(txt) + '</div>' : '')
+              + '</div>';
+          }
+        }
+        box.innerHTML = h;
+        renderReviewAction(styleId, styleNo);
+      },
+      function () {
+        box.innerHTML = '<div class="d-review-empty">评价加载失败</div>';
+      });
+  }
+
+  /**
+   * 「写评价」入口。
+   *
+   * <p>未登录 → 引导登录；已登录但没买过/未发货 → 如实说明，不给假入口；
+   * 买过且已发货 → 给按钮。
+   */
+  function renderReviewAction(styleId, styleNo) {
+    var act = document.getElementById('reviewAct');
+    if (!act) return;
+    if (!isLoggedIn()) {
+      act.innerHTML = '<button class="d-review-btn ghost" id="reviewLogin">登录后可评价</button>';
+      on('reviewLogin', openLoginModal);
+      return;
+    }
+    get('/api/shop/public/me/orders', function (orders) {
+      var hit = null;
+      for (var i = 0; i < (orders || []).length; i++) {
+        var o = orders[i];
+        if (o.status !== 'SHIPPED') continue;
+        hit = o;
+        break;
+      }
+      if (!hit) {
+        act.innerHTML = '<span class="d-review-tip">订单发货后即可评价</span>';
+        return;
+      }
+      // 打开订单明细，确认这款商品在不在、评过没
+      get('/api/shop/public/me/orders/' + encodeURIComponent(hit.orderNo), function (detail) {
+        var items = (detail && detail.items) || [];
+        var target = null;
+        for (var j = 0; j < items.length; j++) {
+          if (items[j].styleNo === styleNo) { target = items[j]; break; }
+        }
+        if (!target) {
+          act.innerHTML = '<span class="d-review-tip">该商品不在你的已发货订单中</span>';
+          return;
+        }
+        if (target.reviewed) {
+          act.innerHTML = '<span class="d-review-tip">你已评价过这款商品</span>';
+          return;
+        }
+        act.innerHTML = '<button class="d-review-btn" id="reviewWrite">写评价</button>';
+        on('reviewWrite', function () { openReviewModal(styleNo, hit.orderNo); });
+      });
+    }, function (msg) {
+      // ⚠️ 不能一律说成「登录状态已失效」：网络抖动、接口异常也会走到这里，
+      // 那样会把顾客引去反复登录却解决不了问题。如实区分。
+      act.innerHTML = '<span class="d-review-tip">'
+        + (msg === '请先登录' ? '登录状态已失效，请重新登录' : '暂时无法判断评价资格，请稍后再试')
+        + '</span>';
+    });
+  }
+
+  /** 评价弹窗：星级 + 内容 + 匿名 */
+  function openReviewModal(styleNo, orderNo) {
+    var rating = 5;
+    var mask = document.createElement('div');
+    mask.className = 'd-modal';
+    mask.innerHTML =
+      '<div class="d-modal-card">'
+      + '<div class="d-modal-title">评价这款商品</div>'
+      + '<div class="d-rate" id="rateBox">' + [1, 2, 3, 4, 5].map(function (i) {
+          return '<span class="d-star' + (i <= 5 ? ' on' : '') + '" data-n="' + i + '">&#9733;</span>';
+        }).join('') + '</div>'
+      + '<textarea id="rvText" class="d-modal-input" maxlength="500" rows="4"'
+      + ' placeholder="说说面料、做工、版型合不合身…（选填）"></textarea>'
+      + '<label class="d-modal-check"><input type="checkbox" id="rvAnon"> 匿名显示</label>'
+      + '<div class="d-modal-acts">'
+      + '<button class="d-modal-btn ghost" id="rvCancel">取消</button>'
+      + '<button class="d-modal-btn primary" id="rvSubmit">提交评价</button>'
+      + '</div></div>';
+    document.body.appendChild(mask);
+
+    function close() { if (mask.parentNode) mask.parentNode.removeChild(mask); }
+    on('rvCancel', close);
+    mask.onclick = function (e) { if (e.target === mask) close(); };
+
+    var rateBox = document.getElementById('rateBox');
+    function paintRate() {
+      Array.prototype.forEach.call(rateBox.children, function (el) {
+        if (Number(el.getAttribute('data-n')) <= rating) el.classList.add('on');
+        else el.classList.remove('on');
+      });
+    }
+    rateBox.onclick = function (e) {
+      var t = e.target;
+      if (!t || !t.getAttribute) return;
+      var n = t.getAttribute('data-n');
+      if (n) { rating = Number(n); paintRate(); }
+    };
+    paintRate();
+
+    on('rvSubmit', function () {
+      var content = document.getElementById('rvText').value;
+      var anon = document.getElementById('rvAnon').checked;
+      post('/api/shop/public/me/orders/' + encodeURIComponent(orderNo) + '/reviews', {
+        styleNo: styleNo, rating: rating, content: content, anonymous: anon
+      }, function () {
+        close();
+        toast('评价已提交，感谢您的反馈');
+        var cur = route() && document.getElementById('reviewBox') ? location.hash : location.hash;
+        var m = cur.match(/^#\/p\/(\d+)$/);
+        if (m) loadReviews(m[1], styleNo);
+      }, function (msg) {
+        toast(msg || '评价提交失败');
+      });
+    });
+  }
+
+  /* ══════════════ 登录 / 注册 ══════════════ */
+
+  function openLoginModal() {
+    var mask = document.createElement('div');
+    mask.className = 'd-modal';
+    mask.innerHTML =
+      '<div class="d-modal-card">'
+      + '<div class="d-modal-title" id="lgTitle">登录</div>'
+      + '<input class="d-modal-input" id="lgPhone" type="tel" inputmode="numeric" placeholder="手机号" maxlength="11">'
+      + '<input class="d-modal-input" id="lgPwd" type="password" placeholder="密码" maxlength="32">'
+      + '<input class="d-modal-input" id="lgNick" placeholder="昵称（注册时填）" maxlength="20">'
+      + '<div class="d-modal-acts">'
+      + '<button class="d-modal-btn ghost" id="lgCancel">取消</button>'
+      + '<button class="d-modal-btn primary" id="lgGo">登录</button>'
+      + '</div>'
+      + '<div class="d-modal-switch"><span id="lgTip">还没有账号？</span>'
+      + '<button class="lnk" id="lgToggle">立即注册</button></div>'
+      + '</div>';
+    document.body.appendChild(mask);
+    var mode = 'login';
+    function close() { if (mask.parentNode) mask.parentNode.removeChild(mask); }
+    on('lgCancel', close);
+    mask.onclick = function (e) { if (e.target === mask) close(); };
+
+    on('lgToggle', function () {
+      mode = mode === 'login' ? 'register' : 'login';
+      document.getElementById('lgTitle').textContent = mode === 'login' ? '登录' : '注册';
+      document.getElementById('lgGo').textContent = mode === 'login' ? '登录' : '注册';
+      document.getElementById('lgTip').textContent = mode === 'login' ? '还没有账号？' : '已有账号？';
+      document.getElementById('lgToggle').textContent = mode === 'login' ? '立即注册' : '去登录';
+      var nick = document.getElementById('lgNick');
+      nick.style.display = mode === 'register' ? '' : 'none';
+    });
+    document.getElementById('lgNick').style.display = 'none';
+
+    on('lgGo', function () {
+      var phone = document.getElementById('lgPhone').value.trim();
+      var pwd = document.getElementById('lgPwd').value;
+      var nick = document.getElementById('lgNick').value.trim();
+      if (!/^1\d{10}$/.test(phone)) return toast('请填写正确的手机号');
+      if (!pwd) return toast('请填写密码');
+      if (mode === 'register' && pwd.length < 6) return toast('密码至少 6 位');
+      var url = '/api/shop/public/auth/' + mode;
+      var body = { phone: phone, password: pwd, nickname: nick };
+      post(url, body, function (data) {
+        // 令牌沿用既有存储键，下单与查单会自动带上
+        setConsumerSession(data && data.token, (data && data.nickname) || nick);
+        close();
+        toast(mode === 'login' ? '登录成功' : '注册并登录成功');
+        var m = location.hash.match(/^#\/p\/(\d+)$/);
+        var so = window.__currentStyleNo;
+        if (m) renderDetail(m[1]);
+      }, function (msg) { toast(msg || '操作失败'); });
+    });
   }
 
   /* ── 购物车（localStorage） ── */
@@ -689,7 +998,7 @@
    * 不该给顾客看到空白块（CLAUDE.md 铁律 9：缺失不能伪装成有）。
    */
   var DETAIL_MODULES = ['gallery', 'price', 'title', 'promise', 'points', 'color', 'size',
-                        'quantity', 'params', 'priceNote', 'detail', 'faq', 'wash', 'purchase'];
+                        'quantity', 'params', 'priceNote', 'detail', 'faq', 'reviews', 'wash', 'purchase'];
 
   /** 按 layout 拿到启用模块的自上而下顺序；无 layout 时用默认顺序全开 */
   function detailModuleOrder(d) {
@@ -993,6 +1302,10 @@ title: function (d) {
           }
           return h + '</div></div>';
         },
+        reviews: function (d) {
+          // D-783：评价。内容异步拉（需判断登录与是否买过），这里只给容器。
+          return reviewsBoxHtml();
+        },
         params: function () {
           // D-770 修复：原先直接把 fabricParts（JSON 结构）当文本渲染，
           // 顾客在页面上看到的是 [{"part":"上装","materials":"..."}] 这类代码。
@@ -1198,6 +1511,10 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
         }]);
         go('#/checkout');
       });
+      // D-783：评价异步加载（需判断登录态与是否买过）
+      window.__currentStyleNo = d.styleNo;
+      loadReviews(styleId, d.styleNo);
+
       function paintBadges() {
         var b = document.querySelector('.d-bar .mini .badge');
         var n = cartCount();
