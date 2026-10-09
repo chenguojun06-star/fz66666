@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Input, Space, Switch, Tag, Typography } from 'antd';
+import { Input, Space, Switch, Tag, Typography } from 'antd';
 
 const { Text } = Typography;
 
@@ -14,11 +14,14 @@ interface Props {
 
 /**
  * 上架信息区（D-768）：店铺上下架开关（即时生效）+ 商品说明（随「保存」提交）。
+ *
+ * <p>D-513：本区归入抽屉的「④ 上架与商品说明」分区卡片，
+ * 原先的「商品名取自款式名称」整块 Alert 已上提为分区副标题，避免长表单被色块切碎。
  */
 const ListingInfoSection: React.FC<Props> = ({
   listed, onToggleListing, toggling, remark, setRemark,
 }) => (
-  <div className="shop-listing__section">
+  <div className="shop-edit__block">
     <div className="shop-listing__block-title">店铺状态</div>
     <Space size={10} align="center">
       <Switch
@@ -42,14 +45,6 @@ const ListingInfoSection: React.FC<Props> = ({
       maxLength={500}
       showCount
       autoSize={{ minRows: 3, maxRows: 8 }}
-    />
-
-    <Alert
-      type="info"
-      showIcon
-      className="shop-listing__alert"
-      message="商品名取自「款式名称」"
-      description="店铺里显示的商品名就是款式的款式名称，如需修改请去「款式资料」。"
     />
   </div>
 );

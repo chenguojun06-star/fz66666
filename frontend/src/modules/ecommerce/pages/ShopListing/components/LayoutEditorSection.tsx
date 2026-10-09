@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { Button, Space, Spin, Switch, Tag, Typography } from 'antd';
 import {
   ArrowDownOutlined, ArrowUpOutlined, HolderOutlined,
 } from '@ant-design/icons';
@@ -116,9 +116,9 @@ export function LayoutEditorSection({ styleId }: { styleId: number | null }) {
   };
 
   return (
-    <div className="shop-listing__layout">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Text strong>详情页布局（上到下）</Text>
+    <div className="shop-edit__block">
+      {/* D-513：标题与说明已上提到分区卡片（「③ 详情页布局」），此处只保留操作按钮 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
         <Space size={6}>
           <Button size="small" onClick={reset} disabled={loading || saving}>恢复默认</Button>
           <Button
@@ -132,14 +132,6 @@ export function LayoutEditorSection({ styleId }: { styleId: number | null }) {
           </Button>
         </Space>
       </div>
-
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 10 }}
-        message="顾客端详情页按这里的顺序从上到下展示"
-        description="勾选＝显示，关闭＝整块不显示。用 ↑↓ 调整顺序。没有资料的模块会自动跳过，不会出现空白块。"
-      />
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '12px 0' }}>

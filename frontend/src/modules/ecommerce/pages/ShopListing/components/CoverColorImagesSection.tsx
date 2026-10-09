@@ -31,7 +31,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
   };
 
   return (
-    <div className="shop-listing__section">
+    <div className="shop-edit__block">
       {/* 隐藏探针：识别 1×1 占位图（线上「连衣裙」封面就是 70 字节的 1×1，店铺里会糊成一块纯色） */}
       {probeSrc ? (
         <img
@@ -58,7 +58,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
         </div>
 
         <div className="shop-listing__colors">
-          <div className="shop-listing__block-title">每个颜色一张图（顾客选颜色时会切换）</div>
+          {/* D-513：「每个颜色一张图」的说明已上提到分区副标题，此处不再重复 */}
           {colors.length === 0 ? (
             <Text type="secondary">该款式还没有 SKU（颜色），请先在「款式资料」维护颜色尺码</Text>
           ) : (

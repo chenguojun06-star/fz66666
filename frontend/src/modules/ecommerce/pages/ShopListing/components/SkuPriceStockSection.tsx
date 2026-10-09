@@ -68,14 +68,9 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
   const dirtyCount = skus.filter((s) => s.dirty).length;
 
   return (
-    <div className="shop-listing__section">
-      <Alert
-        type="warning"
-        showIcon
-        className="shop-listing__alert"
-        message="手工改库存不会生成出入库单据"
-        description="这里的库存调整只改 SKU 可售数量，不走出入库台账（会记录一条操作日志）。正规的库存变动请走「仓库 → 入库 / 出库」。"
-      />
+    <div className="shop-edit__block">
+      {/* D-513：「手工改库存不走台账」的说明已上提到分区副标题；
+          这里只保留「异常态」提醒（有 SKU 没售价 → 顾客无法下单），异常才用 Alert 强调 */}
       {noPrice > 0 ? (
         <Alert
           type="info"
