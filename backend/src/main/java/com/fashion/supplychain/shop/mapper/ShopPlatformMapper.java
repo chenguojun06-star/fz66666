@@ -116,4 +116,60 @@ public interface ShopPlatformMapper {
             + "WHERE o.consumer_id = #{consumerId} AND o.delete_flag = 0 "
             + "ORDER BY o.create_time DESC LIMIT 100")
     List<Map<String, Object>> listOrdersByConsumer(@Param("consumerId") String consumerId);
+
+    /* ── P1：跨店购物车 ─────────────────────────────────────────────────── */
+
+    /**
+     * 购物车明细（一次查全：SKU + 款式 + 店铺），供 C 端渲染与结算前校验。
+     *
+     * <p>把「已下架 / 店铺打烊 / 库存不足」一起查出来交给调用方判定，
+     * 而不是在 SQL 里过滤掉 —— 购物车里失效的商品要**显示出来并说明原因**，
+     * 直接静默消失会让顾客以为商品被吞了。
+     */
+    @Select("SELECT ci.id AS cartItemId, ci.sku_id AS skuId, ci.tenant_id AS tenantId, "
+            + "       ci.quantity AS quantity, ci.create_time AS createTime, "
+            + "       sku.sku_code AS skuCode, sku.color AS color, sku.size AS size, "
+            + "       sku.sales_price AS salesPrice, sku.stock_quantity AS stockQuantity, "
+            + "       sku.sku_color_image AS image, sku.style_id AS styleId, "
+            + "       st.style_no AS styleNo, st.style_name AS styleName, st.cover AS cover, "
+            + "       st.shop_listed AS shopListed, "
+            + "       cfg.slug AS slug, cfg.shop_name AS shopName, cfg.enabled AS shopEnabled "
+            + "FROM t_shop_cart_item ci "
+            + "LEFT JOIN t_product_sku sku ON sku.id = ci.sku_id "
+            + "LEFT JOIN t_style_info st ON st.id = sku.style_id "
+            + "LEFT JOIN t_shop_config cfg ON cfg.tenant_id = ci.tenant_id "
+            + "WHERE ci.consumer_id = #{consumerId} "
+            + "ORDER BY ci.tenant_id ASC, ci.create_time DESC")
+    List<Map<String, Object>> listCartRows(@Param("consumerId") String consumerId);
+
+    /* ── P1：订单详情 ───────────────────────────────────────────────────── */
+
+    /**
+     * 按订单号取订单（**必须同时匹配 consumerId** 才返回）。
+     * 订单号是全局唯一键，但归属校验绝不能省 —— 否则改一个订单号就能看别人的订单。
+     */
+    @Select("SELECT o.order_no AS orderNo, o.tenant_id AS tenantId, o.customer_name AS customerName, "
+            + "       o.phone AS phone, o.address AS address, o.total_amount AS totalAmount, "
+            + "       o.goods_amount AS goodsAmount, o.shipping_fee AS shippingFee, "
+            + "       o.item_count AS itemCount, o.status AS status, o.remark AS remark, "
+            + "       o.express_company AS expressCompany, o.express_no AS expressNo, "
+            + "       o.ship_time AS shipTime, o.cancel_reason AS cancelReason, "
+            + "       o.after_sale_status AS afterSaleStatus, o.after_sale_type AS afterSaleType, "
+            + "       o.after_sale_reason AS afterSaleReason, o.after_sale_remark AS afterSaleRemark, "
+            + "       o.create_time AS createTime, "
+            + "       c.shop_name AS shopName, c.slug AS slug "
+            + "FROM t_shop_order o "
+            + "LEFT JOIN t_shop_config c ON c.tenant_id = o.tenant_id "
+            + "WHERE o.order_no = #{orderNo} AND o.consumer_id = #{consumerId} "
+            + "  AND o.delete_flag = 0 LIMIT 1")
+    Map<String, Object> findOrderForConsumer(@Param("orderNo") String orderNo,
+                                             @Param("consumerId") String consumerId);
+
+    /** 订单商品明细（按订单号；订单号全局唯一，故无需再加租户条件） */
+    @Select("SELECT sku_code AS skuCode, style_no AS styleNo, style_name AS styleName, "
+            + "       color AS color, size AS size, unit_price AS unitPrice, "
+            + "       quantity AS quantity, amount AS amount "
+            + "FROM t_shop_order_item WHERE order_id = "
+            + "  (SELECT id FROM t_shop_order WHERE order_no = #{orderNo} LIMIT 1)")
+    List<Map<String, Object>> listOrderItems(@Param("orderNo") String orderNo);
 }

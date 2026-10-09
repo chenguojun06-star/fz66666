@@ -161,6 +161,20 @@ public class ShopConsumerController {
         }
     }
 
+    /** 订单详情（P1）：订单头 + 商品明细 + 物流/售后状态 */
+    @GetMapping("/me/orders/{orderNo}")
+    public Result<?> orderDetail(@PathVariable String orderNo, HttpServletRequest request) {
+        String consumerId = tokenSupport.resolveConsumerId(request);
+        if (consumerId == null) {
+            return Result.fail(401, "请先登录");
+        }
+        try {
+            return Result.success(consumerOrchestrator.orderDetail(consumerId, orderNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
     private String str(Object v) {
         return v == null ? null : String.valueOf(v).trim();
     }

@@ -93,4 +93,43 @@ class ShopPlatformSchemaGuardTest {
                 .as("必须用 isSuperAdmin 判据（不能只判 isAuthenticated，否则租户管理员也能看全站）")
                 .contains("UserContext.isSuperAdmin()");
     }
+
+    @Test
+    @DisplayName("⑤ 跨店购物车：唯一键 + 绕过租户拦截器 + 结算按店铺分组")
+    void cartTableAndCheckout() throws Exception {
+        String sql = read("db/migration/V202710090003__create_shop_cart_item.sql");
+        assertThat(sql).as("购物车表").contains("CREATE TABLE IF NOT EXISTS t_shop_cart_item");
+        assertThat(sql)
+                .as("(consumer_id, sku_id) 唯一：重复加购必须累加而不是插两行")
+                .contains("uk_consumer_sku");
+        assertThat(sql)
+                .as("tenant_id 只作结算分组键，注释里要写清楚，免得后人误当隔离维度")
+                .contains("结算分组键");
+
+        String mapper = read("shop/mapper/ShopCartItemMapper.java");
+        assertThat(mapper)
+                .as("一辆车混多个店铺，绝不能被追加 AND tenant_id = 当前租户")
+                .contains("@InterceptorIgnore");
+
+        String checkout = read("shop/orchestration/ShopCheckoutOrchestrator.java");
+        assertThat(checkout)
+                .as("逐店独立下单：单店失败不能拖垮整批（D-513 批量操作的教训）")
+                .contains("catch (Exception e)");
+        assertThat(checkout)
+                .as("只有下单成功才清购物车行，失败的行要留给顾客重试")
+                .contains("cartOrchestrator.removeRows(cartItemIds)");
+    }
+
+    @Test
+    @DisplayName("⑥ 订单详情必须同时按订单号 + consumerId 校验归属")
+    void orderDetailMustCheckOwnership() throws Exception {
+        String mapper = read("shop/mapper/ShopPlatformMapper.java");
+        int methodIdx = mapper.indexOf("findOrderForConsumer");
+        assertThat(methodIdx).as("必须提供按消费者查订单的方法").isGreaterThan(0);
+        // 取方法签名**之前**的那段 SQL（@Select 在方法声明上方）
+        String sqlBlock = mapper.substring(Math.max(0, methodIdx - 1500), methodIdx);
+        assertThat(sqlBlock)
+                .as("订单号全局唯一，但归属校验不能省 —— 否则改订单号就能看别人的订单")
+                .contains("o.consumer_id = #{consumerId}");
+    }
 }

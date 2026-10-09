@@ -225,6 +225,26 @@ public class ShopConsumerOrchestrator {
         return platformMapper.listOrdersByConsumer(consumerId);
     }
 
+    /**
+     * 我的订单详情（P1）：订单头 + 商品明细。
+     *
+     * <p>订单号全局唯一，但**归属校验不能省** —— 查询条件里必须同时带 consumerId，
+     * 否则改一个订单号就能看别人的订单。
+     */
+    public Map<String, Object> orderDetail(String consumerId, String orderNo) {
+        requireConsumer(consumerId);
+        if (!StringUtils.hasText(orderNo)) {
+            throw new IllegalArgumentException("订单号不能为空");
+        }
+        Map<String, Object> order = platformMapper.findOrderForConsumer(orderNo, consumerId);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        Map<String, Object> data = new LinkedHashMap<>(order);
+        data.put("items", platformMapper.listOrderItems(orderNo));
+        return data;
+    }
+
     // ── 内部 ────────────────────────────────────────────────────────────────
 
     private Map<String, Object> authPayload(ShopConsumer c) {
