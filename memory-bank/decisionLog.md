@@ -3740,4 +3740,16 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **踩坑**：无（tsc/mvn 一次通过）。**遗留**：completed_quantity 与 progress 不同步（数据问题）、t_factory 缺内部车间配置产能行、qualityScore 按 activeWorkers≥5 给分共用账号时无区分度——均需拍板，本次未动。
 
+## D-774：D-772 三个遗留数据问题的数据库核实与最优解（2026-10-09）
+
+**上下文**：用户要求直接进云端数据库核实 D-772 遗留的 3 个问题并实施最优解。SSH 查询（新密码 `Fz666MySQL@2026`，`--default-character-set=utf8mb4` 防乱码）。
+
+**核实结论与决策**：
+1. **completed_quantity 与 progress 不同步 → 修代码，不回填数据**。全库 32 单在产仅 7 单 completed=0 且 progress>0；租户 2 两单（PO20260828173814 / PO20260901172615，均 80%）在 `t_product_warehousing` **0 行入库记录**、工序扫码 300/840 件 → completed=0 是真实的（口径=入库合格→包装→原值，天然滞后工序进度）。真 bug 是 `SelfHealingOrchestrator.repairProgressConsistency` 用 completed/total 反推进度、`|expected-current|>10` 双向改写，每 6 小时（DataConsistencyPatrolJob）会把未入库订单的正确进度清零 → 改为 **completed=0 跳过 + 仅 expected>currentProgress 才上调**（入库数只作进度下界）。
+2. **t_factory 缺内部车间行 → 不插行**。生产部/生产部1/生产部A组是 `t_organization_unit` DEPARTMENT 节点（owner_type=INTERNAL），非 t_factory 工厂行；两车间近 14 天活跃扫码（生产部 10-07:2000/10-09:1200 件，生产部1 10-07:840/10-09:1140 件）→ capacitySource 走 **"real" 真实扫码，优于配置值**；插行会污染外发管理/供应商列表/排产建议（SchedulingSuggestionOrchestrator.listFactories 只查 t_factory）的工厂清单。
+3. **matchScore 品质分无区分度 → 改用真实扫码合格率**。`FactoryCapacityOrchestrator.calcQualityScore` 原按 activeWorkers≥5 给 10 分，共用扫码账号恒 1 人 → 恒 5 分；而 `fillHistoricalEvaluation`（line 142，先于 calculateMatchScore line 144）已算出真实品质分 `qualityScore = 成功扫码/总扫码×100`（-1=无数据）却未被使用 → 改为 **quality≥0 时 `round(min(100,quality)/10)`（95%→10 分，80%→8 分），-1 才回退原活跃度启发式**。
+
+**验证**：mvn compile 0 错误（test-runner-mcp 不可用，P0 #23 降级原生命令）。
+**反思三问**：① 影响面=仅 SelfHealingOrchestrator.repairProgressConsistency 与 FactoryCapacityOrchestrator.calcQualityScore，均先查调用方确认（repair 仅 diagnose/repair 调用；calcQualityScore 仅 calculateMatchScore 调用且 fillHistoricalEvaluation 先执行）② 同步本地函数，无 LLM/网络调用 ③ 编译通过 + 逻辑链路核对（qualityScore 字段为原始 double 默认 -1，无 NPE）；运行时验证待部署后观察 6 小时巡检日志不再出现「进度清零」。
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md

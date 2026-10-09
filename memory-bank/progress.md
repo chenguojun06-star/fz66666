@@ -860,4 +860,12 @@
 - [x] 验证：tsc 0 错误 + mvn compile 通过
 - [ ] 待用户确认后提交；遗留拍板项见 activeContext D-772（completed_quantity 不同步 / t_factory 无配置产能行 / qualityScore 无区分度）
 
+## 2026-10-09 D-774 D-772 三个遗留数据问题核实与最优解（代码完成，未提交）
+- [x] 数据库核实：completed=0 是真实（0 行入库记录），禁止回填；生产部是 DEPARTMENT 节点走 real 扫码源；真实品质分已算出但未被用
+- [x] SelfHealingOrchestrator.repairProgressConsistency：completed=0 跳过 + 仅上调，防 6 小时巡检清零进度
+- [x] t_factory 定案不插行（插行污染外发/供应商/排产清单）
+- [x] FactoryCapacityOrchestrator.calcQualityScore 改用真实扫码合格率（-1 才回退启发式）
+- [x] 验证：mvn compile 0 错误（test-runner-mcp 不可用，P0 #23 降级）
+- [ ] 待用户确认后提交
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md

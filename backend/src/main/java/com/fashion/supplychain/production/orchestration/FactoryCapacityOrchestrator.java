@@ -273,6 +273,13 @@ public class FactoryCapacityOrchestrator {
     }
 
     private int calcQualityScore(FactoryCapacityItem item) {
+        // D-772 修复：优先用真实扫码合格率（fillHistoricalEvaluation 已在本方法之前执行，
+        // qualityScore = 近一年成功扫码数/总扫码数×100，0-100，-1=无数据）。
+        // 原逻辑按 activeWorkers 给分：内部车间共用扫码账号恒为1人 → 恒5分，无区分度。
+        double quality = item.getQualityScore();
+        if (quality >= 0) {
+            return (int) Math.round(Math.min(100, quality) / 10.0); // 合格率95%→10分，80%→8分
+        }
         if (item.getActiveWorkers() <= 0 && item.getAvgDailyOutput() <= 0) return 3;
         if (item.getActiveWorkers() >= 5) return 10;
         if (item.getActiveWorkers() >= 2) return 7;

@@ -292,10 +292,15 @@ public class SelfHealingOrchestrator {
             int total = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
             int completed = o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0;
             int currentProgress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
-            if (total > 0) {
+            // D-772 修复：completed_quantity 口径是"入库合格数"（ProductionOrderProgressRecomputeHelper
+            // 取 入库→包装→原值），天然滞后于工序进度。用它反推进度会造成两类误伤：
+            //   1) completed=0（未入库但工序已推进，如 progress=80%）→ expected=0 → 把正确进度清零
+            //   2) 工序进度超前入库（先生产后入库）→ 被打回，与扫码链路的进度重算互相打架
+            // 因此入库数只能作为进度的【下界】：仅当 expected > currentProgress 时上调，且 completed=0 跳过。
+            if (total > 0 && completed > 0) {
                 int expected = Math.min(100, (int) ((completed * 100.0) / total));
-                if (Math.abs(expected - currentProgress) > 10) {
-                    log.info("[自愈修复] 订单 {} 进度 {}% -> {}%（修复前记录）", o.getOrderNo(), currentProgress, expected);
+                if (expected > currentProgress) {
+                    log.info("[自愈修复] 订单 {} 进度 {}% -> {}%（入库数 {} 反推下界）", o.getOrderNo(), currentProgress, expected, completed);
                     o.setProductionProgress(expected);
                     productionOrderService.updateById(o);
                     fixed++;
