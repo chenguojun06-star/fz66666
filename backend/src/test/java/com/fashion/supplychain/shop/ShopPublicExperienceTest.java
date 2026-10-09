@@ -328,6 +328,31 @@ class ShopPublicExperienceTest {
     }
 
     /**
+     * D-777：承诺标签此前是<b>裸 span</b>，CSS 又只写了 {@code .d-title .tag}，
+     * 于是承诺词直接连成一句「7 天无理由退货现货速发正品保障」贴在正文里 ——
+     * 看着像拼接字符串，是「不专业」观感的主要来源之一。
+     */
+    @Test
+    @DisplayName("⑮-c 承诺必须渲染成标签，不能连成一句正文")
+    void promiseTagsMustBeStyledTags() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("承诺 span 必须带 .ptag 类，否则没有任何样式")
+                .contains("<span class=\"ptag\">");
+        assertThat(s)
+                .as(".ptag 必须有实际样式")
+                .contains(".ptag{");
+        int m = s.indexOf("function promiseTags()");
+        assertThat(m).as("应存在 promiseTags").isGreaterThan(0);
+        String body = s.substring(m, Math.min(m + 1200, s.length()));
+        // 无理由 / 现货 / 正品 / 自定义 四条都要带类
+        assertThat(body).as("无理由标签").contains("ptag\">' + rd + ' 天无理由退货");
+        assertThat(body).as("现货标签").contains("ptag\">现货速发");
+        assertThat(body).as("正品标签").contains("ptag\">正品保障");
+        assertThat(body).as("自定义承诺标签").contains("ptag\">' + esc(items[i])");
+    }
+
+    /**
      * D-777 回归：整改时我在标题区写死了「现货速发」标签，
      * 既与承诺块里的同一条重复，又把承诺写死成商家没配置过的空头承诺
      * —— 这正是 D-770 已经清除过的做法，不能再犯。

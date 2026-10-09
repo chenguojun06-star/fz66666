@@ -58,7 +58,7 @@ class ShopServicePromiseTest {
         assertThat(s).as("必须有承诺渲染函数").contains("function promiseTags");
         assertThat(s)
                 .as("无理由只在 returnDays>0 时输出，且文案必须带真实天数")
-                .contains("if (rd > 0) out += '<span>' + rd + ' 天无理由退货</span>'");
+                .contains("if (rd > 0) out += '<span class=\"ptag\">' + rd + ' 天无理由退货</span>'");
         assertThat(s)
                 .as("现货速发只在开关为 1 时输出")
                 .contains("promiseInStock");

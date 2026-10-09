@@ -124,6 +124,9 @@
   .d-title .tag{font-size:11px;color:var(--tb-orange);background:#fff3ec;border-radius:3px;padding:2px 7px;}
   .d-title .tag.free{color:#00a870;background:#eafaf3;}
   .d-title .no{font-size:12px;color:var(--tb-sub);margin-top:9px;}
+  /* 服务承诺标签：标题区与独立承诺块共用，必须成标签而不是连成一句话 */
+  .ptag{display:inline-block;font-size:11px;line-height:18px;color:var(--tb-orange);background:#fff3ec;border-radius:3px;padding:0 7px;margin:0 6px 6px 0;}
+  .d-sec .ptag{margin:0 8px 8px 0;}
 
   .d-sec{background:#fff;margin-top:8px;padding:14px;}
   .d-sec .lbl{font-size:13.5px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
@@ -456,19 +459,22 @@
     // 核实过 /shop/public/{slug}/info 返回的就是配置对象本身，没有 config 嵌套
     var c = shopInfo || {};
     var out = '';
+    // D-777：原先这些 span 没有任何 class，承诺词就那样连成一句
+    // 「7 天无理由退货现货速发正品保障」直接贴在正文里，看着像拼接字符串而不是承诺标签。
+    // 现统一走 .ptag，在标题区和独立承诺块里都是规整的标签。
     // 无理由：只认 returnDays > 0；0 视为不承诺
     var rd = Number(c.returnDays || 0);
-    if (rd > 0) out += '<span>' + rd + ' 天无理由退货</span>';
+    if (rd > 0) out += '<span class="ptag">' + rd + ' 天无理由退货</span>';
     // 现货速发
-    if (Number(c.promiseInStock || 0) === 1) out += '<span>现货速发</span>';
+    if (Number(c.promiseInStock || 0) === 1) out += '<span class="ptag">现货速发</span>';
     // 正品保障
-    if (Number(c.promiseAuthentic || 0) === 1) out += '<span>正品保障</span>';
+    if (Number(c.promiseAuthentic || 0) === 1) out += '<span class="ptag">正品保障</span>';
     // 自定义其它承诺（商家自己填的，按逗号拆开，最多显示 3 条）
     var extra = String(c.promiseExtra || '').trim();
     if (extra) {
       var items = extra.split(/[,，]/).map(function (t) { return t.trim(); })
         .filter(function (t) { return t; }).slice(0, 3);
-      for (var i = 0; i < items.length; i++) out += '<span>' + esc(items[i]) + '</span>';
+      for (var i = 0; i < items.length; i++) out += '<span class="ptag">' + esc(items[i]) + '</span>';
     }
     return out;
   }
