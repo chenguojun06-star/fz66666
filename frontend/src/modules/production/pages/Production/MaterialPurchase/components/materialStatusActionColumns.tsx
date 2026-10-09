@@ -48,8 +48,10 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
   } = params;
   return [
     {
-      // D-513 正名：本列看的是**物料库存台账**的可用库存（与左侧「剩余待领」是两个维度，
-      // 「剩余待领」= 本单到货 − 本单已领）。加「仓库」二字避免混淆。
+      // D-513：本列看的是**物料库存台账**的可用库存（仓库维度）。
+      // 原先旁边还有一列「库存余量 / 剩余待领」（本单到货 − 本单已领），
+      // 与"库存"同名却不同维度，用户误以为仓库真有这么多 → 已整列删除。
+      // 加「仓库」二字明确本列是真实库存台账。
       title: '仓库库存/领取',
       dataIndex: 'stockStatus',
       key: 'stockStatus',

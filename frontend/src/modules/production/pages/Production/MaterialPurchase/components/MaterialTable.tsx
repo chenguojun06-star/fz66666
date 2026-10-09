@@ -32,7 +32,6 @@ const MATERIAL_LIST_COLUMNS = [
   { key: 'arrivedQuantity', label: '到货数量' },
   { key: 'pendingArrivalQuantity', label: '待到数量' },
   { key: 'usedQuantity', label: '使用量' },
-  { key: 'stockRemainingQuantity', label: '剩余待领' },
   { key: 'stockStatus', label: '仓库库存/领取' },
   { key: 'unitPrice', label: '单价' },
   { key: 'reconciliationStatus', label: '对账状态' },
@@ -49,7 +48,7 @@ const MATERIAL_LIST_COLUMNS = [
 const MATERIAL_COLUMN_GROUPS = [
   { title: '订单/款式', keys: ['styleCover', 'styleNo', 'orderNo', 'factoryName', 'orderQuantity', 'purchaseNo'] },
   { title: '物料信息', keys: ['materialType', 'materialName', 'materialCode', 'color', 'specWidth', 'fabricWeight', 'fabricComposition', 'supplierName'] },
-  { title: '数量/库存', keys: ['purchaseQuantity', 'referenceKilograms', 'arrivedQuantity', 'pendingArrivalQuantity', 'usedQuantity', 'stockRemainingQuantity', 'stockStatus'] },
+  { title: '数量/库存', keys: ['purchaseQuantity', 'referenceKilograms', 'arrivedQuantity', 'pendingArrivalQuantity', 'usedQuantity', 'stockStatus'] },
   { title: '金额/对账', keys: ['unitPrice', 'reconciliationStatus', 'settlementAmount'] },
   { title: '状态/时间', keys: ['status', 'sourceType', 'createTime', 'expectedShipDate', 'receivedTime', 'actualArrivalDate', 'receiverName', 'remark'] },
 ];
