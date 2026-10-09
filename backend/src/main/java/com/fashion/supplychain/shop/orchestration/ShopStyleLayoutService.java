@@ -43,11 +43,16 @@ public class ShopStyleLayoutService {
         MODULE_DEFS.put("price", "价格与库存");
         MODULE_DEFS.put("title", "标题与货号");
         MODULE_DEFS.put("promise", "服务承诺");
+        // D-782：内容模块。顺序按「先给理由、再让人挑、最后说明与答疑」排，
+        // 对标成熟详情页信息架构：先建立价值，再促成行动。
+        MODULE_DEFS.put("points", "核心卖点");
         MODULE_DEFS.put("color", "颜色选择");
         MODULE_DEFS.put("size", "尺码选择");
         MODULE_DEFS.put("quantity", "购买数量");
         MODULE_DEFS.put("params", "商品参数");
+        MODULE_DEFS.put("priceNote", "价格说明");
         MODULE_DEFS.put("detail", "详情介绍");
+        MODULE_DEFS.put("faq", "常见问题");
         MODULE_DEFS.put("wash", "洗涤说明");
         MODULE_DEFS.put("purchase", "购买与加入购物车");
     }

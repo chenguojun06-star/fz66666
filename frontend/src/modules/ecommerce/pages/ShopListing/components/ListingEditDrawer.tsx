@@ -5,12 +5,15 @@ import {
   TagsOutlined,
   LayoutOutlined,
   ShopOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import CoverColorImagesSection from './CoverColorImagesSection';
 import SkuPriceStockSection from './SkuPriceStockSection';
 import ListingInfoSection from './ListingInfoSection';
 import LayoutEditorSection from './LayoutEditorSection';
+import ListingContentSection, { type ListingContent } from './ListingContentSection';
+import api from '@/utils/api';
 import type { EditableSku, ListingRow } from '../types';
 
 const { Text } = Typography;
@@ -116,6 +119,41 @@ const ListingEditDrawer: React.FC<Props> = ({
 
   const missingColorImages = colors.length > 0 && coloredCount < colors.length;
 
+  // D-782：详情内容（轮播图/视频/品牌/卖点/FAQ/价格说明）
+  // 打开抽屉时按款式拉一次；保存时随「保存」一起提交。
+  const [content, setContent] = React.useState<ListingContent>({
+    gallery: [], videoUrl: null, brand: null, sizeChart: null,
+    points: [], faq: [], priceNote: null,
+  });
+  const styleId = row?.id ?? null;
+  React.useEffect(() => {
+    if (!open || !styleId) return;
+    let cancelled = false;
+    api
+      .get<{ code: number; data: ListingContent }>(`/shop/admin/content/${styleId}`)
+      .then((res) => {
+        if (cancelled || res.code !== 200 || !res.data) return;
+        setContent({
+          gallery: res.data.gallery ?? [],
+          videoUrl: res.data.videoUrl ?? null,
+          brand: res.data.brand ?? null,
+          sizeChart: res.data.sizeChart ?? null,
+          points: res.data.points ?? [],
+          faq: res.data.faq ?? [],
+          priceNote: res.data.priceNote ?? null,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, styleId]);
+
+  const saveContent = React.useCallback(async () => {
+    if (!styleId) return;
+    await api.post(`/shop/admin/content/${styleId}`, content as unknown as Record<string, unknown>);
+  }, [styleId, content]);
+
   return (
     <SideDrawer
       open={open}
@@ -125,7 +163,7 @@ const ListingEditDrawer: React.FC<Props> = ({
       footer={
         <>
           <Button onClick={onClose}>关闭</Button>
-          <Button type="primary" loading={saving} onClick={onSave} disabled={loading}>
+          <Button type="primary" loading={saving} onClick={() => { void saveContent().finally(() => onSave()); }} disabled={loading}>
             保存图片、价格与库存
           </Button>
         </>
@@ -186,6 +224,15 @@ const ListingEditDrawer: React.FC<Props> = ({
 
             <Section
               index={3}
+              icon={<FileTextOutlined />}
+              title="详情内容"
+              desc="轮播图、商品视频、品牌、核心卖点、常见问题、价格说明——顾客端详情页的内容都在这里填，可留空不填。"
+            >
+              <ListingContentSection content={content} setContent={setContent} />
+            </Section>
+
+            <Section
+              index={4}
               icon={<LayoutOutlined />}
               title="详情页布局"
               desc="顾客端详情页按这里的顺序从上到下展示：勾选＝显示，用 ↑↓ 调整顺序；没有资料的模块会自动跳过。"
@@ -194,7 +241,7 @@ const ListingEditDrawer: React.FC<Props> = ({
             </Section>
 
             <Section
-              index={4}
+              index={5}
               icon={<ShopOutlined />}
               title="上架与商品说明"
               desc="上下架开关即时生效（不用点保存）；商品名取自「款式名称」，如需修改请去「款式资料」。"

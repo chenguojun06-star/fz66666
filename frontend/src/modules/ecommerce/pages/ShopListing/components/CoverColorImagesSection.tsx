@@ -189,17 +189,20 @@ const CoverColorImagesSection: React.FC<Props> = ({
         />
       ) : null}
 
-      {/* D-778：主图规范体检。阻断项与建议项分开说，因为处理方式不同 */}
-      {blockers.length > 0 ? (
+      {/* D-778-b：合规只做提示，不限制上传。
+       *  此前把「短边低于平台底线」做成红色「影响上架/展示」的阻断式提示，
+       *  运营看到的是"系统不让传"，而不是"这样传平台可能不给推荐"。
+       *  本店自己展示会裁切/留白，但绝不会因此拦住上传 —— 提示与限制必须分开。*/}
+      {blockers.length > 0 || warnings.length > 0 ? (
         <Alert
-          type="error"
+          type="info"
           showIcon
           className="shop-listing__alert"
-          message={`主图不合规（${blockers.length} 项会影响上架/展示）`}
+          message={`主图建议（${blockers.length + warnings.length} 项，不影响上传）`}
           description={
             <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {blockers.map((b, i) => (
-                <li key={`b-${i}`}>
+              {[...blockers, ...warnings].map((b, i) => (
+                <li key={`a-${i}`}>
                   <b>{b.message}</b>；{b.action}
                 </li>
               ))}
@@ -209,40 +212,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
       ) : null}
 
       {analyzing ? (
-        <Alert
-          type="info"
-          showIcon
-          className="shop-listing__alert"
-          message="正在检测主图规范…"
-        />
-      ) : null}
-
-      {!analyzing && warnings.length > 0 ? (
-        <Alert
-          type="warning"
-          showIcon
-          className="shop-listing__alert"
-          message={`主图可上架，但有 ${warnings.length} 项会影响点击率`}
-          description={
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {warnings.map((w, i) => (
-                <li key={`w-${i}`}>
-                  <b>{w.message}</b>；{w.action}
-                </li>
-              ))}
-            </ul>
-          }
-        />
-      ) : null}
-
-      {!analyzing && cover && blockers.length === 0 && warnings.length === 0 && coverMeta ? (
-        <Alert
-          type="success"
-          showIcon
-          className="shop-listing__alert"
-          message="主图符合平台规范"
-          description={`${coverMeta.width}×${coverMeta.height}、1:1、体积与格式均达标。`}
-        />
+        <Alert type="info" showIcon className="shop-listing__alert" message="正在检测主图规范…" />
       ) : null}
 
       {/* 机器判不了、但平台明确禁止的项——必须显式告知，不能默默通过 */}

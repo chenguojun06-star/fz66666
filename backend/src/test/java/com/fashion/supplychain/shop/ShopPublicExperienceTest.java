@@ -42,6 +42,22 @@ class ShopPublicExperienceTest {
         return read("static/shop/index.html");
     }
 
+    /** 读前端源码（用于守护「只提示不限制」这类跨端约定） */
+    private static String readAny(String rel) throws Exception {
+        for (String p : new String[]{
+                "src/main/java/com/fashion/supplychain/" + rel,
+                "backend/src/main/java/com/fashion/supplychain/" + rel,
+                "src/main/resources/" + rel,
+                "backend/src/main/resources/" + rel,
+                "../frontend/src/modules/ecommerce/pages/ShopListing/" + rel}) {
+            java.nio.file.Path path = java.nio.file.Path.of(p).normalize();
+            if (java.nio.file.Files.exists(path)) {
+                return java.nio.file.Files.readString(path, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        throw new AssertionError("找不到 " + rel);
+    }
+
     /* ─────────────── ① 预览破图 ─────────────── */
 
     /**
@@ -352,17 +368,113 @@ class ShopPublicExperienceTest {
         assertThat(body).as("自定义承诺标签").contains("ptag\">' + esc(items[i])");
     }
 
+/**
+ * D-782：顾客端必须真正展示商家填的内容，否则「能编辑」等于白做。
+ */
+    @Test
+    @DisplayName("㉓ 商家填的轮播图/视频/品牌/卖点/常见问题/价格说明必须真的渲染出来")
+    void merchantContentMustBeRendered() throws Exception {
+        String s = shopPage();
+        for (String r : new String[] {
+                "d.videoUrl", "d.brand", "d.points", "d.faq", "d.priceNote", "d.gallery" }) {
+            assertThat(s).as("详情页必须消费字段 " + r).contains(r);
+        }
+        assertThat(s).as("常见问题要用可折叠呈现，别铺满一屏").contains("<details");
+        assertThat(s).as("卖点要有样式").contains(".d-points");
+        assertThat(s).as("价格说明要有区块").contains("价格说明");
+        // 新模块必须进默认模块表，否则商家在布局里看不到开关
+        assertThat(s)
+                .as("新增模块要进 DETAIL_MODULES")
+                .contains("'points'")
+                .contains("'priceNote'")
+                .contains("'faq'");
+    }
+
     /**
+     * D-782 回归：商家排好的轮播图必须优先于「主图+颜色图」的自动回落，
+     * 否则编辑了轮播顺序却看不出效果。
+     */
+    @Test
+    @DisplayName("㉔ 轮播图优先于自动回落")
+    void galleryMustPreferMerchantOrder() throws Exception {
+        String s = shopPage();
+        int g = s.indexOf("gallery: function (d)");
+        assertThat(g).as("应有轮播图渲染逻辑").isGreaterThan(0);
+        String body = s.substring(g, Math.min(g + 1600, s.length()));
+        assertThat(body).as("先用手填轮播图").contains("d.gallery");
+        assertThat(body)
+                .as("没有手填时才回落到主图+颜色图")
+                .contains("else")
+                .contains("d.cover");
+        assertThat(body).as("手填要去重").contains("indexOf");
+    }
+
+    /**
+     * D-778-b：合规**只做提示**，绝不限制上传。
+     *
+     * <p>用户明确要求：「每次编辑这些内容的 就提示 是否合规 这些 只做提示 不限制上传」。
+     * 此前把短边低于平台底线做成红色「影响上架/展示」的阻断式提示，
+     * 运营看到的是"系统不让传"而不是"这样传平台可能不给推荐"。
+     */
+    @Test
+    @DisplayName("㉕ 合规只做提示，不得出现阻断式文案")
+    void complianceMustBeHintOnly() throws Exception {
+        String ts = readAny("components/CoverColorImagesSection.tsx");
+        assertThat(ts)
+                .as("不得再出现阻断式主图提示")
+                .doesNotContain("主图不合规");
+        assertThat(ts)
+                .as("不得再出现「影响上架/展示」这种限制性措辞")
+                .doesNotContain("会影响上架/展示");
+        assertThat(ts)
+                .as("必须明示不影响上传")
+                .contains("不影响上传");
+        assertThat(ts)
+                .as("提示用中性 info，不得用 error")
+                .doesNotContain("type=\"error\"");
+    }
+}
+
+/**
  * D-780：尺码表。
  *
  * <p>实测生产库 112 款里只有 4 款填了 print_size（3.6%），那 4 条还是
  * 「XS」「M」这种单个码 —— 根本不是尺码表。这功能从未被真正用过。
  * 而 SKU 里本来就躺着完整矩阵，所以改为自动生成，运营零录入。
  */
+class ShopSizeChartGuardTest {
+
+    private static String shopPage() throws Exception {
+        for (String p : new String[]{
+                "src/main/resources/static/shop/index.html",
+                "backend/src/main/resources/static/shop/index.html"}) {
+            java.nio.file.Path path = java.nio.file.Path.of(p);
+            if (java.nio.file.Files.exists(path)) {
+                return java.nio.file.Files.readString(path, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        throw new AssertionError("找不到 shop/index.html");
+    }
+
+    private static String readAny(String rel) throws Exception {
+        for (String p : new String[]{
+                "src/main/java/com/fashion/supplychain/" + rel,
+                "backend/src/main/java/com/fashion/supplychain/" + rel,
+                "src/main/resources/" + rel,
+                "backend/src/main/resources/" + rel,
+                "src/main/resources/../../../frontend/src/modules/ecommerce/pages/ShopListing/" + rel}) {
+            java.nio.file.Path path = java.nio.file.Path.of(p);
+            if (java.nio.file.Files.exists(path)) {
+                return java.nio.file.Files.readString(path, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        throw new AssertionError("找不到 " + rel);
+    }
+
     @Test
     @DisplayName("㉑ 尺码表必须能从 SKU 矩阵自动生成，且前端按矩阵表渲染")
     void sizeChartMustAutoGenerateFromSkuMatrix() throws Exception {
-        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
         assertThat(java)
                 .as("必须从 SKU 聚合出尺码表")
                 .contains("buildSizeChart");
@@ -467,7 +579,7 @@ class ShopPublicExperienceTest {
     @Test
     @DisplayName("⑱ 顾客端不得出现英文枚举")
     void mustNotShowRawEnglishEnum() throws Exception {
-        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
         assertThat(java)
                 .as("必须把英文枚举转中文再下发")
                 .contains("seasonText")
@@ -493,7 +605,7 @@ class ShopPublicExperienceTest {
     @Test
     @DisplayName("⑲ 成分明细必须结构化下发，不得把原始 JSON 透给顾客")
     void fabricPartsMustBeParsedServerSide() throws Exception {
-        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
         assertThat(java)
                 .as("必须解析成可读列表")
                 .contains("fabricPartList");
@@ -523,7 +635,7 @@ class ShopPublicExperienceTest {
     @Test
     @DisplayName("⑳ 洗涤说明要能从成分明细里的 washNote 兜底取出")
     void washNoteMustFallbackToWashInstructions() throws Exception {
-        String java = read("shop/orchestration/ShopOrderOrchestrator.java");
+        String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
         assertThat(java)
                 .as("必须读取 washNote")
                 .contains("washNote");

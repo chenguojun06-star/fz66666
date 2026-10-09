@@ -9,6 +9,7 @@ import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.shop.entity.ShopConfig;
+import com.fashion.supplychain.shop.entity.ShopListingContent;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.entity.ShopOrderItem;
 import com.fashion.supplychain.shop.mapper.ShopConfigMapper;
@@ -62,6 +63,10 @@ public class ShopOrderOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.shop.orchestration.ShopAddressService shopAddressService;
+
+    /** D-782：商品详情内容（轮播图/视频/品牌/卖点/FAQ/价格说明） */
+    @Autowired
+    private ShopListingContentOrchestrator shopListingContentOrchestrator;
 
     /** 公开接口无上下文：以「shop 身份 + 目标租户」执行既有编排器 */
     @Autowired
@@ -338,26 +343,34 @@ public class ShopOrderOrchestrator {
         // 品类/季节：库里存的是英文枚举（SUMMER / WOMAN），顾客端要中文
         putIfPresent(data, "categoryText", enumText(style.getCategory()));
         putIfPresent(data, "seasonText", enumText(style.getSeason()));
-        putIfPresent(data, "sizeChart", style.getPrintSize());
-        // D-780：尺码表缺失时**从 SKU 矩阵自动生成**，不让运营再手录一遍。
-        //
-        // 实测生产库：112 款里只有 4 款填了 print_size（3.6%），而那 4 条填的
-        // 还是「XS」「M」这种单个码，根本不是尺码表 —— 说明这个功能从未被真正用过。
-        // 但 SKU 表里本来就躺着完整的「颜色 × 尺码 × 价格 × 库存」矩阵，
-        // 直接聚合出来就是一张能用的尺码表，运营零录入。
-        //
-        // 口径：人工填了 print_size 就用人工的（那是商家自定义的量体表，
-        // 不能被自动表覆盖）；没填才用自动生成的，并标明来源让前端知道
-        // 该不该提示运营去完善。
-        if (!StringUtils.hasText(style.getPrintSize())) {
+
+        // ── 尺码表：三级优先级（D-780 + D-782） ──
+        // D-780 实测：112 款里只有 4 款填过 print_size（3.6%），且填的是
+        // 「XS」「M」这种单个码，根本不是尺码表 —— 该功能从未被真正用过。
+        // 而 SKU 表里本来就躺着完整的「颜色 × 尺码 × 价格 × 库存」矩阵，
+        // 所以没人填就自动生成，运营零录入。
+        // 优先级：详情内容里的手工量体表 > 款式 print_size > SKU 自动矩阵表。
+        ShopListingContent content = shopListingContentOrchestrator.find(config.getTenantId(), styleId);
+        String manualSizeChart = content == null ? null : content.getSizeChart();
+        if (StringUtils.hasText(manualSizeChart)) {
+            data.put("sizeChart", manualSizeChart);
+            data.put("sizeChartSource", "manual");
+        } else if (StringUtils.hasText(style.getPrintSize())) {
+            data.put("sizeChart", style.getPrintSize());
+            data.put("sizeChartSource", "style");
+        } else {
             Map<String, Object> auto = buildSizeChart(skus);
             if (auto != null) {
                 data.put("sizeChart", auto);
-                data.put("sizeChartSource", "auto");
             }
-        } else {
-            data.put("sizeChartSource", "manual");
+            data.put("sizeChartSource", "auto");
         }
+
+        // D-782：轮播图/视频/品牌/卖点/常见问题/价格说明
+        if (content != null) {
+            data.putAll(shopListingContentOrchestrator.toCustomerView(content));
+        }
+
         // 洗涤说明：优先独立字段，没有则用成分明细里带的 washNote 兜底
         if (style.getWashInstructions() != null && !style.getWashInstructions().isBlank()) {
             putIfPresent(data, "washInstructions", style.getWashInstructions());

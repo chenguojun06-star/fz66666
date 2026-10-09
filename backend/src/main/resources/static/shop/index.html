@@ -168,6 +168,20 @@
   .size-tbl td.na{color:#ddd;}
   .size-tbl td .cny{font-size:10.5px;color:#999;}
 
+  /* D-782：品牌 / 卖点 / 价格说明 / 常见问题 / 视频 */
+  .d-title .d-brand{display:inline-block;margin-top:8px;font-size:12px;color:#666;background:#f5f5f5;border-radius:3px;padding:2px 8px;}
+  .d-video{width:100%;max-height:420px;background:#000;border-radius:6px;display:block;}
+  .d-points{margin:0;padding-left:18px;}
+  .d-points li{font-size:13px;color:#444;line-height:1.9;position:relative;}
+  .d-points li::marker{color:var(--tb-orange);}
+  .d-faq{border-top:1px solid #f5f5f5;}
+  .d-faq-item{border-bottom:1px solid #f5f5f5;}
+  .d-faq-item summary{list-style:none;cursor:pointer;font-size:13px;color:#333;padding:11px 0;position:relative;padding-right:20px;}
+  .d-faq-item summary::-webkit-details-marker{display:none;}
+  .d-faq-item summary::after{content:'›';position:absolute;right:4px;top:50%;transform:translateY(-50%);color:#bbb;font-size:15px;}
+  .d-faq-item[open] summary::after{transform:translateY(-50%) rotate(90deg);}
+  .d-faq-a{font-size:12.5px;color:#666;line-height:1.7;padding:0 0 12px;}
+
   .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
   .d-bar .mini svg{width:20px;height:20px;fill:#666;}
@@ -674,8 +688,8 @@
    * 每个模块渲染为空字符串时自动跳过 —— 商家开了但没填资料，
    * 不该给顾客看到空白块（CLAUDE.md 铁律 9：缺失不能伪装成有）。
    */
-  var DETAIL_MODULES = ['gallery', 'price', 'title', 'promise', 'color', 'size',
-                        'quantity', 'params', 'detail', 'wash', 'purchase'];
+  var DETAIL_MODULES = ['gallery', 'price', 'title', 'promise', 'points', 'color', 'size',
+                        'quantity', 'params', 'priceNote', 'detail', 'faq', 'wash', 'purchase'];
 
   /** 按 layout 拿到启用模块的自上而下顺序；无 layout 时用默认顺序全开 */
   function detailModuleOrder(d) {
@@ -886,17 +900,26 @@
       /** 各模块渲染函数：返回空串表示「本模块无内容」，自动跳过，
        *  避免商家开了模块却没填资料时给顾客看到空白块。 */
       var DETAIL_RENDERERS = {
-        gallery: function (d) {
-          // D-777：主图 + 各颜色图（库里已有 135 张颜色图，此前只显示第一张）
+gallery: function (d) {
+          // D-782：商家排好的轮播图优先；没有才回落「主图 + 各颜色图」
+          // （库里已有 135 张颜色图，此前只显示第一张）。
           var imgs = [];
-          if (d.cover) imgs.push(d.cover);
-          var ci = d.colorImages || {};
-          for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
-          if (!imgs.length) {
-            // 没图时也要给出返回入口，否则又会把后续绑定全打断
-            return carouselHtml([], true);
+          if (d.gallery && d.gallery.length) {
+            for (var g = 0; g < d.gallery.length; g++) {
+              if (d.gallery[g] && imgs.indexOf(d.gallery[g]) < 0) imgs.push(d.gallery[g]);
+            }
+          } else {
+            if (d.cover) imgs.push(d.cover);
+            var ci = d.colorImages || {};
+            for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
           }
-          return carouselHtml(imgs, true);
+          var h = carouselHtml(imgs, true);
+          // D-782：商品视频紧跟图片区
+          if (d.videoUrl) {
+            h += '<div class="d-sec"><div class="lbl">商品视频</div>'
+              + '<video class="d-video" src="' + esc(d.videoUrl) + '" controls preload="metadata" playsinline></video></div>';
+          }
+          return h;
         },
         price: function (d) {
           // D-777：承诺从价格区移除（它属于标题区），这里只留价格/库存/配送
@@ -916,8 +939,11 @@ title: function (d) {
           // 且会与承诺块里的同一条重复显示。
           var tags = '<span class="tag free">' + esc(shipTag()) + '</span>';
           if (!promiseStandalone) tags += promiseTags();
+          // D-782：品牌放在标题下方
+          var brand = d.brand
+            ? '<div class="d-brand">' + esc(d.brand) + '</div>' : '';
           return '<div class="d-title"><h2>' + esc(d.styleName || '') + '</h2>'
-            + '<div class="tags">' + tags + '</div>'
+            + '<div class="tags">' + tags + '</div>' + brand
             + '<div class="no">货号 ' + esc(d.styleNo || '') + '</div></div>';
         },
         promise: function (d) {
@@ -942,6 +968,30 @@ title: function (d) {
           return '<div class="d-sec"><div class="lbl" style="justify-content:space-between">数量'
             + '<span class="stepper"><button id="qm">&#8722;</button><span id="qv">1</span><button id="qp">&#65291;</button></span>'
             + '</div></div>';
+        },
+        points: function (d) {
+          // D-782：核心卖点。放在价格/标题之后、选择之前 —— 先给理由再让人挑
+          if (!d.points || !d.points.length) return '';
+          var h = '<div class="d-sec"><div class="lbl">核心卖点</div><ul class="d-points">';
+          for (var i = 0; i < d.points.length; i++) {
+            h += '<li>' + esc(d.points[i]) + '</li>';
+          }
+          return h + '</ul></div>';
+        },
+        priceNote: function (d) {
+          if (!d.priceNote) return '';
+          return '<div class="d-sec"><div class="lbl">价格说明</div>'
+            + '<div class="d-desc">' + esc(d.priceNote) + '</div></div>';
+        },
+        faq: function (d) {
+          // D-782：常见问题（支付宝规范要求详情页含常见问题描述）
+          if (!d.faq || !d.faq.length) return '';
+          var h = '<div class="d-sec"><div class="lbl">常见问题</div><div class="d-faq">';
+          for (var i = 0; i < d.faq.length; i++) {
+            h += '<details class="d-faq-item"><summary>' + esc(d.faq[i].q) + '</summary>'
+              + '<div class="d-faq-a">' + esc(d.faq[i].a) + '</div></details>';
+          }
+          return h + '</div></div>';
         },
         params: function () {
           // D-770 修复：原先直接把 fabricParts（JSON 结构）当文本渲染，

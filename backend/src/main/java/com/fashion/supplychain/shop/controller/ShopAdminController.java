@@ -2,6 +2,7 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.orchestration.ShopAdminOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopListingContentOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopStyleLayoutService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -19,14 +20,18 @@ import java.util.Map;
 @RequestMapping("/api/shop/admin")
 public class ShopAdminController {
 
-    private final ShopStyleLayoutService shopStyleLayoutService;
-
     private final ShopAdminOrchestrator shopAdminOrchestrator;
 
+    private final ShopStyleLayoutService shopStyleLayoutService;
+
+    private final ShopListingContentOrchestrator shopListingContentOrchestrator;
+
     public ShopAdminController(ShopAdminOrchestrator shopAdminOrchestrator,
-                                ShopStyleLayoutService shopStyleLayoutService) {
+                                ShopStyleLayoutService shopStyleLayoutService,
+                                ShopListingContentOrchestrator shopListingContentOrchestrator) {
         this.shopAdminOrchestrator = shopAdminOrchestrator;
         this.shopStyleLayoutService = shopStyleLayoutService;
+        this.shopListingContentOrchestrator = shopListingContentOrchestrator;
     }
 
     /** 我的店铺配置（无则建，slug 默认 t{tenantId}，默认打烊） */
@@ -241,6 +246,22 @@ public class ShopAdminController {
         } catch (IllegalArgumentException e) {
             return Result.fail(400, e.getMessage());
         }
+    }
+
+    /** D-782：读取某款式的详情内容（轮播图/视频/品牌/尺码表/卖点/FAQ/价格说明） */
+    @GetMapping("/content/{styleId}")
+    public Result<?> getContent(@PathVariable Long styleId) {
+        return Result.success(shopListingContentOrchestrator
+                .loadForEdit(com.fashion.supplychain.common.UserContext.tenantId(), styleId));
+    }
+
+    /** D-782：保存详情内容（整份覆盖写） */
+    @PostMapping("/content/{styleId}")
+    public Result<?> saveContent(@PathVariable Long styleId,
+                                 @RequestBody Map<String, Object> body) {
+        boolean ok = shopListingContentOrchestrator.save(
+                com.fashion.supplychain.common.UserContext.tenantId(), styleId, body);
+        return Result.success(Map.of("saved", ok));
     }
 
     /** D-770：可选模块定义与哪些不可隐藏（管理端渲染用） */

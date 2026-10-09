@@ -132,7 +132,10 @@ class ShopStyleLayoutTest {
                 .contains("out = DETAIL_MODULES.slice()");
         assertThat(s)
                 .as("默认顺序与后端保持一致")
-                .contains("'gallery', 'price', 'title', 'promise', 'color', 'size'");
+                .contains("'gallery', 'price', 'title', 'promise', 'points', 'color', 'size'");
+        // D-782：新增内容模块必须也在默认顺序里，否则商家看不到开关
+        assertThat(s).as("价格说明进默认模块").contains("'priceNote'");
+        assertThat(s).as("常见问题进默认模块").contains("'faq'");
     }
 
     @Test
@@ -146,11 +149,16 @@ class ShopStyleLayoutTest {
         // D-777 行为变更：原来「无图就整个模块跳过」，但那会让 #bk 返回按钮不存在，
         // 进而打断后面所有事件绑定（线上 64% 的上架款式加购/购买全失效）。
         // 现在无论有无图片都必须渲染返回入口，只是没有 cell。
+        // D-782：轮播图来源改为「商家手填优先，无手填才回落到主图+颜色图」，
+        // 无论走哪条分支，返回入口都必须渲染（缺了会把后续事件绑定全打断）。
         assertThat(s)
-                .as("无图时仍要给出返回入口，不能让后续事件绑定被打断")
-                .contains("carouselHtml([], true)");
+                .as("必须优先用手填轮播图")
+                .contains("d.gallery");
         assertThat(s)
-                .as("有图时同样带返回入口")
+                .as("没有手填时才回落到主图+颜色图")
+                .contains("d.colorImages");
+        assertThat(s)
+                .as("返回入口恒定渲染")
                 .contains("carouselHtml(imgs, true)");
     }
 
