@@ -13,6 +13,7 @@ import {
 import { useReceiveModal } from './useReceiveModal';
 import { useReturnConfirmModal } from './useReturnConfirmModal';
 import { useInboundModal } from './useInboundModal';
+import { getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import {
   getOperatorName,
   buildBatchModalContent,
@@ -137,7 +138,7 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
   const handleBatchReturnConfirm = async () => {
     const returnable = filterReturnablePurchases(purchaseList);
     if (!returnable.length) {
-      message.info('没有可回料确认的物料');
+      message.info(getBatchActionDisabledReason(purchaseList, 'batchReturn') || '没有可回料确认的物料');
       return;
     }
     const confirmerName = getOperatorName(user);
@@ -225,7 +226,7 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
   const handleConfirmComplete = async () => {
     const targets = filterAwaitingConfirmPurchases(purchaseList);
     if (!targets.length) {
-      message.info('没有待确认完成的采购项目');
+      message.info(getBatchActionDisabledReason(purchaseList, 'confirmComplete') || '没有待确认完成的采购项目');
       return;
     }
     try {

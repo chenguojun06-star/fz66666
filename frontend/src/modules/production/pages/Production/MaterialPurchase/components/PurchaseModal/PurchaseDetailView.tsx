@@ -3,7 +3,7 @@ import { Alert, Button, Card, Tag } from 'antd';
 import { RollbackOutlined, ExclamationCircleOutlined, FileImageOutlined } from '@ant-design/icons';
 import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
-import { PurchaseActionBar, PurchaseEditActions } from '@/components/common/purchase/PurchaseActionBar';
+import { PurchaseActionBar, PurchaseEditActions, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, getOrderQtyTotal } from '../../utils';
@@ -98,23 +98,18 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.arrivalForm, data.setArrivalTarget]);
 
-  const hasPendingForReceiveAll = detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
-  const hasReceiveStatusForBatch = detailPurchases.some((p) => {
-    const status = normalizeStatus(p.status);
-    return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
-      || status === MATERIAL_PURCHASE_STATUS.PARTIAL
-      || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
-      && Number(p?.returnConfirmed || 0) !== 1;
-  });
   const hasReceiveStatusForReturn = detailPurchases.some((p) => {
     const status = normalizeStatus(p.status);
     return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
       || status === MATERIAL_PURCHASE_STATUS.PARTIAL
       || status === MATERIAL_PURCHASE_STATUS.COMPLETED);
   });
-  // D-333：批量"确认回料完成"与样衣侧（MaterialPurchaseDetail）同口径——存在待确认行即可用
-  const hasAwaitingConfirm = detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
   const hasReturnConfirmed = detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1);
+  // D-664b：批量按钮禁用原因统一动态生成（全入口共用 getBatchActionDisabledReason），
+  // 禁用时显示真实原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不再写死误导文案
+  const receiveReason = getBatchActionDisabledReason(detailPurchases, 'receive');
+  const returnReason = getBatchActionDisabledReason(detailPurchases, 'batchReturn');
+  const confirmCompleteReason = getBatchActionDisabledReason(detailPurchases, 'confirmComplete');
 
   // D-586：库存补货/手动来源的采购行没有订单与款号，详情按订单/款号聚合必然是空集，
   // 之前误报「尚未创建面辅料信息（0项）」让用户以为单子坏了。改为直接展示该行自身。
@@ -185,20 +180,20 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             <PurchaseActionBar
               receive={{
                 // D-360x：部分行已回料确认不再整体禁用——只要还有待领取行就可用（行级各自校验）
-                disabled: !hasPendingForReceiveAll || !data.canProcure,
-                title: !hasPendingForReceiveAll ? '无可领取项' : undefined,
+                disabled: !!receiveReason || !data.canProcure,
+                title: receiveReason || (!data.canProcure ? '物料信息不全（缺编码/名称/单位）' : undefined),
                 onClick: onReceiveAll,
               }}
               batchReturn={{
-                disabled: !hasReceiveStatusForBatch,
+                disabled: !!returnReason,
                 // D-664：禁用原因显示在菜单项里
-                title: hasReceiveStatusForBatch ? undefined : '仅已领取/部分到货的物料可回料确认',
+                title: returnReason,
                 onClick: onBatchReturn,
               }}
               confirmComplete={{
-                disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                disabled: confirmCompleteSubmitting || !!confirmCompleteReason,
                 loading: confirmCompleteSubmitting,
-                title: hasAwaitingConfirm ? undefined : '没有待确认完成的物料',
+                title: confirmCompleteReason,
                 onClick: () => onConfirmComplete?.(),
               }}
               edit={{

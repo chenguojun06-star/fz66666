@@ -2,8 +2,7 @@ import React from 'react';
 import { Button, Dropdown, Space } from 'antd';
 import type { MenuProps } from 'antd';
 import { ShoppingCartOutlined, DownOutlined } from '@ant-design/icons';
-import { PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { PURCHASE_ACTION_LABELS, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 
 interface SelectedRowsBarProps {
@@ -14,8 +13,6 @@ interface SelectedRowsBarProps {
   onBatchReturn?: (records: MaterialPurchaseType[]) => void;
   onBatchComplete?: (records: MaterialPurchaseType[]) => void;
 }
-
-const normalize = (s?: string) => String(s || '').trim().toLowerCase();
 
 /**
  * D-664：禁用菜单项的不可用原因渲染进标签（antd 禁用项悬停 tooltip 不生效）。
@@ -43,31 +40,31 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
 }) => {
   if (selectedRows.length === 0) return null;
 
-  // 禁用口径与采购节点弹窗（InlinePurchasePanel）一致：
-  //   领取 = 有待领取(pending)行；回料 = D-368 业务事实（非取消、未回料确认、到货数量>0）；完成 = 有 awaiting_confirm 行
-  const receiveDisabled = !selectedRows.some((r) => String(r.id || '').trim() && normalize(r.status) === MATERIAL_PURCHASE_STATUS.PENDING);
-  const returnDisabled = !selectedRows.some((r) =>
-    normalize(r.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
-    && Number(r.returnConfirmed || 0) !== 1
-    && Number(r.arrivedQuantity || 0) > 0);
-  const completeDisabled = !selectedRows.some((r) => String(r.id || '').trim() && normalize(r.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+  // D-664b：禁用口径与原因全入口统一（getBatchActionDisabledReason，D-368 业务事实），
+  // 禁用时按真实状态动态生成原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不写死误导文案
+  const receiveReason = getBatchActionDisabledReason(selectedRows, 'receive');
+  const returnReason = getBatchActionDisabledReason(selectedRows, 'batchReturn');
+  const completeReason = getBatchActionDisabledReason(selectedRows, 'confirmComplete');
+  const receiveDisabled = !!receiveReason;
+  const returnDisabled = !!returnReason;
+  const completeDisabled = !!completeReason;
 
   const batchMenuItems: MenuProps['items'] = [
     {
       key: 'receive',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receiveDisabled, '没有待领取的物料'),
+      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receiveDisabled, receiveReason),
       disabled: receiveDisabled,
       onClick: () => onBatchReceive?.(selectedRows),
     },
     {
       key: 'batch-return',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReturn, returnDisabled, '需先登记到货（到货数量＞0）'),
+      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReturn, returnDisabled, returnReason),
       disabled: returnDisabled,
       onClick: () => onBatchReturn?.(selectedRows),
     },
     {
       key: 'confirm-complete',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.confirmComplete, completeDisabled, '没有待确认完成的物料'),
+      label: withDisabledReason(PURCHASE_ACTION_LABELS.confirmComplete, completeDisabled, completeReason),
       disabled: completeDisabled,
       onClick: () => onBatchComplete?.(selectedRows),
     },
@@ -93,7 +90,7 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
             type="primary"
             size="small"
             disabled={receiveDisabled}
-            title={receiveDisabled ? '没有待领取的物料' : undefined}
+            title={receiveReason}
             onClick={() => onBatchReceive?.(selectedRows)}
           >
             {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />

@@ -5,6 +5,7 @@ import type { MessageInstance } from 'antd/es/message/interface';
 import type { HookAPI as ModalHookAPI } from 'antd/es/modal/useModal';
 import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import { normalizeStatus, isConfirmCompleteAvailable } from '../InlinePurchasePanel.helpers';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialPurchase } from '@/types/production';
@@ -99,13 +100,13 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
   }, [message, loadData]);
 
   const handleBatchReturn = useCallback(async () => {
-    const returnable = purchases.filter(p => {
-      const s = normalizeStatus(p.status);
-      return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
-        && Number(p?.returnConfirmed || 0) !== 1;
-    });
+    // D-664b：与按钮禁用判定同源（D-368 业务事实：非取消、未回料确认、已到货）
+    const returnable = purchases.filter(p =>
+      normalizeStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
+      && Number(p?.returnConfirmed || 0) !== 1
+      && Number(p?.arrivedQuantity || 0) > 0);
     if (returnable.length === 0) {
-      message.info('没有可回料确认的物料');
+      message.info(getBatchActionDisabledReason(purchases, 'batchReturn') || '没有可回料确认的物料');
       return;
     }
     const confirmerId = String(user?.id || '').trim();
@@ -204,7 +205,7 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
   const handleConfirmComplete = useCallback(() => {
     const awaiting = purchases.filter(p => isConfirmCompleteAvailable(p));
     if (awaiting.length === 0) {
-      message.info('没有待确认完成的物料');
+      message.info(getBatchActionDisabledReason(purchases, 'confirmComplete') || '没有待确认完成的物料');
       return;
     }
     setConfirmCompleteModalVisible(true);

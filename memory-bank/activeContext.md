@@ -2,10 +2,42 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-07（✅ D-771 商品上架管理专用页：改图（主图+每色一图）/ 改售价库存 / 上下架；已上线 1b3d8d6）
+> 最后更新：2026-10-09（✅ D-773 采购批量按钮禁用原因全入口动态化：四入口统一 getBatchActionDisabledReason；tsc/ESLint 全绿，未提交）
+> 上一版：2026-10-09（✅ D-772 下单页工厂预测/推荐数据口径五项修复：错配+在手量+产能口径+置信度+人数展示；tsc/mvn 全绿，未提交）
+> 上一版：2026-10-07（✅ D-771 商品上架管理专用页：改图（主图+每色一图）/ 改售价库存 / 上下架；已上线 1b3d8d6）
 > 上一版：2026-10-07（✅ D-766/D-767 店铺界面返工：桌面端巨幅修复 + 上架入口可懂 + 1×1 封面兜底；均已上线）
 > 再上一版：2026-10-07（✅ D-765 店铺界面按淘宝风格重做（门面 H5 + 管理页）；D-764 修线上 500/404）
 > 更早：2026-10-06（✅ D-755 小云直查被上下文劫持 + D-756 物料仓库「面料属性」补齐落地）
+
+## ✅ D-773 采购批量按钮禁用原因全入口动态化（2026-10-09，代码完成未提交）
+
+**用户报告**：采购已全部到货+已回料确认，「回料确认/确认完成」批量按钮置灰却显示「需先登记到货（到货数量＞0）」，文案张冠李戴误导用户；要求全部动态化、"全部完成"场景不得误导。
+
+**根因**：四个采购入口的禁用 `title` 全是静态字符串，不区分真实原因；且 PurchaseDetailView / SelectedRowsBar / usePurchaseConfirmCompleteActions 仍用状态白名单（AWAITING_CONFIRM / RECEIVED·PARTIAL·COMPLETED），与 D-368 业务事实口径不一致。
+
+**修复（9 文件）**：
+- `PurchaseActionBar.tsx` 新增共享工具（D-664b）：`getBatchActionDisabledReason(rows, action, isReceiveRowComplete?)` + `isBatchReceiveableRow` / `isBatchReturnableRow` / `isConfirmCompleteRow`；判定顺序=先取消→再已全部完成/已全部回料→最后才是未到货，保证「已全部到货完成，无需重复确认」「已全部回料确认，无需重复」「需先登记到货」「采购任务已取消」「待领取物料信息不全」按真实状态输出
+- 四入口接入动态 reason（disabled 直接由 reason 派生）：MaterialPurchaseDetail / InlinePurchasePanel / PurchaseDetailView / SelectedRowsBar
+- 口径统一 D-368：usePurchaseConfirmCompleteActions（confirmCompleteTargets/confirmCompleteFrom）、usePurchaseReturnConfirmActions.handleBatchReturn、usePurchaseReturnActions.handleBatchReturn 的状态白名单全部改业务事实判定
+- 点击时 message 提示同步动态化（MaterialPurchase/index、usePurchaseDetailActions、两 hooks），删除硬编码「（需先登记到货）」
+
+**验证**：`npx tsc --noEmit` 0 错误；改动 10 文件 ESLint 无告警（test-runner-mcp / anti-pattern-mcp 本会话不可用，按 P0 #23 降级用原生命令并告知用户）。
+
+## ✅ D-772 下单页工厂预测/推荐数据口径五项修复（2026-10-09，代码完成未提交）
+
+**用户报告**：选中「生产部1」（4单在产）但抽屉显示「在产订单明细 1 单」400件、日产1600、推荐63分，全部对不上。
+**数据库核实**（SSH 云端 MySQL 只读查询）：截图所有数字实为「生产部」的数据——前端工厂名双向子串模糊匹配 `find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName))` 让「生产部1」先命中「生产部」。引入于 2026-04-26 提交 `1abe9bf84`（产能统计卡），`dbbbda837`（7-22 大拆分）原样搬运。
+
+**五项修复（A~E）**：
+- **A 错配**：新建 `frontend/src/utils/factoryMatch.ts` `matchFactoryByName`（精确优先→最长子串命中），替换 useOrderPageComputed / useCuttingCreateTask / useAnomalyDetection 三处
+- **D 在手量口径**：新建 `intelligence/helper/OrderWorkloadHelper`（isCompletedPendingClosure=progress≥100；remainingQuantity 按 progress 排算）。FactoryVelocityCalculator.computeFactoryPendingQuantity 改 TERMINAL_STATUSES + 排除已完成待关单 + Σ剩余量（原 Σorder_quantity 把 progress=100% 未关单算进在手，导致"逾期27天建议转单"误报）；CapacityGapOrchestrator 同步；FactoryActiveOrderDTO 加 completedPendingClosure，前端抽屉显示「已完成待关单」而非逾期高危
+- **B 产能口径统一**：废弃 EWMA×趋势×季节（1737.1），三处统一为 总扫码÷活跃天数：FactoryVelocityCalculator 新增 `computeVelocitySample` record(velocity, activeDays, windowDays)；CapacityGapOrchestrator 原 ÷30自然日（106.7）也改 ÷活跃天数
+- **C 置信度**：原 `min(90,40+velocity)` 恒90% → 按活跃天数封顶（≥10天90 / ≥5天75 / 否则55）；PreOrderDeliveryPredictionResponse 加 velocityActiveDays，前端抽屉 <60 时显示「近14天仅X天有生产记录，样本不足」
+- **E 人数展示**：activeWorkers 实为 distinct operator_id（共用扫码账号恒1），3处「生产人数 X 人」改「活跃扫码账号 X 个」+ 说明（OrderFactorySelector / FactoryCapacityCard / OverdueFactoryCardWidget）
+
+**已知遗留（未改，需拍板）**：① completed_quantity 与 production_progress 不同步（progress=80% 但 completed=0）属数据问题 ② t_factory 无生产部/生产部1 配置产能行（capacitySource 走 scan 兜底）③ matchScore 中 qualityScore 按 activeWorkers≥5 给分，共用账号时恒 5 分无区分度 ④ FactoryCapacityOrchestrator 的日均产量口径（总扫码÷活跃天数）与 B 一致但窗口是"近30天有订单的扫码"，边界差异保留
+
+**验证**：tsc 0 错误；mvn compile 通过（test-runner-mcp 本会话不可用，按 P0 #23 降级用原生命令）。相关类无既有测试引用。
 
 ## ✅ D-771 商品上架管理（店铺商品运营专用页）（2026-10-07，已上线 1b3d8d6）
 

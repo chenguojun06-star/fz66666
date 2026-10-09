@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Dropdown, Space } from 'antd';
 import type { MenuProps } from 'antd';
 import { DownOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 
 /**
  * 物料采购统一操作条（D-360 全量统一）
@@ -106,6 +107,81 @@ const withDisabledReason = (label: string, state?: PurchaseActionButtonState): R
   }
   return label;
 };
+
+// ===================== D-664b：批量动作禁用原因（全入口唯一判定 + 动态文案） =====================
+
+export type BatchActionKey = 'receive' | 'batchReturn' | 'confirmComplete';
+
+export interface BatchActionRow {
+  id?: string | number;
+  status?: string;
+  returnConfirmed?: number | boolean | null;
+  arrivedQuantity?: number | null;
+}
+
+const normStatus = (s?: string) => String(s || '').trim().toLowerCase();
+
+/** 可「批量领取」= 存在待采购(pending)且本体信息完整的行 */
+export const isBatchReceiveableRow = (
+  p: BatchActionRow,
+  isRowComplete?: (p: any) => boolean,
+): boolean =>
+  normStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING
+  && String(p.id ?? '').trim() !== ''
+  && (isRowComplete ? isRowComplete(p) : true);
+
+/** D-368 可「回料确认」= 业务事实：非取消、未回料确认、已到货（不依赖状态白名单） */
+export const isBatchReturnableRow = (p: BatchActionRow): boolean =>
+  normStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
+  && Number(p.returnConfirmed || 0) !== 1
+  && Number(p.arrivedQuantity || 0) > 0;
+
+/** D-368 可「确认完成」= 业务事实：非取消、未完成、已到货（不依赖状态白名单） */
+export const isConfirmCompleteRow = (p: BatchActionRow): boolean => {
+  const s = normStatus(p.status);
+  return s !== MATERIAL_PURCHASE_STATUS.COMPLETED
+    && s !== MATERIAL_PURCHASE_STATUS.CANCELLED
+    && Number(p.arrivedQuantity || 0) > 0;
+};
+
+/**
+ * 批量按钮禁用原因（动态生成，全入口共用）。
+ * 可用 → 返回 undefined；禁用 → 返回真实原因。
+ * 判定顺序：先取消 → 再已完成/已回料确认 → 最后才是未到货，
+ * 保证「已全部完成」绝不会被误报成「需先登记到货」（D-664b）。
+ *
+ * @param rows 参与判定的行（各入口传自己的数据源：purchaseList / detailPurchases / selectedRows）
+ * @param action receive | batchReturn | confirmComplete
+ * @param isReceiveRowComplete 领取动作的行完整性校验（缺编码/名称/单位的行不可领取）
+ */
+export const getBatchActionDisabledReason = (
+  rows: BatchActionRow[],
+  action: BatchActionKey,
+  isReceiveRowComplete?: (p: any) => boolean,
+): string | undefined => {
+  if (!rows.length) return '暂无采购记录';
+  const active = rows.filter((p) => normStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED);
+  if (action === 'receive') {
+    if (rows.some((p) => isBatchReceiveableRow(p, isReceiveRowComplete))) return undefined;
+    if (!active.length) return '采购任务已取消';
+    if (isReceiveRowComplete && rows.some((p) => isBatchReceiveableRow(p))) {
+      return '待领取物料信息不全（缺编码/名称/单位）';
+    }
+    return '没有待领取的物料';
+  }
+  if (!active.length) return '采购任务已取消';
+  if (action === 'batchReturn') {
+    if (rows.some(isBatchReturnableRow)) return undefined;
+    if (active.every((p) => Number(p.returnConfirmed || 0) === 1)) return '已全部回料确认，无需重复';
+    return '需先登记到货（到货数量＞0）';
+  }
+  if (rows.some(isConfirmCompleteRow)) return undefined;
+  if (active.every((p) => normStatus(p.status) === MATERIAL_PURCHASE_STATUS.COMPLETED)) {
+    return '已全部到货完成，无需重复确认';
+  }
+  return '需先登记到货（到货数量＞0）';
+};
+// ===================================================================================================
 
 /**
  * 阅读态标准操作条：[批量领取▾(悬停出菜单:批量领取/批量回料确认/确认完成)] [编辑物料] [更多▾] [跳转→]

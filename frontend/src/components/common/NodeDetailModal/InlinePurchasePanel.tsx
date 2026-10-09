@@ -5,12 +5,11 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import { safePrint } from '@/utils/safePrint';
-import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
+import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase } from '@/types/production';
-import { InlinePurchasePanelProps, normalizeStatus, isConfirmCompleteAvailable } from './InlinePurchasePanel.helpers';
+import { InlinePurchasePanelProps, isConfirmCompleteAvailable } from './InlinePurchasePanel.helpers';
 import { isPurchaseRowComplete } from './utils';
 import { buildDisplayColumns, buildEditColumns } from './InlinePurchasePanel.columns';
 import MaterialPickerModal from './MaterialPickerModal';
@@ -160,6 +159,11 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     message.success('采购单已下载');
   };
 
+  // D-664b：批量按钮禁用原因统一动态生成（全入口共用），禁用时显示真实原因，不再写死误导文案
+  const receiveReason = getBatchActionDisabledReason(purchases, 'receive', isPurchaseRowComplete);
+  const returnReason = getBatchActionDisabledReason(purchases, 'batchReturn');
+  const confirmCompleteReason = getBatchActionDisabledReason(purchases, 'confirmComplete');
+
   return (
     <BrandLoading spinning={loading}>
       {/* D-360g：嵌入 NodeDetailModal 时统一头由 NodeDetailBody 渲染，这里不再重复 */}
@@ -213,26 +217,23 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             <Space wrap size={8}>
               <PurchaseActionBar
                 receive={{
-                  disabled: actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && isPurchaseRowComplete(p)),
+                  disabled: actionLoading || !!receiveReason,
                   loading: actionLoading,
                   // D-664：禁用原因显示在菜单项里（antd 禁用项悬停 tooltip 不生效）
-                  title: '没有待领取的物料',
+                  title: receiveReason,
                   onClick: handleReceiveAll,
                 }}
                 batchReturn={{
-                  // D-368：按业务事实判定（已到货且未回料确认），不再用状态白名单，
-                  // 否则 awaiting_confirm 等状态会被漏掉导致按钮永久灰
-                  disabled: !purchases.some(p => normalizeStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
-                    && Number(p?.returnConfirmed || 0) !== 1
-                    && Number(p?.arrivedQuantity || 0) > 0),
+                  // D-368：按业务事实判定（已到货且未回料确认），不再用状态白名单
+                  disabled: !!returnReason,
                   loading: actionLoading,
-                  title: '需先登记到货（到货数量＞0）',
+                  title: returnReason,
                   onClick: handleBatchReturn,
                 }}
                 confirmComplete={{
-                  disabled: !purchases.some(p => isConfirmCompleteAvailable(p)),
+                  disabled: !!confirmCompleteReason,
                   loading: confirmCompleteLoading,
-                  title: '无可确认完成的物料（需先登记到货）',
+                  title: confirmCompleteReason,
                   onClick: handleConfirmComplete,
                 }}
                 edit={{ onClick: handleStartEdit }}

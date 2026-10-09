@@ -19,6 +19,7 @@ import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildStatCards } from './statCardsConfig';
 import TitleExtraTooltip from './TitleExtraTooltip';
 import PurchaseModals from './PurchaseModals';
+import { getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { usePersistentTab } from '@/hooks/usePersistentTab';
 
@@ -226,7 +227,11 @@ const MaterialPurchase: React.FC = () => {
       && Number(r.arrivedQuantity || 0) > 0
       && !isOrderFrozen(r));
     if (!targets.length) {
-      message.info('选中行中没有可回料确认的采购任务（需先登记到货）');
+      // D-664b：提示按真实原因动态生成（不再硬编码"需先登记到货"误导）
+      const active = records.filter((r) => !isOrderFrozen(r));
+      message.info(active.length
+        ? (getBatchActionDisabledReason(active, 'batchReturn') || '选中行中没有可回料确认的采购任务')
+        : '选中行所属订单已锁定，无法批量操作');
       return;
     }
     openReturnConfirm(targets);
@@ -236,7 +241,7 @@ const MaterialPurchase: React.FC = () => {
   const handleBatchCompleteRows = useCallback((records: MaterialPurchaseType[]) => {
     const targets = records.filter((r) => !isOrderFrozen(r));
     if (!targets.length) {
-      message.info('选中行中没有待确认完成的采购任务');
+      message.info('选中行所属订单已锁定，无法批量操作');
       return;
     }
     confirmCompleteFrom(targets);

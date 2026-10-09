@@ -7,7 +7,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader';
 import api from '@/utils/api';
 import { buildStockMap } from '@/components/common/NodeDetailModal/utils';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
-import { PurchaseActionBar, PurchaseEditActions } from '@/components/common/purchase/PurchaseActionBar';
+import { PurchaseActionBar, PurchaseEditActions, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocDrawer from '../MaterialPurchase/components/PurchaseDocDrawer';
 import { useUser } from '@/utils/AuthContext';
@@ -23,7 +23,7 @@ import PurchasePrintModal from './components/PurchasePrintModal';
 import ConfirmCompleteModal from '../MaterialPurchase/components/ConfirmCompleteModal';
 import type { ConfirmCompleteOptions } from '../MaterialPurchase/hooks/usePurchaseConfirmCompleteActions';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
-import { filterPendingPurchases, filterReturnablePurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
+import { filterPendingPurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
 import { isPurchaseRowComplete } from './hooks/types';
 
 export interface MaterialPurchaseDetailProps {
@@ -73,6 +73,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     sampleOrderLines,
     loadData,
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
+
+  // D-664b：批量按钮禁用原因统一动态生成（全入口共用 getBatchActionDisabledReason）。
+  // 禁用时显示真实原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不再写死误导文案。
+  const receiveReason = getBatchActionDisabledReason(purchaseList, 'receive', isPurchaseRowComplete);
+  const returnReason = getBatchActionDisabledReason(purchaseList, 'batchReturn');
+  const confirmCompleteReason = getBatchActionDisabledReason(purchaseList, 'confirmComplete');
 
   const [docDrawerOpen, setDocDrawerOpen] = useState(false);
   // D-360h：确认完成时选择物料去向（入库到仓库/直接使用/暂不登记）
@@ -141,7 +147,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const submitConfirmCompleteLocal = async (options: ConfirmCompleteOptions) => {
     const targets = filterAwaitingConfirmPurchases(purchaseList);
-    if (!targets.length) { message.info('没有待确认完成的采购项目'); return; }
+    if (!targets.length) { message.info(confirmCompleteReason || '没有待确认完成的采购项目'); return; }
     setConfirmCompleteSubmittingLocal(true);
     try {
       for (const t of targets) {
@@ -175,12 +181,6 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const onExport = async () => { await handleExport(); };
 
   const displayData = editing ? editableData : purchaseList;
-
-  /** 批量采购可用：存在至少一行"待采购且本体信息完整"的物料（缺编码/名称/单位的行自动跳过） */
-  const batchPurchaseDisabled = !filterPendingPurchases(purchaseList).some((p) => isPurchaseRowComplete(p));
-  // D-122：批量动作与单条操作条件联动——无符合行时按钮置灰（与行级 disabled 同一判定源）
-  const hasReturnable = filterReturnablePurchases(purchaseList).length > 0;
-  const hasAwaitingConfirm = filterAwaitingConfirmPurchases(purchaseList).length > 0;
 
   const viewColumnsMobile = isMobile;
   const colWidth = viewColumnsMobile ? 80 : undefined;
@@ -354,22 +354,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             <Space wrap size={8}>
               <PurchaseActionBar
                 receive={{
-                  disabled: batchPurchaseDisabled || batchPurchaseLoading,
+                  disabled: batchPurchaseLoading || !!receiveReason,
                   loading: batchPurchaseLoading,
                   // D-664：原因直接显示在禁用菜单项里（antd 禁用项悬停 tooltip 不生效）
-                  title: batchPurchaseDisabled ? '没有待领取的物料' : '打开可编辑确认弹窗，逐行核对数量后领取',
+                  title: receiveReason || '打开可编辑确认弹窗，逐行核对数量后领取',
                   onClick: onBatchPurchase,
                 }}
                 batchReturn={{
-                  disabled: batchReturnLoading || !hasReturnable,
+                  disabled: batchReturnLoading || !!returnReason,
                   loading: batchReturnLoading,
-                  title: hasReturnable ? undefined : '需先登记到货（到货数量＞0）',
+                  title: returnReason,
                   onClick: onBatchReturnConfirm,
                 }}
                 confirmComplete={{
-                  disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                  disabled: confirmCompleteSubmitting || !!confirmCompleteReason,
                   loading: confirmCompleteSubmitting,
-                  title: hasAwaitingConfirm ? undefined : '需先登记到货（到货数量＞0）',
+                  title: confirmCompleteReason,
                   onClick: () => setConfirmCompleteModalOpen(true),
                 }}
                 edit={{

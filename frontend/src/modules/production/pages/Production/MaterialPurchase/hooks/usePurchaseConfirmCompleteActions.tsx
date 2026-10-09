@@ -3,9 +3,9 @@
  * D-321b: 确认完成时可选"入库到仓库/直接使用/暂不登记"，出入库动作写入物料仓储流水。
  */
 import { useState } from 'react';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import { normalizeStatus, postConfirmComplete } from './purchaseActionsHelpers';
+import { isConfirmCompleteRow, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { postConfirmComplete } from './purchaseActionsHelpers';
 
 export type MovementAction = 'inbound' | 'direct_use' | 'none';
 
@@ -39,21 +39,25 @@ export function usePurchaseConfirmCompleteActions({
   // 外部指定的目标集（如采购管理列表页选中行）；null 时回落到详情页 detailPurchases 口径
   const [overrideTargets, setOverrideTargets] = useState<MaterialPurchaseType[] | null>(null);
 
-  const confirmCompleteTargets = overrideTargets
-    ?? detailPurchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+  // D-664b：目标口径统一 D-368 业务事实（非取消、未完成、已到货），与按钮禁用判定同源
+  const confirmCompleteTargets = overrideTargets ?? detailPurchases.filter(isConfirmCompleteRow);
 
   /** 点击"确认完成"按钮：先弹物料去向选择，不再直接提交 */
   const confirmComplete = () => {
-    if (!confirmCompleteTargets.length) { message.info('没有待确认完成的采购任务'); return; }
+    if (!confirmCompleteTargets.length) {
+      message.info(getBatchActionDisabledReason(detailPurchases, 'confirmComplete') || '没有待确认完成的采购任务');
+      return;
+    }
     setConfirmCompleteModalOpen(true);
   };
 
   /** 按指定行打开确认完成弹窗（采购管理列表页选中行批量完成，与详情页同一弹窗） */
   const confirmCompleteFrom = (targets: MaterialPurchaseType[]) => {
-    const list = targets.filter((t) =>
-      String(t?.id || '').trim()
-      && normalizeStatus(t.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
-    if (!list.length) { message.info('选中行中没有待确认完成的采购任务'); return; }
+    const list = targets.filter((t) => String(t?.id || '').trim() && isConfirmCompleteRow(t));
+    if (!list.length) {
+      message.info(getBatchActionDisabledReason(targets, 'confirmComplete') || '选中行中没有待确认完成的采购任务');
+      return;
+    }
     setOverrideTargets(list);
     setConfirmCompleteModalOpen(true);
   };
@@ -66,7 +70,10 @@ export function usePurchaseConfirmCompleteActions({
 
   const submitConfirmComplete = async (options: ConfirmCompleteOptions) => {
     const targets = confirmCompleteTargets;
-    if (!targets.length) { message.info('没有待确认完成的采购任务'); return; }
+    if (!targets.length) {
+      message.info(getBatchActionDisabledReason(detailPurchases, 'confirmComplete') || '没有待确认完成的采购任务');
+      return;
+    }
     const orderKey = String(targets[0]?.orderId || targets[0]?.orderNo || '').trim();
     if (orderKey) { const ok = await ensureOrderUnlocked(orderKey); if (!ok) return; }
     // 提前取出 orderNo/styleNo，finally 块也需要用到

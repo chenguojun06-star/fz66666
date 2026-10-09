@@ -8,6 +8,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
 import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { normalizeStatus, postReturnConfirm } from './purchaseActionsHelpers';
 
@@ -122,13 +123,16 @@ export function usePurchaseReturnConfirmActions({
   };
 
   const handleBatchReturn = async () => {
-    const targets = detailPurchases.filter((p) => {
-      const status = normalizeStatus(p.status);
-      return (status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
-        && String(p.id || '').trim()
-        && Number(p.returnConfirmed || 0) !== 1;
-    });
-    if (!targets.length) { message.info('没有可回料确认的采购任务'); return; }
+    // D-664b：与按钮禁用判定同源（D-368 业务事实：非取消、未回料确认、已到货）
+    const targets = detailPurchases.filter((p) =>
+      String(p.id || '').trim()
+      && normalizeStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
+      && Number(p.returnConfirmed || 0) !== 1
+      && Number(p.arrivedQuantity || 0) > 0);
+    if (!targets.length) {
+      message.info(getBatchActionDisabledReason(detailPurchases, 'batchReturn') || '没有可回料确认的采购任务');
+      return;
+    }
     openReturnConfirm(targets);
   };
 
