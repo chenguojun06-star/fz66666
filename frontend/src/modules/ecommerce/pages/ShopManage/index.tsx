@@ -16,7 +16,15 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
 import { exportShopOrders, printDeliveryNotes } from './deliveryTools';
-import type { ShopConfig, ShopOrder, ShopOrderDetail, ShopOrderItem, ShopOrderStats } from '@/services/shop/shopApi';
+import type {
+  ShopConfig,
+  ShopOrder,
+  ShopOrderDetail,
+  ShopOrderItem,
+  ShopOrderStats,
+  ShopReviewRow,
+  ShopReviewSummary,
+} from '@/services/shop/shopApi';
 import api, { unwrapApiData } from '@/utils/api';
 import './index.css';
 
@@ -122,6 +130,15 @@ const ShopManage: React.FC = () => {
   const [processRemark, setProcessRemark] = useState('');
   const [processSubmitting, setProcessSubmitting] = useState(false);
 
+  // P2：商品评价（商家侧查看）——评价此前只有 C 端写入，商家看不到任何一条
+  const [reviewRows, setReviewRows] = useState<ShopReviewRow[]>([]);
+  const [reviewTotal, setReviewTotal] = useState(0);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewStyleNo, setReviewStyleNo] = useState('');
+  const [reviewRating, setReviewRating] = useState<number | undefined>(undefined);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState<ShopReviewSummary | null>(null);
+
   const fetchConfig = useCallback(async () => {
     try {
       const res: any = await shopAdminApi.getConfig();
@@ -194,6 +211,38 @@ const ShopManage: React.FC = () => {
     void fetchConfig();
   }, [fetchConfig]);
 
+  /** P2：本店铺评价分页 */
+  const fetchReviews = useCallback(async (p: number, styleNo?: string, rating?: number) => {
+    setReviewLoading(true);
+    try {
+      const res = await shopAdminApi.reviews({
+        page: p,
+        pageSize: 20,
+        styleNo: (styleNo ?? reviewStyleNo) || undefined,
+        rating: rating ?? reviewRating,
+      });
+      const data = unwrapApiData<{ records: ShopReviewRow[]; total: number }>(res, '加载评价失败');
+      setReviewRows(data?.records ?? []);
+      setReviewTotal(data?.total ?? 0);
+      setReviewPage(p);
+    } catch {
+      setReviewRows([]);
+      setReviewTotal(0);
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [reviewStyleNo, reviewRating]);
+
+  /** P2：本店铺评价概览 */
+  const fetchReviewSummary = useCallback(async () => {
+    try {
+      const res = await shopAdminApi.reviewSummary();
+      setReviewSummary(unwrapApiData<ShopReviewSummary>(res, '加载评价概览失败'));
+    } catch {
+      setReviewSummary(null);
+    }
+  }, []);
+
   const handleTabChange = useCallback((v: string) => {
     setTab(v);
     // 页签数据在切入时拉取（事件驱动，避免 effect 依赖棘轮豁免）
@@ -202,7 +251,11 @@ const ShopManage: React.FC = () => {
       void fetchOrders(1);
       void fetchStats();
     }
-  }, [fetchStyles, styleKw, fetchOrders, fetchStats]);
+    if (v === 'reviews') {
+      void fetchReviews(1);
+      void fetchReviewSummary();
+    }
+  }, [fetchStyles, styleKw, fetchOrders, fetchStats, fetchReviews, fetchReviewSummary]);
 
   const handleSaveConfig = async () => {
     if (!shopName.trim()) return message.warning('店铺名称不能为空');
@@ -521,6 +574,42 @@ const ShopManage: React.FC = () => {
     },
   ];
 
+  /** P2：评价列表列定义（商家只看得到自己店铺的评价） */
+  const reviewColumns: ColumnsType<ShopReviewRow> = [
+    {
+      title: '评分',
+      dataIndex: 'rating',
+      width: 110,
+      render: (v: number) => (
+        <span style={{ color: 'var(--color-warning)' }}>
+          {'★'.repeat(Math.max(0, Math.min(5, Number(v) || 0)))}
+          <span style={{ color: 'var(--color-text-tertiary)' }}>
+            {'☆'.repeat(5 - Math.max(0, Math.min(5, Number(v) || 0)))}
+          </span>
+        </span>
+      ),
+    },
+    { title: '款号', dataIndex: 'styleNo', width: 130, render: (v?: string | null) => v || '-' },
+    { title: '订单号', dataIndex: 'orderNo', width: 175, render: (v: string) => <Text copyable={{ text: v }}>{v}</Text> },
+    {
+      title: '评价内容',
+      dataIndex: 'content',
+      ellipsis: true,
+      render: (v?: string | null, r?: ShopReviewRow) => (
+        <Space size={6}>
+          {r?.anonymous ? <Tag>匿名</Tag> : null}
+          <span>{v || <Text type="secondary">（未填写内容）</Text>}</span>
+        </Space>
+      ),
+    },
+    {
+      title: '评价时间',
+      dataIndex: 'createTime',
+      width: 165,
+      render: (v: string) => (v || '').replace('T', ' ').slice(0, 19),
+    },
+  ];
+
   const orderColumns: ColumnsType<ShopOrder> = [
     { title: '订单号', dataIndex: 'orderNo', width: 175, render: (v: string) => <Text copyable={{ text: v }}>{v}</Text> },
     { title: '收货人', dataIndex: 'customerName', width: 110 },
@@ -660,6 +749,7 @@ const ShopManage: React.FC = () => {
           { value: 'config', label: '店铺配置' },
           { value: 'listing', label: '商品上架' },
           { value: 'orders', label: '店铺订单' },
+          { value: 'reviews', label: '商品评价' },
         ]}
       />
 
@@ -976,6 +1066,98 @@ const ShopManage: React.FC = () => {
               onChange: (p) => { setSelectedOrderIds([]); void fetchOrders(p); },
             }}
             emptyDescription="还没有店铺订单"
+          />
+        </Card>
+      )}
+
+      {/* P2：商品评价——评价此前只有 C 端写入，商家侧没有任何读入口 */}
+      {tab === 'reviews' && (
+        <Card>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="顾客对已发货订单的评价会出现在这里"
+            description={
+              <span style={{ fontSize: 12.5 }}>
+                评价按「一单一款」记录：一个订单里的每款商品各有一条。顾客提交后不可修改，
+                商家也不能删除——这是为了口碑数据可信。评分会展示在平台商城的商品卡上。
+              </span>
+            }
+          />
+          <div className="shop-order-stats">
+            {[
+              { key: 'avg', label: '平均评分', value: reviewSummary ? `★ ${reviewSummary.avgRating}` : '-', accent: 'var(--color-warning)' },
+              { key: 'total', label: '评价总数', value: reviewSummary ? `${reviewSummary.total}` : '-' },
+              { key: '5', label: '5 星', value: reviewSummary ? `${reviewSummary.distribution?.['5星'] ?? 0}` : '-' },
+              { key: '1', label: '1 星', value: reviewSummary ? `${reviewSummary.distribution?.['1星'] ?? 0}` : '-' },
+            ].map((s) => (
+              <div className="shop-order-stat" key={s.key}>
+                <div className="shop-order-stat__label">{s.label}</div>
+                <div className="shop-order-stat__value" style={s.accent ? { color: s.accent } : undefined}>
+                  {s.value}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="shop-toolbar">
+            <Input.Search
+              allowClear
+              style={{ width: 240 }}
+              placeholder="输入款号后回车"
+              defaultValue={reviewStyleNo}
+              onSearch={(v) => {
+                setReviewStyleNo(v);
+                void fetchReviews(1, v, reviewRating);
+              }}
+              enterButton
+            />
+            <Segmented
+              value={reviewRating === undefined ? 'all' : String(reviewRating)}
+              onChange={(v) => {
+                const next = v === 'all' ? undefined : Number(v);
+                setReviewRating(next);
+                void fetchReviews(1, reviewStyleNo, next);
+              }}
+              options={[
+                { value: 'all', label: '全部星级' },
+                { value: '5', label: '5 星' },
+                { value: '4', label: '4 星' },
+                { value: '3', label: '3 星' },
+                { value: '2', label: '2 星' },
+                { value: '1', label: '1 星' },
+              ]}
+            />
+            <div className="shop-toolbar__spacer" />
+            <Text type="secondary">
+              共 <Text strong>{reviewTotal}</Text> 条评价
+            </Text>
+            <Tooltip title="重新拉取评价">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  void fetchReviews(reviewPage);
+                  void fetchReviewSummary();
+                }}
+              >
+                刷新
+              </Button>
+            </Tooltip>
+          </div>
+          <ResizableTable
+            rowKey="id"
+            size="small"
+            columns={reviewColumns}
+            dataSource={reviewRows}
+            loading={reviewLoading}
+            pagination={{
+              current: reviewPage,
+              total: reviewTotal,
+              pageSize: 20,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p) => void fetchReviews(p),
+            }}
+            emptyDescription="还没有顾客评价"
           />
         </Card>
       )}

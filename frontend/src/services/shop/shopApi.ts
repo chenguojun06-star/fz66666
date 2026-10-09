@@ -281,7 +281,34 @@ export const shopAdminApi = {
   ) => api.post<{ saved: number }>(`/shop/admin/layout/${styleId}`, body),
   batchSaveSku: (styleId: number | string, items: BatchSaveSkuItem[]) =>
     api.post<BatchSaveSkuResult>('/shop/admin/sku/batch-save', { styleId, items }),
+
+  /* ── P2：商品评价（商家侧） ── */
+
+  /** 本店铺评价分页（可按款号 / 星级过滤） */
+  reviews: (params: { page?: number; pageSize?: number; styleNo?: string; rating?: number }) =>
+    api.get<unknown>('/shop/admin/reviews', { params }),
+
+  /** 本店铺评价概览（均分 / 总数 / 各星级分布） */
+  reviewSummary: () => api.get<unknown>('/shop/admin/reviews/summary'),
 };
+
+/** P2：商家侧评价行 */
+export interface ShopReviewRow {
+  id: string;
+  orderNo: string;
+  styleNo?: string | null;
+  rating: number;
+  content?: string | null;
+  anonymous: boolean;
+  createTime: string;
+}
+
+/** P2：商家侧评价概览 */
+export interface ShopReviewSummary {
+  total: number;
+  avgRating: number;
+  distribution: Record<string, number>;
+}
 
 /**
  * 店铺商品编辑依赖的「款式 / SKU」接口（系统既有能力，非店铺专属）。
@@ -367,6 +394,23 @@ export interface PlatformShopOverview {
   recentOrders: PlatformShopOrderRow[];
 }
 
+/** P2：平台全站在架商品行（跨租户只读） */
+export interface PlatformShopProductRow {
+  styleId: number;
+  tenantId: number;
+  styleNo?: string | null;
+  styleName?: string | null;
+  category?: string | null;
+  cover?: string | null;
+  shopName?: string | null;
+  slug?: string | null;
+  minPrice?: number | null;
+  totalStock?: number;
+  colorCount?: number;
+  rating?: number | null;
+  reviewCount?: number;
+}
+
 export const platformShopApi = {
   /**
    * 平台总览（仅平台超管；非超管后端返回 code=403）。
@@ -375,6 +419,10 @@ export const platformShopApi = {
    * 调用方必须用 unwrapApiData 取 data，否则失败也会被当成成功。
    */
   overview: () => api.get<unknown>('/shop/admin/platform/overview'),
+
+  /** 平台全站在架商品（跨租户只读，仅平台超管） */
+  products: (params: { page?: number; pageSize?: number; keyword?: string }) =>
+    api.get<unknown>('/shop/admin/platform/products', { params }),
 };
 
 export default shopAdminApi;

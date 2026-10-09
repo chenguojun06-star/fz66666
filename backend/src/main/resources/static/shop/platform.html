@@ -205,6 +205,11 @@
 </div>
 
 <div class="sec"><h2><i></i><span id="listTitle">全部商品</span></h2></div>
+<div class="cats" id="sorts" style="padding-top:0">
+  <div class="chip on" data-s="newest" onclick="Home.setSort('newest')">最新上架</div>
+  <div class="chip" data-s="price_asc" onclick="Home.setSort('price_asc')">价格从低到高</div>
+  <div class="chip" data-s="price_desc" onclick="Home.setSort('price_desc')">价格从高到低</div>
+</div>
 <div class="grid" id="grid"></div>
 <div class="more" id="more" style="display:none"><button onclick="Home.loadMore()">加载更多</button></div>
 
@@ -219,7 +224,7 @@
 var API = '/api/shop/public';
 var TOKEN_KEY = 'shop_consumer_token';
 var USER_KEY = 'shop_consumer';
-var state = { page: 1, pageSize: 20, keyword: '', category: '', total: 0, loading: false };
+var state = { page: 1, pageSize: 20, keyword: '', category: '', sort: 'newest', total: 0, loading: false };
 var cartState = { groups: [], selected: {}, itemCount: 0, validAmount: 0 };
 
 function $(id){ return document.getElementById(id); }
@@ -298,6 +303,7 @@ var Home = {
     if (state.loading) return;
     state.loading = true;
     var q = '/platform/products?page=' + state.page + '&pageSize=' + state.pageSize
+          + '&sort=' + encodeURIComponent(state.sort || 'newest')
           + (state.keyword ? '&keyword=' + encodeURIComponent(state.keyword) : '')
           + (state.category ? '&category=' + encodeURIComponent(state.category) : '');
     apiGet(q).then(function(d){
@@ -312,7 +318,15 @@ var Home = {
       $('more').style.display = ($('grid').children.length < state.total) ? 'block' : 'none';
     }).catch(function(e){ toast(e.message); }).then(function(){ state.loading = false; });
   },
-  loadMore: function(){ state.page += 1; this.load(true); }
+  loadMore: function(){ state.page += 1; this.load(true); },
+  setSort: function(s){
+    state.sort = s;
+    var chips = document.querySelectorAll('#sorts .chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].className = 'chip' + (chips[i].getAttribute('data-s') === s ? ' on' : '');
+    }
+    this.reset();
+  }
 };
 
 function card(p){
@@ -888,6 +902,15 @@ var OrderDetail = {
       html += '<div class="dsec"><div class="r"><span class="k">取消原因</span><span>' + esc(o.cancelReason) + '</span></div></div>';
     }
 
+    // P2：未发货 → 买家可直接取消（回补库存 + 撤销应收）
+    if (o.status === 'PENDING_SHIP') {
+      html += '<div class="form" style="padding-top:14px"><button class="btn" '
+        + 'style="background:#fff;border:1px solid #ff5000;color:#ff5000" onclick="CancelOrder.open()">'
+        + '取消订单</button>'
+        + '<div class="hint">未发货可直接取消：库存会自动退回、挂账应收会撤销。'
+        + '已发货的订单请改用「申请售后」。</div></div>';
+    }
+
     // P2：已发货且没有待处理/已完成的售后 → 允许买家发起售后
     if (o.status === 'SHIPPED' && (asStatus === 'NONE' || asStatus === 'REJECTED')) {
       html += '<div class="form" style="padding-top:14px"><button class="btn" '
@@ -898,6 +921,30 @@ var OrderDetail = {
 
     html += '<div class="form"><button class="btn" onclick="Mine.open()">返回我的订单</button></div>';
     $('sheetBody').innerHTML = html;
+  }
+};
+
+/* ── P2：取消订单 ── */
+var CancelOrder = {
+  open: function(){
+    Sheet.open('取消订单');
+    $('sheetBody').innerHTML =
+      '<div class="form">'
+      + '<div style="font-size:13px;line-height:1.7;color:#666">取消后：'
+      + '库存自动退回店铺，挂账应收自动撤销。订单不可恢复，需要请重新下单。</div>'
+      + '<label>取消原因（选填）</label>'
+      + '<input id="co-reason" maxlength="200" placeholder="如：下错单 / 地址填错 / 不想要了">'
+      + '<button class="btn" onclick="CancelOrder.submit()">确认取消</button>'
+      + '<div class="hint">若订单已被店铺发货，将无法取消，请改用「申请售后」。</div></div>';
+  },
+  submit: function(){
+    apiPost('/me/orders/' + encodeURIComponent(OrderDetail.order.orderNo) + '/cancel', {
+      reason: ($('co-reason').value || '').trim()
+    }).then(function(){
+      toast('订单已取消');
+      OrderDetail.open(OrderDetail.order.orderNo);
+      Cart.refreshBadge();
+    }).catch(function(e){ toast(e.message); });
   }
 };
 

@@ -2,6 +2,7 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.orchestration.ShopAfterSaleOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopBuyerOrderOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopConsumerOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopConsumerTokenSupport;
 import com.fashion.supplychain.shop.orchestration.ShopReviewOrchestrator;
@@ -28,15 +29,18 @@ import java.util.Map;
 public class ShopConsumerController {
 
     private final ShopConsumerOrchestrator consumerOrchestrator;
+    private final ShopBuyerOrderOrchestrator buyerOrderOrchestrator;
     private final ShopAfterSaleOrchestrator afterSaleOrchestrator;
     private final ShopReviewOrchestrator reviewOrchestrator;
     private final ShopConsumerTokenSupport tokenSupport;
 
     public ShopConsumerController(ShopConsumerOrchestrator consumerOrchestrator,
+                                  ShopBuyerOrderOrchestrator buyerOrderOrchestrator,
                                   ShopAfterSaleOrchestrator afterSaleOrchestrator,
                                   ShopReviewOrchestrator reviewOrchestrator,
                                   ShopConsumerTokenSupport tokenSupport) {
         this.consumerOrchestrator = consumerOrchestrator;
+        this.buyerOrderOrchestrator = buyerOrderOrchestrator;
         this.afterSaleOrchestrator = afterSaleOrchestrator;
         this.reviewOrchestrator = reviewOrchestrator;
         this.tokenSupport = tokenSupport;
@@ -178,6 +182,27 @@ public class ShopConsumerController {
         }
         try {
             return Result.success(consumerOrchestrator.orderDetail(consumerId, orderNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * P2：买家取消订单（仅待发货）。会回补库存并撤销挂账应收。
+     * body: {reason?}
+     */
+    @PostMapping("/me/orders/{orderNo}/cancel")
+    public Result<?> cancelOrder(@PathVariable String orderNo,
+                                 @RequestBody(required = false) Map<String, Object> body,
+                                 HttpServletRequest request) {
+        String consumerId = tokenSupport.resolveConsumerId(request);
+        if (consumerId == null) {
+            return Result.fail(401, "请先登录");
+        }
+        String reason = body == null ? null : str(body.get("reason"));
+        try {
+            buyerOrderOrchestrator.cancelByConsumer(consumerId, orderNo, reason);
+            return Result.successMessage("订单已取消，库存已退回、应收已撤销");
         } catch (IllegalArgumentException e) {
             return Result.fail(400, e.getMessage());
         }

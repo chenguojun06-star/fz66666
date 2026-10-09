@@ -65,6 +65,10 @@ public class ShopAdminOrchestrator {
     @Autowired
     private ShopOrderItemMapper shopOrderItemMapper;
 
+    /** P2：商家查看自己店铺的商品评价（租户隔离由拦截器 + 显式 tenant_id 双重保证） */
+    @Autowired
+    private com.fashion.supplychain.shop.mapper.ShopReviewMapper shopReviewMapper;
+
     /** 取消订单时回补库存（与下单同一套仓库编排，留入库台账） */
     @Autowired
     private FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
@@ -952,6 +956,78 @@ public class ShopAdminOrchestrator {
         resp.put("totalOrders", totalCount);
         resp.put("totalAmount", totalAmount);
         return resp;
+    }
+
+    // ── P2：商品评价（商家侧查看）────────────────────────────────────────────
+    // 评价此前只有 C 端写入、**没有任何商家侧读入口** —— 数据有了但没人消费等于白做。
+    // 归属隔离：拦截器自动追加 tenant_id，这里再显式 eq 一次做双保险。
+
+    /** 本店铺评价分页（可按款号 / 星级过滤）。返回体不含 consumer_id（对商家无意义且属隐私）。 */
+    public Map<String, Object> reviews(int page, int pageSize, String styleNo, Integer rating) {
+        Long tenantId = requireTenant();
+        Page<com.fashion.supplychain.shop.entity.ShopReview> p = shopReviewMapper.selectPage(
+                new Page<>(Math.max(1, page), Math.min(Math.max(1, pageSize), 100)),
+                new LambdaQueryWrapper<com.fashion.supplychain.shop.entity.ShopReview>()
+                        .eq(com.fashion.supplychain.shop.entity.ShopReview::getTenantId, tenantId)
+                        .eq(StringUtils.hasText(styleNo),
+                                com.fashion.supplychain.shop.entity.ShopReview::getStyleNo, styleNo)
+                        .eq(rating != null,
+                                com.fashion.supplychain.shop.entity.ShopReview::getRating, rating)
+                        .orderByDesc(com.fashion.supplychain.shop.entity.ShopReview::getCreateTime));
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (com.fashion.supplychain.shop.entity.ShopReview r : p.getRecords()) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", r.getId());
+            row.put("orderNo", r.getOrderNo());
+            row.put("styleNo", r.getStyleNo());
+            row.put("rating", r.getRating());
+            row.put("content", r.getContent());
+            row.put("anonymous", Integer.valueOf(1).equals(r.getAnonymous()));
+            row.put("createTime", r.getCreateTime());
+            rows.add(row);
+        }
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("records", rows);
+        resp.put("total", p.getTotal());
+        return resp;
+    }
+
+    /** 本店铺评价概览：均分 / 总数 / 各星级分布（商家口碑一眼可见） */
+    public Map<String, Object> reviewSummary() {
+        Long tenantId = requireTenant();
+        int[] dist = new int[6];
+        long total = 0;
+        long sum = 0;
+        for (Map<String, Object> row : shopReviewMapper.countByRating(tenantId)) {
+            int star = row.get("rating") == null ? 0 : Integer.parseInt(String.valueOf(row.get("rating")));
+            int cnt = row.get("cnt") == null ? 0 : Integer.parseInt(String.valueOf(row.get("cnt")));
+            if (star >= 1 && star <= 5) {
+                dist[star] = cnt;
+            }
+            total += cnt;
+            sum += (long) star * cnt;
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("total", total);
+        data.put("avgRating", total == 0
+                ? BigDecimal.ZERO.setScale(1, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.valueOf(sum).divide(BigDecimal.valueOf(total), 1,
+                        java.math.RoundingMode.HALF_UP));
+        Map<String, Integer> distribution = new LinkedHashMap<>();
+        for (int i = 5; i >= 1; i--) {
+            distribution.put(i + "星", dist[i]);
+        }
+        data.put("distribution", distribution);
+        return data;
+    }
+
+    private Long requireTenant() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new IllegalArgumentException("请先登录");
+        }
+        return tenantId;
     }
 
     /** 取订单并校验归属（不存在/跨租户/已删除一律拒绝） */

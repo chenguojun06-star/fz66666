@@ -6,6 +6,7 @@ import com.fashion.supplychain.shop.orchestration.ShopPlatformOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -37,5 +38,22 @@ public class ShopPlatformAdminController {
             return Result.forbidden("仅平台管理员可查看平台总览");
         }
         return Result.success(platformOrchestrator.overview());
+    }
+
+    /**
+     * 平台全站在架商品（跨租户，**只读**）。
+     *
+     * <p>平台方需要能看到「全站现在到底挂了哪些商品」，否则治理无从谈起。
+     * 刻意只做读：下架/审核属于会改变租户既有上架行为的动作，
+     * 需先定策略（是否强制审核、下架如何通知商家）再开，避免越权改别人数据。
+     */
+    @GetMapping("/products")
+    public Result<?> products(@RequestParam(defaultValue = "1") int page,
+                              @RequestParam(defaultValue = "20") int pageSize,
+                              @RequestParam(required = false) String keyword) {
+        if (!UserContext.isSuperAdmin()) {
+            return Result.forbidden("仅平台管理员可查看全站商品");
+        }
+        return Result.success(platformOrchestrator.products(page, pageSize, keyword, null, null));
     }
 }

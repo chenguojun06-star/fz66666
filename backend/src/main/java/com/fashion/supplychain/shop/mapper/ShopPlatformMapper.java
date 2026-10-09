@@ -40,6 +40,10 @@ public interface ShopPlatformMapper {
     /**
      * 平台商品池：分页查已上架款式（带所属店铺 slug / 店名，供前端「进店」跳转）。
      * 店铺配置缺失（未建店）时 LEFT JOIN 给出 null，由调用方回填 slug 兜底。
+     *
+     * <p>排序：{@code price_asc} / {@code price_desc} 按 SKU 最低售价（未维护售价的排最后），
+     * 其余按最新上架。价格排序必须走子查询取 MIN(sales_price) —— 价格在 SKU 上，
+     * 款式表没有价格列，直接 ORDER BY 会排不出来。
      */
     @Select("<script>"
             + "SELECT s.id AS styleId, s.tenant_id AS tenantId, s.style_no AS styleNo, "
@@ -52,11 +56,22 @@ public interface ShopPlatformMapper {
             + "<if test='keyword != null'> AND (s.style_name LIKE CONCAT('%', #{keyword}, '%') "
             + "  OR s.style_no LIKE CONCAT('%', #{keyword}, '%')) </if>"
             + "<if test='category != null'> AND s.category = #{category} </if>"
-            + "ORDER BY s.shop_listing_time DESC, s.id DESC "
+            + "<choose>"
+            + "  <when test='sort == \"price_asc\"'>"
+            + "    ORDER BY COALESCE((SELECT MIN(sk.sales_price) FROM t_product_sku sk "
+            + "      WHERE sk.style_id = s.id AND sk.sales_price IS NOT NULL), 999999999) ASC, s.id DESC "
+            + "  </when>"
+            + "  <when test='sort == \"price_desc\"'>"
+            + "    ORDER BY COALESCE((SELECT MIN(sk.sales_price) FROM t_product_sku sk "
+            + "      WHERE sk.style_id = s.id AND sk.sales_price IS NOT NULL), -1) DESC, s.id DESC "
+            + "  </when>"
+            + "  <otherwise>ORDER BY s.shop_listing_time DESC, s.id DESC </otherwise>"
+            + "</choose>"
             + "LIMIT #{offset}, #{size}"
             + "</script>")
     List<Map<String, Object>> pageListedStyles(@Param("keyword") String keyword,
                                                @Param("category") String category,
+                                               @Param("sort") String sort,
                                                @Param("offset") int offset,
                                                @Param("size") int size);
 

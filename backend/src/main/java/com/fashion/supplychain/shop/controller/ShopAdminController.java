@@ -316,4 +316,29 @@ public class ShopAdminController {
                 .collect(java.util.stream.Collectors.toList());
         return Result.success(shopAdminOrchestrator.skuSummary(styleIds));
     }
+
+    /* ── P2：商品评价（商家侧查看） ── */
+
+    /** 本店铺商品评价分页（可按款号 / 星级过滤） */
+    @GetMapping("/reviews")
+    public Result<?> reviews(@RequestParam(defaultValue = "1") int page,
+                             @RequestParam(defaultValue = "20") int pageSize,
+                             @RequestParam(required = false) String styleNo,
+                             @RequestParam(required = false) Integer rating) {
+        try {
+            return Result.success(shopAdminOrchestrator.reviews(page, pageSize, styleNo, rating));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** 本店铺评价概览（均分 / 总数 / 各星级分布） */
+    @GetMapping("/reviews/summary")
+    public Result<?> reviewSummary() {
+        try {
+            return Result.success(shopAdminOrchestrator.reviewSummary());
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
 }

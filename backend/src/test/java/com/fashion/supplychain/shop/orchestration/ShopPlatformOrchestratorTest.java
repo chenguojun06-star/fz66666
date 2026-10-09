@@ -65,14 +65,14 @@ class ShopPlatformOrchestratorTest {
     @DisplayName("商品池：按 SKU 聚合最低价 / 总可售 / 颜色数")
     void aggregatesSku() {
         when(platformMapper.countListedStyles(null, null)).thenReturn(2L);
-        when(platformMapper.pageListedStyles(eq(null), eq(null), eq(0), anyInt()))
+        when(platformMapper.pageListedStyles(eq(null), eq(null), any(), eq(0), anyInt()))
                 .thenReturn(List.of(style(1L, 2L, "t2")));
         when(platformMapper.listSkusByStyleIds(anyList())).thenReturn(List.of(
                 sku(1L, "黑", "99.00", 3),
                 sku(1L, "黑", "89.50", 2),
                 sku(1L, "白", "120.00", 5)));
 
-        Map<String, Object> resp = orchestrator.products(1, 20, null, null);
+        Map<String, Object> resp = orchestrator.products(1, 20, null, null, null);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) resp.get("records");
@@ -87,11 +87,11 @@ class ShopPlatformOrchestratorTest {
     @DisplayName("商品池：租户未建店铺配置时 slug 兜底为 t{tenantId}，店名兜底")
     void slugFallback() {
         when(platformMapper.countListedStyles(any(), any())).thenReturn(1L);
-        when(platformMapper.pageListedStyles(any(), any(), anyInt(), anyInt()))
+        when(platformMapper.pageListedStyles(any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(List.of(style(7L, 106L, null)));
         when(platformMapper.listSkusByStyleIds(anyList())).thenReturn(new ArrayList<>());
 
-        Map<String, Object> resp = orchestrator.products(1, 20, null, null);
+        Map<String, Object> resp = orchestrator.products(1, 20, null, null, null);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) resp.get("records");
 
@@ -103,11 +103,11 @@ class ShopPlatformOrchestratorTest {
     @DisplayName("商品池：无 SKU 时最低价为 null、可售 0（不抛异常）")
     void noSkuNoPrice() {
         when(platformMapper.countListedStyles(any(), any())).thenReturn(1L);
-        when(platformMapper.pageListedStyles(any(), any(), anyInt(), anyInt()))
+        when(platformMapper.pageListedStyles(any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(List.of(style(9L, 2L, "t2")));
         when(platformMapper.listSkusByStyleIds(anyList())).thenReturn(new ArrayList<>());
 
-        Map<String, Object> resp = orchestrator.products(1, 20, null, null);
+        Map<String, Object> resp = orchestrator.products(1, 20, null, null, null);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) resp.get("records");
 
@@ -119,13 +119,13 @@ class ShopPlatformOrchestratorTest {
     @DisplayName("商品池：pageSize 超过上限被夹取到 60，page<1 归一到 1")
     void pageClamp() {
         when(platformMapper.countListedStyles(any(), any())).thenReturn(0L);
-        when(platformMapper.pageListedStyles(any(), any(), anyInt(), anyInt())).thenReturn(new ArrayList<>());
+        when(platformMapper.pageListedStyles(any(), any(), any(), anyInt(), anyInt())).thenReturn(new ArrayList<>());
 
-        Map<String, Object> resp = orchestrator.products(0, 999, null, null);
+        Map<String, Object> resp = orchestrator.products(0, 999, null, null, null);
 
         ArgumentCaptor<Integer> size = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
-        verify(platformMapper).pageListedStyles(any(), any(), offset.capture(), size.capture());
+        verify(platformMapper).pageListedStyles(any(), any(), any(), offset.capture(), size.capture());
         assertEquals(0, offset.getValue());
         assertEquals(60, size.getValue());
         assertEquals(1, resp.get("page"));
@@ -165,7 +165,7 @@ class ShopPlatformOrchestratorTest {
         s.put("enabled", 0);
         when(platformMapper.listShops()).thenReturn(List.of(s));
         when(platformMapper.listCategories()).thenReturn(List.of());
-        when(platformMapper.pageListedStyles(any(), any(), anyInt(), anyInt())).thenReturn(new ArrayList<>());
+        when(platformMapper.pageListedStyles(any(), any(), any(), anyInt(), anyInt())).thenReturn(new ArrayList<>());
         when(platformMapper.countListedStyles(null, null)).thenReturn(15L);
 
         Map<String, Object> home = orchestrator.home();
@@ -189,5 +189,22 @@ class ShopPlatformOrchestratorTest {
         assertTrue(ov.containsKey("counters"));
         assertTrue(ov.containsKey("shops"));
         assertEquals(1, ((List<?>) ov.get("recentOrders")).size());
+    }
+
+    @Test
+    @DisplayName("排序：白名单外的值一律回落到最新，不把用户输入当 SQL 语义")
+    void sortWhitelist() {
+        when(platformMapper.countListedStyles(any(), any())).thenReturn(0L);
+        when(platformMapper.pageListedStyles(any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ArrayList<>());
+
+        ArgumentCaptor<String> sort = ArgumentCaptor.forClass(String.class);
+
+        orchestrator.products(1, 20, null, null, "price_asc");
+        verify(platformMapper).pageListedStyles(any(), any(), sort.capture(), anyInt(), anyInt());
+        assertEquals("price_asc", sort.getValue());
+
+        Map<String, Object> resp = orchestrator.products(1, 20, null, null, "'; DROP TABLE x; --");
+        assertEquals("newest", resp.get("sort"));
     }
 }

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -75,6 +76,13 @@ class ShopOrderOrchestratorTest {
 
     @Mock
     private ReceivableOrchestrator receivableOrchestrator;
+
+    /**
+     * 用**真实实例**（spy）而非 mock：租户上下文切换必须真跑，
+     * 否则 doPlaceOrder 根本不会被执行，测试会变成假绿。
+     */
+    @Spy
+    private ShopTenantContextRunner tenantContextRunner = new ShopTenantContextRunner();
 
     @InjectMocks
     private ShopOrderOrchestrator orchestrator;

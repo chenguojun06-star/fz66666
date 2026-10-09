@@ -2,7 +2,6 @@ package com.fashion.supplychain.shop.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
@@ -56,6 +55,10 @@ public class ShopOrderOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.shop.orchestration.ShopAddressService shopAddressService;
+
+    /** 公开接口无上下文：以「shop 身份 + 目标租户」执行既有编排器 */
+    @Autowired
+    private ShopTenantContextRunner tenantContextRunner;
 
     @Autowired
     private ShopOrderMapper shopOrderMapper;
@@ -494,21 +497,7 @@ public class ShopOrderOrchestrator {
 
     /** 以 system 身份构造租户上下文执行（公开接口无 UserContext），结束恢复 */
     private <T> T runAsTenant(Long tenantId, java.util.function.Supplier<T> action) {
-        UserContext previous = UserContext.get();
-        try {
-            UserContext ctx = new UserContext();
-            ctx.setTenantId(tenantId);
-            ctx.setUserId("shop");
-            ctx.setUsername("shop");
-            UserContext.set(ctx);
-            return action.get();
-        } finally {
-            if (previous != null) {
-                UserContext.set(previous);
-            } else {
-                UserContext.clear();
-            }
-        }
+        return tenantContextRunner.run(tenantId, "shop", action);
     }
 
     /* ── D-770：C 端收货地址簿 ── */

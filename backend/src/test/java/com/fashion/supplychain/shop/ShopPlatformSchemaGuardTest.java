@@ -167,4 +167,51 @@ class ShopPlatformSchemaGuardTest {
         assertThat(orc).as("只有已发货可评价").contains("SHIPPED");
         assertThat(orc).as("款式必须在该订单里").contains("该商品不在此订单中");
     }
+
+    @Test
+    @DisplayName("⑨ 买家取消订单：必须切到订单所属租户再复用商家侧取消逻辑")
+    void buyerCancelReusesMerchantLogic() throws Exception {
+        String s = read("shop/orchestration/ShopBuyerOrderOrchestrator.java");
+        assertThat(s)
+                .as("必须按 orderNo + consumerId 双条件定位（买家只能取消自己的订单）")
+                .contains("platformMapper.findOrderForConsumer(orderNo, consumerId)");
+        assertThat(s)
+                .as("必须复用商家侧既有取消逻辑（回补库存/撤销应收各只有一份实现）")
+                .contains("shopAdminOrchestrator.cancelOrder(orderId, reasonText)");
+        assertThat(s)
+                .as("调用前必须切到订单所属租户上下文，否则 requireOrder 会 NPE / 越权")
+                .contains("tenantContextRunner.runVoid(tenantId, operator");
+        assertThat(s)
+                .as("只有待发货可取消")
+                .contains("PENDING_SHIP");
+    }
+
+    @Test
+    @DisplayName("⑩ 商家侧评价查看：必须有读入口，且不返回 consumer_id")
+    void merchantCanSeeReviews() throws Exception {
+        String s = read("shop/orchestration/ShopAdminOrchestrator.java");
+        assertThat(s).as("商家侧评价分页").contains("public Map<String, Object> reviews(");
+        assertThat(s).as("商家侧评价概览").contains("public Map<String, Object> reviewSummary(");
+        int idx = s.indexOf("public Map<String, Object> reviews(");
+        String block = s.substring(idx, Math.min(idx + 2000, s.length()));
+        assertThat(block)
+                .as("响应体不得带 consumer_id（对商家无意义，且属顾客隐私）")
+                .doesNotContain("row.put(\"consumerId\"");
+    }
+
+    @Test
+    @DisplayName("⑪ 商品池排序：只接受白名单值，杜绝把用户输入当 SQL 语义")
+    void sortWhitelist() throws Exception {
+        String s = read("shop/orchestration/ShopPlatformOrchestrator.java");
+        assertThat(s).as("排序白名单收敛").contains("normalizeSort");
+        assertThat(s).as("只允许两种价格排序").contains("\"price_asc\".equals(s) || \"price_desc\".equals(s)");
+
+        String mapper = read("shop/mapper/ShopPlatformMapper.java");
+        assertThat(mapper)
+                .as("价格在 SKU 上，排序必须走 MIN(sales_price) 子查询")
+                .contains("SELECT MIN(sk.sales_price) FROM t_product_sku sk");
+        assertThat(mapper)
+                .as("未维护售价的排最后（COALESCE 兜底），不能因为 NULL 就跑到最前面")
+                .contains("COALESCE(");
+    }
 }

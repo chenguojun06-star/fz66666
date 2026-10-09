@@ -44,7 +44,7 @@ public class ShopPlatformOrchestrator {
         data.put("shops", shops);
         data.put("categories", platformMapper.listCategories());
         data.put("featured", buildProductRows(
-                platformMapper.pageListedStyles(null, null, 0, FEATURED_SIZE)));
+                platformMapper.pageListedStyles(null, null, null, 0, FEATURED_SIZE)));
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("shopCount", shops.size());
         stats.put("listedStyleCount", platformMapper.countListedStyles(null, null));
@@ -52,23 +52,35 @@ public class ShopPlatformOrchestrator {
         return data;
     }
 
-    /** 跨店商品池分页（关键字 + 类目） */
-    public Map<String, Object> products(int page, int pageSize, String keyword, String category) {
+    /** 跨店商品池分页（关键字 + 类目 + 排序：newest 默认 / price_asc / price_desc） */
+    public Map<String, Object> products(int page, int pageSize, String keyword, String category,
+                                        String sort) {
         int p = Math.max(1, page);
         int size = Math.min(Math.max(1, pageSize), MAX_PAGE_SIZE);
         String kw = StringUtils.hasText(keyword) ? keyword.trim() : null;
         String cat = StringUtils.hasText(category) ? category.trim() : null;
+        String order = normalizeSort(sort);
 
         long total = platformMapper.countListedStyles(kw, cat);
         List<Map<String, Object>> rows = buildProductRows(
-                platformMapper.pageListedStyles(kw, cat, (p - 1) * size, size));
+                platformMapper.pageListedStyles(kw, cat, order, (p - 1) * size, size));
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("records", rows);
         resp.put("total", total);
         resp.put("page", p);
         resp.put("pageSize", size);
+        resp.put("sort", order == null ? "newest" : order);
         return resp;
+    }
+
+    /** 只接受白名单内的排序值，其余一律按最新（不把用户输入直接拼进 SQL 语义） */
+    private static String normalizeSort(String sort) {
+        if (!StringUtils.hasText(sort)) {
+            return null;
+        }
+        String s = sort.trim();
+        return "price_asc".equals(s) || "price_desc".equals(s) ? s : null;
     }
 
     /** 平台店铺列表 */

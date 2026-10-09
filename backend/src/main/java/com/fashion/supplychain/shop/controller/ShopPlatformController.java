@@ -32,13 +32,14 @@ public class ShopPlatformController {
         return Result.success(platformOrchestrator.home());
     }
 
-    /** 跨店商品池分页（keyword 关键字 / category 类目） */
+    /** 跨店商品池分页（keyword 关键字 / category 类目 / sort 排序） */
     @GetMapping("/products")
     public Result<?> products(@RequestParam(defaultValue = "1") int page,
                               @RequestParam(defaultValue = "20") int pageSize,
                               @RequestParam(required = false) String keyword,
-                              @RequestParam(required = false) String category) {
-        return Result.success(platformOrchestrator.products(page, pageSize, keyword, category));
+                              @RequestParam(required = false) String category,
+                              @RequestParam(required = false) String sort) {
+        return Result.success(platformOrchestrator.products(page, pageSize, keyword, category, sort));
     }
 
     /** 平台店铺列表 */
