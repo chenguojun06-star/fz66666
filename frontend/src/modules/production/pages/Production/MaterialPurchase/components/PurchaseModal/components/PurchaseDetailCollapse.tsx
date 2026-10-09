@@ -132,7 +132,8 @@ const PurchaseDetailCollapse: React.FC<PurchaseDetailCollapseProps> = ({
             },
           },
           {
-            title: '库存余量',
+            // D-513 正名：= 本单到货 − 本单已领料出库（与右侧「仓库库存」是两个维度）
+            title: '剩余待领',
             key: 'stockRemainingQuantity',
             width: 90,
             align: 'right' as const,

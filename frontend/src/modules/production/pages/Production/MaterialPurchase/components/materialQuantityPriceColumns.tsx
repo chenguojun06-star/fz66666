@@ -1,4 +1,4 @@
-import { Tag } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { formatMoney } from '@/utils/format';
@@ -57,15 +57,28 @@ export const buildQuantityPriceColumns = (_params: UseMaterialColumnsParams): Co
       render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v ?? 0, record.unit),
     },
     {
-      title: '库存余量',
+      /*
+       * D-513 正名：原叫「库存余量」，但它算的是 `本单到货 − 本单已领料出库`，
+       * 与右侧「库存/领取」列（物料库存台账的可用库存）是**两个维度**，
+       * 并排放着会让人以为自相矛盾（本例：本单剩余 353 米 vs 台账 无库存）。
+       * 正名为「剩余待领」并给出悬浮说明，消除歧义。
+       */
+      title: '剩余待领',
       key: 'stockRemainingQuantity',
-      width: 100,
+      width: 110,
       align: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const arrived = record?.arrivedQuantity ?? 0;
         const used = record?.usedQuantity ?? 0;
         const remaining = Math.max(0, arrived - used);
-        return formatMaterialQuantityWithUnit(remaining, record.unit);
+        return (
+          <Tooltip
+            title={`本单剩余待领 = 到货数量 ${arrived}${record.unit || ''} − 已领料出库 ${used}${record.unit || ''}。
+与「仓库库存/领取」列不同：那列看的是物料库存台账的可用库存。`}
+          >
+            <span>{formatMaterialQuantityWithUnit(remaining, record.unit)}</span>
+          </Tooltip>
+        );
       },
     },
     {

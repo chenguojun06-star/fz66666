@@ -11,7 +11,7 @@
 import React from 'react';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { getMaterialTypeCategory } from '@/utils/materialType';
-import { formatMaterialQuantity, normalizeMaterialQuantity, subtractMaterialQuantity } from './index';
+import { formatMaterialQuantity, normalizeMaterialQuantity } from './index';
 
 export interface PurchaseInsight {
   totalMaterials: number;
@@ -27,16 +27,61 @@ export interface PurchaseInsight {
   verdict: 'good' | 'warn' | 'critical';
 }
 
-/** 判断单条记录是否已到齐 */
-const isFullyArrived = (r: MaterialPurchaseType) =>
-  normalizeMaterialQuantity(r.arrivedQuantity) >= normalizeMaterialQuantity(r.purchaseQuantity)
-  && normalizeMaterialQuantity(r.purchaseQuantity) > 0;
+/**
+ * D-513：到齐判定引入「容差」。
+ *
+ * <p>布料按米计量，短码/多送属行业常态 —— 预采购 353.5 米、实际到货 353 米（缺 0.5 米）
+ * 不该被判成"主料未到、无法开裁"。
+ *
+ * <p>修复前是 `到货量 >= 预采购数` 的**精确比较**：缺 0.001 米也阻塞。
+ * 而「到货率」又用 `Math.round`（99.86% → 100%），于是同一个卡片出现
+ * 「到货率 100%」+「阻塞中 · 主料未到」的自相矛盾，用户完全看不懂。
+ *
+ * <p>现在统一口径：**缺口在容差内即视为到齐**。
+ * <ul>
+ *   <li>容差 = max(绝对下限 1，预采购数 × 3%)</li>
+ *   <li>353.5 米 → 容差 10.6 米（覆盖常见短码范围）</li>
+ *   <li>1.5 米 → 容差 1 米</li>
+ *   <li>多送（到货 &gt; 预采购）一直算到齐</li>
+ * </ul>
+ */
+const ARRIVAL_TOLERANCE_ABS = 1;
+const ARRIVAL_TOLERANCE_RATIO = 0.03;
+
+/** 该采购单允许的到货缺口（正负差异都视为正常） */
+export const arrivalTolerance = (planned: number) =>
+  Math.max(ARRIVAL_TOLERANCE_ABS, planned * ARRIVAL_TOLERANCE_RATIO);
+
+/** 判断单条记录是否已到齐（含容差） */
+const isFullyArrived = (r: MaterialPurchaseType) => {
+  const p = normalizeMaterialQuantity(r.purchaseQuantity);
+  const a = normalizeMaterialQuantity(r.arrivedQuantity);
+  if (p <= 0) return false;
+  if (a >= p) return true;                        // 到齐或多送
+  return (p - a) <= arrivalTolerance(p);          // 缺口在容差内
+};
+
+/** 缺口（仅用于展示；容差内不再算作"缺料"） */
+const realGap = (r: MaterialPurchaseType) => {
+  const p = normalizeMaterialQuantity(r.purchaseQuantity);
+  const a = normalizeMaterialQuantity(r.arrivedQuantity);
+  const gap = p - a;
+  return gap > arrivalTolerance(p) ? gap : 0;
+};
 
 /** 从同一订单的采购记录中提取智能洞察 */
 export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsight {
   const totalP = orderRecs.reduce((s, r) => s + normalizeMaterialQuantity(r.purchaseQuantity), 0);
   const totalA = orderRecs.reduce((s, r) => s + normalizeMaterialQuantity(r.arrivedQuantity), 0);
-  const rate = totalP > 0 ? Math.round(totalA / totalP * 100) : 0;
+  /*
+   * D-513：到货率与「到齐判定」必须同一口径。
+   * 修复前：率用 Math.round（353/353.5 = 99.86% → 显示 100%），
+   * 判定用精确比较（353 < 353.5 → 未到齐）→ 卡片同时出现「100%」与「阻塞中」，自相矛盾。
+   * 现在：只有真正到齐才显示 100%，否则向下取整并封顶 99%。
+   */
+  const allArrived = orderRecs.length > 0 && orderRecs.every(isFullyArrived);
+  const rawRate = totalP > 0 ? (totalA / totalP) * 100 : 0;
+  const rate = allArrived ? 100 : Math.min(99, Math.floor(rawRate));
 
   // 成本分析
   // totalCost = 采购计划金额（分母，用后端 totalAmount = 采购量×单价）
@@ -71,7 +116,8 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
     verdict = 'critical';
     criticalPath = '主料未到，无法开裁';
     pendingFabrics.forEach(r => {
-      const gap = subtractMaterialQuantity(r.purchaseQuantity, r.arrivedQuantity);
+      const gap = realGap(r);
+      if (gap <= 0) return;   // 容差内的差异不算缺料
       risks.push(`${r.materialName} 缺 ${formatMaterialQuantity(gap)}${r.unit || ''}（${r.supplierName || '未分配'}）`);
     });
     suggestions.push('立即催面料供应商发货');
@@ -99,6 +145,18 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
     } else {
       criticalPath = '全部到齐 ';
     }
+  }
+
+  // ── 容差说明：差异在容差内的不阻塞，但要让用户知道"这个差异被容忍了"，
+  //    否则用户看到「到货 353 / 预采购 353.5」会以为系统算错了 ──
+  const tolerated = orderRecs.filter(r => {
+    const p = normalizeMaterialQuantity(r.purchaseQuantity);
+    const a = normalizeMaterialQuantity(r.arrivedQuantity);
+    return p > 0 && a < p && (p - a) <= arrivalTolerance(p);
+  });
+  if (tolerated.length > 0) {
+    const names = tolerated.slice(0, 3).map(r => r.materialName).join('、');
+    suggestions.push(`差异在容差内（±3%）视为已到齐：${names}${tolerated.length > 3 ? '等' : ''}`);
   }
 
   // ── 供应商维度分析 ──
