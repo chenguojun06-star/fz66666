@@ -24,6 +24,40 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+/**
+ * jsdom 不实现 ResizeObserver，而 antd 的 Table / Scrollbar / AutoSize 都会
+ * `new ResizeObserver(...)`，缺失时直接抛 `ResizeObserver is not defined`，
+ * 让用例在渲染阶段就崩掉（看不到任何断言失败信息）。
+ *
+ * 这里补一个最小空实现：只做「构造得出来、observe 得进去」，
+ * 不模拟尺寸变化 —— 布局尺寸相关的断言仍应交给浏览器 E2E，而不是在这里假装能测。
+ */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
+}
+
+/**
+ * 同理：jsdom 不实现 `window.matchMedia`，而 antd 的响应式栅格 / Tooltip /
+ * 折叠面板都会调用它。补一个恒定「不匹配」的最小实现，
+ * 固定按窄屏渲染 —— 需要验证宽屏布局时请走浏览器 E2E。
+ */
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
 afterEach(() => {
   cleanup();
 });

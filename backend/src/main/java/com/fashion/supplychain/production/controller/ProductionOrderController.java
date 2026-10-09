@@ -480,6 +480,21 @@ public class ProductionOrderController {
     }
 
     /**
+     * 外发工厂产能台账（D-779）
+     *
+     * <p>给「内部产能不足时要外推」的决策用：哪家有余量、哪家超载、
+     * <b>哪家压根没配日产能</b>（这批必须显式暴露出来，而不是当作 0 产能静默过滤）。
+     */
+    @GetMapping("/capacity-ledger")
+    public Result<List<FactoryCapacityOrchestrator.CapacityLedgerRow>> getCapacityLedger() {
+        // 工厂账号不可查看租户级产能台账（属于全局数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        return Result.success(factoryCapacityOrchestrator.getCapacityLedger());
+    }
+
+    /**
      * 外发工厂统计（对齐 PC 端 ExternalFactory FactorySidebar 7-Tag）
      * 返回每个外发工厂的：订单数/件数/款数/进行中/已完成/逾期/预警
      */

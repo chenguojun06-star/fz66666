@@ -8,6 +8,49 @@ export type ProductionOrderListParams = ProductionQueryParams & {
   endDate?: string;
 };
 
+/**
+ * 外发工厂产能台账行（D-779）
+ *
+ * status 语义（区分「不知道」与「很闲」是关键）：
+ * - UNCONFIGURED 未配置产能 → loadRate/freeCapacity 为 null，**不可当作有余量**
+ * - OVERLOADED 负荷 >100%（正是需要外推的信号）
+ * - TIGHT 负荷 80%~100%
+ * - AVAILABLE 负荷 <80%，有余量
+ * - UNKNOWN 有产能但没有排产数据 → 数值同样为 null
+ */
+export type CapacityLedgerStatus =
+  | 'UNCONFIGURED'
+  | 'OVERLOADED'
+  | 'TIGHT'
+  | 'AVAILABLE'
+  | 'UNKNOWN';
+
+export interface CapacityLedgerRow {
+  factoryId: string;
+  factoryName: string;
+  factoryType?: string;
+  /** 手工配置日产能（件/天）；null = 未配置 */
+  dailyCapacity: number | null;
+  /** 实测扫码推算日产能；0 = 无实测 */
+  realDailyOutput: number;
+  /** 生效日产能 = max(实测, 配置) */
+  effectiveDailyCapacity: number;
+  capacitySource: 'real' | 'configured' | 'none';
+  inProgressQuantity: number;
+  inProgressOrders: number;
+  /** 近 30 天可接单总量 */
+  capacity30d: number;
+  /** 负荷率 %，不可知为 null */
+  loadRate: number | null;
+  /** 近 30 天余量（件），不可知为 null，负数=超载 */
+  freeCapacity30d: number | null;
+  status: CapacityLedgerStatus;
+  qualityScore: number;
+  completionRate: number;
+  overallScore: number;
+  supplierTier?: string;
+}
+
 export interface FactoryCapacityItem {
   factoryName: string;
   totalOrders: number;
@@ -77,6 +120,9 @@ export const productionOrderApi = {
   stats: (params?: Partial<ProductionOrderListParams>) => api.get<{ code: number; data: ProductionOrderStats }>('/production/order/stats', { params }),
   // 工厂产能雷达
   getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
+  /** D-779：外发工厂产能台账（判断「订单该外推给谁」） */
+  getCapacityLedger: () =>
+    api.get<{ code: number; data: CapacityLedgerRow[] }>('/production/order/capacity-ledger'),
   // 客户分享链接：生成分享令牌（30天有效）
   generateShareToken: (orderId: string) =>
     api.post<{ code: number; data: { token: string; shareUrl: string } }>(

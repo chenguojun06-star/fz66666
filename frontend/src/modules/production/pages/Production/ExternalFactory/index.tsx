@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Space, Tag } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined, InboxOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined, InboxOutlined, BarChartOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
@@ -30,6 +30,7 @@ import ProductionModals from '../List/components/ProductionModals';
 import FactorySidebar, { FactoryStats } from './components/FactorySidebar';
 import ExternalFactorySmartView from './ExternalFactorySmartView';
 import FactoryShipmentTab from './components/FactoryShipmentTab';
+import CapacityLedgerTab from './components/CapacityLedgerTab';
 
 const ExternalFactory: React.FC = () => {
   const { message } = App.useApp();
@@ -344,6 +345,14 @@ const ExternalFactory: React.FC = () => {
               key: 'shipments',
               label: <span><InboxOutlined /> 收货管理</span>,
               children: <div className="u-ov-auto u-h-full"><FactoryShipmentTab selectedFactoryId={selectedFactoryId} isFactoryAccount={isFactoryAccount} /></div>,
+            },
+            {
+              // D-779：产能台账。工厂账号不可见（租户级全局数据）
+              key: 'capacity',
+              label: <span><BarChartOutlined /> 产能台账</span>,
+              children: isFactoryAccount ? null : (
+                <div className="u-ov-auto u-h-full"><CapacityLedgerTab /></div>
+              ),
             },
           ]} />
         </div>

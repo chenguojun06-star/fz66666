@@ -563,7 +563,7 @@ public class FactoryCapacityOrchestrator {
         return "completed".equalsIgnoreCase(s) || "warehoused".equalsIgnoreCase(s);
     }
 
-    private double round1(double v) {
+    private static double round1(double v) {
         return Math.round(v * 10.0) / 10.0;
     }
 
@@ -581,5 +581,213 @@ public class FactoryCapacityOrchestrator {
         long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(now, o.getPlannedEndDate());
         int progress = o.getProductionProgress() == null ? 0 : o.getProductionProgress();
         return daysLeft <= AT_RISK_DAYS && progress < AT_RISK_PROGRESS;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     * D-779：外发工厂产能台账
+     *
+     * 为什么不是直接做「对外发布」：
+     * 实测生产库 25 家 EXTERNAL 工厂中**只有 1 家配了 daily_capacity**，
+     * t_factory_calendar 0 行、t_factory_shipment 0 行。
+     * 没有产能数据时做发布，发布出来是空的 —— 那种「看起来做完、
+     * 实际无物可发」的功能最坑人。所以先把最缺的补上：
+     * 一眼看清**哪家能接、哪家超载、哪家压根没填产能**。
+     *
+     * 口径纪律（与 D-775 NULL=未配置 一致）：
+     * - 产能缺失 → status=UNCONFIGURED，且 loadRate/freeCapacity 返回 null，
+     *   **不用 0 冒充**（那会让运营以为工厂很闲，从而把订单推给一家根本没产能的厂）
+     * - 排产数据缺失 → status=UNKNOWN，同样不给数字
+     * - 实测扫码产能 > 手工配置产能（实测更可信）
+     * ══════════════════════════════════════════════════════════════ */
+
+    /** 台账观测窗口：近 30 天 */
+    public static final int LEDGER_WINDOW_DAYS = 30;
+    /** 负荷率 ≥ 该值视为吃紧 */
+    public static final double LEDGER_TIGHT_RATE = 80.0;
+
+    /** 产能台账一行 */
+    @Data
+    public static class CapacityLedgerRow {
+        private String factoryId;
+        private String factoryName;
+        private String factoryType;
+        /** 手工配置的日产能（件/天）；null = 未配置 */
+        private Integer dailyCapacity;
+        /** 实测扫码推算的日产能（件/天）；0 = 无实测数据 */
+        private double realDailyOutput;
+        /** 实际生效的日产能 = max(实测, 配置) */
+        private double effectiveDailyCapacity;
+        /** 产能来源：real=实测 / configured=配置 / none=都无 */
+        private String capacitySource;
+        /** 在制件数 */
+        private int inProgressQuantity;
+        /** 在制单数 */
+        private int inProgressOrders;
+        /** 观察窗口内可接单总量 = 生效日产能 × 30 */
+        private int capacity30d;
+        /** 负荷率（%）：在制件数 ÷ 窗口产能；不可知时 null */
+        private Double loadRate;
+        /** 窗口余量（件）；不可知时 null，负数表示已超载 */
+        private Integer freeCapacity30d;
+        /**
+         * UNCONFIGURED=未配产能 / OVERLOADED=超载 / TIGHT=接近满载 /
+         * AVAILABLE=有余量 / UNKNOWN=负载不可知
+         */
+        private String status;
+        private double qualityScore = -1;
+        private double completionRate = -1;
+        private double overallScore = -1;
+        private String supplierTier;
+        /** 排产数据是否缺失（用于判定 UNKNOWN） */
+        private boolean loadDataMissing;
+    }
+
+    /**
+     * 按行计算负荷率/余量/状态。
+     *
+     * <p>抽成静态方法是为了让判定口径能被单测直接覆盖——
+     * 这些阈值是最容易被后续改动悄悄改坏的地方。
+     */
+    public static void applyLedgerStatus(CapacityLedgerRow r) {
+        double real = r.getRealDailyOutput() > 0 ? r.getRealDailyOutput() : 0;
+        double cfg = r.getDailyCapacity() != null && r.getDailyCapacity() > 0
+                ? r.getDailyCapacity().doubleValue() : 0;
+        double eff = Math.max(real, cfg);
+        r.setEffectiveDailyCapacity(eff);
+        r.setCapacitySource(real > 0 ? "real" : (cfg > 0 ? "configured" : "none"));
+
+        if (eff <= 0) {
+            // 没有产能：无从判断余量，给 null 而不是 0
+            r.setCapacity30d(0);
+            r.setLoadRate(null);
+            r.setFreeCapacity30d(null);
+            r.setStatus("UNCONFIGURED");
+            return;
+        }
+        int cap30 = (int) Math.round(eff * LEDGER_WINDOW_DAYS);
+        r.setCapacity30d(cap30);
+        if (r.isLoadDataMissing()) {
+            r.setLoadRate(null);
+            r.setFreeCapacity30d(null);
+            r.setStatus("UNKNOWN");
+            return;
+        }
+        double rate = cap30 > 0 ? round1(r.getInProgressQuantity() * 100.0 / cap30) : 0;
+        r.setLoadRate(rate);
+        r.setFreeCapacity30d(cap30 - r.getInProgressQuantity());
+        if (rate > 100) {
+            r.setStatus("OVERLOADED");
+        } else if (rate >= LEDGER_TIGHT_RATE) {
+            r.setStatus("TIGHT");
+        } else {
+            r.setStatus("AVAILABLE");
+        }
+    }
+
+    /** 是否外发工厂（沿用既有口径，未标注的不猜） */
+    public static boolean isOutsourceFactory(Factory f) {
+        if (f == null) return false;
+        return "EXTERNAL".equalsIgnoreCase(f.getFactoryType())
+                || "OUTSOURCE".equalsIgnoreCase(f.getSupplierType());
+    }
+
+    /**
+     * 外发工厂产能台账：供运营决定「订单要不要外推、推给谁」。
+     *
+     * <p>只含外发工厂 —— 内部工厂不参与对外承接。
+     */
+    public List<CapacityLedgerRow> getCapacityLedger() {
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Collections.emptyList();
+        }
+        Long tenantId = UserContext.tenantId();
+
+        List<Factory> factories;
+        try {
+            QueryWrapper<Factory> fqw = new QueryWrapper<>();
+            fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
+            factories = factoryService.list(fqw);
+        } catch (Exception e) {
+            log.warn("[产能台账] 工厂查询失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+        final Map<String, Factory> outsource = factories.stream()
+                .filter(FactoryCapacityOrchestrator::isOutsourceFactory)
+                .collect(Collectors.toMap(
+                        f -> f.getFactoryName() == null ? "" : f.getFactoryName().trim(),
+                        f -> f, (a, b) -> a));
+
+        // 在制负载：按工厂名聚合（与现有雷达同一口径）
+        Map<String, List<ProductionOrder>> grouped = new HashMap<>();
+        try {
+            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .notIn("status", OrderStatusConstants.TERMINAL_STATUSES)
+              .eq("delete_flag", 0)
+              .isNotNull("factory_name").ne("factory_name", "");
+            for (ProductionOrder o : productionOrderService.list(qw)) {
+                grouped.computeIfAbsent(o.getFactoryName().trim(), k -> new ArrayList<>()).add(o);
+            }
+        } catch (Exception e) {
+            log.warn("[产能台账] 在制订单查询失败: {}", e.getMessage());
+        }
+
+        // 复用现有雷达的实测产能与历史评价，避免两套口径打架
+        Map<String, FactoryCapacityItem> radar;
+        try {
+            radar = getFactoryCapacity().stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toMap(
+                            i -> i.getFactoryName() == null ? "" : i.getFactoryName().trim(),
+                            i -> i, (a, b) -> a));
+        } catch (Exception e) {
+            radar = Collections.emptyMap();
+        }
+
+        List<CapacityLedgerRow> rows = new ArrayList<>();
+        for (Map.Entry<String, Factory> e : outsource.entrySet()) {
+            String fname = e.getKey();
+            if (fname.isEmpty()) continue;
+            Factory f = e.getValue();
+            FactoryCapacityItem r = radar.get(fname);
+
+            CapacityLedgerRow row = new CapacityLedgerRow();
+            row.setFactoryId(f.getId());
+            row.setFactoryName(fname);
+            row.setFactoryType(f.getFactoryType());
+            // D-775：NULL=未配置，不要用 !=500 哨兵（用户真实产能=500 时也应生效）
+            row.setDailyCapacity(f.getDailyCapacity() != null && f.getDailyCapacity() > 0
+                    ? f.getDailyCapacity() : null);
+
+            List<ProductionOrder> inProgress = grouped.get(fname);
+            row.setLoadDataMissing(inProgress == null);
+            if (inProgress != null) {
+                row.setInProgressOrders(inProgress.size());
+                row.setInProgressQuantity(inProgress.stream()
+                        .mapToInt(o -> o.getOrderQuantity() == null ? 0 : o.getOrderQuantity())
+                        .sum());
+            }
+            if (r != null) {
+                row.setRealDailyOutput(r.getAvgDailyOutput() > 0 ? r.getAvgDailyOutput() : 0);
+                row.setQualityScore(r.getQualityScore());
+                row.setCompletionRate(r.getCompletionRate());
+                row.setOverallScore(r.getOverallScore());
+                row.setSupplierTier(r.getSupplierTier());
+            }
+            applyLedgerStatus(row);
+            rows.add(row);
+        }
+
+        // 排序：有余量优先 → 吃紧 → 超载 → 未知 → 未配置（把「能接的」排在最前）
+        rows.sort(Comparator.comparingInt((CapacityLedgerRow r) -> {
+            switch (String.valueOf(r.getStatus())) {
+                case "AVAILABLE": return 0;
+                case "TIGHT": return 1;
+                case "OVERLOADED": return 2;
+                case "UNKNOWN": return 3;
+                default: return 4;
+            }
+        }).thenComparing(r -> r.getLoadRate() == null ? 999 : r.getLoadRate()));
+        return rows;
     }
 }
