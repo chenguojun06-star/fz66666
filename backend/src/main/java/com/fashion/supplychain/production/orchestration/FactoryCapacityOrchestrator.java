@@ -228,7 +228,8 @@ public class FactoryCapacityOrchestrator {
                     continue;
                 }
                 Factory f = factoryByName.get(item.getFactoryName());
-                if (f != null && f.getDailyCapacity() != null && f.getDailyCapacity() > 0 && f.getDailyCapacity() != 500) {
+                // D-775：NULL=未配置（V202710090005 起），不再用 !=500 哨兵——用户真实产能=500 时也应生效
+                if (f != null && f.getDailyCapacity() != null && f.getDailyCapacity() > 0) {
                     item.setAvgDailyOutput(f.getDailyCapacity().doubleValue());
                     item.setCapacitySource("configured");
                     if (item.getTotalQuantity() > 0) {
@@ -398,7 +399,8 @@ public class FactoryCapacityOrchestrator {
                 item.setAvgDailyOutput(0);
                 item.setEstimatedCompletionDays(-1);
                 item.setCapacitySource("none");
-                if (f.getDailyCapacity() != null && f.getDailyCapacity() > 0 && f.getDailyCapacity() != 500) {
+                // D-775：NULL=未配置，不再用 !=500 哨兵
+                if (f.getDailyCapacity() != null && f.getDailyCapacity() > 0) {
                     item.setAvgDailyOutput(f.getDailyCapacity().doubleValue());
                     item.setCapacitySource("configured");
                 }

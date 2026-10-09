@@ -3752,4 +3752,22 @@ chip 可见人群对齐，否则"看得到点不进"。
 **验证**：mvn compile 0 错误（test-runner-mcp 不可用，P0 #23 降级原生命令）。
 **反思三问**：① 影响面=仅 SelfHealingOrchestrator.repairProgressConsistency 与 FactoryCapacityOrchestrator.calcQualityScore，均先查调用方确认（repair 仅 diagnose/repair 调用；calcQualityScore 仅 calculateMatchScore 调用且 fillHistoricalEvaluation 先执行）② 同步本地函数，无 LLM/网络调用 ③ 编译通过 + 逻辑链路核对（qualityScore 字段为原始 double 默认 -1，无 NPE）；运行时验证待部署后观察 6 小时巡检日志不再出现「进度清零」。
 
+## D-775：日产能 500 哨兵根治——NULL=未配置（2026-10-09）
+
+**上下文**：用户采纳 D-774 汇报中发现的问题——外部 8 家工厂 daily_capacity 全是默认 500，代码用 `!=500` 判"已配置"，配置产能功能形同虚设；8 家零近30天扫码（capacitySource 全 none）。要求"优先做这个，做好点不要出别的问题"。
+
+**数据库核实**：云端列 int/nullable/DEFAULT 500；8 家全 500；30 天扫码全 0（本厂累计 2079 件÷18 活跃天≈115 件/天，其余 7 家零扫码零订单无依据）；t_process_capacity 租户 2 空表。
+
+**方案（NULL 语义根治）**：
+1. **Flyway `V202710090005__factory_daily_capacity_null_unconfigured.sql`**：MODIFY 列默认 NULL（幂等）+ 存量 `500→NULL`（UPDATE 带 WHERE 幂等；500 在原 !=500 判定下本就按未配置生效，全局语义等价无损失）。云端 INFORMATION_SCHEMA 已核实列存在；版本号 > 202710090004；check-flyway-sql.py 通过
+2. **3 处哨兵移除**（改 `!= null && >0`）：FactoryCapacityOrchestrator L231（fillDailyCapacityFallback）/ L401（fillMissingFactories）、SchedulingSuggestionOrchestrator L313（capacityConfigured）；排产建议未配置时仍 return 500 但标 `capacitySource="default"`（显式默认兜底，非哨兵）
+3. **清空=取消配置**：MyBatis-Plus updateById NOT_NULL 策略下 null 不落库 → Factory 新增 `@TableField(exist=false) clearDailyCapacity` 标志；FactoryOrchestrator.update 见标志才 LambdaUpdateWrapper set NULL（带 tenant_id）；前端编辑弹窗 `values.dailyCapacity==null` 时显式传标志。**关键坑**：不能用"null=清空"推断——QuickManageModal.tsx:255 走同一 update 接口只改名称/联系人不带产能字段，会被误清
+4. **数据回填**：本厂 daily_capacity=115（用户拍板，扫码推算）；其余 7 家留空待用户在 系统管理→工厂管理 页面填（UI 已支持，extra 提示加"留空表示未配置"）
+
+**兼容性自查**：旧代码+115（≠500 立即生效）、新代码+NULL、Flyway 与代码同次部署原子生效无窗口；ApsSchedulingHelper（null→return 500 默认）/FactoryProfileLearningService（null→0）等全部使用点已 grep 核查 null-safe；5 分钟 Redis 缓存自动过期。
+
+**验证**：mvn compile 0 错误、npx tsc --noEmit 0 错误、check-flyway-sql.py 通过、check-entity-flyway 无需校验、云端 UPDATE 回填已验证（本厂 115/其余 500）。
+
+**遗留**：7 家外部工厂日产能待用户页面填；排产建议无数据时 default 500 估算保留原状（有 default 源标记，如需按品类均值估算是新需求）。
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md

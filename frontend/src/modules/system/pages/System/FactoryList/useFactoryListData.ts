@@ -262,6 +262,9 @@ export function useFactoryListData() {
         status: values.status || 'active',
         id: factoryModal.data?.id,
         operationRemark: remark,
+        // D-775：日产能清空=取消配置（NULL=未配置）。antd 清空后值为 undefined 会被 JSON 丢键，
+        // 后端无法区分"未传"与"清空"，故显式传标志位；有值时不传（正常走 updateById）
+        ...(dialogMode === 'edit' && values.dailyCapacity == null ? { clearDailyCapacity: true } : {}),
       };
       setSubmitLoading(true);
       try {

@@ -73,9 +73,16 @@ public class Factory {
 
     /**
      * 工厂日产能（件/天），用于AI排产建议引擎计算
-     * 默认 500，可在工厂管理页面修改
+     * D-775 起：NULL=未配置（V202710090005 迁移后不再以 500 作默认），可在工厂管理页面修改
      */
     private Integer dailyCapacity;
+
+    /**
+     * D-775：编辑保存时显式清空日产能的标志（clearDailyCapacity=true → daily_capacity 置 NULL）。
+     * 仅编辑弹窗全量保存时传递；QuickManageModal 等部分更新入口不传，避免"未传字段"被误判为"清空"。
+     */
+    @TableField(exist = false)
+    private Boolean clearDailyCapacity;
 
     private String supplierCategory;
 

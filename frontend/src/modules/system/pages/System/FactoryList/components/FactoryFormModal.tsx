@@ -290,7 +290,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
         <Form.Item
           name="dailyCapacity"
           label="日产能（件/天）"
-          extra="填写实际日均可生产件数，直接影响排产建议评分的准确性"
+          extra="填写实际日均可生产件数，留空表示未配置（按无产能数据处理）；直接影响排产建议评分的准确性"
         >
           <InputNumber
             min={1}

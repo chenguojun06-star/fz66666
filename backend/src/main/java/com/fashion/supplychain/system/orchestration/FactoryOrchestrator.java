@@ -184,9 +184,22 @@ public class FactoryOrchestrator {
         if (!StringUtils.hasText(factory.getFactoryType())) {
             factory.setFactoryType("EXTERNAL");
         }
+        // D-775：NULL=未配置。仅当编辑弹窗显式传 clearDailyCapacity=true 才清空——
+        // QuickManageModal 等部分更新入口不带该标志（也不带 dailyCapacity），不能把"未传"当"清空"
+        boolean clearCapacity = Boolean.TRUE.equals(factory.getClearDailyCapacity());
+        if (clearCapacity) {
+            factory.setDailyCapacity(null);
+        }
         boolean ok = factoryService.updateById(factory);
         if (!ok) {
             throw new IllegalStateException("更新失败");
+        }
+        if (clearCapacity) {
+            LambdaUpdateWrapper<Factory> capacityClear = new LambdaUpdateWrapper<>();
+            capacityClear.eq(Factory::getId, factory.getId())
+                .eq(Factory::getTenantId, UserContext.tenantId())
+                .set(Factory::getDailyCapacity, null);
+            factoryService.update(capacityClear);
         }
         Factory latest = factoryService.getById(factory.getId());
         if (latest != null) {

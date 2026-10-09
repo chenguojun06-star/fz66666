@@ -2,14 +2,26 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-09（✅ D-774 D-772 三个遗留数据问题核实+最优解：自愈巡检防清零进度 / t_factory 不插行定案 / 品质分改真实扫码合格率；mvn compile 0 错误，未提交）
-> 上一版：2026-10-09（✅ D-773 采购批量按钮禁用原因全入口动态化：四入口统一 getBatchActionDisabledReason；tsc/ESLint 全绿，已推送 1c088c299；同推 D-772=a0594cd54，safe-push 11 项全过）
+> 最后更新：2026-10-09（✅ D-775 日产能 500 哨兵根治：NULL=未配置（V202710090005）+ 3 处哨兵移除 + clearDailyCapacity 标志 + 本厂回填 115；tsc/mvn 全绿，未提交；D-774 已推送 184fe5d62）
+> 上一版：2026-10-09（✅ D-774 D-772 三个遗留数据问题核实+最优解：自愈巡检防清零进度 / t_factory 不插行定案 / 品质分改真实扫码合格率；mvn compile 0 错误，已推送 184fe5d62）
 > 上一版：2026-10-07（✅ D-771 商品上架管理专用页：改图（主图+每色一图）/ 改售价库存 / 上下架；已上线 1b3d8d6）
 > 上一版：2026-10-07（✅ D-766/D-767 店铺界面返工：桌面端巨幅修复 + 上架入口可懂 + 1×1 封面兜底；均已上线）
 > 再上一版：2026-10-07（✅ D-765 店铺界面按淘宝风格重做（门面 H5 + 管理页）；D-764 修线上 500/404）
 > 更早：2026-10-06（✅ D-755 小云直查被上下文劫持 + D-756 物料仓库「面料属性」补齐落地）
 
-## ✅ D-774 D-772 三个遗留数据问题的数据库核实与最优解（2026-10-09，代码完成未提交）
+## ✅ D-775 日产能 500 哨兵根治——NULL=未配置（2026-10-09，代码完成未提交）
+
+**问题**：外部 8 家工厂 daily_capacity 全是列默认 500，代码用 `!=500` 判"已配置"→ 配置产能功能形同虚设；8 家近 30 天零扫码 → capacitySource 全部 "none"，产能卡片/排产建议全部无产能数据。
+
+**改动（6 文件 + 1 迁移 + 云端数据）**：
+- Flyway `V202710090005__factory_daily_capacity_null_unconfigured.sql`：列默认 500→NULL（幂等 MODIFY）+ 存量 500→NULL（UPDATE 带 WHERE 幂等，与原判定语义全局等价）
+- 3 处 `!=500` 哨兵移除：FactoryCapacityOrchestrator L231/L401、SchedulingSuggestionOrchestrator L313
+- 「清空=取消配置」：Factory 实体加 `@TableField(exist=false) clearDailyCapacity`，FactoryOrchestrator.update 见标志才显式 set NULL（带 tenant_id）；前端编辑弹窗 dailyCapacity 为空时传标志。**坑**：QuickManageModal 走同一 update 接口只改名/联系人不带产能字段，绝不能按"null=清空"推断
+- 云端回填：本厂=115（用户拍板，扫码 2079÷18 天推算）；其余 7 家留空，待用户在 系统管理→工厂管理「日产能」填写（表单 extra 已加"留空表示未配置"）
+
+**验证**：mvn compile 0 错误、tsc 0 错误、check-flyway-sql.py 通过、云端 UPDATE 已验证。**未提交**，待用户确认。
+
+## ✅ D-774 D-772 三个遗留数据问题的数据库核实与最优解（2026-10-09，已推送 184fe5d62）
 
 **数据库核实**（SSH 云端 MySQL，密码已变更为 `Fz666MySQL@2026`，查询需 `--default-character-set=utf8mb4`）：
 - ① 全库 32 单在产仅 7 单 completed=0&progress>0；租户 2 两单 80% 进度的订单 `t_product_warehousing` **0 行入库**，工序扫码 300/840 件 → completed=0 是真实的，**禁止回填数据**

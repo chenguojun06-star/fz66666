@@ -310,8 +310,8 @@ public class SchedulingSuggestionOrchestrator {
 
         Integer realCap = realDailyCapByFactory.get(factoryName);
         boolean hasRealScanCapacity = realCap != null && realCap > 0;
-        boolean capacityConfigured = f.getDailyCapacity() != null && f.getDailyCapacity() > 0
-                && f.getDailyCapacity() != 500;
+        // D-775：NULL=未配置（V202710090005 起），不再用 !=500 哨兵
+        boolean capacityConfigured = f.getDailyCapacity() != null && f.getDailyCapacity() > 0;
         int dailyCapacity = resolveDailyCapacity(realCap, hasRealScanCapacity, capacityConfigured, f);
         String capacitySource = resolveCapacitySource(hasRealScanCapacity, capacityConfigured);
 

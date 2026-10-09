@@ -866,6 +866,14 @@
 - [x] t_factory 定案不插行（插行污染外发/供应商/排产清单）
 - [x] FactoryCapacityOrchestrator.calcQualityScore 改用真实扫码合格率（-1 才回退启发式）
 - [x] 验证：mvn compile 0 错误（test-runner-mcp 不可用，P0 #23 降级）
-- [ ] 待用户确认后提交
+- [x] 已推送 184fe5d62（safe-push 通过）
+
+## 2026-10-09 D-775 日产能 500 哨兵根治（代码完成，未提交）
+- [x] 数据库核实：8 家外部工厂全 500 默认值、30 天零扫码；本厂 2079 件÷18 天≈115 件/天
+- [x] Flyway V202710090005：默认 NULL + 存量 500→NULL（check-flyway-sql.py 通过）
+- [x] 3 处 !=500 哨兵移除；清空=取消配置（clearDailyCapacity 标志，防 QuickManageModal 误清）
+- [x] 云端回填本厂=115；其余 7 家留空待用户页面填
+- [x] 验证：mvn compile 0 错误 + tsc 0 错误 + check-entity-flyway 通过
+- [ ] 待用户确认后提交；待用户在工厂管理页填 7 家真实日产能
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md
