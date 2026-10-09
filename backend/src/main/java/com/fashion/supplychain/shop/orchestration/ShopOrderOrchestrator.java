@@ -55,6 +55,9 @@ public class ShopOrderOrchestrator {
     private ShopConfigMapper shopConfigMapper;
 
     @Autowired
+    private com.fashion.supplychain.shop.orchestration.ShopAddressService shopAddressService;
+
+    @Autowired
     private ShopOrderMapper shopOrderMapper;
 
     @Autowired
@@ -489,4 +492,50 @@ public class ShopOrderOrchestrator {
             }
         }
     }
+
+    /* ── D-770：C 端收货地址簿 ── */
+
+    public List<com.fashion.supplychain.shop.entity.ShopAddress> addresses(String slug, String phone) {
+        ShopConfig config = resolveBySlug(slug);
+        if (config == null) {
+            throw new IllegalArgumentException("店铺不存在");
+        }
+        return shopAddressService.listByPhone(config.getTenantId(), phone);
+    }
+
+    public Long saveAddress(String slug, Map<String, Object> body) {
+        ShopConfig config = resolveBySlug(slug);
+        if (config == null) {
+            throw new IllegalArgumentException("店铺不存在");
+        }
+        Long id = shopAddressService.save(
+                config.getTenantId(),
+                String.valueOf(body.get("phone")),
+                String.valueOf(body.get("consignee")),
+                String.valueOf(body.get("phoneExt")),
+                String.valueOf(body.get("province")),
+                String.valueOf(body.get("city")),
+                String.valueOf(body.get("district")),
+                String.valueOf(body.get("detailAddr")),
+                Boolean.TRUE.equals(body.get("isDefault"))
+                        || "1".equals(String.valueOf(body.get("isDefault"))));
+        return id;
+    }
+
+    public void setDefaultAddress(String slug, String phone, Long id) {
+        ShopConfig config = resolveBySlug(slug);
+        if (config == null) {
+            throw new IllegalArgumentException("店铺不存在");
+        }
+        shopAddressService.setDefault(config.getTenantId(), phone, id);
+    }
+
+    public void deleteAddress(String slug, String phone, Long id) {
+        ShopConfig config = resolveBySlug(slug);
+        if (config == null) {
+            throw new IllegalArgumentException("店铺不存在");
+        }
+        shopAddressService.delete(config.getTenantId(), phone, id);
+    }
+
 }

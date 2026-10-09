@@ -3,6 +3,8 @@ import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, InputNumber, M
 import {
   CopyOutlined,
   ExportOutlined,
+  FileExcelOutlined,
+  PrinterOutlined,
   LinkOutlined,
   ReloadOutlined,
   ShopOutlined,
@@ -13,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
+import { exportShopOrders, printDeliveryNotes } from './deliveryTools';
 import type { ShopConfig, ShopOrder, ShopOrderDetail, ShopOrderItem, ShopOrderStats } from '@/services/shop/shopApi';
 import api, { unwrapApiData } from '@/utils/api';
 import './index.css';
@@ -324,6 +327,58 @@ const ShopManage: React.FC = () => {
       message.error(e instanceof Error ? e.message : '备注保存失败');
     } finally {
       setRemarkSubmitting(false);
+    }
+  };
+
+  /** D-770：导出订单 Excel（勾选优先，未勾选导出当前列表） */
+  const handleExportOrders = async () => {
+    try {
+      const n = await exportShopOrders(orders, selectedOrderIds, shopName);
+      message.success(`已导出 ${n} 笔订单`);
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '导出失败');
+    }
+  };
+
+  /** D-770：打印发货单（一个订单一块，需逐单拉明细） */
+  const handlePrintNotes = async () => {
+    const picked = selectedOrderIds.length
+      ? orders.filter((o) => selectedOrderIds.includes(o.id))
+      : orders.filter((o) => o.status !== 'CANCELLED');
+    if (!picked.length) {
+      message.warning('没有可打印的订单');
+      return;
+    }
+    const modal = message.loading('正在准备发货单…', 0);
+    try {
+      const itemsByOrderId: Record<string, Array<Record<string, unknown>>> = {};
+      // 明细要逐单拉；并发上限 5，避免订单多时把浏览器打满
+      for (let i = 0; i < picked.length; i += 5) {
+        const batch = picked.slice(i, i + 5);
+        const results = await Promise.all(
+          batch.map(async (o) => {
+            try {
+              const d = unwrapApiData<{ items?: Array<Record<string, unknown>> }>(
+                await shopAdminApi.orderDetail(o.id),
+                '读取订单明细失败',
+              );
+              return [o.id, d?.items ?? []] as const;
+            } catch {
+              // 单单拉取失败不阻断整批：发货单会显示「无明细」，仓库可自行核对
+              return [o.id, []] as const;
+            }
+          }),
+        );
+        for (const [id, items] of results) {
+          itemsByOrderId[id] = items as never;
+        }
+      }
+      const n = printDeliveryNotes(picked, itemsByOrderId, shopName);
+      modal();
+      message.success(`已生成 ${n} 张发货单`);
+    } catch (e: unknown) {
+      modal();
+      message.error(e instanceof Error ? e.message : '打印失败');
     }
   };
 
@@ -879,6 +934,20 @@ const ShopManage: React.FC = () => {
                 onChange={(e) => setOrderKw(e.target.value)}
                 onSearch={(v) => void fetchOrders(1, orderStatus, v)}
               />
+              <Button
+                icon={<FileExcelOutlined />}
+                disabled={orders.length === 0}
+                onClick={() => void handleExportOrders()}
+              >
+                导出 Excel
+              </Button>
+              <Button
+                icon={<PrinterOutlined />}
+                disabled={orders.length === 0}
+                onClick={() => void handlePrintNotes()}
+              >
+                打印发货单
+              </Button>
               <Button
                 type="primary"
                 disabled={selectedOrderIds.length === 0}

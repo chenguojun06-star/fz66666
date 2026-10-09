@@ -98,4 +98,54 @@ public class ShopPublicController {
     private String str(Object v) {
         return v == null ? null : String.valueOf(v).trim();
     }
+
+    /* ── D-770：C 端收货地址簿 ── */
+
+    /** 读取地址簿（按手机号归属；免登录页面，故严格校验手机号格式与地址条数上限） */
+    @GetMapping("/{slug}/addresses")
+    public Result<?> addresses(@PathVariable String slug,
+                               @RequestParam("phone") String phone) {
+        try {
+            return Result.success(shopOrderOrchestrator.addresses(slug, phone));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** 新增或更新地址（同收货人+详细地址视为同一条） */
+    @PostMapping("/{slug}/addresses")
+    public Result<?> saveAddress(@PathVariable String slug, @RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(Map.of("id", shopOrderOrchestrator.saveAddress(slug, body)));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** 设为默认地址 */
+    @PostMapping("/{slug}/addresses/{id}/default")
+    public Result<?> setDefaultAddress(@PathVariable String slug,
+                                       @RequestParam("phone") String phone,
+                                       @PathVariable Long id) {
+        try {
+            shopOrderOrchestrator.setDefaultAddress(slug, phone, id);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** 删除地址（只能删自己的） */
+    @PostMapping("/{slug}/addresses/{id}/delete")
+    public Result<?> deleteAddress(@PathVariable String slug,
+                                   @RequestParam("phone") String phone,
+                                   @PathVariable Long id) {
+        try {
+            shopOrderOrchestrator.deleteAddress(slug, phone, id);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
 }
