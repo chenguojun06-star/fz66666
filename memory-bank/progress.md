@@ -2,9 +2,19 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-06（D-754 智能化落地 5 批：P0 清淤 / P1 巡检→根因串联 / P2 环节瓶颈热力 / P3 交期偏差回扫自校准 / P4 排产建议一键采纳，每批独立提交并推送，CI 全绿）
+> 最后更新：2026-10-09（D-776 外部账号隔离收口；D-775/774/773/772 代码完成未提交）
 
 ## 已完成
+
+### 2026-10-09 D-776 外部账号不混入内部账号体系（代码完成未提交）
+
+- [x] 核实：面辅料供应商账号独立表 `t_supplier_user` 物理隔离（与 t_user 零交集，独立登录端点）；外发工厂账号在 `t_user` 以 factory_id + is_factory_owner 打标（3 条）
+- [x] 核实：`user_type` 为休眠字段（Java 零读取），云端数据与 factory_id 100% 等价，沿用 factory_id 口径
+- [x] 修复：UserController `excludeFactoryUsers` 默认 false→true；TenantController 子账号同步默认 true
+- [x] 修复：OrganizationUnitOrchestrator `getAssignableUsers`/`membersByOrgUnit` 补内部范围过滤 + `assignMember`/`batchAssignMembers` 写入侧防御
+- [x] 反向核实：角色人数统计显式传 false 保全量；工厂账号传 factoryId 查询不受影响
+- [x] 验证：mvn compile / tsc --noEmit / eslint 全绿（test-runner-mcp 不可用，P0 #23 降级）
+- [ ] 遗留：user_type 休眠字段后续可考虑启用；代码待用户确认后提交
 
 ### 2026-10-06 D-754 智能化落地 5 批（已推 CI 全绿）
 

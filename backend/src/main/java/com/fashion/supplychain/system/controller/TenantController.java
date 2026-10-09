@@ -143,7 +143,8 @@ public class TenantController {
         String employmentStatus = params != null ? (String) params.get("employmentStatus") : null;
         String roleId = params != null && params.get("roleId") != null ? String.valueOf(params.get("roleId")) : null;
         String employeeNo = params != null ? (String) params.get("employeeNo") : null;
-        Boolean excludeFactoryUsers = params != null && params.get("excludeFactoryUsers") != null ? Boolean.valueOf(params.get("excludeFactoryUsers").toString()) : false;
+        // D-776：默认排除外发工厂账号（与 UserController /system/user/list 口径一致），需要全量时显式传 false
+        Boolean excludeFactoryUsers = params != null && params.get("excludeFactoryUsers") != null ? Boolean.valueOf(params.get("excludeFactoryUsers").toString()) : true;
         return Result.success(tenantOrchestrator.listSubAccounts(page, pageSize, name, roleName, orgUnitId, employmentStatus, roleId, employeeNo, excludeFactoryUsers));
     }
 

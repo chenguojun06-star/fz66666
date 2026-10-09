@@ -84,7 +84,9 @@ export function useRoleListData() {
   /** 拉取岗位关联人数统计（一次用户列表，按 roleId 聚合） */
   const fetchRoleMemberCounts = useCallback(async () => {
     try {
-      const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 9999 } });
+      // D-776：此处是岗位"关联人数"统计而非人员选择，需要全量口径——
+      // 若随默认排除外发工厂账号，「外发工厂」岗位人数会恒为 0，属于错误数据
+      const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 9999, excludeFactoryUsers: false } });
       const result = res as any;
       const records = result?.code === 200 ? (result.data?.records || []) : [];
       const countMap: Record<string, number> = {};

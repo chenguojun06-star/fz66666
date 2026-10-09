@@ -56,7 +56,11 @@ public class UserController {
             @RequestParam(required = false) String employmentStatus,
             @RequestParam(required = false) String orgUnitId,
             @RequestParam(required = false) String employeeNo,
-            @RequestParam(required = false, defaultValue = "false") Boolean excludeFactoryUsers) {
+            // D-776：默认排除外发工厂账号。外发工厂账号虽存于 t_user（factory_id + is_factory_owner 标记），
+            // 但不属于内部人员体系；原先默认 false 要求每个调用点手动传，漏传即混淆（工资/扣款/领料/跟单等 8 处）。
+            // 传了 factoryId（查某工厂成员）或工厂账号登录查本厂成员时不受影响——过滤条件本身带 !hasText(factoryId) 守卫。
+            // 需要全量口径的场景（如角色人数统计）显式传 excludeFactoryUsers=false。
+            @RequestParam(required = false, defaultValue = "true") Boolean excludeFactoryUsers) {
         // 用户列表含手机号/角色/组织等 PII：仅主管及以上可拉取（原先任意登录用户可枚举全租户通讯录）
         if (!com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
             throw new org.springframework.security.access.AccessDeniedException("无权限查看人员列表");

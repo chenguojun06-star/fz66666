@@ -2,12 +2,37 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-09（✅ D-775 日产能 500 哨兵根治：NULL=未配置（V202710090005）+ 3 处哨兵移除 + clearDailyCapacity 标志 + 本厂回填 115；tsc/mvn 全绿，未提交；D-774 已推送 184fe5d62）
+> 最后更新：2026-10-09（✅ D-776 外部账号与内部账号体系隔离核实+收口：供应商账号物理隔离确认、user/list 等默认排除外发工厂账号、组织架构 2 接口补过滤、写入侧防御；tsc/mvn/eslint 全绿，未提交）
+> 上一版：2026-10-09（✅ D-775 日产能 500 哨兵根治：NULL=未配置（V202710090005）+ 3 处哨兵移除 + clearDailyCapacity 标志 + 本厂回填 115；tsc/mvn 全绿，未提交；D-774 已推送 184fe5d62）
 > 上一版：2026-10-09（✅ D-774 D-772 三个遗留数据问题核实+最优解：自愈巡检防清零进度 / t_factory 不插行定案 / 品质分改真实扫码合格率；mvn compile 0 错误，已推送 184fe5d62）
 > 上一版：2026-10-07（✅ D-771 商品上架管理专用页：改图（主图+每色一图）/ 改售价库存 / 上下架；已上线 1b3d8d6）
 > 上一版：2026-10-07（✅ D-766/D-767 店铺界面返工：桌面端巨幅修复 + 上架入口可懂 + 1×1 封面兜底；均已上线）
 > 再上一版：2026-10-07（✅ D-765 店铺界面按淘宝风格重做（门面 H5 + 管理页）；D-764 修线上 500/404）
 > 更早：2026-10-06（✅ D-755 小云直查被上下文劫持 + D-756 物料仓库「面料属性」补齐落地）
+
+## ✅ D-776 外部账号不混入内部账号体系——全量核实+收口（2026-10-09，代码完成未提交）
+
+**用户指令**：核实「给供应商/外部工厂创建的账号不会归纳到内部账号体系」，"全部核实清楚，不要混淆内部外部人员"。
+
+**核实结论（云端数据库 + 代码双线核实）**：
+1. **面辅料供应商账号 = 物理隔离**：独立表 `t_supplier_user`（16 条），与 `t_user`（22+3 条）零交集；登录走独立端点 `/api/supplier-portal/login`（`SupplierPortalOrchestrator`），token 的 factoryId 塞 supplierId → **绝无可能混入内部体系**
+2. **外发工厂账号 = 同表存储、查询过滤隔离**：`FactoryAccountHelper.createAccount`（截图页「创建账号」）写 `t_user`，打标 `factory_id` + `is_factory_owner=1` + 角色 factory_owner，共 3 条（junjun/199711/1997111）
+3. **`t_user.user_type`（INTERNAL/EXTERNAL_FACTORY/SUPPLIER）是休眠字段**：V20270628005 已建、云端数据正确且与 factory_id 100% 等价，但 Java 后端零读取 → 沿用 factory_id 口径
+4. **登录后权限隔离完整**：`DataPermissionHelper.isFactoryAccount()` 在财务/发票/对账/库存预警等 20+ 处拦截 + UserContext.factoryId 强制过滤
+
+**发现的混淆缺口（漏传即混）**：
+- 前端 8 处调用 `/system/user/list` 漏传 `excludeFactoryUsers`（领料收料人、裁剪任务、订单跟单员、工资配置、财务扣款×2、节点详情、工序配置）
+- 后端 2 个组织接口完全无过滤：`getAssignableUsers`（可指派人员）、`membersByOrgUnit`（部门成员）
+
+**修复（5 文件，用户选定「后端默认排除」方案）**：
+1. `UserController /system/user/list`：`excludeFactoryUsers` 默认值 `false → true`（过滤带 `!hasText(factoryId)` 守卫，传 factoryId 查工厂成员/工厂账号查本厂均不受影响）
+2. `TenantController` 子账号列表：默认值同步改 true
+3. `OrganizationUnitOrchestrator`：`getAssignableUsers` + `membersByOrgUnit` 补 `applyInternalFactoryUserScope`（工厂账号登录只看本厂，内部登录只看 factory_id 为空的内部人）；新增 `isExternalFactoryUser`/`isInternalUnit`；`assignMember` 写入侧拒绝外发工厂账号挂内部部门（抛异常），`batchAssignMembers` 跳过
+4. `useRoleListData` 角色人数统计显式传 `excludeFactoryUsers: false`（全量口径，否则「外发工厂」岗位人数恒 0）
+5. 反向核实不误伤：工厂账号经 FactoryPersonalCenterModal 传 factoryId 不受影响；云端 1997111 所挂节点是其自己的 EXTERNAL 工厂节点（非内部）不拦截；小程序借调/考勤搜索走同一接口自动属内部场景
+
+**验证**：mvn compile 0 错误、tsc --noEmit 0 错误、eslint 0 告警（test-runner-mcp 不可用，P0 #23 降级原生命令并告知用户）。**未提交**，待用户确认。
+**遗留**：user_type 仍为休眠字段；组织架构页工厂节点成员展示随过滤变空（工厂成员管理走「供应商管理→工厂成员」入口，属既有设计）。
 
 ## ✅ D-775 日产能 500 哨兵根治——NULL=未配置（2026-10-09，代码完成未提交）
 

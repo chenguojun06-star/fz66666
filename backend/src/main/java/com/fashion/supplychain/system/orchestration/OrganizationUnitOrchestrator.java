@@ -350,10 +350,39 @@ public class OrganizationUnitOrchestrator {
         if (tenantId != null) {
             wrapper.eq(User::getTenantId, tenantId);
         }
+        applyInternalFactoryUserScope(wrapper);
         List<User> users = userService.list(wrapper);
         boolean isAdmin = UserContext.isSupervisorOrAbove();
         users.forEach(u -> sanitizeUser(u, isAdmin));
         return users;
+    }
+
+    /**
+     * D-776：内部/外部人员边界。
+     * <p>外发工厂账号虽存于 t_user（factory_id + is_factory_owner + user_type=EXTERNAL_FACTORY 标记），
+     * 但不属于内部人员体系——可指派用户、组织架构成员等内部场景不应出现它们。
+     * <ul>
+     *   <li>工厂账号登录：只返回本厂成员（保持其在本厂内的可用性）</li>
+     *   <li>内部账号登录：排除所有带 factory_id 的外发工厂账号</li>
+     * </ul>
+     */
+    private void applyInternalFactoryUserScope(LambdaQueryWrapper<User> wrapper) {
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            wrapper.eq(User::getFactoryId, ctxFactoryId);
+        } else {
+            wrapper.and(w -> w.isNull(User::getFactoryId).or().eq(User::getFactoryId, ""));
+        }
+    }
+
+    /** 外发工厂账号：带 factory_id 即为外部（与 user_type=EXTERNAL_FACTORY 完全等价，云端数据已核对一致） */
+    private boolean isExternalFactoryUser(User user) {
+        return user != null && StringUtils.hasText(user.getFactoryId());
+    }
+
+    /** 内部组织节点：未关联工厂，或显式标记为 INTERNAL 部门 */
+    private boolean isInternalUnit(OrganizationUnit unit) {
+        return unit == null || !StringUtils.hasText(unit.getFactoryId()) || "INTERNAL".equals(unit.getOwnerType());
     }
 
     /** 将用户分配到指定组织节点 */
@@ -376,6 +405,10 @@ public class OrganizationUnitOrchestrator {
         User user = userService.getById(userIdLong);
         if (user == null) {
             throw new IllegalArgumentException("用户不存在");
+        }
+        // D-776：外发工厂账号不纳入内部组织架构（可指派列表已排除，此处为接口层双路径防御）
+        if (isExternalFactoryUser(user) && isInternalUnit(unit)) {
+            throw new IllegalArgumentException("外发工厂账号不属于内部组织架构，无法分配到内部部门");
         }
         User patch = new User();
         patch.setId(userIdLong);
@@ -408,6 +441,8 @@ public class OrganizationUnitOrchestrator {
             }
             User user = userService.getById(userIdLong);
             if (user == null) continue;
+            // D-776：外发工厂账号跳过，不纳入内部组织架构
+            if (isExternalFactoryUser(user) && isInternalUnit(unit)) continue;
             User patch = new User();
             patch.setId(userIdLong);
             patch.setOrgUnitId(orgUnitId);
@@ -473,6 +508,8 @@ public class OrganizationUnitOrchestrator {
         if (tenantId != null) {
             wrapper.eq(User::getTenantId, tenantId);
         }
+        // D-776：组织架构是内部人员架构，排除外发工厂账号（历史数据中存在工厂账号被挂到部门节点的情况）
+        applyInternalFactoryUserScope(wrapper);
         List<User> users = userService.list(wrapper);
         // 清除敏感字段（非管理员额外脱敏手机号、邮箱等 PII）
         boolean isAdmin = UserContext.isSupervisorOrAbove();

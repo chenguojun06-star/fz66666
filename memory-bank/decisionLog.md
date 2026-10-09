@@ -3770,4 +3770,31 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **遗留**：7 家外部工厂日产能待用户页面填；排产建议无数据时 default 500 估算保留原状（有 default 源标记，如需按品类均值估算是新需求）。
 
+## D-776：内部/外部账号体系隔离核实与默认排除（2026-10-09）
+
+**上下文**：用户上传「工人名册(只读)」截图（含"创建账号"按钮），要求核实给供应商创建的账号**不会归纳进内部账号体系**，"全部核实清楚，不要混淆"。
+
+**核实结论（两套账号体系）**：
+1. **面辅料供应商账号 → `t_supplier_user` 独立表**（16 条），与 `t_user` 零交集。建号两条链路：`FactoryOrchestrator.autoCreateSupplierUser`（MATERIAL 供应商创建时自动建，L166）+ `SupplierUserOrchestrator.createUser`（供应商管理页手动建）。登录走独立端点 `/api/supplier-portal/login`（SupplierPortalOrchestrator），**完全物理隔离** ✅
+2. **外发工厂账号 → 落在内部 `t_user` 表**（3 条），链路为 `FactoryAccountHelper.createFactoryAccount`（工人名册"创建账号" → `/system/organization/factory/create-account`）。靠三字段打标：`factory_id` + `is_factory_owner=1` + 角色"外发工厂/车间工人"。云端数据：内部 22 条（factory_id 空）/ 外发 3 条（junjun、199711、1997111）。**同表存储，需靠查询过滤隔离** ⚠️
+3. **`t_user.user_type`（INTERNAL/EXTERNAL_FACTORY/SUPPLIER）已由 V20270628005 建立且数据正确，但后端 Java 无一处读取**（休眠字段）。经核对 `has factory_id ⟺ EXTERNAL_FACTORY` 完全等价 → 沿用既有 `factory_id` 过滤口径即可，不引入新字段依赖。
+4. **登录后权限隔离完整**：`DataPermissionHelper.isFactoryAccount()` 在财务报表/发票/应收应付/出货对账/物料对账/库存预警/模板等 20+ 处拦截；供应商账号 token 中 `factoryId=supplierId`（SupplierPortalOrchestrator L133）→ 同样命中 isFactoryAccount 拦截。工厂账号登录时 `UserContext.factoryId` 强制过滤只能看本厂。
+
+**发现的混淆缺口（根因：`excludeFactoryUsers` 默认 `false`，要求每个调用点手动传，漏传即混入）**：
+- 已正确排除：用户管理页、StaffSelect、考勤管理、租户子账号列表（均传 true）
+- **漏传的 8 处**：领料收料人(useInstructionManager:75)、裁剪任务指派(useCuttingCreateTask:187)、订单跟单员(useOrderDataFetch:123)、工资配置(SalaryConfig:164)、财务扣款(DeductionManage:209/229)、节点详情指派(useNodeDetailData:80/83)、工序阶段配置(StageConfigArea:62)、角色人数统计(useRoleListData:87)
+- **另外两个后端接口完全无过滤**：`OrganizationUnitOrchestrator.getAssignableUsers()`（可指派用户）与 `membersByOrgUnit()`（组织架构成员）—— 调用方覆盖裁剪指派、订单跟单员、工厂列表"领取人"、组织树、伙伴管理
+
+**修复方案（用户选"后端默认排除"，一处改动全覆盖）**：
+1. `UserController.getUserList` 的 `excludeFactoryUsers` 默认值 `false→true`；`TenantController /sub/list` 同步改。**安全性**：过滤条件本身带 `!hasText(factoryId)` 守卫 → 传 factoryId 查工厂成员（FactoryPersonalCenterModal）、工厂账号登录查本厂成员（UserContext.factoryId 强制注入）**均不受影响**
+2. `OrganizationUnitOrchestrator` 新增 `applyInternalFactoryUserScope()`：工厂账号登录 → `eq(factoryId, 本厂)`；内部账号登录 → `isNull(factory_id) OR =''`。套用到 `getAssignableUsers` + `membersByOrgUnit`
+3. **统计口径保留全量**：`useRoleListData` 角色人数统计显式传 `excludeFactoryUsers: false`（否则"外发工厂"岗位人数恒为 0，属错误数据）
+4. **写入侧双路径防御**：`assignMember` 抛异常 / `batchAssignMembers` 跳过 —— 禁止外发工厂账号挂进**内部**组织节点（`isInternalUnit` = 无 factory_id 或 ownerType=INTERNAL）
+
+**反向核实（不误伤）**：`assignMember` 既有逻辑"内部人挂到工厂节点会写入 factory_id"是设计行为，未改动；工厂账号挂到**自己工厂的 EXTERNAL 节点**（云端 1997111 → "本厂"节点 cd90b424…，owner_type=EXTERNAL）属正常，`isInternalUnit` 判定为非内部 → 不拦截。小程序端扫码借调选择器、考勤员工搜索走同一接口 → 自动排除（借调/考勤本就是内部人员场景；工厂账号登录查自己不受影响）。
+
+**验证**：mvn compile 0 错误、npx tsc --noEmit 0 错误、ESLint 0 告警（test-runner-mcp 不可用，P0 #23 降级原生命令）；云端 SQL 已核对 user_type/factory_id/org_unit_id 分布。
+
+**遗留**：`t_user.user_type` 仍是休眠字段（Java 未读），可后续用于统一账号类型判断；组织架构页的工厂节点成员展示会随过滤变为空，工厂成员管理统一走 供应商管理→工厂成员 入口（既有设计）。
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md
