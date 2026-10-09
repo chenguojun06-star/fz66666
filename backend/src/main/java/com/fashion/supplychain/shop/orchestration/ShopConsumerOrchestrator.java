@@ -48,6 +48,7 @@ public class ShopConsumerOrchestrator {
     private final ShopConsumerMapper consumerMapper;
     private final ShopConsumerAddressMapper addressMapper;
     private final ShopPlatformMapper platformMapper;
+    private final ShopReviewOrchestrator reviewOrchestrator;
     private final PasswordEncoder passwordEncoder;
     private final ShopConsumerTokenSupport tokenSupport;
 
@@ -241,7 +242,8 @@ public class ShopConsumerOrchestrator {
             throw new IllegalArgumentException("订单不存在");
         }
         Map<String, Object> data = new LinkedHashMap<>(order);
-        data.put("items", platformMapper.listOrderItems(orderNo));
+        // P2：明细带「是否已评价 / 我的评分」，前端据此决定显示「评价」还是「已评价」
+        data.put("items", reviewOrchestrator.markReviewed(orderNo, platformMapper.listOrderItems(orderNo)));
         return data;
     }
 

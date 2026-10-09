@@ -148,7 +148,8 @@ public interface ShopPlatformMapper {
      * 按订单号取订单（**必须同时匹配 consumerId** 才返回）。
      * 订单号是全局唯一键，但归属校验绝不能省 —— 否则改一个订单号就能看别人的订单。
      */
-    @Select("SELECT o.order_no AS orderNo, o.tenant_id AS tenantId, o.customer_name AS customerName, "
+    @Select("SELECT o.id AS orderId, o.order_no AS orderNo, o.tenant_id AS tenantId, "
+            + "       o.customer_name AS customerName, "
             + "       o.phone AS phone, o.address AS address, o.total_amount AS totalAmount, "
             + "       o.goods_amount AS goodsAmount, o.shipping_fee AS shippingFee, "
             + "       o.item_count AS itemCount, o.status AS status, o.remark AS remark, "
@@ -166,10 +167,50 @@ public interface ShopPlatformMapper {
                                              @Param("consumerId") String consumerId);
 
     /** 订单商品明细（按订单号；订单号全局唯一，故无需再加租户条件） */
-    @Select("SELECT sku_code AS skuCode, style_no AS styleNo, style_name AS styleName, "
+    @Select("SELECT sku_id AS skuId, sku_code AS skuCode, style_no AS styleNo, style_name AS styleName, "
             + "       color AS color, size AS size, unit_price AS unitPrice, "
             + "       quantity AS quantity, amount AS amount "
             + "FROM t_shop_order_item WHERE order_id = "
             + "  (SELECT id FROM t_shop_order WHERE order_no = #{orderNo} LIMIT 1)")
     List<Map<String, Object>> listOrderItems(@Param("orderNo") String orderNo);
+
+    /** 按 租户 + 款号 反查款式 ID（评价要落到 style_id 上才能在商品页展示） */
+    @Select("SELECT id FROM t_style_info WHERE tenant_id = #{tenantId} AND style_no = #{styleNo} LIMIT 1")
+    Long findStyleIdByNo(@Param("tenantId") Long tenantId, @Param("styleNo") String styleNo);
+
+    /* ── P2：商品评价 ───────────────────────────────────────────────────── */
+
+    /**
+     * 按款式批量取评价统计（均分 + 条数）——商品池卡片展示用。
+     * 均分保留一位小数，由 SQL 侧 ROUND 完成，避免各端各自取整口径不一。
+     */
+    @Select("<script>"
+            + "SELECT style_id AS styleId, COUNT(*) AS cnt, ROUND(AVG(rating), 1) AS avgRating "
+            + "FROM t_shop_review WHERE style_id IN "
+            + "<foreach collection='styleIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " GROUP BY style_id"
+            + "</script>")
+    List<Map<String, Object>> listReviewStatsByStyleIds(@Param("styleIds") List<Long> styleIds);
+
+    /**
+     * 某款式的评价列表（最新在前）。
+     * 昵称在 SQL 侧拼好：匿名→「匿名用户」，否则用消费者昵称，昵称缺失回落到手机号后四位。
+     * 只返回展示所需字段，**不含手机号全量、不含 consumer_id**。
+     */
+    @Select("SELECT r.rating AS rating, r.content AS content, r.create_time AS createTime, "
+            + "       r.style_no AS styleNo, "
+            + "       CASE WHEN r.anonymous = 1 THEN '匿名用户' "
+            + "            ELSE COALESCE(NULLIF(c.nickname, ''), CONCAT('用户', RIGHT(c.phone, 4))) END AS nickname "
+            + "FROM t_shop_review r "
+            + "LEFT JOIN t_shop_consumer c ON c.id = r.consumer_id "
+            + "WHERE r.style_id = #{styleId} "
+            + "ORDER BY r.create_time DESC LIMIT #{limit}")
+    List<Map<String, Object>> listReviewsByStyleId(@Param("styleId") Long styleId,
+                                                   @Param("limit") int limit);
+
+    /** 某订单的评价（用于「我的订单详情」标记哪些商品已评价） */
+    @Select("SELECT r.style_no AS styleNo, r.rating AS rating, r.content AS content, "
+            + "       r.create_time AS createTime "
+            + "FROM t_shop_review r WHERE r.order_no = #{orderNo}")
+    List<Map<String, Object>> listReviewsByOrderNo(@Param("orderNo") String orderNo);
 }

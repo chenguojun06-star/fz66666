@@ -228,6 +228,7 @@ function toast(msg){
   clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = 'none'; }, 2200);
 }
 function money(v){ return v === null || v === undefined ? '—' : '¥' + Number(v).toFixed(2); }
+function stars(n){ var k = Math.max(0, Math.min(5, Math.round(Number(n) || 0))); return '★★★★★'.slice(0, k) + '☆☆☆☆☆'.slice(0, 5 - k); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function mask(p){ if(!p) return ''; var s = String(p);
@@ -319,13 +320,16 @@ function card(p){
     ? '<img src="' + esc(p.cover) + '" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<div class=&quot;ph&quot;>&#128717;</div>\'">'
     : '<div class="ph">&#128717;</div>';
   var storeUrl = '/shop/index.html?s=' + encodeURIComponent(p.slug || '') + '#/p/' + p.styleId;
+  var rv = num(p.reviewCount) > 0
+    ? ('<span style="color:#ff9500">★' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span> · ')
+    : '';
   return '<div class="pc">'
     + '<div class="th" onclick="Sku.open(' + p.styleId + ',\'' + esc(p.slug || '') + '\')">'
     + img + '<div class="shopTag">' + esc(p.shopName || '') + '</div></div>'
     + '<div class="in">'
     + '<div class="nm">' + esc(p.styleName || p.styleNo || '未命名商品') + '</div>'
     + '<div class="pr"><span class="p"><small>¥</small>' + (p.minPrice == null ? '—' : Number(p.minPrice).toFixed(2)) + '</span>'
-    + '<span class="s">' + num(p.totalStock) + ' 件可售</span></div>'
+    + '<span class="s">' + rv + num(p.totalStock) + ' 件可售</span></div>'
     + '<div class="acts">'
     + '<button class="add" onclick="Sku.open(' + p.styleId + ',\'' + esc(p.slug || '') + '\')">加入购物车</button>'
     + '<button class="store" onclick="location.href=\'' + storeUrl + '\'">进店</button>'
@@ -358,10 +362,11 @@ function renderShops(shops){
 
 /* ── 规格选择 + 加购 ── */
 var Sku = {
-  data: null, color: null, size: null, qty: 1, slug: '',
+  data: null, color: null, size: null, qty: 1, slug: '', styleId: null,
   open: function(styleId, slug){
     if (!slug) { toast('该商品所属店铺信息缺失'); return; }
-    this.data = null; this.color = null; this.size = null; this.qty = 1; this.slug = slug;
+    this.data = null; this.color = null; this.size = null; this.qty = 1;
+    this.slug = slug; this.styleId = styleId;
     Sheet.open('选择规格');
     $('sheetBody').innerHTML = '<div class="empty">加载中…</div>';
     apiGet('/' + slug + '/products/' + styleId).then(function(d){
@@ -374,6 +379,7 @@ var Sku = {
       Sku.color = colors.length ? colors[0] : null;
       Sku.size = sizes.length ? sizes[0] : null;
       Sku.render();
+      Sku.loadReviews();
     }).catch(function(e){
       $('sheetBody').innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
     });
@@ -422,9 +428,37 @@ var Sku = {
       + '<div class="qty"><button onclick="Sku.qtyAdd(-1)">−</button><span id="skuQty">' + this.qty + '</span>'
       + '<button onclick="Sku.qtyAdd(1)">＋</button></div>'
       + '<span style="font-size:12px;color:#999">最多 ' + num(cur ? cur.stock : 0) + ' 件</span></div></div>'
+      + '<div id="skuReviews"></div>'
       + '<div class="form" style="padding-top:16px"><button class="btn" onclick="Sku.add()">加入购物车</button>'
       + '<div class="hint">加入后可在「购物车」里跨店一起结算，一次结算会按店铺分别生成订单。</div></div>';
     $('sheetBody').innerHTML = html;
+  },
+  /** P2：商品评价（公开可读，无需登录） */
+  loadReviews: function(){
+    var box = $('skuReviews');
+    if (!box || !this.styleId) return;
+    apiGet('/platform/styles/' + this.styleId + '/reviews').then(function(d){
+      var el = $('skuReviews');
+      if (!el) return;
+      if (!d || !num(d.count)) {
+        el.innerHTML = '<div class="skuGrp"><div class="t">用户评价</div>'
+          + '<div style="font-size:12.5px;color:#999">还没有评价</div></div>';
+        return;
+      }
+      var h = '<div class="skuGrp"><div class="t">用户评价 <b style="color:#ff9500">★'
+        + Number(d.rating).toFixed(1) + '</b> <span style="color:#999">共 ' + d.count + ' 条</span></div>';
+      (d.records || []).forEach(function(r){
+        h += '<div style="border-top:1px solid #f0f0f0;padding:9px 0">'
+          + '<div style="display:flex;justify-content:space-between;font-size:12.5px">'
+          + '<span style="color:#666">' + esc(r.nickname) + '</span>'
+          + '<span style="color:#ff9500">' + stars(num(r.rating)) + '</span></div>'
+          + (r.content ? '<div style="font-size:12.5px;color:#333;margin-top:5px;line-height:1.5">' + esc(r.content) + '</div>' : '')
+          + '<div style="font-size:11px;color:#bbb;margin-top:4px">' + esc(fmtTime(r.createTime)) + '</div>'
+          + '</div>';
+      });
+      h += '</div>';
+      el.innerHTML = h;
+    }).catch(function(){ /* 评价加载失败不打扰下单 */ });
   },
   stockOf: function(size){
     var d = this.data; if (!d) return 0;
@@ -704,12 +738,16 @@ var Mine = {
       if (!list || !list.length) { $('orders').innerHTML = '<div class="empty">还没有订单</div>'; return; }
       var names = { PENDING_SHIP: '待发货', SHIPPED: '已发货', CANCELLED: '已取消' };
       $('orders').innerHTML = list.map(function(o){
+        var extra = '';
+        if (o.afterSaleStatus === 'APPLIED') extra = '<span style="color:#ff5000"> · 售后处理中</span>';
+        else if (o.afterSaleStatus === 'APPROVED') extra = '<span style="color:#1a9c52"> · 售后已处理</span>';
+        else if (o.afterSaleStatus === 'REJECTED') extra = '<span style="color:#999"> · 售后被拒绝</span>';
         return '<div class="order">'
           + '<div class="o1"><span>' + esc(o.shopName || '店铺') + '</span><span>' + esc(fmtTime(o.createTime)) + '</span></div>'
           + '<div class="o2">' + esc(o.orderNo) + ' · ' + num(o.itemCount) + ' 件<br>'
           + esc(o.customerName || '') + ' ' + esc(mask(o.phone)) + '</div>'
           + '<div class="o3"><span class="p">' + money(o.totalAmount) + '</span>'
-          + '<span class="st ' + esc(o.status) + '">' + (names[o.status] || o.status) + '</span></div>'
+          + '<span class="st ' + esc(o.status) + '">' + (names[o.status] || o.status) + extra + '</span></div>'
           + '<div style="text-align:right;margin-top:8px"><a class="lnk" href="javascript:;" '
           + 'onclick="OrderDetail.open(\'' + esc(o.orderNo) + '\')">查看详情 &gt;</a></div>'
           + '</div>';
@@ -779,56 +817,164 @@ var Mine = {
 
 /* ── 订单详情 ── */
 var OrderDetail = {
+  order: null,
   open: function(orderNo){
     Sheet.open('订单详情');
     $('sheetBody').innerHTML = '<div class="empty">加载中…</div>';
     apiGet('/me/orders/' + encodeURIComponent(orderNo)).then(function(o){
-      var names = { PENDING_SHIP: '待发货', SHIPPED: '已发货', CANCELLED: '已取消' };
-      var afterNames = { APPLIED: '已申请待处理', APPROVED: '已同意', REJECTED: '已拒绝' };
-      var html = '<div class="dsec">'
-        + '<div class="r"><span class="k">订单号</span><span>' + esc(o.orderNo) + '</span></div>'
-        + '<div class="r"><span class="k">店铺</span><span>' + esc(o.shopName || '') + '</span></div>'
-        + '<div class="r"><span class="k">状态</span><span>' + esc(names[o.status] || o.status) + '</span></div>'
-        + '<div class="r"><span class="k">下单时间</span><span>' + esc(fmtTime(o.createTime)) + '</span></div>'
-        + '<div class="r"><span class="k">收货人</span><span>' + esc(o.customerName || '') + ' ' + esc(mask(o.phone)) + '</span></div>'
-        + '<div class="r"><span class="k">收货地址</span><span style="max-width:60%;text-align:right">' + esc(o.address || '') + '</span></div>'
-        + (o.remark ? '<div class="r"><span class="k">买家留言</span><span style="max-width:60%;text-align:right">' + esc(o.remark) + '</span></div>' : '')
-        + '</div>';
-
-      html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">商品明细</div>';
-      (o.items || []).forEach(function(it){
-        html += '<div class="it"><span>' + esc(it.styleName || it.styleNo || '') + ' '
-          + esc([it.color, it.size].filter(Boolean).join('/')) + ' × ' + num(it.quantity) + '</span>'
-          + '<span>' + money(it.amount) + '</span></div>';
-      });
-      html += '<div class="it"><span>商品金额</span><span>' + money(o.goodsAmount) + '</span></div>'
-        + '<div class="it"><span>运费</span><span>' + money(o.shippingFee) + '</span></div>'
-        + '<div class="it"><span><b>合计</b></span><span><b style="color:#ff5000">' + money(o.totalAmount) + '</b></span></div>'
-        + '</div>';
-
-      if (o.expressNo || o.shipTime) {
-        html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">物流信息</div>'
-          + '<div class="r"><span class="k">快递公司</span><span>' + esc(o.expressCompany || '—') + '</span></div>'
-          + '<div class="r"><span class="k">快递单号</span><span>' + esc(o.expressNo || '—') + '</span></div>'
-          + '<div class="r"><span class="k">发货时间</span><span>' + esc(fmtTime(o.shipTime)) + '</span></div>'
-          + '</div>';
-      }
-      if (o.afterSaleStatus && o.afterSaleStatus !== 'NONE') {
-        html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">售后</div>'
-          + '<div class="r"><span class="k">状态</span><span>' + esc(afterNames[o.afterSaleStatus] || o.afterSaleStatus) + '</span></div>'
-          + (o.afterSaleReason ? '<div class="r"><span class="k">原因</span><span style="max-width:60%;text-align:right">' + esc(o.afterSaleReason) + '</span></div>' : '')
-          + (o.afterSaleRemark ? '<div class="r"><span class="k">商家处理</span><span style="max-width:60%;text-align:right">' + esc(o.afterSaleRemark) + '</span></div>' : '')
-          + '</div>';
-      }
-      if (o.cancelReason) {
-        html += '<div class="dsec"><div class="r"><span class="k">取消原因</span><span>' + esc(o.cancelReason) + '</span></div></div>';
-      }
-      html += '<div class="form"><button class="btn" onclick="Mine.open()">返回我的订单</button>'
-        + '<div class="hint">售后请直接联系店铺客服，平台不参与仲裁。</div></div>';
-      $('sheetBody').innerHTML = html;
+      OrderDetail.order = o;
+      OrderDetail.render();
     }).catch(function(e){
       $('sheetBody').innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
     });
+  },
+  render: function(){
+    var o = this.order;
+    if (!o) return;
+    var names = { PENDING_SHIP: '待发货', SHIPPED: '已发货', CANCELLED: '已取消' };
+    var afterNames = { APPLIED: '待商家处理', APPROVED: '已同意', REJECTED: '已拒绝' };
+    var html = '<div class="dsec">'
+      + '<div class="r"><span class="k">订单号</span><span>' + esc(o.orderNo) + '</span></div>'
+      + '<div class="r"><span class="k">店铺</span><span>' + esc(o.shopName || '') + '</span></div>'
+      + '<div class="r"><span class="k">状态</span><span>' + esc(names[o.status] || o.status) + '</span></div>'
+      + '<div class="r"><span class="k">下单时间</span><span>' + esc(fmtTime(o.createTime)) + '</span></div>'
+      + '<div class="r"><span class="k">收货人</span><span>' + esc(o.customerName || '') + ' ' + esc(mask(o.phone)) + '</span></div>'
+      + '<div class="r"><span class="k">收货地址</span><span style="max-width:60%;text-align:right">' + esc(o.address || '') + '</span></div>'
+      + (o.remark ? '<div class="r"><span class="k">买家留言</span><span style="max-width:60%;text-align:right">' + esc(o.remark) + '</span></div>' : '')
+      + '</div>';
+
+    html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">商品明细</div>';
+    (o.items || []).forEach(function(it, idx){
+      var canReview = o.status === 'SHIPPED' && !it.reviewed;
+      html += '<div style="border-top:1px solid #f0f0f0;padding:9px 0">'
+        + '<div style="display:flex;justify-content:space-between;font-size:12.5px">'
+        + '<span>' + esc(it.styleName || it.styleNo || '') + ' '
+        + esc([it.color, it.size].filter(Boolean).join('/')) + ' × ' + num(it.quantity) + '</span>'
+        + '<span>' + money(it.amount) + '</span></div>'
+        + (it.reviewed
+            ? '<div style="font-size:11.5px;color:#ff9500;margin-top:6px">已评价 '
+              + stars(num(it.myRating)) + (it.myReview ? '：' + esc(it.myReview) : '') + '</div>'
+            : (canReview
+                ? '<div style="text-align:right;margin-top:6px"><a href="javascript:;" class="lnk" '
+                  + 'onclick="Review.open(' + idx + ')">评价</a></div>'
+                : ''))
+        + '</div>';
+    });
+    html += '<div class="it"><span>商品金额</span><span>' + money(o.goodsAmount) + '</span></div>'
+      + '<div class="it"><span>运费</span><span>' + money(o.shippingFee) + '</span></div>'
+      + '<div class="it"><span><b>合计</b></span><span><b style="color:#ff5000">' + money(o.totalAmount) + '</b></span></div>'
+      + '</div>';
+
+    if (o.expressNo || o.shipTime) {
+      html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">物流信息</div>'
+        + '<div class="r"><span class="k">快递公司</span><span>' + esc(o.expressCompany || '—') + '</span></div>'
+        + '<div class="r"><span class="k">快递单号</span><span>' + esc(o.expressNo || '—') + '</span></div>'
+        + '<div class="r"><span class="k">发货时间</span><span>' + esc(fmtTime(o.shipTime)) + '</span></div>'
+        + '</div>';
+    }
+
+    var asStatus = o.afterSaleStatus || 'NONE';
+    if (asStatus !== 'NONE') {
+      html += '<div class="dsec"><div style="font-size:13px;font-weight:600;margin-bottom:6px">售后</div>'
+        + '<div class="r"><span class="k">类型</span><span>'
+        + (o.afterSaleType === 'RETURN_REFUND' ? '退货退款' : '仅退款') + '</span></div>'
+        + '<div class="r"><span class="k">状态</span><span>' + esc(afterNames[asStatus] || asStatus) + '</span></div>'
+        + (o.afterSaleReason ? '<div class="r"><span class="k">申请原因</span><span style="max-width:60%;text-align:right">' + esc(o.afterSaleReason) + '</span></div>' : '')
+        + (o.afterSaleRemark ? '<div class="r"><span class="k">商家处理</span><span style="max-width:60%;text-align:right">' + esc(o.afterSaleRemark) + '</span></div>' : '')
+        + '</div>';
+    }
+
+    if (o.cancelReason) {
+      html += '<div class="dsec"><div class="r"><span class="k">取消原因</span><span>' + esc(o.cancelReason) + '</span></div></div>';
+    }
+
+    // P2：已发货且没有待处理/已完成的售后 → 允许买家发起售后
+    if (o.status === 'SHIPPED' && (asStatus === 'NONE' || asStatus === 'REJECTED')) {
+      html += '<div class="form" style="padding-top:14px"><button class="btn" '
+        + 'style="background:#fff;border:1px solid #ff5000;color:#ff5000" onclick="AfterSale.open()">'
+        + '申请售后（退款 / 退货退款）</button>'
+        + '<div class="hint">未发货的订单请直接取消订单；售后申请提交后由店铺处理，平台不参与仲裁。</div></div>';
+    }
+
+    html += '<div class="form"><button class="btn" onclick="Mine.open()">返回我的订单</button></div>';
+    $('sheetBody').innerHTML = html;
+  }
+};
+
+/* ── P2：评价 ── */
+var Review = {
+  idx: 0, rating: 5,
+  open: function(idx){
+    this.idx = idx; this.rating = 5;
+    var it = (OrderDetail.order.items || [])[idx] || {};
+    Sheet.open('评价商品');
+    $('sheetBody').innerHTML =
+      '<div class="skuGrp"><div class="t">' + esc(it.styleName || it.styleNo || '') + '</div>'
+      + '<div style="font-size:12px;color:#999">' + esc([it.color, it.size].filter(Boolean).join('/')) + '</div></div>'
+      + '<div class="skuGrp"><div class="t">评分</div>'
+      + '<div style="font-size:26px;letter-spacing:4px;color:#ff9500" id="rvStars">' + stars(5) + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px" id="rvBtns">'
+      + [1,2,3,4,5].map(function(n){ return '<div class="opt" onclick="Review.setStars(' + n + ')">' + n + ' 星</div>'; }).join('')
+      + '</div></div>'
+      + '<div class="form">'
+      + '<label>评价内容（选填）</label>'
+      + '<textarea id="rvText" maxlength="500" style="width:100%;height:90px;border:1px solid #f0f0f0;'
+      + 'border-radius:8px;padding:10px;font-size:14px;outline:none;font-family:inherit" '
+      + 'placeholder="说说这件衣服的版型、面料、做工…"></textarea>'
+      + '<label style="display:flex;align-items:center;gap:6px;margin-top:10px">'
+      + '<input type="checkbox" id="rvAnon" style="width:auto;height:auto"> 匿名评价</label>'
+      + '<button class="btn" onclick="Review.submit()">提交评价</button>'
+      + '<div class="hint">评价提交后不可修改，请如实填写。</div></div>';
+  },
+  setStars: function(n){
+    this.rating = n;
+    $('rvStars').textContent = stars(n);
+  },
+  submit: function(){
+    var it = (OrderDetail.order.items || [])[this.idx] || {};
+    apiPost('/me/orders/' + encodeURIComponent(OrderDetail.order.orderNo) + '/reviews', {
+      styleNo: it.styleNo,
+      rating: this.rating,
+      content: ($('rvText').value || '').trim(),
+      anonymous: $('rvAnon').checked
+    }).then(function(){
+      toast('感谢您的评价');
+      OrderDetail.open(OrderDetail.order.orderNo);
+    }).catch(function(e){ toast(e.message); });
+  }
+};
+
+/* ── P2：售后申请 ── */
+var AfterSale = {
+  type: 'REFUND_ONLY',
+  open: function(){
+    Sheet.open('申请售后');
+    $('sheetBody').innerHTML =
+      '<div class="form">'
+      + '<label>售后类型</label>'
+      + '<div class="opts">'
+      + '<div class="opt on" id="as-refund" onclick="AfterSale.pick(\'REFUND_ONLY\')">仅退款（货不退）</div>'
+      + '<div class="opt" id="as-return" onclick="AfterSale.pick(\'RETURN_REFUND\')">退货退款（回寄商品）</div>'
+      + '</div>'
+      + '<label>申请原因</label>'
+      + '<input id="as-reason" maxlength="200" placeholder="如：颜色与图片不符 / 尺码偏小 / 有瑕疵">'
+      + '<button class="btn" onclick="AfterSale.submit()">提交申请</button>'
+      + '<div class="hint">提交后由店铺处理。退货退款需按商家指引寄回商品；'
+      + '款项由店铺线下退还（平台不经手货款）。</div></div>';
+  },
+  pick: function(t){
+    this.type = t;
+    $('as-refund').className = 'opt' + (t === 'REFUND_ONLY' ? ' on' : '');
+    $('as-return').className = 'opt' + (t === 'RETURN_REFUND' ? ' on' : '');
+  },
+  submit: function(){
+    apiPost('/me/orders/' + encodeURIComponent(OrderDetail.order.orderNo) + '/after-sale', {
+      type: this.type,
+      reason: ($('as-reason').value || '').trim()
+    }).then(function(){
+      toast('售后申请已提交');
+      OrderDetail.open(OrderDetail.order.orderNo);
+    }).catch(function(e){ toast(e.message); });
   }
 };
 

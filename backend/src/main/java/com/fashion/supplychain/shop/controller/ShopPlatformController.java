@@ -2,13 +2,14 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.orchestration.ShopPlatformOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopReviewOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 平台级商城（公共商品池）公开接口（P0）。
+ * 平台级商城（公共商品池）公开接口（P0/P2）。
  *
- * <p>免登录、跨租户只读：平台首页 / 商品池 / 店铺列表 / 类目。
+ * <p>免登录、跨租户只读：平台首页 / 商品池 / 店铺列表 / 类目 / 商品评价。
  * 全部在 {@code /api/shop/public/**} 白名单内。
  */
 @Slf4j
@@ -17,9 +18,12 @@ import org.springframework.web.bind.annotation.*;
 public class ShopPlatformController {
 
     private final ShopPlatformOrchestrator platformOrchestrator;
+    private final ShopReviewOrchestrator reviewOrchestrator;
 
-    public ShopPlatformController(ShopPlatformOrchestrator platformOrchestrator) {
+    public ShopPlatformController(ShopPlatformOrchestrator platformOrchestrator,
+                                  ShopReviewOrchestrator reviewOrchestrator) {
         this.platformOrchestrator = platformOrchestrator;
+        this.reviewOrchestrator = reviewOrchestrator;
     }
 
     /** 平台首页：店铺 + 类目 + 精选商品 + 概览数字 */
@@ -47,5 +51,16 @@ public class ShopPlatformController {
     @GetMapping("/categories")
     public Result<?> categories() {
         return Result.success(platformOrchestrator.categories());
+    }
+
+    /** P2：某款式的评价（均分 + 条数 + 最新若干条），公开可读 */
+    @GetMapping("/styles/{styleId}/reviews")
+    public Result<?> styleReviews(@PathVariable Long styleId,
+                                  @RequestParam(required = false) Integer limit) {
+        try {
+            return Result.success(reviewOrchestrator.styleReviews(styleId, limit));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
     }
 }

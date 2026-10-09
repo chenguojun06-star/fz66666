@@ -119,6 +119,17 @@ public class ShopPlatformOrchestrator {
             }
         }
 
+        // P2：评价统计（均分 + 条数）——一次批量查，避免逐行 N+1
+        Map<Long, Map<String, Object>> reviewStats = new HashMap<>();
+        if (!styleIds.isEmpty()) {
+            for (Map<String, Object> st : platformMapper.listReviewStatsByStyleIds(styleIds)) {
+                Object sid = st.get("styleId");
+                if (sid != null) {
+                    reviewStats.put(Long.valueOf(String.valueOf(sid)), st);
+                }
+            }
+        }
+
         for (Map<String, Object> s : styles) {
             Map<String, Object> row = new LinkedHashMap<>(s);
             Long styleId = s.get("styleId") == null ? null : Long.valueOf(String.valueOf(s.get("styleId")));
@@ -146,6 +157,12 @@ public class ShopPlatformOrchestrator {
             row.put("minPrice", minPrice);
             row.put("totalStock", totalStock);
             row.put("colorCount", colors.size());
+            // P2：没有评价时给 0 / 0，前端据此显示「暂无评价」而不是 0 星
+            Map<String, Object> rs = styleId == null ? null : reviewStats.get(styleId);
+            row.put("rating", rs == null || rs.get("avgRating") == null
+                    ? null : new BigDecimal(String.valueOf(rs.get("avgRating"))));
+            row.put("reviewCount", rs == null || rs.get("cnt") == null
+                    ? 0 : Integer.parseInt(String.valueOf(rs.get("cnt"))));
             // 未建店铺配置的租户：slug 兜底为 t{tenantId}，保证「进店」链接可用
             if (!StringUtils.hasText((String) row.get("slug")) && row.get("tenantId") != null) {
                 row.put("slug", "t" + row.get("tenantId"));

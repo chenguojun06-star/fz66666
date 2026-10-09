@@ -132,4 +132,39 @@ class ShopPlatformSchemaGuardTest {
                 .as("订单号全局唯一，但归属校验不能省 —— 否则改订单号就能看别人的订单")
                 .contains("o.consumer_id = #{consumerId}");
     }
+
+    @Test
+    @DisplayName("⑦ 买家售后：只有已发货可申请，且审批仍走商家侧既有状态机")
+    void buyerAfterSale() throws Exception {
+        String s = read("shop/orchestration/ShopAfterSaleOrchestrator.java");
+        assertThat(s)
+                .as("订单归属必须用 orderNo + consumerId 双条件定位")
+                .contains("platformMapper.findOrderForConsumer(orderNo, consumerId)");
+        assertThat(s)
+                .as("只有已发货可申请售后（未发货请走取消订单）")
+                .contains("SHIPPED");
+        assertThat(s)
+                .as("审批不在这里重复实现 —— 库存回补/应收冲销仍归商家侧既有逻辑")
+                .doesNotContain("restoreStock");
+    }
+
+    @Test
+    @DisplayName("⑧ 评价：一单一款一条 + 只允许已发货订单")
+    void reviewRules() throws Exception {
+        String sql = read("db/migration/V202710090004__create_shop_review.sql");
+        assertThat(sql).as("评价表").contains("CREATE TABLE IF NOT EXISTS t_shop_review");
+        assertThat(sql)
+                .as("(order_id, style_no) 唯一：一单一款只能评一次，防刷分")
+                .contains("uk_order_style");
+        assertThat(sql).as("评价带 tenant_id（商家查自己店铺评价要走租户隔离）").contains("tenant_id bigint");
+
+        String mapper = read("shop/mapper/ShopReviewMapper.java");
+        assertThat(mapper)
+                .as("评价是租户业务数据，**不得**整体绕过租户拦截器（注解必须没有真正落在类上）")
+                .doesNotContain("\n@InterceptorIgnore");
+
+        String orc = read("shop/orchestration/ShopReviewOrchestrator.java");
+        assertThat(orc).as("只有已发货可评价").contains("SHIPPED");
+        assertThat(orc).as("款式必须在该订单里").contains("该商品不在此订单中");
+    }
 }

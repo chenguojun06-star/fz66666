@@ -1,8 +1,10 @@
 package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.shop.orchestration.ShopAfterSaleOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopConsumerOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopConsumerTokenSupport;
+import com.fashion.supplychain.shop.orchestration.ShopReviewOrchestrator;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -11,13 +13,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 平台级 C 端消费者账号接口（P0）。
+ * 平台级 C 端消费者账号接口（P0 / P2）。
  *
  * <p>全部在 {@code /api/shop/public/**} 白名单内（免 Spring Security 鉴权），
  * 身份靠独立请求头 {@code X-Shop-Token}（见 {@link ShopConsumerTokenSupport}），
  * 与员工账号体系完全隔离。
  *
- * <p>业务全部在 {@link ShopConsumerOrchestrator}，本控制器只做参数解析与 Result 包装
+ * <p>业务全部在编排器，本控制器只做参数解析与 Result 包装
  * （规则6：Controller 不直接依赖多个 Service）。
  */
 @Slf4j
@@ -26,11 +28,17 @@ import java.util.Map;
 public class ShopConsumerController {
 
     private final ShopConsumerOrchestrator consumerOrchestrator;
+    private final ShopAfterSaleOrchestrator afterSaleOrchestrator;
+    private final ShopReviewOrchestrator reviewOrchestrator;
     private final ShopConsumerTokenSupport tokenSupport;
 
     public ShopConsumerController(ShopConsumerOrchestrator consumerOrchestrator,
+                                  ShopAfterSaleOrchestrator afterSaleOrchestrator,
+                                  ShopReviewOrchestrator reviewOrchestrator,
                                   ShopConsumerTokenSupport tokenSupport) {
         this.consumerOrchestrator = consumerOrchestrator;
+        this.afterSaleOrchestrator = afterSaleOrchestrator;
+        this.reviewOrchestrator = reviewOrchestrator;
         this.tokenSupport = tokenSupport;
     }
 
@@ -172,6 +180,62 @@ public class ShopConsumerController {
             return Result.success(consumerOrchestrator.orderDetail(consumerId, orderNo));
         } catch (IllegalArgumentException e) {
             return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * P2：买家申请售后（仅「已发货」订单）。
+     * body: {type: REFUND_ONLY|RETURN_REFUND, reason?}
+     */
+    @PostMapping("/me/orders/{orderNo}/after-sale")
+    public Result<?> applyAfterSale(@PathVariable String orderNo,
+                                    @RequestBody(required = false) Map<String, Object> body,
+                                    HttpServletRequest request) {
+        String consumerId = tokenSupport.resolveConsumerId(request);
+        if (consumerId == null) {
+            return Result.fail(401, "请先登录");
+        }
+        Map<String, Object> b = body == null ? Map.of() : body;
+        try {
+            afterSaleOrchestrator.applyByConsumer(consumerId, orderNo,
+                    str(b.get("type")), str(b.get("reason")));
+            return Result.successMessage("售后申请已提交，等待商家处理");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * P2：提交商品评价（一单一款一条，提交后不可修改）。
+     * body: {styleNo, rating(1~5), content?, anonymous?}
+     */
+    @PostMapping("/me/orders/{orderNo}/reviews")
+    public Result<?> submitReview(@PathVariable String orderNo,
+                                  @RequestBody Map<String, Object> body,
+                                  HttpServletRequest request) {
+        String consumerId = tokenSupport.resolveConsumerId(request);
+        if (consumerId == null) {
+            return Result.fail(401, "请先登录");
+        }
+        try {
+            reviewOrchestrator.submit(consumerId, orderNo, str(body.get("styleNo")),
+                    parseInt(body.get("rating")), str(body.get("content")),
+                    Boolean.TRUE.equals(body.get("anonymous"))
+                            || "1".equals(String.valueOf(body.get("anonymous"))));
+            return Result.successMessage("感谢您的评价");
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    private int parseInt(Object v) {
+        if (v == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 
