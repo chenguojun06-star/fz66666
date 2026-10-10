@@ -1,54 +1,8 @@
 .page {
   min-height: 100vh;
   background: var(--color-bg-subtle);
-  padding-bottom: var(--space-40);
-}
-
-/* 顶部导航 */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 88rpx;
-  padding: 0 var(--space-24);
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
-}
-
-.back-btn {
-  width: 60rpx;
-  height: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.page-title {
-  font-size: var(--fs-32);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.save-btn {
-  padding: var(--space-8) var(--space-20);
-  border-radius: var(--radius-8);
-  border: 1rpx solid var(--color-primary);
-  background: transparent;
-}
-
-.save-btn text {
-  font-size: var(--fs-26);
-  color: var(--color-primary);
-  font-weight: 500;
-}
-
-.save-btn--disabled {
-  border-color: #ccc;
-  opacity: 0.6;
-}
-
-.save-btn--disabled text {
-  color: #999;
+  /* 底部固定保存栏高度 + iPhone 安全区，避免最后一项被遮住 */
+  padding-bottom: calc(var(--btn-height-md) + var(--spacing-sm) * 2 + env(safe-area-inset-bottom));
 }
 
 /* 加载 */

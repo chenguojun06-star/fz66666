@@ -1,15 +1,4 @@
 <view class="page">
-  <!-- 顶部导航 -->
-  <view class="page-header">
-    <view class="back-btn" bindtap="onBack">
-      <view class="line-icon icon-arrow-left"></view>
-    </view>
-    <text class="page-title">{{t.permissionTitle}}</text>
-    <view class="save-btn {{saving ? 'save-btn--disabled' : ''}}" bindtap="onSave">
-      <text>{{saving ? t.saving : t.save}}</text>
-    </view>
-  </view>
-
   <!-- 加载中 -->
   <view class="loading-wrap" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
@@ -62,6 +51,13 @@
       <view class="tip-bar">
         <text class="tip-text">{{t.unitPriceHint}}</text>
       </view>
+    </view>
+  </view>
+
+  <!-- 底部保存（导航栏走原生，页面自绘头部会重复） -->
+  <view class="footer-bar" wx:if="{{!loading}}">
+    <view class="btn-submit {{saving ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onSave">
+      <text>{{saving ? t.saving : t.save}}</text>
     </view>
   </view>
 
