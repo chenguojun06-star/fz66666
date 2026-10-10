@@ -17,19 +17,33 @@ import java.util.Map;
 @Mapper
 public interface PosSaleMapper extends BaseMapper<PosSale> {
 
-    /** 今日按收款方式汇总（交班对账用） */
+    /**
+     * 今日按收款方式汇总（交班对账用）。
+     *
+     * <p>只统计**钱已到位**的单（PAID 已收款 / UNPAID 挂账），
+     * 排除 PAYING（顾客还没付）与 CANCELLED（作废）——
+     * 交班时收银员要拿这个数去数钱，把待支付也算进去会对不上账。
+     */
     @Select("SELECT pay_method AS payMethod, pay_status AS payStatus, "
             + "       COUNT(*) AS saleCount, COALESCE(SUM(total_amount), 0) AS amount "
             + "FROM t_pos_sale "
             + "WHERE tenant_id = #{tenantId} AND status = 'NORMAL' AND DATE(create_time) = CURDATE() "
+            + "  AND pay_status IN ('PAID', 'UNPAID') "
             + "GROUP BY pay_method, pay_status "
             + "ORDER BY amount DESC")
     List<Map<String, Object>> todayByPayMethod(@Param("tenantId") Long tenantId);
 
-    /** 今日汇总（单数 / 件数 / 金额 / 挂账金额） */
+    /**
+     * 今日汇总（单数 / 件数 / 已收款金额 / 挂账金额）。
+     *
+     * <p>{@code amount} 只算**真正收到的钱**（pay_status = PAID），
+     * 挂账单独放 {@code creditAmount}；待支付与已取消都不计入 ——
+     * 交班对账时"账面收款"必须与钱箱/流水对得上。
+     */
     @Select("SELECT COUNT(*) AS saleCount, COALESCE(SUM(item_count), 0) AS itemCount, "
-            + "       COALESCE(SUM(total_amount), 0) AS amount, "
-            + "       COALESCE(SUM(CASE WHEN pay_status = 'UNPAID' THEN total_amount ELSE 0 END), 0) AS creditAmount "
+            + "       COALESCE(SUM(CASE WHEN pay_status = 'PAID' THEN total_amount ELSE 0 END), 0) AS amount, "
+            + "       COALESCE(SUM(CASE WHEN pay_status = 'UNPAID' THEN total_amount ELSE 0 END), 0) AS creditAmount, "
+            + "       COALESCE(SUM(CASE WHEN pay_status = 'PAYING' THEN 1 ELSE 0 END), 0) AS payingCount "
             + "FROM t_pos_sale "
             + "WHERE tenant_id = #{tenantId} AND status = 'NORMAL' AND DATE(create_time) = CURDATE()")
     Map<String, Object> todaySummary(@Param("tenantId") Long tenantId);

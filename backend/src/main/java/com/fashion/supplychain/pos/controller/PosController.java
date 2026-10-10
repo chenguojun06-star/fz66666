@@ -1,9 +1,11 @@
 package com.fashion.supplychain.pos.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.integration.payment.orchestration.PaymentConfigOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosSaleOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,8 +30,55 @@ public class PosController {
 
     private final PosSaleOrchestrator posSaleOrchestrator;
 
-    public PosController(PosSaleOrchestrator posSaleOrchestrator) {
+    private final PaymentConfigOrchestrator paymentConfigOrchestrator;
+
+    public PosController(PosSaleOrchestrator posSaleOrchestrator,
+                         PaymentConfigOrchestrator paymentConfigOrchestrator) {
         this.posSaleOrchestrator = posSaleOrchestrator;
+        this.paymentConfigOrchestrator = paymentConfigOrchestrator;
+    }
+
+    /**
+     * 各在线收款渠道是否可用（收银台据此决定微信/支付宝按钮能不能点）。
+     *
+     * <p>未配置的渠道按钮会置灰并提示去「收款设置」配置 ——
+     * 而不是让收银员点了才发现报错。
+     */
+    @GetMapping("/channels")
+    public Result<?> channels() {
+        return Result.success(paymentConfigOrchestrator.channelReadiness());
+    }
+
+    /**
+     * 查询待支付单的支付状态（收银台轮询用）。
+     *
+     * <p>会主动向渠道查询并就地确认：支付结果不能只等回调，回调可能丢。
+     */
+    @GetMapping("/sales/{saleNo}/pay-state")
+    public Result<?> payState(@PathVariable String saleNo) {
+        try {
+            return Result.success(posSaleOrchestrator.payState(saleNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** 取消待支付单（收银员取消 / 顾客不买了）：先关渠道单，再置本地为已取消 */
+    @PostMapping("/sales/{saleNo}/cancel-pay")
+    public Result<?> cancelPay(@PathVariable String saleNo,
+                               @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            Object reason = body == null ? null : body.get("reason");
+            posSaleOrchestrator.cancelPending(saleNo,
+                    reason == null ? null : String.valueOf(reason));
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
     }
 
     /**
@@ -61,6 +110,9 @@ public class PosController {
             return Result.success(posSaleOrchestrator.checkout(body));
         } catch (IllegalArgumentException e) {
             return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            // 例如"发起支付失败"：单据已自动取消，收银员可以重试
+            return Result.fail(409, e.getMessage());
         }
     }
 

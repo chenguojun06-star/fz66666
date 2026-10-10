@@ -47,11 +47,21 @@ public class PosSale {
     /** CASH / WECHAT / ALIPAY / CARD / CREDIT(挂账) */
     private String payMethod;
 
-    /** PAID 已收款 / UNPAID 挂账未收 */
+    /**
+     * 收款状态：
+     * PAYING 待支付（在线支付二维码已生成）/
+     * PAID 已收款 / UNPAID 挂账未收 / CANCELLED 已取消
+     */
     private String payStatus;
 
     /** 挂账生成的应收单 ID（当场收款为空） */
     private String receivableId;
+
+    /** 渠道交易号（微信 transaction_id / 支付宝 trade_no，对账用） */
+    private String channelTradeNo;
+
+    /** 实际收款时间（在线支付为渠道确认时间） */
+    private LocalDateTime paidTime;
 
     private String outstockNo;
 

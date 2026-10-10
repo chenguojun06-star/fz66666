@@ -319,10 +319,13 @@ class ShopPlatformSchemaGuardTest {
         assertThat(sql).contains("CREATE TABLE IF NOT EXISTS `t_pos_sale`");
         assertThat(sql).contains("CREATE TABLE IF NOT EXISTS `t_pos_sale_item`");
 
-        String orc = read("pos/orchestration/PosSaleOrchestrator.java");
-        assertThat(orc)
+        // 出库动作已下沉到 PosSaleWriteService（避免在事务里调渠道 HTTP 接口），
+        // 所以这里检查的是那个类 —— 它必须复用既有 freeOutbound，而不是另写一套扣库存逻辑。
+        String write = read("pos/service/PosSaleWriteService.java");
+        assertThat(write)
                 .as("出库复用既有 freeOutbound —— 库存与台账口径必须与店铺订单一致")
                 .contains("finishedWarehouseOperationOrchestrator.freeOutbound(params)");
+        String orc = read("pos/orchestration/PosSaleOrchestrator.java");
         assertThat(orc)
                 .as("挂账才生成应收（当场收款生成应收 = 同一笔钱记两次）")
                 .contains("if (PAY_CREDIT.equals(payMethod)) {");
@@ -333,7 +336,7 @@ class ShopPlatformSchemaGuardTest {
                 .as("改价留痕：明细同时存吊牌价与成交价")
                 .contains("it.setTagPrice(sku.getTagPrice())");
         assertThat(orc)
-                .as("收款方式走白名单，不接真实支付通道")
+                .as("收款方式走白名单：不认识的收款方式直接拒绝，不进后面的分支")
                 .contains("PAY_METHODS.contains(payMethod)");
 
         String controller = read("pos/controller/PosController.java");

@@ -14,6 +14,7 @@ import com.fashion.supplychain.integration.record.entity.IntegrationChannelConfi
 import com.fashion.supplychain.integration.record.entity.LogisticsRecord;
 import com.fashion.supplychain.integration.record.entity.PaymentRecord;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
+import com.fashion.supplychain.integration.orchestration.ChannelConfigOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,7 +45,7 @@ public class IntegrationDashboardController {
     private final SFExpressProperties sfProps;
     private final STOProperties stoProps;
     private final IntegrationRecordService recordService;
-    private final com.fashion.supplychain.integration.orchestration.ChannelConfigOrchestrator channelConfigOrchestrator;
+    private final ChannelConfigOrchestrator channelConfigOrchestrator;
 
     /** 物流渠道实现（用于判断该渠道是否已真正接入第三方API） */
     private final List<LogisticsService> logisticsServices;
@@ -57,7 +58,8 @@ public class IntegrationDashboardController {
      */
     private static final List<Map<String, String>> CHANNEL_META = List.of(
             Map.of("name", "支付宝", "category", "PAYMENT", "code", "ALIPAY", "webhook", "/api/webhook/payment/alipay"),
-            Map.of("name", "微信支付", "category", "PAYMENT", "code", "WECHAT_PAY", "webhook", "/api/webhook/payment/wechat"),
+            // 微信回调 body 是加密的（解密需要该商户的 APIv3 密钥），所以地址带 tenantId
+            Map.of("name", "微信支付", "category", "PAYMENT", "code", "WECHAT_PAY", "webhook", "/api/webhook/payment/wechat/{tenantId}"),
             Map.of("name", "顺丰速运", "category", "LOGISTICS", "code", "SF", "webhook", "/api/webhook/logistics/sf"),
             Map.of("name", "申通快递", "category", "LOGISTICS", "code", "STO", "webhook", "/api/webhook/logistics/sto"),
             // 以下 6 家尚未建回调端点，webhook 留空；接入时补端点再填地址
@@ -84,10 +86,15 @@ public class IntegrationDashboardController {
             String code = meta.get("code");
             IntegrationChannelConfig dbCfg = dbConfigs.get(code);
 
-            // 优先：DB 配置 > yml 配置
+            // 支付渠道：状态来自「收款设置」（每租户自己的商户号），不走全局 yml 也不走渠道配置表
             boolean enabled;
             boolean configured;
-            if (dbCfg != null) {
+            if ("ALIPAY".equals(code) || "WECHAT_PAY".equals(code)) {
+                ChannelConfigOrchestrator.ChannelStatus st =
+                        channelConfigOrchestrator.paymentChannelStatus(code);
+                enabled = st.enabled();
+                configured = st.configured();
+            } else if (dbCfg != null) {
                 enabled = Boolean.TRUE.equals(dbCfg.getEnabled());
                 configured = enabled && hasText(dbCfg.getAppId());
             } else {
@@ -122,10 +129,15 @@ public class IntegrationDashboardController {
                 .orElse(true); // 未登记为物流渠道 → 不适用该维度
     }
 
+    /**
+     * 全局 yml 配置的渠道开关。
+     *
+     * <p>只剩物流渠道走这里 —— 快递账号是平台级合作，与资金无关。
+     * 支付渠道的状态来自每租户的「收款设置」（见 {@code paymentChannelStatus}），
+     * 因为商户号必须商家自己持有（平台代收即二清）。
+     */
     private boolean isYmlEnabled(String code) {
         switch (code) {
-            case "ALIPAY": return alipayProps.isEnabled();
-            case "WECHAT_PAY": return wechatPayProps.isEnabled();
             case "SF": return sfProps.isEnabled();
             case "STO": return stoProps.isEnabled();
             default: return false;
@@ -134,8 +146,6 @@ public class IntegrationDashboardController {
 
     private boolean isYmlConfigured(String code) {
         switch (code) {
-            case "ALIPAY": return alipayProps.isConfigured();
-            case "WECHAT_PAY": return wechatPayProps.isConfigured();
             case "SF": return sfProps.isConfigured();
             case "STO": return stoProps.isConfigured();
             default: return false;

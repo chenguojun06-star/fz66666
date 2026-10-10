@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
+import PaymentSettingsTab from './components/PaymentSettingsTab';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
 import { exportShopOrders, printDeliveryNotes } from './deliveryTools';
@@ -796,6 +797,7 @@ const ShopManage: React.FC = () => {
           { value: 'orders', label: '店铺订单' },
           { value: 'reviews', label: '商品评价' },
           { value: 'dashboard', label: '数据看板' },
+          { value: 'payment', label: '收款设置' },
         ]}
       />
 
@@ -1264,6 +1266,9 @@ const ShopManage: React.FC = () => {
           />
         </Card>
       )}
+
+      {/* 收款设置：微信/支付宝商户参数（每个商家配自己的，平台不经手资金） */}
+      {tab === 'payment' && <PaymentSettingsTab />}
 
       {/* P2：商品评价——评价此前只有 C 端写入，商家侧没有任何读入口 */}
       {tab === 'reviews' && (

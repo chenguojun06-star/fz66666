@@ -31,12 +31,15 @@ import { unwrapApiData } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import posApi from '@/services/pos/posApi';
 import type {
+  PosChannelReadiness,
   PosCheckoutResult,
   PosCustomer,
+  PosPayInfo,
   PosPayMethod,
   PosSku,
   PosToday,
 } from '@/services/pos/posApi';
+import { QRCodeSVG } from 'qrcode.react';
 import './index.css';
 
 const { Text } = Typography;
@@ -90,6 +93,13 @@ const PosTerminal: React.FC = () => {
   const [submitting, setSubmitting] = React.useState(false);
   const [today, setToday] = React.useState<PosToday | null>(null);
   const [result, setResult] = React.useState<PosCheckoutResult | null>(null);
+  /** 在线收款渠道可用性：未配置的渠道按钮置灰，避免收银员点了才发现报错 */
+  const [channels, setChannels] = React.useState<PosChannelReadiness | null>(null);
+  /** 待支付单（二维码已生成，等顾客扫码） */
+  const [payInfo, setPayInfo] = React.useState<PosPayInfo | null>(null);
+  /** 二维码剩余有效秒数 */
+  const [payLeft, setPayLeft] = React.useState(0);
+  const [cancelling, setCancelling] = React.useState(false);
 
   const searchRef = React.useRef<InputRef>(null);
 
@@ -103,6 +113,14 @@ const PosTerminal: React.FC = () => {
 
   React.useEffect(() => {
     void loadToday();
+    void (async () => {
+      try {
+        setChannels(unwrapApiData<PosChannelReadiness>(await posApi.channels(), '渠道状态加载失败'));
+      } catch {
+        // 拿不到渠道状态就按"都不可用"处理：宁可让收银员用现金，也不能点了报错
+        setChannels(null);
+      }
+    })();
   }, [loadToday]);
 
   const goodsAmount = React.useMemo(
@@ -275,6 +293,18 @@ const PosTerminal: React.FC = () => {
         }),
         '开单失败',
       );
+      if (res?.payStatus === 'PAYING' && res.qrCode) {
+        // 在线支付：先不结算，把二维码给顾客扫，等渠道确认（回调/轮询）才出库
+        setPayInfo({
+          saleNo: res.saleNo,
+          qrCode: res.qrCode,
+          totalAmount: Number(res.totalAmount ?? 0),
+          payMethod: res.payMethod,
+          expireSeconds: res.expireSeconds,
+        });
+        void loadToday();
+        return;
+      }
       setResult(res);
       setLines([]);
       setDiscount(0);
@@ -288,6 +318,88 @@ const PosTerminal: React.FC = () => {
       setSubmitting(false);
     }
   }, [lines, payMethod, phone, discount, roundOff, customerName, remark, loadToday]);
+
+  /**
+   * 待支付单轮询：每 2 秒问一次服务端。
+   *
+   * 服务端在 pay-state 里会**主动向微信/支付宝查询**并就地确认，
+   * 所以即使支付回调丢了（网络抖动、发布重启、回调地址配错），这里也能把单子推进到已支付。
+   */
+  React.useEffect(() => {
+    if (!payInfo) {
+      return undefined;
+    }
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const st = unwrapApiData<{ paid: boolean; payStatus: string; outstockNo?: string | null }>(
+          await posApi.payState(payInfo.saleNo),
+          '查询支付状态失败',
+        );
+        if (stopped) return;
+        if (st?.paid) {
+          setPayInfo(null);
+          setResult({
+            saleNo: payInfo.saleNo,
+            goodsAmount: 0,
+            discountAmount: 0,
+            roundOffAmount: 0,
+            totalAmount: payInfo.totalAmount,
+            payMethod: payInfo.payMethod,
+            payStatus: 'PAID',
+            itemCount: 0,
+            outstockNo: st.outstockNo ?? null,
+          } as PosCheckoutResult);
+          setLines([]);
+          setDiscount(0);
+          setRoundOff(0);
+          setReceived(null);
+          setRemark('');
+          void loadToday();
+        } else if (st?.payStatus === 'CANCELLED') {
+          setPayInfo(null);
+          message.warning('该单已取消');
+          void loadToday();
+        }
+      } catch {
+        // 轮询失败不打断收银：下一轮再试
+      }
+    };
+    const timer = window.setInterval(() => void tick(), 2000);
+    void tick();
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [payInfo, loadToday]);
+
+  /** 二维码倒计时 */
+  React.useEffect(() => {
+    if (!payInfo) {
+      return undefined;
+    }
+    setPayLeft(payInfo.expireSeconds ?? 900);
+    const timer = window.setInterval(() => {
+      setPayLeft((v) => (v <= 0 ? 0 : v - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [payInfo]);
+
+  /** 取消待支付单（顾客不买了 / 换支付方式） */
+  const cancelPay = React.useCallback(async () => {
+    if (!payInfo) return;
+    setCancelling(true);
+    try {
+      unwrapApiData(await posApi.cancelPay(payInfo.saleNo, '收银员取消'), '取消失败');
+      setPayInfo(null);
+      message.info('已取消该笔待支付');
+      void loadToday();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '取消失败');
+    } finally {
+      setCancelling(false);
+    }
+  }, [payInfo, loadToday]);
 
   /* ── 表格 ── */
 
@@ -538,8 +650,23 @@ const PosTerminal: React.FC = () => {
               onChange={(e) => setPayMethod(e.target.value as PosPayMethod)}
               optionType="button"
               buttonStyle="solid"
-              options={PAY_OPTIONS}
+              options={PAY_OPTIONS.map((o) => ({
+                ...o,
+                // 未配置商户号的在线渠道直接置灰：让收银员一眼看出"这个收不了"，
+                // 而不是点了才弹报错（收款方式配置在「店铺管理 → 收款设置」）
+                disabled:
+                  (o.value === 'WECHAT' && !channels?.WECHAT_PAY) ||
+                  (o.value === 'ALIPAY' && !channels?.ALIPAY),
+              }))}
             />
+            {payMethod === 'WECHAT' || payMethod === 'ALIPAY' ? (
+              <Alert
+                style={{ marginTop: 8 }}
+                type="info"
+                showIcon
+                message="顾客扫屏幕上的二维码付款，收到款项后自动出库"
+              />
+            ) : null}
 
             {payMethod === 'CASH' ? (
               <Row gutter={8} style={{ marginTop: 8 }} align="middle">
@@ -625,6 +752,51 @@ const PosTerminal: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* 待支付：展示二维码 + 倒计时，收银员可随时取消 */}
+      <Modal
+        open={!!payInfo}
+        title="等待顾客付款"
+        footer={null}
+        onCancel={() => void cancelPay()}
+        maskClosable={false}
+        width={380}
+      >
+        {payInfo ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: '#8c8c8c' }}>应收</div>
+            <div className="pos-total__num" style={{ marginBottom: 8 }}>
+              {formatMoney(payInfo.totalAmount)}
+            </div>
+            {payInfo.qrCode ? (
+              <div style={{ display: 'inline-block', padding: 8, background: '#fff', borderRadius: 8 }}>
+                <QRCodeSVG value={payInfo.qrCode} size={220} level="M" />
+              </div>
+            ) : (
+              <Alert type="warning" showIcon message="渠道未返回二维码，请取消后重试" />
+            )}
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">
+                {payInfo.payMethod === 'WECHAT' ? '微信' : '支付宝'}扫码付款 ·
+                剩余 {Math.floor(payLeft / 60)}:{(payLeft % 60).toString().padStart(2, '0')}
+              </Text>
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                单号 {payInfo.saleNo}
+              </Text>
+            </div>
+            <Button style={{ marginTop: 12 }} loading={cancelling} onClick={() => void cancelPay()}>
+              取消这笔
+            </Button>
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                付款成功后会自动出库并计入今日收款，无需再点确认
+              </Text>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={!!result}

@@ -3,22 +3,21 @@ package com.fashion.supplychain.pos.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.crm.entity.Customer;
-import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
-import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.integration.payment.PaymentGateway;
+import com.fashion.supplychain.integration.payment.orchestration.PaymentOrchestrator;
 import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosSaleItem;
 import com.fashion.supplychain.pos.mapper.PosSaleItemMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.pos.service.PosSaleWriteService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -41,21 +40,18 @@ import java.util.stream.Collectors;
  * 客户档案在系统里都已经有了。缺的只有「一屏完成选货 → 改价 → 收款」的单据，
  * 所以这里**不新建任何库存/财务逻辑**，只做编排：
  * <ul>
- *   <li>出库：逐 SKU 走既有的 {@code freeOutbound}（扣库存 + 落 t_product_outstock 台账），
- *       与店铺订单同一正路，仓库页看到的出库记录口径一致；</li>
- *   <li>收款：当场收钱（现金/微信/支付宝/刷卡）只**登记方式**，不接真实支付通道
- *       —— 零牌照风险、立刻能用；</li>
- *   <li>挂账：生成一条应收单，进既有「收付款中心」核销 ——
- *       与全系统「应收 + 收款核销」同一口径，不另起一套。</li>
+ *   <li>出库：逐 SKU 走既有的 {@code freeOutbound}（扣库存 + 落 t_product_outstock 台账）；</li>
+ *   <li>收款：现金/刷卡当场收（登记方式）；挂账生成应收单进「收付款中心」核销；
+ *       <b>微信/支付宝走真实支付通道</b>（顾客扫屏幕二维码，渠道确认后才出库）；</li>
  * </ul>
  *
- * <p><b>口径纪律</b>：
- * <ul>
- *   <li>金额一律**服务端算**（单价 × 数量、折扣、抹零、应收），前端只传原始输入；</li>
- *   <li>挂账必须留手机号（要归并客户，应收单的 customer_id 是必填）；</li>
- *   <li>当场收钱的不生成应收 —— 否则同一笔钱会在「已收款」和「应收未收」里各出现一次；</li>
- *   <li>改价留痕：明细同时存吊牌价与成交价，事后能看出这单让了多少。</li>
- * </ul>
+ * <p><b>资金合规</b>：在线收款用的是**商家自己的商户号**（在「收款设置」里配置），
+ * 平台不经手资金。平台用一个商户号代收所有商家的钱属于二清（无牌照非法经营）。
+ *
+ * <p><b>出库时机</b>：只有"钱到位"才出库 —— 现金/刷卡当场、挂账记账、
+ * 在线支付等渠道确认（回调或轮询）。待支付中的单只是占位，不动库存。
+ *
+ * <p><b>金额一律服务端算</b>，前端只传单价、数量、折扣、抹零这些原始输入。
  */
 @Slf4j
 @Service
@@ -65,10 +61,11 @@ public class PosSaleOrchestrator {
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final AtomicInteger NO_SEQ = new AtomicInteger(0);
 
-    /** 收款方式白名单（只登记，不接真实支付通道） */
-    private static final Set<String> PAY_METHODS =
-            new LinkedHashSet<>(List.of("CASH", "WECHAT", "ALIPAY", "CARD", "CREDIT"));
-    /** 挂账 */
+    /** 收款方式白名单：前四种是登记式，后两种走真实支付通道 */
+    private static final Set<String> PAY_METHODS = new LinkedHashSet<>(
+            List.of("CASH", "WECHAT", "ALIPAY", "CARD", "CREDIT"));
+    /** 走真实支付通道的收款方式 */
+    private static final Set<String> PAY_ONLINE = Set.of("WECHAT", "ALIPAY");
     private static final String PAY_CREDIT = "CREDIT";
     private static final int MAX_QTY = 9999;
     private static final int MAX_LINES = 200;
@@ -79,8 +76,8 @@ public class PosSaleOrchestrator {
     private final ProductSkuService productSkuService;
     private final StyleInfoService styleInfoService;
     private final CustomerOrchestrator customerOrchestrator;
-    private final ReceivableOrchestrator receivableOrchestrator;
-    private final FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
+    private final PosSaleWriteService writeService;
+    private final PaymentOrchestrator paymentOrchestrator;
 
     /* ── 选货 ─────────────────────────────────────────────────────────────── */
 
@@ -201,12 +198,15 @@ public class PosSaleOrchestrator {
     /* ── 开单 ─────────────────────────────────────────────────────────────── */
 
     /**
-     * 收银台开单：算价 → 校验库存 → 出库 → 收款或挂账。
+     * 收银台开单：算价 → 校验库存 → 落单 → 按收款方式结算或发起在线支付。
+     *
+     * <p>本方法**刻意不加 @Transactional**：在线支付要在中间调渠道 HTTP 接口，
+     * 事务里做网络调用会长时间占着数据库连接。事务边界交给
+     * {@link PosSaleWriteService#createSale} 与 {@link PosSaleWriteService#settle}。
      *
      * @param body items[{skuId,quantity,unitPrice?}] / payMethod / discount / roundOff /
      *             customerName / customerPhone / remark
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> checkout(Map<String, Object> body) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
@@ -228,6 +228,10 @@ public class PosSaleOrchestrator {
         String customerPhone = str(body.get("customerPhone"));
         if (PAY_CREDIT.equals(payMethod) && !StringUtils.hasText(customerPhone)) {
             throw new IllegalArgumentException("挂账需要填写客户手机号（要挂到客户名下）");
+        }
+        if (PAY_ONLINE.contains(payMethod) && !StringUtils.hasText(customerPhone)) {
+            // 不强制：扫码支付不需要手机号，但留个提示由前端决定是否要填
+            log.debug("[POS] 在线支付未填客户手机号，按散客处理");
         }
 
         // 1. 明细算价（服务端算，不信前端传的金额）
@@ -304,7 +308,7 @@ public class PosSaleOrchestrator {
             customer = findOrCreateCustomer(tenantId, customerName, customerPhone);
         }
 
-        // 4. 落单
+        // 4. 落单（收款状态先落 PAYING，等结算/渠道确认再落定）
         PosSale sale = new PosSale();
         sale.setTenantId(tenantId);
         sale.setSaleNo("POS" + LocalDateTime.now().format(NO_FMT)
@@ -319,55 +323,13 @@ public class PosSaleOrchestrator {
         sale.setRoundOffAmount(roundOff);
         sale.setTotalAmount(total);
         sale.setPayMethod(payMethod);
-        sale.setPayStatus(PAY_CREDIT.equals(payMethod) ? "UNPAID" : "PAID");
+        sale.setPayStatus("PAYING");
         sale.setRemark(str(body.get("remark")));
         sale.setCashier(UserContext.username());
         sale.setStatus("NORMAL");
         sale.setCreateTime(LocalDateTime.now());
         sale.setUpdateTime(LocalDateTime.now());
-        saleMapper.insert(sale);
-
-        // 5. 逐条出库（与店铺订单同一正路：扣库存 + 落台账）
-        List<String> outstockNos = new ArrayList<>();
-        for (PosSaleItem it : items) {
-            Map<String, Object> params = new LinkedHashMap<>();
-            params.put("skuCode", it.getSkuCode());
-            params.put("quantity", it.getQuantity());
-            params.put("outstockType", "free_outbound");
-            params.put("customerName", sale.getCustomerName());
-            params.put("customerPhone", sale.getCustomerPhone());
-            params.put("remark", "收银台 " + sale.getSaleNo());
-            var out = finishedWarehouseOperationOrchestrator.freeOutbound(params);
-            if (out != null && StringUtils.hasText(out.getOutstockNo())) {
-                outstockNos.add(out.getOutstockNo());
-            }
-            it.setSaleId(sale.getId());
-            saleItemMapper.insert(it);
-        }
-
-        // 6. 挂账才生成应收（当场收款不生成，否则同一笔钱记两次）
-        String receivableId = null;
-        if (PAY_CREDIT.equals(payMethod)) {
-            Receivable receivable = new Receivable();
-            receivable.setCustomerId(customer.getId());
-            receivable.setCustomerName(customer.getCompanyName());
-            receivable.setAmount(total);
-            receivable.setDescription("收银台销售单 " + sale.getSaleNo());
-            Receivable saved = receivableOrchestrator.create(receivable);
-            receivableId = saved.getId();
-        }
-
-        PosSale patch = new PosSale();
-        patch.setId(sale.getId());
-        patch.setReceivableId(receivableId);
-        if (!outstockNos.isEmpty()) {
-            patch.setOutstockNo(outstockNos.get(0)
-                    + (outstockNos.size() > 1 ? " 等" + outstockNos.size() + "单" : ""));
-        }
-        saleMapper.updateById(patch);
-
-        log.info("[POS] 开单成功 saleNo={} tenant={} 金额={} 方式={} 件数={} 出库={}单",
-                sale.getSaleNo(), tenantId, total, payMethod, itemCount, outstockNos.size());
+        writeService.createSale(sale, items);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("saleNo", sale.getSaleNo());
@@ -376,11 +338,117 @@ public class PosSaleOrchestrator {
         resp.put("roundOffAmount", roundOff);
         resp.put("totalAmount", total);
         resp.put("payMethod", payMethod);
-        resp.put("payStatus", sale.getPayStatus());
         resp.put("itemCount", itemCount);
-        resp.put("receivableId", receivableId);
-        resp.put("outstockNo", patch.getOutstockNo());
-        return resp;
+
+        // 5a. 现金/刷卡：当场收款 → 立即结算（出库）
+        if ("CASH".equals(payMethod) || "CARD".equals(payMethod)) {
+            Map<String, Object> settled = writeService.settle(sale.getId(), "PAID", null);
+            resp.putAll(settled);
+            resp.put("saleNo", sale.getSaleNo());
+            resp.put("totalAmount", total);
+            return resp;
+        }
+
+        // 5b. 挂账：生成应收 → 结算为未收（出库）
+        if (PAY_CREDIT.equals(payMethod)) {
+            Map<String, Object> settled = writeService.settle(sale.getId(), "UNPAID", null);
+            resp.putAll(settled);
+            resp.put("saleNo", sale.getSaleNo());
+            resp.put("totalAmount", total);
+            return resp;
+        }
+
+        // 5c. 在线支付：向渠道下单拿二维码，**此时不出库**，等回调/轮询确认
+        try {
+            Map<String, Object> prepay = paymentOrchestrator.prepay(
+                    tenantId, "POS_SALE", sale.getSaleNo(),
+                    total.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact(),
+                    "收银台 " + sale.getSaleNo(), channelOf(payMethod));
+            resp.putAll(prepay);
+            // 显式给出单据的收款状态：prepay 返回的 status 是**渠道视角**的（PENDING），
+            // 而前端要判断的是"这张销售单处于待支付"。两者语义不同，不能混用。
+            resp.put("payStatus", "PAYING");
+            resp.put("saleNo", sale.getSaleNo());
+            resp.put("totalAmount", total);
+            log.info("[POS] 待支付单已生成 saleNo={} 方式={} 金额={}", sale.getSaleNo(), payMethod, total);
+            return resp;
+        } catch (RuntimeException e) {
+            // 发起支付失败 → 把单置为已取消，避免留下一张永远待支付的废单
+            writeService.markCancelled(sale.getId(), "发起支付失败：" + e.getMessage());
+            throw new IllegalStateException("发起" + payMethod + "支付失败：" + e.getMessage(), e);
+        }
+    }
+
+    /* ── 在线支付确认（回调 / 轮询共用） ───────────────────────────────────── */
+
+    /**
+     * 确认已收款并结算（出库）。由 {@code PosPaymentHandler} 在支付回调/轮询确认时调用。
+     *
+     * <p>回调链路没有登录上下文，租户由 {@code PosPaymentHandler} 设置后传入。
+     */
+    public void confirmPaid(String saleNo, String channel, String channelTradeNo, long paidFen) {
+        PosSale sale = findSaleByNo(saleNo);
+        if (sale == null) {
+            throw new IllegalStateException("销售单不存在：" + saleNo);
+        }
+        if ("PAID".equals(sale.getPayStatus())) {
+            log.info("[POS] 已确认过收款，跳过 saleNo={}", saleNo);
+            return;
+        }
+        if (sale.getTotalAmount() != null
+                && BigDecimal.valueOf(paidFen).compareTo(
+                        sale.getTotalAmount().multiply(BigDecimal.valueOf(100))) < 0) {
+            // 金额对不上：宁可让人看到，也不能按低价出库
+            throw new IllegalStateException("实付金额小于应收金额，拒绝出库 saleNo=" + saleNo
+                    + " 实付=" + paidFen + "分 应收=" + sale.getTotalAmount());
+        }
+        writeService.settle(sale.getId(), "PAID", channelTradeNo);
+    }
+
+    /** 取消待支付单（收银员取消 / 超时）：先关渠道单，再置本地为已取消 */
+    public void cancelPending(String saleNo, String reason) {
+        PosSale sale = findSaleByNo(saleNo);
+        if (sale == null) {
+            throw new IllegalArgumentException("销售单不存在：" + saleNo);
+        }
+        if (!"PAYING".equals(sale.getPayStatus())) {
+            throw new IllegalArgumentException("该单不在待支付状态，无法取消");
+        }
+        PaymentGateway.PaymentType channel = channelOf(sale.getPayMethod());
+        paymentOrchestrator.cancel(sale.getTenantId(), saleNo, channel, reason);
+        writeService.markCancelled(sale.getId(), StringUtils.hasText(reason) ? reason : "收银员取消");
+    }
+
+    /**
+     * 查询待支付单的支付状态（收银台轮询用）。
+     *
+     * <p>会主动向渠道查询并就地确认 —— 支付结果不能只等回调，回调可能丢。
+     */
+    public Map<String, Object> payState(String saleNo) {
+        PosSale sale = findSaleByNo(saleNo);
+        if (sale == null) {
+            throw new IllegalArgumentException("销售单不存在：" + saleNo);
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("saleNo", saleNo);
+        out.put("payStatus", sale.getPayStatus());
+        out.put("paid", "PAID".equals(sale.getPayStatus()));
+        out.put("payMethod", sale.getPayMethod());
+        out.put("totalAmount", sale.getTotalAmount());
+        if (!"PAYING".equals(sale.getPayStatus())) {
+            out.put("outstockNo", sale.getOutstockNo());
+            return out;
+        }
+        Map<String, Object> state = paymentOrchestrator.queryAndConfirm(
+                sale.getTenantId(), saleNo, channelOf(sale.getPayMethod()));
+        out.putAll(state);
+        PosSale after = findSaleByNo(saleNo);
+        if (after != null) {
+            out.put("payStatus", after.getPayStatus());
+            out.put("paid", "PAID".equals(after.getPayStatus()));
+            out.put("outstockNo", after.getOutstockNo());
+        }
+        return out;
     }
 
     /* ── 交班 ─────────────────────────────────────────────────────────────── */
@@ -403,6 +471,39 @@ public class PosSaleOrchestrator {
     }
 
     // ── 内部 ────────────────────────────────────────────────────────────────
+
+    private PosSale findSaleByNo(String saleNo) {
+        Long tenantId = UserContext.tenantId();
+        if (!StringUtils.hasText(saleNo)) {
+            return null;
+        }
+        // 回调链路没有租户上下文，此时只按单号查（单号全局唯一）
+        LambdaQueryWrapper<PosSale> w = new LambdaQueryWrapper<PosSale>()
+                .eq(PosSale::getSaleNo, saleNo)
+                .last("LIMIT 1");
+        if (tenantId != null) {
+            w.eq(PosSale::getTenantId, tenantId);
+        }
+        return saleMapper.selectOne(w);
+    }
+
+    /**
+     * 收银台的收款方式 → 支付渠道枚举。
+     *
+     * <p>两套词汇故意不共用：收银台用的是「业务上的收款方式」（CASH/WECHAT/ALIPAY/CARD/CREDIT），
+     * 支付模块用的是「渠道代码」（ALIPAY/WECHAT_PAY）。
+     * 直接拿前者去 parse 后者会漏掉 {@code WECHAT → WECHAT_PAY} 这个映射
+     * （这个 bug 真的发生过，被单测拦住了），所以这里显式翻译一次。
+     */
+    private static PaymentGateway.PaymentType channelOf(String payMethod) {
+        if ("WECHAT".equals(payMethod)) {
+            return PaymentGateway.PaymentType.WECHAT_PAY;
+        }
+        if ("ALIPAY".equals(payMethod)) {
+            return PaymentGateway.PaymentType.ALIPAY;
+        }
+        throw new IllegalArgumentException("该收款方式不支持在线支付：" + payMethod);
+    }
 
     private Customer findOrCreateCustomer(Long tenantId, String name, String phone) {
         Customer existing = customerOrchestrator.getByPhone(tenantId, phone);
@@ -485,5 +586,4 @@ public class PosSaleOrchestrator {
     private static BigDecimal nz(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
     }
-
 }

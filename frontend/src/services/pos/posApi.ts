@@ -53,12 +53,19 @@ export interface PosCheckoutBody {
 
 export interface PosCheckoutResult {
   saleNo: string;
+  /** 在线支付时的二维码内容（PAYING 时才有） */
+  qrCode?: string | null;
+  expireSeconds?: number;
   goodsAmount: number;
   discountAmount: number;
   roundOffAmount: number;
   totalAmount: number;
   payMethod: PosPayMethod;
-  payStatus: 'PAID' | 'UNPAID';
+  /**
+   * 收款状态：PAYING 待支付（二维码已生成）/ PAID 已收款 /
+   * UNPAID 挂账未收 / CANCELLED 已取消
+   */
+  payStatus: 'PAYING' | 'PAID' | 'UNPAID' | 'CANCELLED';
   itemCount: number;
   receivableId?: string | null;
   outstockNo?: string | null;
@@ -89,6 +96,34 @@ export interface PosRecentSale {
   createTime: string;
 }
 
+/** 在线收款渠道是否可用（收银台据此决定微信/支付宝按钮能不能点） */
+export interface PosChannelReadiness {
+  ALIPAY?: boolean;
+  WECHAT_PAY?: boolean;
+}
+
+/** 待支付单信息（二维码已生成，等顾客扫码） */
+export interface PosPayInfo {
+  saleNo: string;
+  /** 二维码内容（微信 code_url / 支付宝 qr_code），前端渲染成二维码 */
+  qrCode?: string | null;
+  totalAmount: number;
+  payMethod: PosPayMethod;
+  /** 二维码有效期（秒） */
+  expireSeconds?: number;
+}
+
+/** 待支付单的当前支付状态 */
+export interface PosPayState {
+  saleNo: string;
+  payStatus: 'PAYING' | 'PAID' | 'UNPAID' | 'CANCELLED';
+  paid: boolean;
+  payMethod?: string;
+  totalAmount?: number;
+  outstockNo?: string | null;
+  status?: string;
+}
+
 export interface PosToday {
   summary: PosTodaySummary;
   byPayMethod: PosPayMethodRow[];
@@ -108,6 +143,22 @@ export const posApi = {
 
   /** 今日汇总（交班对账） */
   today: () => api.get<PosToday>('/pos/today'),
+
+  /** 在线收款渠道可用性（未配置的渠道按钮置灰，避免点了才发现报错） */
+  channels: () => api.get<PosChannelReadiness>('/pos/channels'),
+
+  /**
+   * 查询待支付单状态（轮询）。
+   *
+   * 服务端会**主动向渠道查询**并就地确认，所以即使支付回调丢了，
+   * 这里也能把单子推进到已支付 —— 不能只依赖回调。
+   */
+  payState: (saleNo: string) =>
+    api.get<PosPayState>(`/pos/sales/${encodeURIComponent(saleNo)}/pay-state`),
+
+  /** 取消待支付单（顾客不买了 / 换支付方式）：先关渠道单，再作废本地单据 */
+  cancelPay: (saleNo: string, reason?: string) =>
+    api.post<null>(`/pos/sales/${encodeURIComponent(saleNo)}/cancel-pay`, { reason }),
 };
 
 export default posApi;

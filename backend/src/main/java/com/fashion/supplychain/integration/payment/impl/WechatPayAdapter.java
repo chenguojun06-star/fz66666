@@ -1,56 +1,29 @@
 package com.fashion.supplychain.integration.payment.impl;
 
-import com.fashion.supplychain.integration.config.WechatPayProperties;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentRequest;
 import com.fashion.supplychain.integration.payment.PaymentResponse;
-import com.fashion.supplychain.integration.util.IntegrationHttpClient;
-import com.wechat.pay.java.core.RSAAutoCertificateConfig;
-import com.wechat.pay.java.core.notification.NotificationParser;
+import com.fashion.supplychain.integration.payment.channel.WechatPayGatewayClient;
+import com.fashion.supplychain.integration.payment.config.PaymentChannelConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * 微信支付适配器
+ * 微信支付适配器（Native 主扫 / 查询 / 退款）。
  *
- * ============================================================
- * 接入只需 3 步（拿到密钥就能上线）：
- * ============================================================
- * Step 1. 在 application.yml 填入密钥：
- *   wechat-pay:
- *     enabled: true
- *     app-id: "wx..."          # 公众号/小程序/APP的AppID
- *     mch-id: "1234567890"     # 商户号
- *     api-v3-key: "xxxxx..."   # API V3 密钥（32位）
- *     serial-no: "xxxxx"       # 商户证书序列号
- *     private-key-path: "classpath:cert/apiclient_key.pem"
- *     notify-url: "https://你的域名/api/webhook/payment/wechat"
+ * <p>只做协议编排，SDK 调用在 {@link WechatPayGatewayClient}。
+ * 凭据来自**该租户自己的**收款配置。
  *
- * Step 2. 在 pom.xml 添加 SDK（取消注释）：
- *   <dependency>
- *     <groupId>com.github.wechatpay-apiv3</groupId>
- *     <artifactId>wechatpay-java</artifactId>
- *     <version>0.2.14</version>
- *   </dependency>
- *
- * Step 3. 在每个方法中，删除 "if (!wechatPayConfig.isConfigured())" 的 mock 分支，
- *         取消注释 "=== 真实接入 ===" 块内的代码。
- *
- * 微信支付商户平台：https://pay.weixin.qq.com
- * 开发文档：https://pay.weixin.qq.com/wiki/doc/apiv3/index.shtml
- * ============================================================
+ * <p><b>不再有 Mock 分支</b>（历史实现未配置时会返回假二维码，且
+ * {@code verifyCallback} 直接放行）。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WechatPayAdapter implements PaymentGateway {
 
-    /** 配置属性（application.yml 中 wechat-pay.* 自动映射） */
-    private final WechatPayProperties wechatPayConfig;
-
-    /** 统一 HTTP 客户端 */
-    private final IntegrationHttpClient httpClient;
+    private final WechatPayGatewayClient client;
 
     @Override
     public String getChannelName() {
@@ -63,205 +36,81 @@ public class WechatPayAdapter implements PaymentGateway {
     }
 
     @Override
-    public PaymentResponse createPayment(PaymentRequest request) throws PaymentException {
-        log.info("[微信支付] 发起支付 | orderId={} amount={}分", request.getOrderId(), request.getAmount());
-
-        // ---- Mock 模式（密钥未配置时） ----
-        if (!wechatPayConfig.isConfigured()) {
-            return mockResponse(request.getOrderId(), "WX_MOCK_", request.getAmount());
-        }
-
-        // ============================================================
-        // === 真实接入（Step 2 引入 SDK 后取消注释） ===
-        // ============================================================
-        //
-        // // 初始化微信支付 V3 客户端（自动下载和刷新平台证书）
-        // RSAAutoCertificateConfig config = new RSAAutoCertificateConfig.Builder()
-        //     .merchantId(wechatPayConfig.getMchId())
-        //     .privateKeyFromPath(wechatPayConfig.getPrivateKeyPath())
-        //     .merchantSerialNumber(wechatPayConfig.getSerialNo())
-        //     .apiV3Key(wechatPayConfig.getApiV3Key())
-        //     .build();
-        //
-        // // Native 支付（PC 端扫码支付）
-        // NativePayService service = new NativePayService.Builder().config(config).build();
-        // PrepayRequest prepayRequest = new PrepayRequest();
-        // Amount amount = new Amount();
-        // amount.setTotal((int)(long) request.getAmount());  // 单位：分
-        // amount.setCurrency("CNY");
-        // prepayRequest.setAmount(amount);
-        // prepayRequest.setAppid(wechatPayConfig.getAppId());
-        // prepayRequest.setMchid(wechatPayConfig.getMchId());
-        // prepayRequest.setDescription(request.getSubject());
-        // prepayRequest.setNotifyUrl(wechatPayConfig.getNotifyUrl());
-        // prepayRequest.setOutTradeNo(request.getOrderId());
-        //
-        // PrepayResponse response = service.prepay(prepayRequest);
-        //
-        // return PaymentResponse.builder()
-        //     .success(true)
-        //     .orderId(request.getOrderId())
-        //     .thirdPartyOrderId(request.getOrderId())  // 微信以 out_trade_no 为主
-        //     .status(PaymentResponse.PaymentStatus.PENDING)
-        //     .qrCode(response.getCodeUrl())  // 二维码内容，前端 qrcodejs 渲染
-        //     .amount(request.getAmount())
-        //     .build();
-        //
-        // ============================================================
-
-        throw new PaymentException("[微信支付] 密钥已配置，请取消注释上方真实接入代码");
-    }
-
-    @Override
-    public PaymentResponse queryPayment(String orderId, String thirdPartyOrderId) throws PaymentException {
-        log.info("[微信支付] 查询状态 | orderId={}", orderId);
-
-        if (!wechatPayConfig.isConfigured()) {
-            return PaymentResponse.builder().success(true).orderId(orderId)
-                    .thirdPartyOrderId(thirdPartyOrderId)
-                    .status(PaymentResponse.PaymentStatus.PENDING).build();
-        }
-
-        // ============================================================
-        // === 真实接入 ===
-        // ============================================================
-        //
-        // RSAAutoCertificateConfig config = buildConfig();
-        // NativePayService service = new NativePayService.Builder().config(config).build();
-        // QueryOrderByOutTradeNoRequest request = new QueryOrderByOutTradeNoRequest();
-        // request.setMchid(wechatPayConfig.getMchId());
-        // request.setOutTradeNo(orderId);
-        // Transaction transaction = service.queryOrderByOutTradeNo(request);
-        //
-        // PaymentResponse.PaymentStatus status = switch (transaction.getTradeState()) {
-        //     case SUCCESS  -> PaymentResponse.PaymentStatus.SUCCESS;
-        //     case NOTPAY   -> PaymentResponse.PaymentStatus.PENDING;
-        //     case CLOSED   -> PaymentResponse.PaymentStatus.CANCELLED;
-        //     case REFUND   -> PaymentResponse.PaymentStatus.REFUNDED;
-        //     default       -> PaymentResponse.PaymentStatus.PENDING;
-        // };
-        // return PaymentResponse.builder().success(true).orderId(orderId)
-        //     .thirdPartyOrderId(transaction.getTransactionId())
-        //     .status(status)
-        //     .actualAmount((long) transaction.getAmount().getPayerTotal())
-        //     .build();
-        //
-        // ============================================================
-
-        throw new PaymentException("[微信支付] 密钥已配置，请取消注释 queryPayment 真实代码");
-    }
-
-    @Override
-    public PaymentResponse refund(String orderId, Long refundAmount, String reason) throws PaymentException {
-        log.info("[微信支付] 退款 | orderId={} amount={}分", orderId, refundAmount);
-
-        if (!wechatPayConfig.isConfigured()) {
-            return PaymentResponse.builder().success(true).orderId(orderId)
-                    .status(PaymentResponse.PaymentStatus.REFUNDED)
-                    .actualAmount(refundAmount).build();
-        }
-
-        // ============================================================
-        // === 真实接入 ===
-        // ============================================================
-        //
-        // RSAAutoCertificateConfig config = buildConfig();
-        // RefundService refundService = new RefundService.Builder().config(config).build();
-        // CreateRequest createRequest = new CreateRequest();
-        // createRequest.setOutTradeNo(orderId);
-        // createRequest.setOutRefundNo("REFUND_" + orderId + "_" + System.currentTimeMillis());
-        // createRequest.setReason(reason);
-        // AmountReq amountReq = new AmountReq();
-        // amountReq.setRefund(refundAmount);
-        // amountReq.setTotal(refundAmount);  // 此处如需部分退款需传原始金额
-        // amountReq.setCurrency("CNY");
-        // createRequest.setAmount(amountReq);
-        // Refund refund = refundService.create(createRequest);
-        //
-        // return PaymentResponse.builder().success(true).orderId(orderId)
-        //     .status(PaymentResponse.PaymentStatus.REFUNDED)
-        //     .actualAmount(refundAmount).build();
-        //
-        // ============================================================
-
-        throw new PaymentException("[微信支付] 密钥已配置，请取消注释 refund 真实代码");
-    }
-
-    @Override
-    public boolean verifyCallback(String callbackData) {
-        if (!wechatPayConfig.isConfigured()) {
-            log.debug("[微信支付] Mock模式，跳过签名验证");
-            return true;
-        }
-
+    public PaymentResponse createPayment(PaymentChannelConfig cfg, PaymentRequest request)
+            throws PaymentException {
+        requireUsable(cfg);
         try {
-            // 解析 callbackData 格式：timestamp|nonce|body|signature|serial
-            String[] parts = callbackData.split("\\|", 5);
-            if (parts.length != 5) {
-                log.warn("[微信支付] 回调数据格式错误，期望5段数据");
-                return false;
-            }
-
-            String timestamp = parts[0];
-            String nonce = parts[1];
-            String body = parts[2];
-            String signature = parts[3];
-            String serial = parts[4];
-
-            // 构建验签请求
-            com.wechat.pay.java.core.notification.RequestParam requestParam =
-                    new com.wechat.pay.java.core.notification.RequestParam.Builder()
-                    .serialNumber(serial)
-                    .nonce(nonce)
-                    .timestamp(timestamp)
-                    .signature(signature)
-                    .body(body)
+            String codeUrl = client.prepay(cfg, request.getOrderId(),
+                    request.getAmount(), request.getSubject());
+            log.info("[微信支付] 下单成功 outTradeNo={} amount={}分", request.getOrderId(), request.getAmount());
+            return PaymentResponse.builder()
+                    .success(true)
+                    .orderId(request.getOrderId())
+                    .thirdPartyOrderId(request.getOrderId())
+                    .status(PaymentResponse.PaymentStatus.PENDING)
+                    .qrCode(codeUrl)
+                    .amount(request.getAmount())
                     .build();
-
-            // 使用 SDK 验签（自动下载平台证书并验证）
-            RSAAutoCertificateConfig config = buildConfig();
-            NotificationParser parser = new NotificationParser(config);
-
-            // 解析并验签支付通知（解密后的交易信息）
-            parser.parse(requestParam, com.wechat.pay.java.service.payments.model.Transaction.class);
-
-            log.info("[微信支付] 回调验签成功");
-            return true;
-
-        } catch (NumberFormatException e) {
-            log.warn("[微信支付] 时间戳格式错误: {}", callbackData, e);
-            return false;
-        } catch (Exception e) {
-            log.error("[微信支付] 回调验签失败", e);
-            return false;
+        } catch (RuntimeException e) {
+            throw new PaymentException("WECHAT_ERROR", e.getMessage(), e);
         }
     }
 
-    /**
-     * 构建微信支付 RSA 配置（自动下载平台证书）
-     */
-    private RSAAutoCertificateConfig buildConfig() {
-        return new RSAAutoCertificateConfig.Builder()
-                .merchantId(wechatPayConfig.getMchId())
-                .privateKeyFromPath(wechatPayConfig.getPrivateKeyPath())
-                .merchantSerialNumber(wechatPayConfig.getSerialNo())
-                .apiV3Key(wechatPayConfig.getApiV3Key())
-                .build();
+    @Override
+    public PaymentResponse queryPayment(PaymentChannelConfig cfg, String orderId,
+                                        String thirdPartyOrderId) throws PaymentException {
+        requireUsable(cfg);
+        try {
+            WechatPayGatewayClient.TradeState state = client.query(cfg, orderId);
+            return PaymentResponse.builder()
+                    .success(true)
+                    .orderId(orderId)
+                    .thirdPartyOrderId(state.transactionId())
+                    .status(state.paid() ? PaymentResponse.PaymentStatus.SUCCESS
+                            : state.closed() ? PaymentResponse.PaymentStatus.CLOSED
+                            : PaymentResponse.PaymentStatus.PENDING)
+                    .actualAmount(state.payerTotalFen() > 0 ? state.payerTotalFen() : null)
+                    .build();
+        } catch (RuntimeException e) {
+            throw new PaymentException("WECHAT_QUERY_ERROR", e.getMessage(), e);
+        }
     }
 
-    // -----------------------------------------------
-    // 私有辅助
-    // -----------------------------------------------
+    @Override
+    public void closeOrder(PaymentChannelConfig cfg, String orderId) throws PaymentException {
+        requireUsable(cfg);
+        try {
+            client.close(cfg, orderId);
+        } catch (RuntimeException e) {
+            throw new PaymentException("WECHAT_CLOSE_ERROR", e.getMessage(), e);
+        }
+    }
 
-    private PaymentResponse mockResponse(String orderId, String prefix, Long amount) {
-        log.info("[微信支付] Mock模式 | orderId={}（application.yml 设 wechat-pay.enabled=true 切换真实API）", orderId);
-        return PaymentResponse.builder()
-                .success(true)
-                .orderId(orderId)
-                .thirdPartyOrderId(prefix + System.currentTimeMillis())
-                .status(PaymentResponse.PaymentStatus.PENDING)
-                .qrCode("weixin://wxpay/bizpayurl?[MOCK]")
-                .amount(amount)
-                .build();
+    @Override
+    public PaymentResponse refund(PaymentChannelConfig cfg, String orderId,
+                                  long refundFen, long totalFen, String reason) throws PaymentException {
+        requireUsable(cfg);
+        try {
+            client.refund(cfg, orderId, refundFen, totalFen, reason);
+            log.info("[微信支付] 退款已受理 outTradeNo={} refund={}分", orderId, refundFen);
+            return PaymentResponse.builder()
+                    .success(true)
+                    .orderId(orderId)
+                    .status(PaymentResponse.PaymentStatus.REFUNDED)
+                    .actualAmount(refundFen)
+                    .build();
+        } catch (RuntimeException e) {
+            throw new PaymentException("WECHAT_REFUND_ERROR", e.getMessage(), e);
+        }
+    }
+
+    private void requireUsable(PaymentChannelConfig cfg) throws PaymentException {
+        if (cfg == null) {
+            throw new PaymentException("WECHAT_NOT_CONFIGURED", "尚未配置微信支付收款参数");
+        }
+        if (!cfg.isUsable()) {
+            throw new PaymentException("WECHAT_NOT_CONFIGURED",
+                    "微信支付收款参数不完整，缺少：" + cfg.missingHint());
+        }
     }
 }

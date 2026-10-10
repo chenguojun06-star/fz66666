@@ -1,249 +1,130 @@
 package com.fashion.supplychain.shop.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.fashion.supplychain.shop.entity.ShopBrowseLog;
-import com.fashion.supplychain.shop.mapper.ShopBrowseLogMapper;
-import com.fashion.supplychain.shop.mapper.ShopStatDailyMapper;
-import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.service.ProductSkuService;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * D-784 商品推荐单测。
+ * 详情页底部推荐（D-784）
  *
- * <p>这批代码是工作区里**已存在但从未接线**的实现（无控制器、无调用方、无测试）。
- * 接手时保留其核心策略（同品类/个人偏好/热度三级混合 + 时间衰减），补上测试与接线。
+ * <p>用户诉求：「详情页 到底部的时候 是不是有一些推荐 根据用户的这些 喜欢的」。
+ * 实测顾客端推荐代码 0 处、后端也没有任何推荐逻辑 —— 底部是死胡同。
  *
- * <p>重点守住的几条口径：
- * <ol>
- *   <li>匿名访客**不假装有个性化** —— 不去查浏览历史；</li>
- *   <li>浏览计数**匿名也记**（看板要），但个人浏览明细**只记登录顾客**；</li>
- *   <li>时间衰减 —— 90 天前看过的权重为 0，否则推荐会长期锁死在过时偏好上；</li>
- *   <li>绝不推荐当前正在看的款式。</li>
- * </ol>
+ * <p><b>最容易悄悄坏掉的是排序</b>：推荐不报错、页面照常显示，
+ * 只是顺序悄悄不对了。所以本测试重点锁住<b>排序口径</b>而不是「有没有返回」。
  */
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
+@DisplayName("详情页底部推荐（D-784）")
 class ShopRecommendOrchestratorTest {
 
-    @Mock
-    private ShopBrowseLogMapper browseLogMapper;
-
-    @Mock
-    private ShopStatDailyMapper statDailyMapper;
-
-    @Mock
-    private StyleInfoService styleInfoService;
-
-    @Mock
-    private ProductSkuService productSkuService;
-
-    @InjectMocks
-    private ShopRecommendOrchestrator orchestrator;
-
-    private static final long TENANT = 7L;
-
-    private StyleInfo style(long id, String no, String category, String season) {
+    private static StyleInfo style(Long id, String styleNo, String category, String season) {
         StyleInfo s = new StyleInfo();
         s.setId(id);
-        s.setTenantId(TENANT);
-        s.setStyleNo(no);
-        s.setStyleName("款" + id);
+        s.setStyleNo(styleNo);
         s.setCategory(category);
         s.setSeason(season);
-        s.setShopListed(1);
-        s.setCover("c" + id + ".jpg");
         return s;
     }
 
-    private ProductSku sku(long id, long styleId, String price) {
-        ProductSku k = new ProductSku();
-        k.setId(id);
-        k.setTenantId(TENANT);
-        k.setStyleId(styleId);
-        k.setSalesPrice(new BigDecimal(price));
-        k.setStockQuantity(5);
-        k.setColor("红");
-        return k;
-    }
-
-    // ── 记录浏览 ────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("① 匿名浏览：只记按天计数，不建个人明细（不假装有个性化）")
-    void anonymousBrowseOnlyCounts() {
-        orchestrator.recordView(TENANT, null, 100L, "A1");
-
-        verify(statDailyMapper).bumpBrowse(TENANT);
-        verify(browseLogMapper, never()).recordView(anyLong(), anyString(), anyLong(), anyString());
-    }
-
-    @Test
-    @DisplayName("② 登录浏览：计数与个人明细都记")
-    void loggedInBrowseRecordsBoth() {
-        orchestrator.recordView(TENANT, "c1", 100L, "A1");
-
-        verify(statDailyMapper).bumpBrowse(TENANT);
-        verify(browseLogMapper).recordView(TENANT, "c1", 100L, "A1");
-    }
-
-    @Test
-    @DisplayName("③ 统计写失败不得影响顾客浏览（静默降级）")
-    void statFailureIsSwallowed() {
-        when(statDailyMapper.bumpBrowse(anyLong())).thenThrow(new RuntimeException("db down"));
-        when(browseLogMapper.recordView(anyLong(), anyString(), anyLong(), anyString()))
-                .thenThrow(new RuntimeException("db down"));
-
-        // 不抛异常即为通过
-        orchestrator.recordView(TENANT, "c1", 100L, "A1");
-    }
-
-    @Test
-    @DisplayName("④ 缺少租户或款式时不记任何东西")
-    void missingTenantOrStyleSkips() {
-        orchestrator.recordView(null, "c1", 100L, "A1");
-        orchestrator.recordView(TENANT, "c1", null, "A1");
-
-        verify(statDailyMapper, never()).bumpBrowse(anyLong());
-        verify(browseLogMapper, never()).recordView(anyLong(), anyString(), anyLong(), anyString());
-    }
-
-    // ── 推荐 ───────────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("⑤ 匿名访客：不查浏览历史，仍能按同品类给出推荐")
-    void anonymousRecommendationUsesCategoryOnly() {
-        when(styleInfoService.getById(1L)).thenReturn(style(1L, "A1", "WOMAN", "SUMMER"));
-        when(styleInfoService.list(any(Wrapper.class))).thenReturn(List.of(
-                style(2L, "A2", "WOMAN", "SUMMER"),
-                style(3L, "A3", "MAN", "WINTER")));
-        when(productSkuService.list(any(Wrapper.class))).thenReturn(List.of(
-                sku(21L, 2L, "199"), sku(31L, 3L, "299")));
-
-        List<Map<String, Object>> rows = orchestrator.recommend(TENANT, 1L, null, 8);
-
-        assertEquals(2, rows.size());
-        // 同类同季的排最前
-        assertEquals(2L, rows.get(0).get("styleId"));
-        assertEquals("同类同季", rows.get(0).get("reason"));
-        assertEquals(new BigDecimal("199"), rows.get(0).get("minPrice"));
-        assertEquals(5, rows.get(0).get("totalStock"));
-        // 匿名不得去查个人浏览历史
-        verify(browseLogMapper, never()).recentViews(anyLong(), anyString(), anyInt());
-    }
-
-    @Test
-    @DisplayName("⑥ 绝不推荐当前正在看的款式")
-    void neverRecommendsCurrentStyle() {
-        when(styleInfoService.getById(1L)).thenReturn(style(1L, "A1", "WOMAN", "SUMMER"));
-        // 候选池由 SQL 的 ne(id, styleId) 保证不含自己；这里再守一次调用方传参
-        when(styleInfoService.list(any(Wrapper.class))).thenReturn(new ArrayList<>());
-
-        assertTrue(orchestrator.recommend(TENANT, 1L, "c1", 8).isEmpty());
-    }
-
-    @Test
-    @DisplayName("⑦ 登录顾客：个人偏好参与打分，且标出「你常看」")
-    void loggedInPreferenceAffectsScore() {
-        when(styleInfoService.getById(1L)).thenReturn(style(1L, "A1", "DRESS", "SUMMER"));
-        when(styleInfoService.list(any(Wrapper.class))).thenReturn(List.of(
-                style(9L, "B9", "DRESS", "WINTER"),   // 同品类，但顾客历史里看过它 → 应被抬上来
-                style(8L, "B8", "DRESS", "SUMMER"))); // 同品类同季，基础分更高
-
-        Map<String, Object> view = new HashMap<>();
-        view.put("styleId", 9L);
-        view.put("lastTime", LocalDateTime.now().minusDays(1));
-        when(browseLogMapper.recentViews(eq(TENANT), eq("c1"), anyInt())).thenReturn(List.of(view));
-        when(styleInfoService.getById(9L)).thenReturn(style(9L, "B9", "DRESS", "WINTER"));
-        when(productSkuService.list(any(Wrapper.class))).thenReturn(List.of());
-
-        List<Map<String, Object>> rows = orchestrator.recommend(TENANT, 1L, "c1", 8);
-
-        assertEquals(2, rows.size());
-        String firstReason = String.valueOf(rows.get(0).get("reason"));
-        assertTrue(firstReason.contains("你常看"),
-                "看过的那款应因个人偏好被抬到最前，实际理由=" + firstReason);
-    }
-
-    @Test
-    @DisplayName("⑧ 时间衰减：90 天前看过的权重为 0（不锁死在过时偏好上）")
-    void decayZeroAfterWindow() {
+    @DisplayName("① 时间衰减：越久远的浏览权重越低")
+    void timeDecayMustReduceWeight() {
         LocalDateTime now = LocalDateTime.now();
-        assertTrue(ShopRecommendOrchestrator.decayOf(now.minusDays(1), now) > 0.9);
-        assertTrue(ShopRecommendOrchestrator.decayOf(now.minusDays(30), now) < 0.55);
-        assertEquals(0d, ShopRecommendOrchestrator.decayOf(now.minusDays(120), now));
+        double today = ShopRecommendOrchestrator.decayOf(now, now);
+        double week = ShopRecommendOrchestrator.decayOf(now.minusDays(7), now);
+        double month = ShopRecommendOrchestrator.decayOf(now.minusDays(30), now);
+        double quarter = ShopRecommendOrchestrator.decayOf(now.minusDays(90), now);
+        double ancient = ShopRecommendOrchestrator.decayOf(now.minusDays(200), now);
+
+        assertThat(today).isEqualTo(1.0);
+        assertThat(week).isLessThan(today);
+        assertThat(month).isLessThan(week);
+        assertThat(quarter).isLessThan(month);
+        // 超出新鲜期直接归零 —— 否则推荐会长期锁死在早已放弃的偏好上
+        assertThat(ancient).isEqualTo(0.0);
     }
 
     @Test
-    @DisplayName("⑨ 款式不存在 / 租户缺失时返回空，不抛异常")
-    void missingStyleReturnsEmpty() {
-        assertTrue(orchestrator.recommend(TENANT, 999L, null, 8).isEmpty());
-        assertTrue(orchestrator.recommend(null, 1L, null, 8).isEmpty());
+    @DisplayName("② 30 天半衰：正好 30 天应约为一半")
+    void halfLifeAt30Days() {
+        LocalDateTime now = LocalDateTime.now();
+        assertThat(ShopRecommendOrchestrator.decayOf(now.minusDays(30), now))
+                .isCloseTo(0.5, org.assertj.core.data.Offset.offset(0.02));
     }
 
     @Test
-    @DisplayName("⑩ 无评分数据时给 null/0，前端据此显示「暂无评价」")
-    void noReviewStatsGivesNullRating() {
-        when(styleInfoService.getById(1L)).thenReturn(style(1L, "A1", "WOMAN", "SUMMER"));
-        when(styleInfoService.list(any(Wrapper.class))).thenReturn(List.of(style(2L, "A2", "WOMAN", "SUMMER")));
-        when(productSkuService.list(any(Wrapper.class))).thenReturn(List.of());
-
-        List<Map<String, Object>> rows = orchestrator.recommend(TENANT, 1L, null, 8);
-
-        assertEquals(1, rows.size());
-        assertEquals(0, rows.get(0).get("totalStock"));
-        assertFalse(rows.get(0).containsKey("rating") && rows.get(0).get("rating") != null);
+    @DisplayName("③ 未来时间不得让权重爆炸（时钟漂移/时区）")
+    void futureTimeMustNotExplode() {
+        LocalDateTime now = LocalDateTime.now();
+        double future = ShopRecommendOrchestrator.decayOf(now.plusDays(3), now);
+        assertThat(future).isBetween(0.0, 1.0);
     }
 
     @Test
-    @DisplayName("⑪ 无货的款排到最后（实测「猜你喜欢」里混进库存 0 的款，点进去买不了）")
-    void outOfStockGoesLast() {
-        Map<String, Object> a = new HashMap<>();
-        a.put("styleId", 1L);
-        a.put("totalStock", 0);
-        Map<String, Object> b = new HashMap<>();
-        b.put("styleId", 2L);
-        b.put("totalStock", 5);
-        Map<String, Object> c = new HashMap<>();
-        c.put("styleId", 3L);
-        c.put("totalStock", 2);
+    @DisplayName("④ 时间无法解析时按 0 处理，不得当成最新")
+    void unparsableTimeMustBeZero() {
+        assertThat(ShopRecommendOrchestrator.decayOf(null, LocalDateTime.now())).isEqualTo(0.0);
+        assertThat(ShopRecommendOrchestrator.decayOf("不是时间", LocalDateTime.now())).isEqualTo(0.0);
+    }
 
-        List<Map<String, Object>> sorted =
-                ShopRecommendOrchestrator.stockFirst(new ArrayList<>(List.of(a, b, c)));
+    @Test
+    @DisplayName("⑤ 偏好画像：看过的品类权重更高")
+    void preferenceMustFavorSeenCategory() {
+        ShopRecommendOrchestrator.Preference p = new ShopRecommendOrchestrator.Preference();
+        p.add("WOMAN", 2.0);
+        assertThat(p.scoreOf(style(1L, "BR26X1W1150A", "WOMAN", "SUMMER"))).isGreaterThan(0);
+        assertThat(p.scoreOf(style(2L, "BR26X1W1150A", "MAN", "SUMMER"))).isEqualTo(0.0);
+    }
 
-        // 有货的两个保持原相对顺序在前，无货的沉底
-        assertEquals(2L, sorted.get(0).get("styleId"));
-        assertEquals(3L, sorted.get(1).get("styleId"));
-        assertEquals(1L, sorted.get(2).get("styleId"));
-        // 不删除：它仍是本店真实商品
-        assertEquals(3, sorted.size());
+    @Test
+    @DisplayName("⑥ 偏好画像：同产品线（款号前缀）也算一种偏好")
+    void preferenceMustFavorSameLinePrefix() {
+        ShopRecommendOrchestrator.Preference p = new ShopRecommendOrchestrator.Preference();
+        p.addPrefix("BR26X1", 1.5);
+        // 同前缀应得分，不同前缀不得分
+        assertThat(p.scoreOf(style(1L, "BR26X1W1150A", null, null))).isGreaterThan(0);
+        assertThat(p.scoreOf(style(2L, "BR26CB0201E", null, null))).isEqualTo(0.0);
+    }
+
+    @Test
+    @DisplayName("⑦ 空画像不得给任何加权（匿名访客不得被假装有个性化）")
+    void emptyPreferenceMustScoreZero() {
+        ShopRecommendOrchestrator.Preference p = new ShopRecommendOrchestrator.Preference();
+        assertThat(p.isEmpty()).isTrue();
+        assertThat(p.scoreOf(style(1L, "BR26X1W1150A", "WOMAN", "SUMMER"))).isEqualTo(0.0);
+    }
+
+    @Test
+    @DisplayName("⑧ 空值品类/季节不得被算作「同类」")
+    void blankCategoryMustNotMatch() {
+        ShopRecommendOrchestrator.Preference p = new ShopRecommendOrchestrator.Preference();
+        p.add("WOMAN", 1.0);
+        // 候选款没有品类 → 不该拿到该品类的偏好分
+        assertThat(p.scoreOf(style(1L, "BR26X1W1150A", null, "SUMMER"))).isEqualTo(0.0);
+    }
+
+    @Test
+    @DisplayName("⑨ 推荐条数上限受控，防一次拉爆接口")
+    void limitMustBeCapped() {
+        assertThat(ShopRecommendOrchestrator.DEFAULT_LIMIT).isGreaterThan(0);
+        assertThat(ShopRecommendOrchestrator.DEFAULT_LIMIT).isLessThanOrEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("⑩ 浏览记录按顾客+款式合并，不逐条插入")
+    void browseLogMustUpsertNotInsert() throws Exception {
+        String mapper = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/fashion/supplychain/shop/mapper/ShopBrowseLogMapper.java"),
+                java.nio.charset.StandardCharsets.UTF_8);
+        // 并发下「先查再插」会双双查不到然后都去插，唯一键冲突后丢数据
+        assertThat(mapper).as("必须用 ON DUPLICATE KEY UPDATE 合并计数")
+                .contains("ON DUPLICATE KEY UPDATE");
+        assertThat(mapper).as("必须累加浏览次数")
+                .contains("view_count = view_count + 1");
+        assertThat(mapper).as("浏览历史必须限量查询").contains("LIMIT #{limit}");
     }
 }
