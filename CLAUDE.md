@@ -146,12 +146,15 @@ Controller → Orchestrator → Service → Mapper
   （例如仓库里的 `java-springboot` skill 就写了这条）。
   ArchUnit 架构守护会在 pre-push 每轮校验分层依赖，改成非分层结构会**直接卡住推送**。
   同理，本项目普遍使用字段注入（`@Autowired` 字段），改成构造器注入属大范围重构，需单独排期，不是随手可改项。
-- **All test sources ARE committed** — 测试代码入库策略的权威说明在 `.gitignore` 第 28-38 行。
+- **All test sources ARE committed** — 测试代码入库策略的权威说明在 `.gitignore` 的「测试代码入库策略」段落。
   Java 单元测试（`backend/src/test/`，2026-09-15 起入库）、前端单元测试（2026-09-19 起入库）、
-  Shell 集成测试（`scripts/test/`）、Playwright E2E（`frontend/e2e/`）**全部入库**；
-  仅小程序测试（`miniprogram/test/`、`miniprogram/**/*.test.js`）仍按原策略本地保留。
-  ⚠️ 历史上曾把 `backend/src/test/` 排除（56a5948c0），后果是 CI checkout 后测试目录为空、
-  ArchUnit 等架构门控**在 CI 上空转**。**不要再次把测试源码移出版本控制。**
+  小程序单元测试（`miniprogram/test/`，2026-10-10 起入库）、Shell 集成测试（`scripts/test/`）、
+  Playwright E2E（`frontend/e2e/`）**全部入库，无一端被排除**。
+  ⚠️ **同一原因已连续踩坑三次**，每次都是「CI 门控静默空转」：
+  backend（2026-04-11，ArchUnit 空转）、frontend（2026-09-19，447 个测试不执行）、
+  miniprogram（2026-10-10，46 个测试纯靠本机手动跑 —— D-165 改动后
+  `patternScanProcessor` 测试烂了近 2 个月无人发现）。
+  **测试不入库 ≠ 省事，而是把门控关掉。不要再次把任何端的测试源码移出版本控制。**
 
 ## Backend Module Structure (14 modules)
 
@@ -194,6 +197,10 @@ cd frontend && npm run check:all                  # 全量检查（lint + type +
 cd frontend && npm run test                       # Vitest 单元测试
 cd frontend && npm run test:e2e                   # Playwright E2E测试
 
+# 小程序单元测试（无需 npm install，只依赖 node:test 内置模块）
+cd miniprogram && npm run 测试                   # 46 个用例
+cd miniprogram && npm run 检查                   # ESLint
+
 # Shell集成测试（需先启动后端）
 ./scripts/test/test-complete-business-flow.sh     # 完整业务流程E2E
 ./scripts/test/test-all-settlement-flows.sh       # 结算流程测试
@@ -220,10 +227,12 @@ python3 scripts/check-dependency-eol.py --no-baseline   # 治理验收：看全�
 | Flutter测试 | 2 files | `flutter/test/`, `flutter_app/test/` | Dart |
 | Java单元测试 | ✅ 已入库（44 文件，2026-09-15 起） | `backend/src/test/` | Java |
 | 前端单元测试 | ✅ 已入库（34 文件，2026-09-19 起） | `frontend/src/**/*.test.ts(x)` | TypeScript |
+| 小程序单元测试 | ✅ 已入库（6 文件/46 用例，2026-10-10 起） | `miniprogram/test/` | JavaScript |
 
-Note: **所有测试源码均已入库**（仅小程序测试按原策略本地保留）。历史教训：曾将
-`backend/src/test/` 排除，导致 CI checkout 后测试目录为空、ArchUnit 门控空转
-（详见 `.gitignore` 第 28-38 行的策略说明）。
+Note: **三端测试源码均已入库，无一端被排除**。历史教训：同一原因连续踩坑三次
+（backend ArchUnit 空转 / frontend 447 个测试不执行 / miniprogram 46 个测试
+纯靠本机手动跑，D-165 后测试腐烂近 2 个月）。详见 `.gitignore`「测试代码入库策略」
+段落的完整决策过程与三次事故记录。
 
 ## Key Design Rules
 

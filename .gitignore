@@ -26,21 +26,27 @@ h5-web/.vite/
 miniprogram/node_modules/
 
 # 测试代码入库策略
-# Backend 测试代码：**入库**
-#   2026-04-11（56a5948c0）曾将 backend/src/test/ 排除，导致 CI checkout 后测试目录为空
-#   → ArchUnit 等门控在 CI 上必然空转，团队测试也无法共享。
-#   2026-09-15 改为入库，架构守护测试才能在 CI 真正生效。
-# Frontend 测试代码：**入库**（2026-09-19 起）
-#   原先只保留在本地，导致 447 个测试 CI 完全不执行、团队也拿不到，
-#   洗水唛打印模板的断言在实现重做后过期却无人发现。现改为入库并在 CI 执行 npm test。
-# Miniprogram 测试仍按原策略本地保留（见下）。
-
-# Frontend 测试代码：已入库，不再排除
-
-# Miniprogram 测试代码
-miniprogram/test/
-miniprogram/**/*.test.js
-miniprogram/**/*.spec.js
+# ★ 三端现已全部入库（2026-10-10 小程序补齐），**不要再排除任何测试目录**。
+#   本条策略已因同一原因踩坑三次，每次后果都是「CI 门控静默空转」：
+#
+#   ① Backend（2026-04-11，56a5948c0 曾排除 backend/src/test/）
+#      → CI checkout 后测试目录为空，ArchUnit 架构守护在 CI 上必然空转，
+#        团队测试也无法共享。2026-09-15 改为入库。
+#   ② Frontend（2026-09-19，D-474）
+#      → 447 个测试 CI 完全不执行，洗水唛打印模板的断言在实现重做后
+#        过期却无人发现。改为入库并在 CI 执行 npm test。
+#   ③ Miniprogram（2026-10-10，本次）
+#      → 46 个测试纯靠本机手动跑，团队拿不到。证据：D-165（22c30d1db，
+#        2026-08-26）砍掉样衣扫码默认四步流程后，patternScanProcessor 测试
+#        仍断言已删除的 RECEIVE 默认流程，**烂了近 2 个月无人发现**。
+#
+#   ⚠️ 结论：测试不入库 ≠ 省事，而是把门控关掉。发现过期断言的唯一有效
+#      手段是「测试入库 + CI 执行」，排除出仓库等于让腐烂静默发生。
+#
+#   各端 CI 执行方式：
+#     backend     → mvn test（ci.yml backend-test job）
+#     frontend    → npm test（ci.yml frontend-lint job，门禁）
+#     miniprogram → npm run 测试（ci.yml miniprogram-test job，门禁）
 
 # Env / local run files
 .env
