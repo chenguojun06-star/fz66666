@@ -2,6 +2,8 @@ package com.fashion.supplychain.production.orchestration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -182,8 +184,56 @@ class SalesTrendOrchestratorTest {
     @DisplayName("days 非法值回落到默认值，不抛异常也不返回空数据")
     void daysNormalized() {
         when(productOutstockService.list(any(LambdaQueryWrapper.class))).thenReturn(new ArrayList<>());
-        assertThat(orchestrator.getStyleSalesTrend("ST-X", null).get("days")).isEqualTo(30);
-        assertThat(orchestrator.getStyleSalesTrend("ST-X", 0).get("days")).isEqualTo(30);
-        assertThat(orchestrator.getStyleSalesTrend("ST-X", 9999).get("days")).isEqualTo(180);
+        assertThat(orchestrator.getStyleSalesTrend("ST-X", null).get("days")).isEqualTo(90);
+        assertThat(orchestrator.getStyleSalesTrend("ST-X", 0).get("days")).isEqualTo(90);
+        assertThat(orchestrator.getStyleSalesTrend("ST-X", 99999).get("days")).isEqualTo(365);
+    }
+
+    @Test
+    @DisplayName("窗口内无数据时自动回溯，并如实标记 windowExpanded（低频款不能被误判为没卖过）")
+    void autoExpandWhenWindowEmpty() {
+        // 第一次查（90天窗口）返回空 → 触发回溯；第二次（180天）命中
+        when(productOutstockService.list(any(LambdaQueryWrapper.class)))
+                .thenReturn(new ArrayList<>())
+                .thenReturn(List.of(
+                        row("ST-LOW", "草绿色", "M", 60, LocalDate.now().minusDays(120).atStartOfDay(),
+                                null, "shipment")));
+
+        Map<String, Object> r = orchestrator.getStyleSizeColorSalesTrend("ST-LOW", 90, null, null);
+
+        assertThat(r.get("hasData")).isEqualTo(true);
+        assertThat(r.get("windowExpanded")).isEqualTo(true);
+        assertThat((Integer) r.get("requestedDays")).isEqualTo(90);
+        assertThat((Integer) r.get("days")).isEqualTo(180);
+        assertThat(r.get("totalQty")).isEqualTo(60);
+    }
+
+    @Test
+    @DisplayName("回溯后仍无数据 → hasData=false 且给出明确原因，绝不编造")
+    void noDataEvenAfterExpand() {
+        when(productOutstockService.list(any(LambdaQueryWrapper.class))).thenReturn(new ArrayList<>());
+
+        Map<String, Object> r = orchestrator.getStyleSizeColorSalesTrend("ST-NONE", 90, null, null);
+
+        assertThat(r.get("hasData")).isEqualTo(false);
+        assertThat(r.get("noDataReason")).isNotNull();
+        // 回溯到上限仍为空 → 不标记为 windowExpanded（没有命中数据，谈不上回溯成功）
+        assertThat(r.get("windowExpanded")).isNull();
+    }
+
+    @Test
+    @DisplayName("窗口内有数据时不回溯 —— 不做多余查询，也不误标")
+    void noExpandWhenWindowHasData() {
+        List<ProductOutstock> rows = List.of(
+                row("ST-OK", "草绿色", "M", 30, LocalDate.now().minusDays(5).atStartOfDay(), "POS", "shipment"));
+        when(productOutstockService.list(any(LambdaQueryWrapper.class))).thenReturn(rows);
+
+        Map<String, Object> r = orchestrator.getStyleSizeColorSalesTrend("ST-OK", 90, null, null);
+
+        assertThat(r.get("hasData")).isEqualTo(true);
+        assertThat(r.get("windowExpanded")).isNull();
+        assertThat((Integer) r.get("days")).isEqualTo(90);
+        // 只查一次，没有触发回溯
+        verify(productOutstockService, times(1)).list(any(LambdaQueryWrapper.class));
     }
 }

@@ -49,9 +49,15 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class SalesTrendOrchestrator {
 
-    /** 趋势默认天数 */
-    private static final int DEFAULT_DAYS = 30;
-    private static final int MAX_DAYS = 180;
+    /**
+     * 趋势默认天数。
+     *
+     * <p>D-800 补修：原为 30 天，但服装是<b>低频大批</b>（一个月出一批货），
+     * 30 天窗口对多数款式必然查空，下单人员会误判「没卖过」。
+     * 改为 90 天（约一个季度，覆盖正常补货周期）。
+     */
+private static final int DEFAULT_DAYS = 90;
+    private static final int MAX_DAYS = 365;
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Autowired
@@ -59,9 +65,8 @@ public class SalesTrendOrchestrator {
 
     /**
      * 查询款式销量趋势（款号级）。
-     *
      * @param styleNo  款号
-     * @param days     天数，默认 30，上限 180
+     * @param days     天数，默认 90，上限 365
      * @return 含 hasData / dataRange / totalQty / points / channels
      */
     public Map<String, Object> getStyleSalesTrend(String styleNo, Integer days) {
@@ -101,9 +106,40 @@ public class SalesTrendOrchestrator {
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusDays(window - 1L);
         List<ProductOutstock> rows = querySaleOutstocks(tenantId, styleNo, from, to);
+
+        // D-800 补修：窗口内没数据时自动回溯，避免「明明卖过却查不到」。
+        //
+        // 【实测踩到的坑】BR24XQ0098E 在 2026-09-11 发过 5 个码各 60 件，
+        // 到 10-11 正好距今 30 天，而默认 30 天窗口从 09-12 起 —— 刚好差 1 天被排除，
+        // 下单人员点开只看到「—」，误以为「这款没卖过」。实际是低频款（一月一批），
+        // 固定 30 天窗口对服装行业几乎必然查空。
+        //
+        // 【为什么是回溯而不是单纯把默认改大】单纯改成 90 天仍会有下一次边界踩坑。
+        // 回溯是兜底：窗口内空就往前找，找到为止，并**如实告知实际用了多长的区间**，
+        // 让下单人员知道「这是 3 个月前的数据」而不是误以为「最近卖得差」。
+        int actualWindow = window;
+        if (rows.isEmpty() && window < MAX_DAYS) {
+            int extended = Math.min(MAX_DAYS, Math.max(window * 2, DEFAULT_DAYS));
+            LocalDate wideFrom = to.minusDays(extended - 1L);
+            List<ProductOutstock> wideRows = querySaleOutstocks(tenantId, styleNo, wideFrom, to);
+            if (!wideRows.isEmpty()) {
+                rows = wideRows;
+                from = wideFrom;
+                actualWindow = extended;
+                log.info("[销量趋势] 近{}天无数据，自动回溯到{}天命中: styleNo={}",
+                        window, extended, styleNo);
+            }
+        }
+        result.put("days", actualWindow);
+        if (actualWindow != window) {
+            result.put("windowExpanded", true);
+            result.put("requestedDays", window);
+        }
+
         if (rows.isEmpty()) {
             // 全款式无任何销售流水 —— 诚实表达，不造零线
             result.put("hasData", false);
+            result.put("noDataReason", "该款式在最近 " + actualWindow + " 天内没有销售出库记录");
             return result;
         }
 
@@ -153,7 +189,7 @@ public class SalesTrendOrchestrator {
         for (Map.Entry<String, Map<String, Map<LocalDate, Integer>>> ce : grouped.entrySet()) {
             Map<String, Object> sizeMap = new LinkedHashMap<>();
             for (Map.Entry<String, Map<LocalDate, Integer>> se : ce.getValue().entrySet()) {
-                sizeMap.put(se.getKey(), buildCellTrend(se.getValue(), to, from, window));
+                sizeMap.put(se.getKey(), buildCellTrend(se.getValue(), to, from, actualWindow));
             }
             matrix.put(ce.getKey(), sizeMap);
         }

@@ -63,6 +63,11 @@ interface SalesTrendBySizeColorResponse {
     matrix?: Record<string, Record<string, SalesTrendCell>>;
     dataRange?: string | null;
     recordCount?: number | null;
+    days?: number | null;
+    /** 窗口内无数据时自动回溯过（默认窗口查不到，扩到更长才命中） */
+    windowExpanded?: boolean;
+    requestedDays?: number | null;
+    noDataReason?: string | null;
     noColorSizeReason?: string | null;
     source?: string;
   };
@@ -187,8 +192,14 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   // D-800：销量趋势（真实出库台账）。matrix 里没有的色码 = 无销售记录 → 显示「—」
   const [salesTrendMatrix, setSalesTrendMatrix] = useState<Record<string, Record<string, SalesTrendCell>>>({});
-  const [salesTrendMeta, setSalesTrendMeta] = useState<{ hasData: boolean; dataRange: string | null; reason: string | null }>(
-    { hasData: false, dataRange: null, reason: null },
+  const [salesTrendMeta, setSalesTrendMeta] = useState<{
+    hasData: boolean;
+    dataRange: string | null;
+    reason: string | null;
+    days: number | null;
+    windowExpanded: boolean;
+  }>(
+    { hasData: false, dataRange: null, reason: null, days: null, windowExpanded: false },
   );
   const [styleNoForTrend, setStyleNoForTrend] = useState<string>('');
   const [trendExpanded, setTrendExpanded] = useState(false);
@@ -244,12 +255,14 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   useEffect(() => {
     if (!styleNo) {
       setSalesTrendMatrix({});
-      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null, days: null, windowExpanded: false });
       return;
     }
     let cancelled = false;
     api.get<SalesTrendBySizeColorResponse>('/order-management/sales-trend-by-size-color', {
-      params: { styleNo, days: 30 },
+      // D-800 补修：原先写死 30 天，覆盖掉了后端默认值。低频款（一个月一批货）
+      // 在 30 天窗口内必然查空，误显示「—」。改为 90 天并允许后端自动回溯。
+      params: { styleNo, days: 90 },
     }).then((res) => {
       if (cancelled) return;
       if (res.code === 200 && res.data) {
@@ -265,17 +278,19 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         setSalesTrendMeta({
           hasData: !!res.data.hasData,
           dataRange: res.data.dataRange ?? null,
-          reason: res.data.noColorSizeReason ?? null,
+          reason: res.data.noColorSizeReason ?? res.data.noDataReason ?? null,
+          days: res.data.days ?? null,
+          windowExpanded: !!res.data.windowExpanded,
         });
       } else {
         setSalesTrendMatrix({});
-        setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+        setSalesTrendMeta({ hasData: false, dataRange: null, reason: null, days: null, windowExpanded: false });
       }
     }).catch(() => {
       if (cancelled) return;
       // 查询失败：显示「暂无数据」，不保留上一次款式的趋势，避免张冠李戴
       setSalesTrendMatrix({});
-      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null, days: null, windowExpanded: false });
     });
     return () => { cancelled = true; };
   }, [styleNo]);
@@ -461,11 +476,18 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
             color: 'var(--color-text-secondary)',
           }}
         >
-          <strong>销量趋势（近30天，来自真实出库台账）</strong>
+          <strong>销量趋势（近{salesTrendMeta.days ?? 90}天，来自真实出库台账）</strong>
           <div className="u-mt-4">
             {styleNoForTrend ? (
               salesTrendMeta.hasData ? (
-                <>数据区间：{salesTrendMeta.dataRange || '—'}。每格下方柱状图为该色码逐日出库量，悬停可看累计件数。</>
+                <>
+                  数据区间：{salesTrendMeta.dataRange || '—'}。每格下方柱状图为该色码逐日出库量，悬停可看累计件数。
+                  {salesTrendMeta.windowExpanded && (
+                    <span style={{ color: 'var(--color-warning-deep)' }}>
+                      {' '}（近{salesTrendMeta.days ?? 0}天窗口内无记录，系统已自动向前回溯查找，请注意数据可能来自较早时段）
+                    </span>
+                  )}
+                </>
               ) : (
                 <>
                   该款式暂无可用的销售出库记录
@@ -546,12 +568,12 @@ const avail = getAvailability(row.color, size);
                             <div className="u-ta-center" style={{ lineHeight: 1.2 }}>
                               {trendCell && trendCell.hasData && trendCell.points && trendCell.points.length > 0 ? (
                                 <Tooltip
-                                  title={`近30天累计售出 ${trendCell.totalQty ?? 0} 件，出库台账记录 ${trendCell.recordDays ?? 0} 天`}
+                                  title={`近${salesTrendMeta.days ?? 90}天累计售出 ${trendCell.totalQty ?? 0} 件，出库台账记录 ${trendCell.recordDays ?? 0} 天`}
                                 >
                                   <span><MiniSalesBars points={trendCell.points} /></span>
                                 </Tooltip>
                               ) : (
-                                <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }} title="该色码近30天没有销售出库记录">—</span>
+                                <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }} title={`该色码近${salesTrendMeta.days ?? 90}天没有销售出库记录`}>—</span>
                               )}
                             </div>
                           )}
