@@ -594,6 +594,19 @@
 /* ══════════════ 底部推荐（D-784） ══════════════ */
 
   /**
+     * 底部推荐容器（骨架先占位，数据到了再填，避免空标题闪烁）。
+     *
+     * <p>⚠️ 这个函数曾经叫 recSectionHtml，在「两套推荐实现并存」时被我删掉，
+     * 但调用点还留着 → ReferenceError 被 route() 吞掉 → **整页卡在「加载中」**。
+     * 与 D-777 那个 P0 完全同类：改函数必须同时确认所有调用点。
+     */
+  function recommendSectionHtml() {
+    return '<div class="d-sec" id="recSec"><div class="lbl">'
+      + '猜你喜欢<span class="hint" id="recHint"></span></div>'
+      + '<div id="recBox"><div class="d-review-empty">加载中…</div></div></div>';
+  }
+
+  /**
    * 拉取并渲染「猜你喜欢」。
    *
    * <p>登录顾客由后端按「个人浏览偏好 + 同品类 + 热度」混合排序；
@@ -1392,10 +1405,12 @@ title: function (d) {
           return reviewsBoxHtml();
         },
         recommend: function (d) {
-          // D-784：详情页底部推荐。异步拉，这里只给容器。
-          return '<div class="d-sec" id="recSec"><div class="lbl">'
-            + '猜你喜欢<span class="hint" id="recHint"></span></div>'
-            + '<div id="recBox"><div class="d-review-empty">加载中…</div></div></div>';
+          // D-784：底部推荐。
+          // ⚠️ 底部推荐**刻意不作为可布局模块**：它在 renderDetail 里统一追加，
+          // 放在模块表里会出现重复的 DOM id，getElementById 只命中第一个，
+          // 第二个永远填不上数据 —— 页面上一个推荐区有数据、另一个空白。
+          // 返回空串表示「本区块不由模块系统渲染」。
+          return '';
         },
         params: function () {
           // D-770 修复：原先直接把 fabricParts（JSON 结构）当文本渲染，
@@ -1452,10 +1467,10 @@ title: function (d) {
 var html = renderDetailModules(d, order, DETAIL_RENDERERS);
 
       // D-784：详情页底部「猜你喜欢」。
-      // 刻意放在模块化布局**之外** —— 布局开关是给「商品内容模块」用的，
+      // 底部推荐：放在模块化布局**之外** —— 布局开关是给「商品内容模块」用的，
       // 而底部推荐是电商通用版式，不该被商家误关掉。内容异步填充，
       // 加载失败或没有可推的商品时整块隐藏（不给顾客看空标题）。
-      html += recSectionHtml();
+      html += recommendSectionHtml();
 
       // D-777：给固定购买栏留出底部空间，否则最后一块内容被压住
       html += '<div class="d-bar-space"></div>';
