@@ -7,6 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -89,6 +91,25 @@ class SpringContextSmokeTest {
         assertThat(created)
                 .as("实际实例化的 Bean 数为 0，说明强制预实例化失效，本测试将形同虚设")
                 .isGreaterThan(50);
+    }
+
+    /**
+     * 生产环境是 {@code spring.main.lazy-initialization=true}（application-prod.yml），
+     * 也就是说 <b>Controller 与它的整条依赖链在启动时都不会被创建</b>，
+     * 缺 Bean / 循环依赖要等到<b>线上第一个请求</b>才炸（2026-10-10 真实发生：
+     * PaymentConfigMapper 放错包 + 支付确认循环依赖，单测全绿、应用能启动、回调 500）。
+     *
+     * <p>{@code getBeansWithAnnotation} 会强制实例化这些 Bean（含其全部依赖），
+     * 把这类问题从「线上首请求」提前到「测试环境」。
+     */
+    @Test
+    @DisplayName("所有 @RestController 都能被实例化（生产是懒初始化，问题只在首请求暴露）")
+    void everyControllerCanBeCreated() {
+        Map<String, Object> controllers = ctx.getBeansWithAnnotation(
+                org.springframework.web.bind.annotation.RestController.class);
+        org.assertj.core.api.Assertions.assertThat(controllers)
+                .as("一个 Controller 都没扫到，组件扫描是否失效")
+                .isNotEmpty();
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.fashion.supplychain.integration.payment.PaymentBusinessHandler;
 import com.fashion.supplychain.integration.record.entity.PaymentRecord;
 import com.fashion.supplychain.integration.record.mapper.PaymentRecordMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -30,17 +31,42 @@ import java.util.stream.Collectors;
 public class PaymentConfirmOrchestrator {
 
     private final PaymentRecordMapper paymentRecordMapper;
-    private final Map<String, PaymentBusinessHandler> handlers;
+
+    /**
+     * 业务处理器用 {@link ObjectProvider} 懒解析，**不能在构造期直接注入 List**。
+     *
+     * <p>为什么：POS 的处理器（PosPaymentHandler）依赖 PosSaleOrchestrator，
+     * 后者又依赖 PaymentOrchestrator，而 PaymentOrchestrator 依赖本类 ——
+     * 若在构造期解析处理器，就是一条
+     * {@code 支付确认 → 业务处理器 → 业务编排 → 支付编排 → 支付确认} 的死循环
+     * （2026-10-10 真实发生：生产环境是懒初始化，应用能启动，首个回调才 500）。
+     * 改成「首次用到时再解析」，既打破环，又保持同一套注册约定。
+     */
+    private final ObjectProvider<PaymentBusinessHandler> handlerProvider;
+
+    private volatile Map<String, PaymentBusinessHandler> handlers;
 
     public PaymentConfirmOrchestrator(PaymentRecordMapper paymentRecordMapper,
-                                      List<PaymentBusinessHandler> handlerList) {
+                                      ObjectProvider<PaymentBusinessHandler> handlerProvider) {
         this.paymentRecordMapper = paymentRecordMapper;
-        Map<String, PaymentBusinessHandler> map = new HashMap<>();
-        for (PaymentBusinessHandler h : handlerList) {
-            map.put(h.bizType(), h);
+        this.handlerProvider = handlerProvider;
+    }
+
+    /** 解析业务处理器（首次使用时构建并缓存） */
+    private Map<String, PaymentBusinessHandler> handlers() {
+        Map<String, PaymentBusinessHandler> local = handlers;
+        if (local == null) {
+            synchronized (this) {
+                if (handlers == null) {
+                    Map<String, PaymentBusinessHandler> map = new HashMap<>();
+                    handlerProvider.orderedStream().forEach(h -> map.put(h.bizType(), h));
+                    handlers = map;
+                    log.info("[支付] 已注册业务处理器: {}", map.keySet());
+                }
+                local = handlers;
+            }
         }
-        this.handlers = map;
-        log.info("[支付] 已注册业务处理器: {}", map.keySet());
+        return local;
     }
 
     /**
@@ -69,7 +95,7 @@ public class PaymentConfirmOrchestrator {
             return false;
         }
 
-        PaymentBusinessHandler handler = handlers.get(record.getOrderType());
+        PaymentBusinessHandler handler = handlers().get(record.getOrderType());
         if (handler == null) {
             log.warn("[支付确认] 没有匹配的业务处理器 orderType={} bizNo={}（流水已置成功，业务需人工处理）",
                     record.getOrderType(), bizNo);
@@ -94,7 +120,7 @@ public class PaymentConfirmOrchestrator {
         if (rows == 0) {
             return;
         }
-        PaymentBusinessHandler handler = handlers.get(record.getOrderType());
+        PaymentBusinessHandler handler = handlers().get(record.getOrderType());
         if (handler != null) {
             handler.onClosed(tenantId, bizNo);
         }
@@ -102,6 +128,6 @@ public class PaymentConfirmOrchestrator {
 
     /** 已注册的业务类型（诊断用） */
     public List<String> registeredBizTypes() {
-        return handlers.keySet().stream().sorted().collect(Collectors.toList());
+        return handlers().keySet().stream().sorted().collect(Collectors.toList());
     }
 }

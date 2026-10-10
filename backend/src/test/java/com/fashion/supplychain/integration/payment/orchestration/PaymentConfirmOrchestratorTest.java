@@ -15,6 +15,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.Mockito;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -56,6 +58,22 @@ class PaymentConfirmOrchestratorTest {
         }
     }
 
+    /**
+     * 造一个只吐指定处理器的 ObjectProvider。
+     *
+     * <p>生产里由 Spring 注入；测试里用 Mockito 桩掉 {@code orderedStream()} 即可
+     * （编排器只调用这一个方法）。
+     */
+    @SuppressWarnings("unchecked")
+    private static org.springframework.beans.factory.ObjectProvider<PaymentBusinessHandler>
+            providerOf(PaymentBusinessHandler... items) {
+        org.springframework.beans.factory.ObjectProvider<PaymentBusinessHandler> provider =
+                Mockito.mock(org.springframework.beans.factory.ObjectProvider.class);
+        Mockito.when(provider.orderedStream())
+                .thenReturn(java.util.Arrays.stream(items));
+        return provider;
+    }
+
     private PaymentRecord record(String orderType, String status) {
         PaymentRecord r = new PaymentRecord();
         r.setId(1L);
@@ -74,7 +92,7 @@ class PaymentConfirmOrchestratorTest {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
         RecordingHandler handler = new RecordingHandler();
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of(handler));
+                new PaymentConfirmOrchestrator(mapper, providerOf(handler));
 
         when(mapper.findLatest(TENANT, "POS202610100001", "ALIPAY"))
                 .thenReturn(record("POS_SALE", "PENDING"));
@@ -95,7 +113,7 @@ class PaymentConfirmOrchestratorTest {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
         RecordingHandler handler = new RecordingHandler();
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of(handler));
+                new PaymentConfirmOrchestrator(mapper, providerOf(handler));
 
         when(mapper.findLatest(TENANT, "POS202610100001", "ALIPAY"))
                 .thenReturn(record("POS_SALE", "SUCCESS"));
@@ -114,7 +132,7 @@ class PaymentConfirmOrchestratorTest {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
         RecordingHandler handler = new RecordingHandler();
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of(handler));
+                new PaymentConfirmOrchestrator(mapper, providerOf(handler));
 
         when(mapper.findLatest(anyLong(), anyString(), anyString())).thenReturn(null);
 
@@ -128,7 +146,7 @@ class PaymentConfirmOrchestratorTest {
     void noHandlerStillMarksPaid() {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of());
+                new PaymentConfirmOrchestrator(mapper, providerOf());
 
         when(mapper.findLatest(TENANT, "POS202610100001", "ALIPAY"))
                 .thenReturn(record("SOME_OTHER_BIZ", "PENDING"));
@@ -144,7 +162,7 @@ class PaymentConfirmOrchestratorTest {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
         RecordingHandler handler = new RecordingHandler();
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of(handler));
+                new PaymentConfirmOrchestrator(mapper, providerOf(handler));
 
         when(mapper.findLatest(TENANT, "POS202610100001", "ALIPAY"))
                 .thenReturn(record("POS_SALE", "PENDING"));
@@ -164,8 +182,10 @@ class PaymentConfirmOrchestratorTest {
     @DisplayName("⑥ 业务处理器按 bizType 注册（支付模块不反向依赖业务模块）")
     void handlersRegisteredByBizType() {
         PaymentRecordMapper mapper = mock(PaymentRecordMapper.class);
+        // 处理器是**首次使用时才解析**的（懒解析打破循环依赖），所以注册表要在
+        // 第一次调用 registeredBizTypes() 时才建立 —— 这里直接断言它即可触发解析。
         PaymentConfirmOrchestrator orchestrator =
-                new PaymentConfirmOrchestrator(mapper, List.of(new RecordingHandler()));
+                new PaymentConfirmOrchestrator(mapper, providerOf(new RecordingHandler()));
 
         assertEquals(List.of("POS_SALE"), orchestrator.registeredBizTypes());
     }
