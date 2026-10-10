@@ -35,7 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -76,6 +78,15 @@ class ShopOrderOrchestratorTest {
 
     @Mock
     private ReceivableOrchestrator receivableOrchestrator;
+
+    @Mock
+    private ShopListingContentOrchestrator shopListingContentOrchestrator;
+
+    @Mock
+    private ShopStyleLayoutService styleLayoutService;
+
+    @Mock
+    private ShopRecommendOrchestrator shopRecommendOrchestrator;
 
     /**
      * 用**真实实例**（spy）而非 mock：租户上下文切换必须真跑，
@@ -137,6 +148,57 @@ class ShopOrderOrchestratorTest {
 
     private List<Map<String, Object>> cartItems(int qty) {
         return List.of(Map.of("skuId", 100L, "quantity", qty));
+    }
+
+    /* ─────────────── D-781 补修：生产工艺资料外泄（线上实测） ─────────────── */
+
+    /**
+     * 线上抓到的真泄漏：D-781 原本是「<b>先无条件下发 description，再打一个
+     * descriptionVisibleToCustomer=false</b>」，只让前端藏起来 ——
+     * 顾客在 F12 展开响应体照样看到完整的「大货工艺要求 / 裁剪工艺说明」。
+     *
+     * <p>前端隐藏 ≠ 资料没外泄。这条断言盯的是<b>数据层</b>：原文根本不能在响应里。
+     * 只测 {@code ProductionContentDetector} 会全绿，却漏掉真正的漏洞 ——
+     * 所以这里必须打到编排器的返回值。
+     */
+    @Test
+    @DisplayName("顾客端详情：description 是生产工艺资料时，响应体里不能有原文")
+    void productionProcessDescriptionMustNotLeakToCustomer() {
+        openShop();
+        StyleInfo style = listedStyle();
+        // 抄线上款 146 的真实内容形态：大货工艺制造单 + 裁剪工艺说明
+        style.setDescription("大货工艺要求 供应链管理有限公司 - 大货工艺制造单(2/2) "
+                + "一. 裁剪工艺说明：裁剪前需松布和缩水，确认布号、正反面及验布，裁剪按照合同执行。");
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+        when(styleLayoutService.layoutOf(1L)).thenReturn(List.of());
+
+        Map<String, Object> data = orchestrator.productDetail("test-shop", 1L);
+
+        assertEquals(Boolean.FALSE, data.get("descriptionVisibleToCustomer"));
+        assertNull(data.get("description"), "生产工艺原文不能出现在顾客端响应体里");
+        assertFalse(String.valueOf(data).contains("裁剪工艺"), "响应体任何位置都不得残留工艺原文");
+    }
+
+    /** 反向守护：正常商品描述必须照常下发，别为了挡工艺把顾客需要的资料也挡了 */
+    @Test
+    @DisplayName("顾客端详情：正常商品描述照常下发")
+    void normalDescriptionStillVisibleToCustomer() {
+        openShop();
+        StyleInfo style = listedStyle();
+        style.setDescription("经典翻领设计，优质棉布面料，手感柔软亲肤透气，适合日常通勤穿着。");
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+        when(styleLayoutService.layoutOf(1L)).thenReturn(List.of());
+
+        Map<String, Object> data = orchestrator.productDetail("test-shop", 1L);
+
+        assertEquals(Boolean.TRUE, data.get("descriptionVisibleToCustomer"));
+        assertNotNull(data.get("description"));
     }
 
     private void mockHappySku() {

@@ -302,12 +302,20 @@ public class ShopOrderOrchestrator {
         // 导致详情页只有图 + 颜色尺码 + 价格 —— 与淘宝/1688 的详情页差距明显。
         // 只透出「已经在库里、不需要新录入」的资料，不编造任何内容；
         // 未维护的字段返回 null，前端显示「暂无」而不是留空或填占位说明。
-        putIfPresent(data, "description", style.getDescription());
         // D-781：款式详情里存的是生产工艺/工序资料时，顾客端不展示。
         // 只隐藏、不删数据 —— 这份资料对车间和工厂是有用的。
+        //
+        // D-781 补修（线上实测抓到的真泄漏）：原来这里是**先无条件下发 description、
+        // 再单独打一个 descriptionVisibleToCustomer=false 的标记**，等于只让前端
+        // 藏起来、原文照样躺在接口响应体里 —— 顾客在浏览器 F12 一展开就看到完整的
+        // 「裁剪工艺说明/缝纫工艺/大货工艺制造单」。前端隐藏 ≠ 资料没外泄，
+        // 这类内部工艺文档外泄是不可逆的，所以必须在服务端就不下发。
+        boolean productionContent = ProductionContentDetector.looksLikeProductionContent(style.getDescription());
+        if (!productionContent) {
+            putIfPresent(data, "description", style.getDescription());
+        }
         if (style.getDescription() != null && !style.getDescription().isBlank()) {
-            data.put("descriptionVisibleToCustomer",
-                    !ProductionContentDetector.looksLikeProductionContent(style.getDescription()));
+            data.put("descriptionVisibleToCustomer", !productionContent);
         }
         putIfPresent(data, "fabricComposition", style.getFabricComposition());
         // D-777：fabric_parts 存的是 JSON 结构（[{"part":"上装","materials":"..."}]），
