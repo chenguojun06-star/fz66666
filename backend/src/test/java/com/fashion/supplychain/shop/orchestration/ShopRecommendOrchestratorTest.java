@@ -222,4 +222,28 @@ class ShopRecommendOrchestratorTest {
         assertEquals(0, rows.get(0).get("totalStock"));
         assertFalse(rows.get(0).containsKey("rating") && rows.get(0).get("rating") != null);
     }
+
+    @Test
+    @DisplayName("⑪ 无货的款排到最后（实测「猜你喜欢」里混进库存 0 的款，点进去买不了）")
+    void outOfStockGoesLast() {
+        Map<String, Object> a = new HashMap<>();
+        a.put("styleId", 1L);
+        a.put("totalStock", 0);
+        Map<String, Object> b = new HashMap<>();
+        b.put("styleId", 2L);
+        b.put("totalStock", 5);
+        Map<String, Object> c = new HashMap<>();
+        c.put("styleId", 3L);
+        c.put("totalStock", 2);
+
+        List<Map<String, Object>> sorted =
+                ShopRecommendOrchestrator.stockFirst(new ArrayList<>(List.of(a, b, c)));
+
+        // 有货的两个保持原相对顺序在前，无货的沉底
+        assertEquals(2L, sorted.get(0).get("styleId"));
+        assertEquals(3L, sorted.get(1).get("styleId"));
+        assertEquals(1L, sorted.get(2).get("styleId"));
+        // 不删除：它仍是本店真实商品
+        assertEquals(3, sorted.size());
+    }
 }

@@ -188,7 +188,29 @@ public class ShopRecommendOrchestrator {
                 .thenComparing(x -> String.valueOf(x.style.getStyleNo())));
 
         List<Scored> picked = scored.stream().limit(size).collect(Collectors.toList());
-        return decorate(tenantId, picked, pref.isEmpty());
+        return stockFirst(decorate(tenantId, picked, pref.isEmpty()));
+    }
+
+    /**
+     * 有货的排前面（稳定排序，组内保持原有推荐顺序）。
+     *
+     * <p>实测发现「猜你喜欢」里会混进库存为 0 的款 —— 顾客点进去买不了，
+     * 白白占掉一个推荐位。无货的不删（它仍然是本店真实商品，也许马上补货），
+     * 但只让它在后面凑数。
+     */
+    static List<Map<String, Object>> stockFirst(List<Map<String, Object>> rows) {
+        if (rows == null || rows.size() < 2) {
+            return rows == null ? List.of() : rows;
+        }
+        List<Map<String, Object>> inStock = new ArrayList<>();
+        List<Map<String, Object>> outOfStock = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Object stock = r.get("totalStock");
+            int n = stock instanceof Number num ? num.intValue() : 0;
+            (n > 0 ? inStock : outOfStock).add(r);
+        }
+        inStock.addAll(outOfStock);
+        return inStock;
     }
 
     /** 补齐价格/库存/封面，并标注推荐理由 */
