@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.util.AesEncryptor;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.entity.PaymentConfig;
+import com.fashion.supplychain.integration.payment.mapper.PaymentConfigMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -3,6 +3,7 @@ package com.fashion.supplychain.integration.payment.config;
 import com.fashion.supplychain.common.util.AesEncryptor;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.entity.PaymentConfig;
+import com.fashion.supplychain.integration.payment.mapper.PaymentConfigMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -244,6 +244,30 @@ class ArchitectureRulesTest {
     }
 
     /**
+     * 规则6.5：@Mapper 接口必须放在 ..mapper.. 包里。
+     *
+     * <p><b>为什么需要这条（真实生产事故）</b>：{@code @MapperScan("com.fashion.supplychain.**.mapper")}
+     * 只扫 {@code **.mapper} 结尾的包。把 Mapper 放到别的包（如 {@code payment/config}）时
+     * <b>编译通过、单测全绿</b>（本仓库的上下文冒烟测试不会主动实例化所有 Controller，
+     * 而 Spring MVC 的 HandlerMethod 是**首次请求时才解析 bean**），直到线上第一个请求打过来
+     * 才报 {@code No qualifying bean of type 'XxxMapper'} → 500。
+     * 2026-10-10 真实发生：PaymentConfigMapper 放在 payment/config 下，支付回调整条链路 500。
+     */
+    @Test
+    @DisplayName("@Mapper 接口必须放在 ..mapper.. 包（否则 @MapperScan 扫不到，运行时才炸）")
+    void mappersMustLiveInMapperPackages() {
+        JavaClasses c = classes();
+        ArchRule rule = ArchRuleDefinition.classes()
+                .that().areAnnotatedWith("org.apache.ibatis.annotations.Mapper")
+                .should().resideInAPackage("..mapper..")
+                .because("@MapperScan 只扫 **.mapper 结尾的包，放错位置的 Mapper 不会被注册成 Bean，"
+                        + "且只在首次请求时才暴露（HandlerMethod 懒解析）");
+
+        int violations = countViolations(c, rule);
+        assertNotWorse("mapper.must.live.in.mapper.package", violations, "见 ArchUnit 输出");
+    }
+
+    /**
      * 规则7：Service 不得依赖其他 Service（跨服务编排必须上移到 Orchestrator）。
      *
      * <p>CLAUDE.md 的 P0 铁律原文：「Services must NOT call each other — all cross-service

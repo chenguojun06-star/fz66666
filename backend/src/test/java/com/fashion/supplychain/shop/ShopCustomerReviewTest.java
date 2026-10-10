@@ -170,4 +170,25 @@ class ShopCustomerReviewTest {
                 .contains("if (!isLoggedIn()) return;");
         assertThat(s).as("上报失败不得打扰顾客").contains("function () {}, function () {}");
     }
+
+    /**
+     * D-784 回归：并行开发时同一功能被实现了两遍
+     * （一套「本店好物」recSec/recGrid，一套「猜你喜欢」recSec/recBox），
+     * 两套都进了同一个页面 —— **DOM 里出现两个 id="recSec"**，
+     * getElementById 只会命中第一个，第二个区块永远填不上数据，
+     * 页面出现两个推荐区且其中一个空白。
+     */
+    @Test
+    @DisplayName("⑬ 推荐区块的 id 必须唯一（曾因两套实现并存出现重复 id）")
+    void recommendSectionIdMustBeUnique() throws Exception {
+        String s = page();
+        int count = s.split("id=\"recSec\"", -1).length - 1;
+        assertThat(count).as("id=\"recSec\" 只能出现一次").isEqualTo(1);
+        assertThat(s).as("不得残留另一套实现的 recGrid")
+                .doesNotContain("recGrid");
+        assertThat(s).as("推荐渲染函数只能有一个")
+                .contains("function loadRecommends(");
+        assertThat(s).as("不得残留旧的单数版本函数")
+                .doesNotContain("function loadRecommend(styleId)");
+    }
 }

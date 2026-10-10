@@ -1,4 +1,4 @@
-package com.fashion.supplychain.integration.payment.config;
+package com.fashion.supplychain.integration.payment.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.integration.payment.entity.PaymentConfig;
