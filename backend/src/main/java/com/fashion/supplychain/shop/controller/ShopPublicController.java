@@ -1,11 +1,14 @@
 package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.shop.entity.ShopConfig;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.orchestration.ShopConsumerTokenSupport;
 import com.fashion.supplychain.shop.orchestration.ShopOrderOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopRecommendOrchestrator;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -26,10 +29,15 @@ public class ShopPublicController {
 
     private final ShopConsumerTokenSupport consumerTokenSupport;
 
+    /** 显式上报浏览用（见下方 recordView 的说明：与详情接口内置记录是同一份数据源） */
+    private final ShopRecommendOrchestrator shopRecommendOrchestrator;
+
     public ShopPublicController(ShopOrderOrchestrator shopOrderOrchestrator,
-                                ShopConsumerTokenSupport consumerTokenSupport) {
+                                ShopConsumerTokenSupport consumerTokenSupport,
+                                ShopRecommendOrchestrator shopRecommendOrchestrator) {
         this.shopOrderOrchestrator = shopOrderOrchestrator;
         this.consumerTokenSupport = consumerTokenSupport;
+        this.shopRecommendOrchestrator = shopRecommendOrchestrator;
     }
 
     /** 店铺门面信息（名称/公告/是否营业） */
@@ -88,6 +96,43 @@ public class ShopPublicController {
                     shopOrderOrchestrator.recommendations(slug, styleId, consumerId, limit));
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 上报一次商品浏览（D-784，推荐的数据来源）。
+     *
+     * <p>⚠️ <b>与详情接口内置的记录是同一份数据源，前端只能选一条路径</b>：
+     * 服务端已经在 {@code GET /{slug}/products/{styleId}} 里记过一次浏览
+     * （更可靠：只有真正渲染成功的详情才算，且不依赖前端配合）。
+     * 如果前端在打开详情后**又**调本接口，同一次浏览会被记两次，热度与看板都会虚高。
+     * 保留本接口是给"详情页之外也需要上报浏览"的场景（如列表页预加载）。
+     *
+     * <p><b>免登录静默成功</b>：匿名访客没有稳定身份，不入库、不报错，
+     * 只走「同品类 + 热度」推荐。<b>不假装给匿名用户做了个性化</b>。
+     *
+     * <p>浏览记录记不下来绝不能影响顾客浏览 —— 记录失败只吞掉，不抛。
+     */
+    @PostMapping("/{slug}/products/{styleId}/view")
+    public Result<?> recordView(@PathVariable String slug, @PathVariable Long styleId,
+                                @RequestBody(required = false) Map<String, Object> body,
+                                HttpServletRequest request) {
+        try {
+            ShopConfig config = shopOrderOrchestrator.resolveBySlug(slug);
+            if (config == null) {
+                return Result.fail("店铺不存在");
+            }
+            String consumerId = consumerTokenSupport.resolveConsumerId(request);
+            String styleNo = body == null || body.get("styleNo") == null
+                    ? null : String.valueOf(body.get("styleNo"));
+            shopRecommendOrchestrator.recordView(config.getTenantId(), consumerId, styleId, styleNo);
+            // 统一返回成功：没登录也返回成功，避免前端弹「请先登录」
+            return Result.success(Map.of("recorded", StringUtils.hasText(consumerId)));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            // 记录失败不影响浏览
+            return Result.success(Map.of("recorded", false));
         }
     }
 

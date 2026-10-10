@@ -121,4 +121,53 @@ class ShopCustomerReviewTest {
         String s = page();
         assertThat(s).as("取评价失败要降级为占位").contains("评价加载失败");
     }
+
+    /**
+     * D-784：详情页底部推荐。
+     *
+     * <p>用户诉求：「详情页 到底部的时候 是不是有一些推荐 根据用户的这些 喜欢的」。
+     * 实测顾客端推荐代码 0 处 —— 底部是死胡同。
+     */
+    @Test
+    @DisplayName("⑨ 详情页必须有底部推荐，且如实说明推荐依据")
+    void detailPageMustHaveRecommendations() throws Exception {
+        String s = page();
+        assertThat(s).as("必须拉取推荐").contains("function loadRecommends");
+        assertThat(s).as("必须有推荐区块").contains("recSec");
+        assertThat(s).as("recommend 模块要进模块表").contains("'recommend'");
+        assertThat(s).as("标题要说明依据").contains("猜你喜欢");
+        // 登录与匿名要区分说明，不能给匿名用户谎称「根据你的偏好」
+        assertThat(s).as("登录态说明个性化").contains("根据你的浏览偏好");
+        assertThat(s).as("匿名态如实说明是同类").contains("同类商品");
+    }
+
+    @Test
+    @DisplayName("⑩ 推荐为空时整块隐藏，不给顾客一个空区块")
+    void emptyRecommendMustHideSection() throws Exception {
+        String s = page();
+        assertThat(s).as("没得推要隐藏整块，不给空区块")
+                .contains("getElementById('recSec')")
+                .contains("style.display = 'none'");
+    }
+
+    @Test
+    @DisplayName("⑪ 推荐要带价格，缺价不得显示成 0")
+    void recommendMustNotFakePrice() throws Exception {
+        String s = page();
+        assertThat(s)
+                .as("缺价要如实说「价格未维护」，不能显示 ¥0")
+                .contains("价格未维护");
+        assertThat(s).as("缺价时用 null 判定而不是 >0").contains("r.minPrice != null");
+    }
+
+    @Test
+    @DisplayName("⑫ 浏览行为只在登录时上报，且失败静默")
+    void browseReportOnlyWhenLoggedIn() throws Exception {
+        String s = page();
+        assertThat(s).as("必须有上报函数").contains("function reportView");
+        assertThat(s)
+                .as("匿名不上报——无稳定身份，会变成无法清理的垃圾数据")
+                .contains("if (!isLoggedIn()) return;");
+        assertThat(s).as("上报失败不得打扰顾客").contains("function () {}, function () {}");
+    }
 }

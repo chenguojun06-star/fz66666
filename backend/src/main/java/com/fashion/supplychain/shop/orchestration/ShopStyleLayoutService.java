@@ -57,6 +57,9 @@ public class ShopStyleLayoutService {
         // 而不是滚到最底。
         MODULE_DEFS.put("reviews", "商品评价");
         MODULE_DEFS.put("wash", "洗涤说明");
+        // D-784：推荐放最后 —— 它是「逛完这件之后去哪」，
+        // 排在购买条正上方，既不打断看商品，又不让顾客走到死胡同。
+        MODULE_DEFS.put("recommend", "猜你喜欢");
         MODULE_DEFS.put("purchase", "购买与加入购物车");
     }
 

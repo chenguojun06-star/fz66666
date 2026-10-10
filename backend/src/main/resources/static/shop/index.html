@@ -230,6 +230,19 @@
   .d-modal-switch{text-align:center;font-size:12.5px;color:#999;margin-top:12px;}
   .d-rate{text-align:center;margin-bottom:14px;}
 
+  /* D-784：详情页底部推荐 */
+  .d-rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .d-rec-card{cursor:pointer;}
+  .d-rec-thumb{position:relative;width:100%;aspect-ratio:1/1;background:#f5f5f5;border-radius:6px;overflow:hidden;}
+  .d-rec-thumb img{width:100%;height:100%;object-fit:cover;}
+  .d-rec-thumb .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#d5d5d5;font-size:22px;}
+  .d-rec-off{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;}
+  .d-rec-off span{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.85);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;}
+  .d-rec-name{font-size:12.5px;line-height:1.4;color:#333;margin-top:6px;height:35px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .d-rec-foot{margin-top:3px;}
+  .d-rec-noprice{font-size:11.5px;color:#bbb;}
+  .d-rec-reason{font-size:10.5px;color:var(--tb-orange);margin-top:2px;}
+
   .d-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--tb-line);z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   .d-bar .mini{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:#666;background:none;border:none;width:48px;}
   .d-bar .mini svg{width:20px;height:20px;fill:#666;}
@@ -586,6 +599,74 @@
       if (t) h['X-Shop-Token'] = t;
     } catch (e) {}
     return h;
+  }
+
+/* ══════════════ 底部推荐（D-784） ══════════════ */
+
+  /**
+   * 拉取并渲染「猜你喜欢」。
+   *
+   * <p>登录顾客由后端按「个人浏览偏好 + 同品类 + 热度」混合排序；
+   * 匿名访客走「同品类 + 热度」——<b>不假装给匿名用户做了个性化</b>。
+   *
+   * <p>每条推荐带 reason（如「同类同季 · 你常看」），如实告诉顾客为什么推它，
+   * 而不是给一堆不明所以的商品。
+   */
+  function loadRecommends(styleId) {
+    var box = document.getElementById('recBox');
+    if (!box) return;
+    get(API + '/' + slug + '/products/' + encodeURIComponent(styleId) + '/recommendations?limit=8',
+      function (list) {
+        var hint = document.getElementById('recHint');
+        list = list || [];
+        if (!list.length) {
+          // 没得推就整块隐藏，不给顾客一个空区块
+          var sec0 = document.getElementById('recSec');
+          if (sec0) sec0.style.display = 'none';
+          return;
+        }
+        if (hint) {
+          hint.textContent = isLoggedIn() ? '根据你的浏览偏好' : '同类商品';
+        }
+        var h = '<div class="d-rec-grid">';
+        for (var i = 0; i < list.length; i++) {
+          var r = list[i];
+          var stock = Number(r.totalStock) || 0;
+          h += '<div class="d-rec-card" data-id="' + r.styleId + '">'
+            + '<div class="d-rec-thumb">' + thumbHtml(r.cover)
+            + (stock <= 0 ? '<div class="d-rec-off"><span>已售罄</span></div>' : '')
+            + '</div>'
+            + '<div class="d-rec-name">' + esc(r.styleName || r.styleNo || '') + '</div>'
+            + '<div class="d-rec-foot">'
+            + (r.minPrice != null
+                ? '<span class="price"><span class="cny">¥</span><span class="int">'
+                  + Number(r.minPrice).toFixed(0) + '</span></span>'
+                : '<span class="d-rec-noprice">价格未维护</span>')
+            + '</div>'
+            + (r.reason ? '<div class="d-rec-reason">' + esc(r.reason) + '</div>' : '')
+            + '</div>';
+        }
+        box.innerHTML = h + '</div>';
+        Array.prototype.forEach.call(box.querySelectorAll('.d-rec-card'), function (el) {
+          el.onclick = function () { go('#/p/' + el.getAttribute('data-id')); };
+        });
+      },
+      function () {
+        var sec0 = document.getElementById('recSec');
+        if (sec0) sec0.style.display = 'none';
+      });
+  }
+
+  /**
+   * 上报浏览行为（推荐的数据来源）。
+   *
+   * <p>只在登录状态下上报 —— 匿名顾客没有稳定身份，入库既无法跨设备复用、
+   * 又容易变成无法清理的垃圾数据。上报失败静默，绝不能影响顾客浏览。
+   */
+  function reportView(styleId, styleNo) {
+    if (!isLoggedIn()) return;
+    post(API + '/' + slug + '/products/' + encodeURIComponent(styleId) + '/view',
+      { styleNo: styleNo }, function () {}, function () {});
   }
 
   /* ══════════════ 顾客账号（D-783） ══════════════
@@ -1012,7 +1093,7 @@
    * 不该给顾客看到空白块（CLAUDE.md 铁律 9：缺失不能伪装成有）。
    */
   var DETAIL_MODULES = ['gallery', 'price', 'title', 'promise', 'points', 'color', 'size',
-                        'quantity', 'params', 'priceNote', 'detail', 'faq', 'reviews', 'wash', 'purchase'];
+                        'quantity', 'params', 'priceNote', 'detail', 'faq', 'reviews', 'wash', 'recommend', 'purchase'];
 
   /** 按 layout 拿到启用模块的自上而下顺序；无 layout 时用默认顺序全开 */
   function detailModuleOrder(d) {
@@ -1361,6 +1442,12 @@ title: function (d) {
           // D-783：评价。内容异步拉（需判断登录与是否买过），这里只给容器。
           return reviewsBoxHtml();
         },
+        recommend: function (d) {
+          // D-784：详情页底部推荐。异步拉，这里只给容器。
+          return '<div class="d-sec" id="recSec"><div class="lbl">'
+            + '猜你喜欢<span class="hint" id="recHint"></span></div>'
+            + '<div id="recBox"><div class="d-review-empty">加载中…</div></div></div>';
+        },
         params: function () {
           // D-770 修复：原先直接把 fabricParts（JSON 结构）当文本渲染，
           // 顾客在页面上看到的是 [{"part":"上装","materials":"..."}] 这类代码。
@@ -1607,6 +1694,8 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
       // D-783：评价异步加载（需判断登录态与是否买过）
       window.__currentStyleNo = d.styleNo;
       loadReviews(styleId, d.styleNo);
+      loadRecommends(styleId);
+      reportView(styleId, d.styleNo);
 
       function paintBadges() {
         var b = document.querySelector('.d-bar .mini .badge');
