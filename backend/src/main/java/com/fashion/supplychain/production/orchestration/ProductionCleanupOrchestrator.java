@@ -21,6 +21,7 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -263,10 +264,16 @@ public class ProductionCleanupOrchestrator {
                     .update();
         }
 
+        // D-800：批量软删必须排除销售出库与冲销记录。
+        // 原来只按 create_time >= cutoff 过滤、不分类型，会把真实销售单一并软删，
+        // 导致销量趋势/销售统计凭空少掉一批数据（且不可逆）。
+        // 销售流水是对账依据，只能由用户显式删除，不进批量清理。
         List<ProductOutstock> osToDelete = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
                 .select(ProductOutstock::getId, ProductOutstock::getOrderId)
                 .eq(ProductOutstock::getDeleteFlag, 0)
-                .ge(ProductOutstock::getCreateTime, cutoff));
+                .ge(ProductOutstock::getCreateTime, cutoff)
+                .notIn(ProductOutstock::getOutstockType,
+                        OutstockTypeConstants.SALE_OUTSTOCK_TYPES.toArray()));
         if (osToDelete != null) {
             for (ProductOutstock o : osToDelete) {
                 if (o != null && StringUtils.hasText(o.getOrderId())) {
@@ -279,6 +286,8 @@ public class ProductionCleanupOrchestrator {
             productOutstockService.lambdaUpdate()
                     .eq(ProductOutstock::getDeleteFlag, 0)
                     .ge(ProductOutstock::getCreateTime, cutoff)
+                    .notIn(ProductOutstock::getOutstockType,
+                            OutstockTypeConstants.SALE_OUTSTOCK_TYPES.toArray())
                     .set(ProductOutstock::getDeleteFlag, 1)
                     .set(ProductOutstock::getUpdateTime, now)
                     .update();

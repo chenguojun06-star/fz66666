@@ -27,10 +27,13 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 
 @Slf4j
 @Service
@@ -490,6 +493,16 @@ public class EcommerceOrderOrchestrator {
             }
             log.info("[EC现货出库] SKU库存已扣减: skuCode={} quantity={}", skuCode, quantity);
         }
+
+        // D-800：EC 现货发货补写 t_product_outstock 出库流水。
+        // 【为什么必须补】原来这条链路只扣 SKU 库存 + 改 EC 单状态，**一行出库流水都不写**，
+        // 导致：① t_product_outstock 里查不到任何电商销量；② 销量趋势/渠道分析对电商全是空；
+        //      ③ 店铺/POS 都有流水而唯独电商没有，口径不统一。
+        // 套装分支已在 comboOutbound 内写过流水，此处只补非套装分支（避免重复记账）。
+        // 【为什么用 stockAlreadyDeducted=true】库存已在上面扣过，outbound() 里不能再扣一次。
+        if (order.getComboId() == null && StringUtils.hasText(skuCode)) {
+            recordEcOutboundFlow(order, skuCode, quantity, trackingNo, expressCompany);
+        }
         order.setStatus(2);
         order.setWarehouseStatus(2);
         order.setTrackingNo(trackingNo);
@@ -502,10 +515,70 @@ public class EcommerceOrderOrchestrator {
         } catch (Exception e) {
             log.warn("[EC现货出库] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
+        }
+
+    /**
+     * D-800：EC 现货发货补写出库台账（t_product_outstock）。
+     *
+     * <p>【背景】EC 现货出库链路原本只扣 SKU 库存 + 改 EC 单状态，不写任何出库流水，
+     * 导致电商销量在出库台账里完全缺失，销量趋势与渠道分析对电商永远是空的。
+     *
+     * <p>【为什么不复用 comboOutbound】套装分支已在上面走过 comboOutbound（含组合溯源三列），
+     * 这里只处理非套装单SKU，避免重复记账导致库存与销量双扣。
+     *
+     * <p>【幂等】同一 EC 单重复调用会被 warehouseStatus >= 2 的前置校验拦掉，
+     * 因此不会重复写流水。
+     *
+     * <p>【失败不阻断】台账补记失败只告警不抛 —— 库存已经扣了、订单已发货，
+     * 此时抛异常会让整个事务回滚、货发不出去。台账缺失可由对账补录修复。
+     */
+    private void recordEcOutboundFlow(EcommerceOrder order, String skuCode, int quantity,
+                                      String trackingNo, String expressCompany) {
         try {
-            platformNotifyHelper.notifyShipped(order);
+            Map<String, Object> params = new java.util.HashMap<>();
+            List<Map<String, Object>> items = new ArrayList<>();
+            Map<String, Object> item = new java.util.HashMap<>();
+            item.put("sku", skuCode);
+            item.put("quantity", quantity);
+            // 不传 salesPrice：出库台账沿用 SKU 挂牌售价（与店铺/POS 口径一致）。
+            // EC 实际成交价（可能含优惠/运费）由 t_ec_sales_revenue.pay_amount 承担，
+            // 两表职责不同：台账记「出库了什么」，收入表记「实际收了多少钱」。
+            items.add(item);
+            params.put("items", items);
+            params.put("outstockType", OutstockTypeConstants.SHIPMENT);
+            // 库存已在本方法调用方扣过，这里只补台账
+            params.put("stockAlreadyDeducted", true);
+            // 订单关联：写平台单号与平台渠道，供销量趋势按渠道拆分。
+            // 注意 orderId 故意不传 t_production_order.id —— 该列有指向生产订单的外键，
+            // 传 EC 单 id 会造成错误关联，故只用 orderNo/platform 文本维度关联。
+            params.put("orderNo", order.getPlatformOrderNo() != null && !order.getPlatformOrderNo().isBlank()
+                    ? order.getPlatformOrderNo() : order.getOrderNo());
+            params.put("platformCode", OutstockTypeConstants.ecChannel(order.getPlatform()));
+            String customer = StringUtils.hasText(order.getReceiverName())
+                    ? order.getReceiverName() : order.getBuyerNick();
+            if (StringUtils.hasText(customer)) {
+                params.put("customerName", customer);
+            }
+            if (StringUtils.hasText(order.getReceiverPhone())) {
+                params.put("customerPhone", order.getReceiverPhone());
+            }
+            if (StringUtils.hasText(order.getReceiverAddress())) {
+                params.put("shippingAddress", order.getReceiverAddress());
+            }
+            if (StringUtils.hasText(trackingNo)) {
+                params.put("trackingNo", trackingNo);
+            }
+            if (StringUtils.hasText(expressCompany)) {
+                params.put("expressCompany", expressCompany);
+            }
+            params.put("remark", "电商发货 " + order.getOrderNo()
+                    + (StringUtils.hasText(order.getShopName()) ? "|" + order.getShopName() : ""));
+            finishedOutstockHelper.outbound(params);
+            log.info("[EC现货出库] 出库台账已补记: ecOrderNo={} sku={} qty={} platform={}",
+                    order.getOrderNo(), skuCode, quantity, OutstockTypeConstants.ecChannel(order.getPlatform()));
         } catch (Exception e) {
-            log.warn("[EC现货出库] 物流回传失败: {}", e.getMessage());
+            log.error("[EC现货出库] 出库台账补记失败（不阻断发货，需人工对账补录）: ecOrderNo={} sku={} qty={} err={}",
+                    order.getOrderNo(), skuCode, quantity, e.getMessage(), e);
         }
     }
 

@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.orchestration.OrderManagementOrchestrator;
+import com.fashion.supplychain.production.orchestration.SalesTrendOrchestrator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,10 @@ public class OrderManagementController {
 
   @Autowired
   private OrderManagementOrchestrator orderManagementOrchestrator;
+
+  /** D-800：销量趋势查询（只读，跨表聚合出库台账，故用独立 Orchestrator） */
+  @Autowired
+  private SalesTrendOrchestrator salesTrendOrchestrator;
 
   /**
    * 从样衣开发推送到下单管理
@@ -99,6 +104,42 @@ public class OrderManagementController {
       return Result.success(data);
     } catch (Exception e) {
       log.error("综合查询失败: styleId={}", styleId, e);
+      return Result.fail("查询失败：" + e.getMessage());
+    }
+  }
+
+  /**
+   * 款式销量趋势（款号级，D-800）
+   *
+   * <p>数据来源为真实出库台账，仅销售口径。无数据时返回 hasData=false，
+   * 前端应显示「暂无销量数据」而非画一条零线。
+   */
+  @GetMapping("/sales-trend")
+  public Result<?> getSalesTrend(@RequestParam("styleNo") String styleNo,
+                                 @RequestParam(value = "days", required = false) Integer days) {
+    try {
+      return Result.success(salesTrendOrchestrator.getStyleSalesTrend(styleNo, days));
+    } catch (Exception e) {
+      log.error("查询销量趋势失败: styleNo={}", styleNo, e);
+      return Result.fail("查询失败：" + e.getMessage());
+    }
+  }
+
+  /**
+   * 款式「颜色×尺码」销量趋势（下单页矩阵用，D-800）
+   *
+   * <p>只有真实存在销售流水的色码才会出现在 matrix 中；无流水的色码不返回，
+   * 前端据此显示「—」，绝不补零伪装成「卖不动」。
+   */
+  @GetMapping("/sales-trend-by-size-color")
+  public Result<?> getSalesTrendBySizeColor(@RequestParam("styleNo") String styleNo,
+                                             @RequestParam(value = "days", required = false) Integer days,
+                                             @RequestParam(value = "colors", required = false) List<String> colors,
+                                             @RequestParam(value = "sizes", required = false) List<String> sizes) {
+    try {
+      return Result.success(salesTrendOrchestrator.getStyleSizeColorSalesTrend(styleNo, days, colors, sizes));
+    } catch (Exception e) {
+      log.error("查询色码销量趋势失败: styleNo={}", styleNo, e);
       return Result.fail("查询失败：" + e.getMessage());
     }
   }

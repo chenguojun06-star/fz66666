@@ -261,6 +261,9 @@ public class DashboardInventoryQueryHelper {
      * 出库单数（按时间区间）
      * <p>
      * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     * <p>
+     * D-800：只统计<b>销售</b>出库。调拨/报废/样衣/冲销不是销售，
+     * 计入会让看板经营数字虚高，且无法解释。
      */
     public long countOutstockBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
@@ -271,14 +274,18 @@ public class DashboardInventoryQueryHelper {
         return productOutstockService.lambdaQuery()
                 .eq(ProductOutstock::getDeleteFlag, 0)
                 .eq(ProductOutstock::getTenantId, tenantId)
+                .in(ProductOutstock::getOutstockType,
+                        com.fashion.supplychain.warehouse.constant.OutstockTypeConstants.SALE_OUTSTOCK_TYPES)
                 .between(ProductOutstock::getCreateTime, start, end)
                 .count();
     }
 
     /**
-     * 出库数量合计（按时间区间）
+     * 出库数量合计（按时间区间，仅销售口径）
      * <p>
      * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     * <p>
+     * D-800：与 countOutstockBetween 保持同一销售口径，不把内部流转算进出库。
      */
     public long sumOutstockQuantityBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
@@ -290,6 +297,8 @@ public class DashboardInventoryQueryHelper {
                 .select("COALESCE(SUM(COALESCE(outstock_quantity, 0)), 0) as total")
                 .eq("delete_flag", 0)
                 .eq("tenant_id", tenantId)
+                .in("outstock_type",
+                        com.fashion.supplychain.warehouse.constant.OutstockTypeConstants.SALE_OUTSTOCK_TYPES)
                 .between("create_time", start, end);
         return cacheHelper.extractLongScalar(productOutstockService.getBaseMapper().selectMaps(qw), "total");
     }

@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -66,10 +67,22 @@ public class EcStockCalculator {
                 .sum();
     }
 
+    /**
+     * 已销售出库量（用于电商可售库存扣减）。
+     *
+     * <p>【D-800为什么必须过滤类型】原来只按 {@code delete_flag=0} 汇总全表出库量，
+     * 导致 <b>调拨、报废、样衣出库、冲销单全部被当成销售</b>扣减可售库存。
+     * 调拨只是仓库之间挪货、报废是损耗，都不是「卖掉了」，凭什么占用电商可售额度？
+     * 结果是电商可售库存被内部流转侵蚀、越用越低。
+     *
+     * <p>【冲销单】D-800 起冲销数量存负数（红字），这里用类型过滤直接排除，
+     * 不用靠正负号判断 —— 万一未来有其他负数场景也不会误伤。
+     */
     private int sumOutstockedByStyle(Long styleId) {
         List<ProductOutstock> records = productOutstockService.list(new QueryWrapper<ProductOutstock>()
                 .eq("style_id", String.valueOf(styleId))
-                .eq("delete_flag", 0));
+                .eq("delete_flag", 0)
+                .in("outstock_type", OutstockTypeConstants.SALE_OUTSTOCK_TYPES));
         return records.stream()
                 .mapToInt(r -> r.getOutstockQuantity() != null ? r.getOutstockQuantity() : 0)
                 .sum();

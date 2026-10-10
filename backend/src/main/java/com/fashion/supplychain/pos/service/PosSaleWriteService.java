@@ -7,6 +7,7 @@ import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosSaleItem;
 import com.fashion.supplychain.pos.mapper.PosSaleItemMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -100,6 +101,9 @@ public class PosSaleWriteService {
             params.put("outstockType", "free_outbound");
             params.put("customerName", sale.getCustomerName());
             params.put("customerPhone", sale.getCustomerPhone());
+            // D-800：销售渠道与销售单号落库。原先只有 remark 文本，销量趋势无法按渠道拆分。
+            params.put("salesOrderNo", sale.getSaleNo());
+            params.put("platformCode", OutstockTypeConstants.CHANNEL_POS);
             params.put("remark", "收银台 " + sale.getSaleNo());
             var os = finishedWarehouseOperationOrchestrator.freeOutbound(params);
             if (os != null && StringUtils.hasText(os.getOutstockNo())) {

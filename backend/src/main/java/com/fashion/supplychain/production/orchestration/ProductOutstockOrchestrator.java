@@ -24,6 +24,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
+
 import java.util.Map;
 
 @Service
@@ -427,6 +429,9 @@ public class ProductOutstockOrchestrator {
         }
 
         // 3. 创建冲销新记录
+        // D-800：冲销数量与金额同为负数。原来数量存正数、只有金额取负，
+        // 导致任何 SUM(outstock_quantity) 都把冲销算成正销量（虚增）。
+        // 现统一取负，语义与 total_amount 一致。库存回补仍用正数 reverseQty（见上方步骤1）。
         ProductOutstock reversal = new ProductOutstock();
         String reversalId = java.util.UUID.randomUUID().toString().replace("-", "");
         reversal.setId(reversalId);
@@ -436,8 +441,8 @@ public class ProductOutstockOrchestrator {
         reversal.setStyleId(original.getStyleId());
         reversal.setStyleNo(original.getStyleNo());
         reversal.setStyleName(original.getStyleName());
-        reversal.setOutstockQuantity(reverseQty);
-        reversal.setOutstockType("reversal");
+        reversal.setOutstockQuantity(-reverseQty);
+        reversal.setOutstockType(OutstockTypeConstants.REVERSAL);
         reversal.setSourceType(original.getSourceType());
         reversal.setWarehouse(original.getWarehouse());
         reversal.setWarehouseAreaId(original.getWarehouseAreaId());

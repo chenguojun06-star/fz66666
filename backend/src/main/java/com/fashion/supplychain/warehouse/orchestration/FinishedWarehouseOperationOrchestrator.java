@@ -553,6 +553,12 @@ public class FinishedWarehouseOperationOrchestrator {
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
+        // D-800：销售渠道 + 业务单号。POS/店铺原先只在 remark 里存文本，
+        // 导致台账查不出「这批货卖给谁、走的哪个渠道」，销量趋势无法按渠道拆分。
+        // salesOrderNo 是文本型业务单号（POS 单号/店铺单号/EC 平台单号），不写 orderId——
+        // order_id 有指向 t_production_order 的外键，混填销售单号会造成错误关联。
+        String salesOrderNo = trimToNull(params.get("salesOrderNo"));
+        String platformCode = trimToNull(params.get("platformCode"));
         String traceId = trimToNull(params.get("traceId"));
 
         if (!StringUtils.hasText(skuCode)) {
@@ -594,6 +600,8 @@ public class FinishedWarehouseOperationOrchestrator {
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() != null ? styleInfoService.getById(sku.getStyleId()) : null;
         o.setOutstockNo(buildNo("FO", now));
+        o.setOrderNo(salesOrderNo);
+        o.setPlatformCode(platformCode);
         o.setStyleId(sku.getStyleId() != null ? String.valueOf(sku.getStyleId()) : null);
         o.setStyleNo(sku.getStyleNo());
         o.setStyleName(styleInfo != null ? styleInfo.getStyleName() : null);

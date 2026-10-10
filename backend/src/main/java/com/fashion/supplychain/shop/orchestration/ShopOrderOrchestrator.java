@@ -19,6 +19,7 @@ import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -578,6 +579,9 @@ public class ShopOrderOrchestrator {
             params.put("customerName", customerName);
             params.put("customerPhone", phone);
             params.put("shippingAddress", address);
+            // D-800：销售渠道与销售单号落库，供销量趋势按渠道拆分。
+            params.put("salesOrderNo", order.getOrderNo());
+            params.put("platformCode", OutstockTypeConstants.CHANNEL_SHOP);
             params.put("remark", "店铺订单 " + order.getOrderNo());
             var out = freeOutboundCapturingNo(params);
             if (out != null && StringUtils.hasText(out.getOutstockNo())) {

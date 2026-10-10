@@ -7,6 +7,7 @@ import type { OrderLine } from '../types';
 
 interface MultiColorOrderEditorProps {
   styleId: string | number | null;
+  styleNo?: string | null;
   availableColors: string[];
   availableSizes: string[];
   orderLines: OrderLine[];
@@ -35,6 +36,38 @@ interface AvailabilityInfo {
   pendingSales: number;
 }
 
+/**
+ * D-800 销量趋势（来自真实出库台账，仅销售口径）
+ *
+ * ⚠️ 数据真实性约定：`hasData=false` 表示**没有销售记录**，
+ * 与「有记录但当天卖了 0 件」是两回事 —— 前者必须显示「暂无数据」，
+ * 绝不能画一条平的零线，否则下单人员会误判成「这款卖不动」。
+ */
+interface SalesTrendPoint {
+  date: string;
+  qty: number;
+}
+
+interface SalesTrendCell {
+  totalQty?: number | null;
+  recordDays?: number | null;
+  hasData?: boolean;
+  avgQty?: number | null;
+  points?: SalesTrendPoint[];
+}
+
+interface SalesTrendBySizeColorResponse {
+  code: number;
+  data: {
+    hasData?: boolean;
+    matrix?: Record<string, Record<string, SalesTrendCell>>;
+    dataRange?: string | null;
+    recordCount?: number | null;
+    noColorSizeReason?: string | null;
+    source?: string;
+  };
+}
+
 const normalizeKey = (value: unknown) => String(value || '').trim().toLowerCase();
 
 const uniq = (values: string[]) => {
@@ -52,6 +85,43 @@ const uniq = (values: string[]) => {
 };
 
 const buildComboKey = (color: string, size: string) => `${normalizeKey(color)}__${normalizeKey(size)}`;
+
+/**
+ * 迷你销量柱状趋势（D-800）
+ *
+ * ⚠️ 防伪造设计（与 LinkPanelParts.MiniTrendBars 同口径）：
+ *  - 全部为 0 时**只画基线不画柱子** —— 0 是事实，不应被放大成「有数据的样子」；
+ *  - 无销售记录（hasData=false）时根本不渲染，由调用方显示「—」；
+ *  - 柱高按本组最大值归一化，避免绝对值大小影响视觉误判。
+ */
+const MiniSalesBars: React.FC<{ points: SalesTrendPoint[]; width?: number; height?: number }> = ({
+  points,
+  width = 96,
+  height = 20,
+}) => {
+  const bars = useMemo(() => {
+    if (!points || points.length === 0) return [];
+    const max = Math.max(...points.map((p) => p.qty || 0), 0);
+    const n = points.length;
+    const barWidth = Math.max(1, width / n - 1);
+    return points.map((p, i) => ({
+      x: (width / n) * i,
+      h: max > 0 && (p.qty || 0) > 0 ? Math.max(1.5, ((p.qty || 0) / max) * (height - 2)) : 0,
+      w: barWidth,
+      qty: p.qty || 0,
+    }));
+  }, [points, width, height]);
+
+  const hasAny = bars.some((b) => b.h > 0);
+  return (
+    <svg width={width} height={height} style={{ display: 'block' }} aria-label="销量趋势">
+      <line x1={0} y1={height - 1} x2={width} y2={height - 1} stroke="var(--color-border)" strokeWidth={1} />
+      {hasAny && bars.map((b, i) => (
+        <rect key={i} x={b.x} y={height - 1 - b.h} width={b.w} height={b.h} fill="var(--color-primary)" opacity={0.75} />
+      ))}
+    </svg>
+  );
+};
 
 const buildLinesFromSelection = (colors: string[], sizes: string[], previousLines: OrderLine[]) => {
   if (!colors.length || !sizes.length) return [] as OrderLine[];
@@ -85,6 +155,7 @@ const buildLinesFromSelection = (colors: string[], sizes: string[], previousLine
 
 const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   styleId,
+  styleNo,
   availableColors,
   availableSizes,
   orderLines,
@@ -114,6 +185,13 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const [availabilityMatrix, setAvailabilityMatrix] = useState<Record<string, Record<string, AvailabilityInfo>>>({});
   const [summary, setSummary] = useState<{ inProduction: number; stock: number; pendingSales: number } | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  // D-800：销量趋势（真实出库台账）。matrix 里没有的色码 = 无销售记录 → 显示「—」
+  const [salesTrendMatrix, setSalesTrendMatrix] = useState<Record<string, Record<string, SalesTrendCell>>>({});
+  const [salesTrendMeta, setSalesTrendMeta] = useState<{ hasData: boolean; dataRange: string | null; reason: string | null }>(
+    { hasData: false, dataRange: null, reason: null },
+  );
+  const [styleNoForTrend, setStyleNoForTrend] = useState<string>('');
+  const [trendExpanded, setTrendExpanded] = useState(false);
 
   // 查询综合可用性（在途+库存+欠数）
   useEffect(() => {
@@ -161,6 +239,48 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     });
     return () => { cancelled = true; };
   }, [styleId]);
+
+  // D-800：查询色码级销量趋势（默认收起，不干扰正常下单；用户需要时再展开）
+  useEffect(() => {
+    if (!styleNo) {
+      setSalesTrendMatrix({});
+      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+      return;
+    }
+    let cancelled = false;
+    api.get<SalesTrendBySizeColorResponse>('/order-management/sales-trend-by-size-color', {
+      params: { styleNo, days: 30 },
+    }).then((res) => {
+      if (cancelled) return;
+      if (res.code === 200 && res.data) {
+        const normalized: Record<string, Record<string, SalesTrendCell>> = {};
+        Object.entries(res.data.matrix || {}).forEach(([color, sizes]) => {
+          const ck = normalizeKey(color);
+          normalized[ck] = normalized[ck] || {};
+          Object.entries(sizes).forEach(([size, cell]) => {
+            normalized[ck][normalizeKey(size)] = cell as SalesTrendCell;
+          });
+        });
+        setSalesTrendMatrix(normalized);
+        setSalesTrendMeta({
+          hasData: !!res.data.hasData,
+          dataRange: res.data.dataRange ?? null,
+          reason: res.data.noColorSizeReason ?? null,
+        });
+      } else {
+        setSalesTrendMatrix({});
+        setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+      }
+    }).catch(() => {
+      if (cancelled) return;
+      // 查询失败：显示「暂无数据」，不保留上一次款式的趋势，避免张冠李戴
+      setSalesTrendMatrix({});
+      setSalesTrendMeta({ hasData: false, dataRange: null, reason: null });
+    });
+    return () => { cancelled = true; };
+  }, [styleNo]);
+
+  useEffect(() => { setStyleNoForTrend(styleNo || ''); }, [styleNo]);
 
   const getAvailability = (color: string, size: string): AvailabilityInfo => {
     const byColor = availabilityMatrix[normalizeKey(color)];
@@ -322,7 +442,43 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         <Button onClick={() => syncSelection([], [])}>清空</Button>
         <InputNumber min={1} value={quickFillQty} onChange={(value) => setQuickFillQty(Math.max(1, Number(value) || 1))} />
         <Button type="primary" ghost onClick={() => applyQuickFill(quickFillQty)}>全部铺量</Button>
+        {/* D-800：销量趋势开关。默认收起，避免干扰正常下单；需要决策时才展开 */}
+        <Button
+          type={trendExpanded ? 'primary' : 'default'}
+          onClick={() => setTrendExpanded((v) => !v)}
+        >
+          {trendExpanded ? '收起销量趋势' : '查看销量趋势'}
+        </Button>
       </Space>
+
+      {trendExpanded ? (
+        <div
+          className="u-fs-12 u-mb-8 u-p-8"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border-light)',
+            borderRadius: 4,
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          <strong>销量趋势（近30天，来自真实出库台账）</strong>
+          <div className="u-mt-4">
+            {styleNoForTrend ? (
+              salesTrendMeta.hasData ? (
+                <>数据区间：{salesTrendMeta.dataRange || '—'}。每格下方柱状图为该色码逐日出库量，悬停可看累计件数。</>
+              ) : (
+                <>
+                  该款式暂无可用的销售出库记录
+                  {salesTrendMeta.reason ? `（${salesTrendMeta.reason}）` : ''}
+                  ，单元格显示「—」表示<b>没有销售数据</b>，而非「销量为零」。
+                </>
+              )
+            ) : (
+              '请先选择款式'
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {(summary && (summary.inProduction > 0 || summary.stock > 0 || summary.pendingSales > 0)) || availabilityLoading ? (
         <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? 'var(--status-warning-bg)' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? 'var(--status-warning-border)' : 'var(--color-border-light)'}`, color: 'var(--color-warning-deep)' }}>
@@ -362,8 +518,12 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                   <td className="u-fw-600 u-ov-hidden u-ws-nowrap" style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textOverflow: 'ellipsis' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = orderLines.find((line) => buildComboKey(line.color, line.size) === buildComboKey(row.color, size));
-                    const avail = getAvailability(row.color, size);
+const avail = getAvailability(row.color, size);
                     const hasInfo = avail.inProduction > 0 || avail.stock > 0 || avail.pendingSales > 0;
+                    // D-800：该色码没有销售流水时 trendCell 为 undefined —— 显示「—」而不是零线
+                    const trendCell = trendExpanded
+                      ? salesTrendMatrix[normalizeKey(row.color)]?.[normalizeKey(size)]
+                      : undefined;
                     return (
                       <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid var(--color-bg-subtle)' }}>
                         <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
@@ -372,7 +532,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                             value={matched?.quantity || 0}
                             style={{ width: '100%' }}
                             controls={false}
-                           
+                            
                             onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                           />
                           {hasInfo ? (
@@ -382,6 +542,19 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                               {avail.pendingSales > 0 && <span style={{ color: 'var(--color-error)' }}>欠{avail.pendingSales}</span>}
                             </div>
                           ) : null}
+                          {trendExpanded && (
+                            <div className="u-ta-center" style={{ lineHeight: 1.2 }}>
+                              {trendCell && trendCell.hasData && trendCell.points && trendCell.points.length > 0 ? (
+                                <Tooltip
+                                  title={`近30天累计售出 ${trendCell.totalQty ?? 0} 件，出库台账记录 ${trendCell.recordDays ?? 0} 天`}
+                                >
+                                  <span><MiniSalesBars points={trendCell.points} /></span>
+                                </Tooltip>
+                              ) : (
+                                <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }} title="该色码近30天没有销售出库记录">—</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                     );

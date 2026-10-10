@@ -115,8 +115,14 @@ public class OutstockReceivableHelper {
 
         Receivable r = new Receivable();
         r.setCustomerId(customerId);
-        r.setOrderId(order.getId());
-        r.setOrderNo(order.getOrderNo());
+        // D-800：order 可能为 null（备货直发场景没有生产订单，只能靠客户名匹配档案）。
+        // 原来这里直接 order.getId() 会抛 NPE，被调用方 try-catch 吞掉 →
+        // 应收单<b>静默不生成</b>，钱就这么丢了且没有任何报错。
+        // 现在按实际有无填：没有订单就留空，应收单仍要生成（客户与金额都已确定）。
+        if (order != null) {
+            r.setOrderId(order.getId());
+            r.setOrderNo(order.getOrderNo());
+        }
         r.setAmount(amount);
         r.setReceivedAmount(outstock.getPaidAmount() == null ? BigDecimal.ZERO : outstock.getPaidAmount());
         // D-741：到期日 = 出库时间 + 账期天数（租户可配置，默认 30 天，读不到自动回退）

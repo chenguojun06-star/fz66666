@@ -150,6 +150,12 @@ public class FinishedOutstockHelper {
         // D-360k：质检直发——不落成品库存直接发客户，跳过库存扣减但仍写销售出库记录
         boolean directShip = params.get("directShip") != null
                 && Boolean.parseBoolean(String.valueOf(params.get("directShip")));
+        // D-800：库存已由调用方扣减过（EC 现货发货链路自己扣 SKU 库存后再补流水），
+        // 这里只补台账，绝不能再扣一次。语义上与 directShip 不同：
+        // directShip=「本来就不经过成品库存」（质检直发）；
+        // stockAlreadyDeducted=「库存已扣，只缺台账」（EC 现货出库）。
+        boolean stockAlreadyDeducted = params.get("stockAlreadyDeducted") != null
+                && Boolean.parseBoolean(String.valueOf(params.get("stockAlreadyDeducted")));
         String outstockType = trimToNull(params.get("outstockType"));
         // D-130：兼容前端旧键名 outboundType（PC出库弹窗/二维码出库均发该键，此前后端读不到→一律默认 shipment，
         // 报废/调拨出库被错误记成销售出库）
@@ -219,15 +225,17 @@ public class FinishedOutstockHelper {
             if (sku == null) {
                 throw new IllegalArgumentException("SKU不存在: " + skuCode);
             }
-            if (!directShip) {
+            if (!directShip && !stockAlreadyDeducted) {
                 boolean updated = productSkuService.decreaseStockBySkuCode(skuCode, quantity);
                 if (!updated) {
                     int current = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
                     throw new IllegalArgumentException(
                             "库存不足: " + skuCode + "，可用库存:" + current + "件，申请出库:" + quantity + "件");
                 }
-            } else {
+            } else if (directShip) {
                 log.info("[出库] 质检直发模式：不扣减库存 skuCode={} qty={}", skuCode, quantity);
+            } else {
+                log.info("[出库] 库存已由调用方扣减，本次仅补台账 skuCode={} qty={}", skuCode, quantity);
             }
 
             // 价格覆盖逻辑
