@@ -409,7 +409,16 @@ public class ShopOrderOrchestrator {
             putIfPresent(data, "washInstructions", washFromParts);
         }
         // D-770：详情页模块布局（商家自定义上到下顺序与开关）
-        data.put("layout", styleLayoutService.layoutOf(styleId).stream().map(l -> {
+        //
+        // ⚠️ D-785 线上实测抓到的真 bug：layoutOf 内部按 **UserContext.tenantId()** 查库，
+        // 而公开的顾客端请求没有登录、UserContext 是空的 → 查不到任何行 →
+        // 直接回落默认布局。后果是**商家在后台排的顺序、关掉的模块，对真实顾客
+        // 从来没有生效过**，所有人看到的都是默认版式（管理端自己预览却是好的，
+        // 因为后台请求带登录态 —— 这种"后台对、线上不对"最难查）。
+        // 这里必须以**店铺所属租户**的身份去读，不能依赖请求上下文。
+        Long shopTenantId = config.getTenantId();
+        data.put("layout", tenantContextRunner.run(shopTenantId, "shop-public",
+                () -> styleLayoutService.layoutOf(styleId)).stream().map(l -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("moduleKey", l.getModuleKey());
             m.put("sortOrder", l.getSortOrder());

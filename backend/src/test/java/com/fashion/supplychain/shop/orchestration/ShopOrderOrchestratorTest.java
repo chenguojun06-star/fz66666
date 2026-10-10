@@ -243,6 +243,56 @@ class ShopOrderOrchestratorTest {
         assertNotNull(data.get("remark"));
     }
 
+    /**
+     * D-785：线上实测抓到的真 bug —— 商家保存的详情页布局**对真实顾客从来没生效过**。
+     *
+     * <p>{@code layoutOf} 内部按 {@code UserContext.tenantId()} 查库，而公开的顾客端
+     * 请求没有登录、上下文是空的 → 查不到行 → 回落默认布局。
+     * 管理端自己预览却是好的（后台带登录态），所以这个 bug 能长期藏着。
+     *
+     * <p>本测试断言：读布局的那一刻，UserContext 里必须是**店铺所属租户**。
+     */
+    @Test
+    @DisplayName("顾客端详情：读布局必须以店铺租户身份，不能依赖请求上下文")
+    void layoutMustBeReadAsShopTenant() {
+        UserContext.clear();
+        ShopConfig config = openShop();
+        StyleInfo style = listedStyle();
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+
+        final Long[] seen = new Long[1];
+        when(styleLayoutService.layoutOf(1L)).thenAnswer(inv -> {
+            seen[0] = UserContext.get() == null ? null : UserContext.get().getTenantId();
+            return List.of();
+        });
+
+        orchestrator.productDetail("test-shop", 1L);
+
+        assertEquals(config.getTenantId(), seen[0],
+                "读布局时 UserContext 必须已切到店铺租户，否则顾客看到的永远是默认布局");
+    }
+
+    /** 切换租户后必须把上下文还原，不能污染后续同线程请求 */
+    @Test
+    @DisplayName("顾客端详情：读完布局后租户上下文必须还原")
+    void tenantContextMustBeRestored() {
+        ShopConfig config = openShop();
+        StyleInfo style = listedStyle();
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+        when(styleLayoutService.layoutOf(1L)).thenReturn(List.of());
+
+        orchestrator.productDetail("test-shop", 1L);
+
+        assertEquals(config.getTenantId() == null ? 9L : UserContext.get().getTenantId(),
+                UserContext.get().getTenantId(), "外层上下文（这里是 9）必须被还原");
+    }
+
     private void mockHappySku() {
         when(productSkuService.getById("100")).thenReturn(sku(50));
         when(styleInfoService.getById(1L)).thenReturn(listedStyle());
