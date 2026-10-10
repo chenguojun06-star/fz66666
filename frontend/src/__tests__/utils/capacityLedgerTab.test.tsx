@@ -50,9 +50,9 @@ describe('外发工厂产能台账（D-779）', () => {
     mockApi.getCapacityLedger.mockResolvedValue({ data: [base] });
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('有余量')).toBeTruthy());
-    expect(screen.getByText('33.3%')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('33.3%')).toBeTruthy());
     // 2000 同时出现在表格余量列与顶部汇总，属于预期
-    expect(screen.getAllByText('2000').length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => expect(screen.getAllByText('2000').length).toBeGreaterThanOrEqual(1));
   });
 
   it('未配置产能必须显示「未配置」而不是 0', async () => {
@@ -73,12 +73,13 @@ describe('外发工厂产能台账（D-779）', () => {
       ],
     });
     render(<CapacityLedgerTab />);
+    // ⚠️ 所有断言都要包在 waitFor 里：表格是异步填的，
+    // 先等到「未配置产能」标签出现，再取其他节点，中间仍可能发生一次重渲染
+    // （这正是 CI 偶发失败、本地却一直通过的原因）。
     await waitFor(() => expect(screen.getByText('未配置产能')).toBeTruthy());
-    // 关键：不能出现「0」被当成产能
-    const cells = screen.getAllByText('未配置');
-    expect(cells.length).toBeGreaterThan(0);
-    // 负荷与余量都应是「—」而不是 0%
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    await waitFor(() => expect(screen.getAllByText('未配置').length).toBeGreaterThan(0));
+    // 负荷率与余量都应是「—」而不是 0%
+    await waitFor(() => expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2));
   });
 
   it('未配置产能的数量必须被单独提示出来', async () => {
@@ -121,8 +122,9 @@ describe('外发工厂产能台账（D-779）', () => {
     });
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('已超载')).toBeTruthy());
-    expect(screen.getByText('200%')).toBeTruthy();
-    expect(screen.getByText('-3000')).toBeTruthy();
+    // 同样要等：表格是异步填的，紧随其后的裸断言会偶发失败
+    await waitFor(() => expect(screen.getByText('200%')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('-3000')).toBeTruthy());
   });
 
   it('负载不可知时显示「负载未知」，不给负荷率', async () => {
