@@ -4,7 +4,7 @@ import { DeleteOutlined, LeftOutlined, PlusOutlined, RightOutlined, StarFilled }
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 export interface ListingContent {

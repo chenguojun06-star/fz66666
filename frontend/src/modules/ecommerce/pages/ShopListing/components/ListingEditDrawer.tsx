@@ -31,6 +31,13 @@ interface Props {
   setColorImages: (v: Record<string, string>) => void;
   remark: string;
   setRemark: (v: string) => void;
+  /* 详情页三块内容（商品参数 / 洗涤说明 / 款式详情）——此前上架页没有入口 */
+  fabric: string;
+  setFabric: (v: string) => void;
+  wash: string;
+  setWash: (v: string) => void;
+  desc: string;
+  setDesc: (v: string) => void;
   listed: boolean;
   toggling: boolean;
   onToggleListing: (listed: boolean) => void;
@@ -86,6 +93,7 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; warn?: boolean }> 
 const ListingEditDrawer: React.FC<Props> = ({
   open, loading, saving, row, skus, setSkus,
   cover, setCover, colorImages, setColorImages, remark, setRemark,
+  fabric, setFabric, wash, setWash, desc, setDesc,
   listed, toggling, onToggleListing, onClose, onSave,
 }) => {
   const colors = useMemo(() => {
@@ -244,7 +252,7 @@ const ListingEditDrawer: React.FC<Props> = ({
               index={5}
               icon={<ShopOutlined />}
               title="上架与商品说明"
-              desc="上下架开关即时生效（不用点保存）；商品名取自「款式名称」，如需修改请去「款式资料」。"
+              desc="上下架开关即时生效（不用点保存）；商品名取自「款式名称」，如需修改请去「款式资料」。详情页的「商品参数 / 洗涤说明 / 款式详情」也在这里填，不用再跑去款式资料。"
             >
               <ListingInfoSection
                 listed={listed}
@@ -252,6 +260,12 @@ const ListingEditDrawer: React.FC<Props> = ({
                 onToggleListing={onToggleListing}
                 remark={remark}
                 setRemark={setRemark}
+                fabric={fabric}
+                setFabric={setFabric}
+                wash={wash}
+                setWash={setWash}
+                desc={desc}
+                setDesc={setDesc}
               />
             </Section>
           </Space>

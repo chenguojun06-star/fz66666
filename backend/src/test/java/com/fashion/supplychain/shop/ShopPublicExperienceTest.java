@@ -712,4 +712,50 @@ class ShopSizeChartGuardTest {
                 .contains("carouselIntervalMs")
                 .contains("carouselAutoplay");
     }
+
+    /* ─────────────── ㉕ 上架编辑页必须能填「详情页每一块」的内容 ─────────────── */
+
+    /**
+     * 用户反馈：「详情页租户这边根本就不能做每一个模块每一个模块的信息」。
+     *
+     * <p>D-782 补齐了轮播图/视频/品牌/尺码表/卖点/FAQ/价格说明，但顾客端详情页
+     * 实际渲染的「商品参数（面料成分）/ 洗涤说明 / 款式详情」三块**仍然没有入口** ——
+     * 商家只能跑去「款式资料」那个给生产车间用的几十字段大表单里填。
+     * 本测试守护这三块的编辑入口，以及「填了必须真的能到顾客端」。
+     */
+    @Test
+    @DisplayName("㉕ 上架编辑页必须提供 面料成分 / 洗涤说明 / 款式详情 三个入口")
+    void listingEditorMustEditDetailModules() throws Exception {
+        String section = readAny(
+                "frontend/src/modules/ecommerce/pages/ShopListing/components/ListingInfoSection.tsx");
+        assertThat(section).as("面料成分输入").contains("面料成分").contains("fabricComposition");
+        assertThat(section).as("洗涤说明输入").contains("洗涤说明").contains("washInstructions");
+        assertThat(section).as("款式详情输入").contains("款式详情").contains("description");
+
+        String hook = readAny(
+                "frontend/src/modules/ecommerce/pages/ShopListing/hooks/useListingEditor.ts");
+        assertThat(hook)
+                .as("只提交真正改动过的字段（PUT /style/info 是局部更新，全量提交会用旧值覆盖新值）")
+                .contains("if (Object.keys(stylePatch).length > 1)");
+
+        String api = readAny("frontend/src/services/shop/shopApi.ts");
+        assertThat(api)
+                .as("保存入参必须包含这三个字段")
+                .contains("fabricComposition?: string | null")
+                .contains("washInstructions?: string | null")
+                .contains("description?: string | null");
+    }
+
+    @Test
+    @DisplayName("㉖ 这三块内容必须真的能到顾客端（不能只存不发）")
+    void detailModulesMustReachCustomer() throws Exception {
+        String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(java).as("款式详情").contains("putIfPresent(data, \"description\"");
+        assertThat(java).as("面料成分").contains("putIfPresent(data, \"fabricComposition\"");
+        assertThat(java).as("洗涤说明（含 washNote 兜底）").contains("putIfPresent(data, \"washInstructions\"");
+
+        String page = shopPage();
+        assertThat(page).as("顾客端要渲染面料成分").contains("d.fabricComposition");
+        assertThat(page).as("顾客端要渲染洗涤说明").contains("washInstructions");
+    }
 }

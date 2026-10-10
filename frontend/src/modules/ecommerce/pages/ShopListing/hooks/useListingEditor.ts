@@ -20,8 +20,19 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
   const [skus, setSkus] = useState<EditableSku[]>([]);
   const [cover, setCover] = useState<string | null>(null);
   const [remark, setRemark] = useState('');
+  // 顾客端详情页「商品参数 / 洗涤说明 / 款式详情」三块的内容（此前上架页无入口）
+  const [fabric, setFabric] = useState('');
+  const [wash, setWash] = useState('');
+  const [desc, setDesc] = useState('');
   const [colorImages, setColorImages] = useState<Record<string, string>>({});
-  const [baseline, setBaseline] = useState({ cover: null as string | null, remark: '', colorImages: {} as Record<string, string> });
+  const [baseline, setBaseline] = useState({
+    cover: null as string | null,
+    remark: '',
+    fabric: '',
+    wash: '',
+    desc: '',
+    colorImages: {} as Record<string, string>,
+  });
 
   const openFor = useCallback(async (r: ListingRow) => {
     setOpen(true);
@@ -52,9 +63,15 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       const detail = unwrap<ShopStyleInfoRow | null>(styleRaw);
       const c = detail?.cover ?? r.cover ?? null;
       const rm = detail?.remark ?? r.remark ?? '';
+      const fb = detail?.fabricComposition ?? '';
+      const ws = detail?.washInstructions ?? '';
+      const ds = detail?.description ?? '';
       setCover(c);
       setRemark(rm);
-      setBaseline({ cover: c, remark: rm, colorImages: imgs });
+      setFabric(fb);
+      setWash(ws);
+      setDesc(ds);
+      setBaseline({ cover: c, remark: rm, fabric: fb, wash: ws, desc: ds, colorImages: imgs });
     } catch (e: unknown) {
       message.error(errText(e, '商品详情加载失败'));
     } finally {
@@ -71,8 +88,23 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
     if (!row) return;
     setSaving(true);
     try {
-      if (cover !== baseline.cover || remark !== baseline.remark) {
-        await shopProductApi.updateStyle({ id: row.id, cover, remark });
+      // 只提交真正改动过的字段：后端 PUT /style/info 是局部更新，
+      // 把没动过的字段一起提交等于用"页面上的旧值"覆盖库里的新值。
+      const stylePatch: {
+        id: number | string;
+        cover?: string | null;
+        remark?: string | null;
+        fabricComposition?: string | null;
+        washInstructions?: string | null;
+        description?: string | null;
+      } = { id: row.id };
+      if (cover !== baseline.cover) stylePatch.cover = cover;
+      if (remark !== baseline.remark) stylePatch.remark = remark;
+      if (fabric !== baseline.fabric) stylePatch.fabricComposition = fabric.trim() || null;
+      if (wash !== baseline.wash) stylePatch.washInstructions = wash.trim() || null;
+      if (desc !== baseline.desc) stylePatch.description = desc.trim() || null;
+      if (Object.keys(stylePatch).length > 1) {
+        await shopProductApi.updateStyle(stylePatch);
       }
       const changedImgs: Record<string, string> = {};
       Object.keys(colorImages).forEach((c) => {
@@ -99,17 +131,18 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         message.success('已保存');
       }
       setSkus((prev) => prev.map((s) => ({ ...s, dirty: false })));
-      setBaseline({ cover, remark, colorImages });
+      setBaseline({ cover, remark, fabric, wash, desc, colorImages });
       onSaved(row.id);
     } catch (e: unknown) {
       message.error(errText(e, '保存失败'));
     } finally {
       setSaving(false);
     }
-  }, [row, cover, remark, colorImages, skus, baseline, onSaved]);
+  }, [row, cover, remark, fabric, wash, desc, colorImages, skus, baseline, onSaved]);
 
   return {
     open, row, loading, saving, skus, setSkus, cover, setCover, remark, setRemark,
+    fabric, setFabric, wash, setWash, desc, setDesc,
     colorImages, setColorImages, openFor, close, save,
   };
 }

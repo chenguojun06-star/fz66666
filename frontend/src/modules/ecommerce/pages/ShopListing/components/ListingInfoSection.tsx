@@ -11,6 +11,15 @@ interface Props {
   toggling: boolean;
   remark: string;
   setRemark: (v: string) => void;
+  /* 详情页三块内容：顾客端「商品参数 / 洗涤说明 / 款式详情」的数据源。
+     此前这三块顾客端有渲染、上架页却没有入口，商家只能去「款式资料」那个
+     给生产车间用的几十字段大表单里填 —— 用户反馈「根本就不能做每一个模块的信息」。 */
+  fabric: string;
+  setFabric: (v: string) => void;
+  wash: string;
+  setWash: (v: string) => void;
+  desc: string;
+  setDesc: (v: string) => void;
 }
 
 /**
@@ -21,6 +30,7 @@ interface Props {
  */
 const ListingInfoSection: React.FC<Props> = ({
   listed, onToggleListing, toggling, remark, setRemark,
+  fabric, setFabric, wash, setWash, desc, setDesc,
 }) => {
   // D-781：边写边提示，别等保存后才发现顾客端看不到
   const isProcessContent = looksLikeProductionContent(remark);
@@ -59,6 +69,48 @@ const ListingInfoSection: React.FC<Props> = ({
         description={PRODUCTION_CONTENT_HINT}
       />
     ) : null}
+
+    {/* 详情页三块内容：填了就显示，留空则整块跳过（不渲染空标题） */}
+    <div className="shop-listing__block-title shop-listing__block-title--mt">
+      详情页内容
+      <Text type="secondary" className="shop-listing__hint" style={{ marginLeft: 8 }}>
+        填了才显示，留空则顾客端整块跳过
+      </Text>
+    </div>
+
+    <div className="shop-edit__field-label">面料成分</div>
+    <Input.TextArea
+      value={fabric}
+      onChange={(e) => setFabric(e.target.value)}
+      placeholder="如：97% 桑蚕丝；3% 氨纶。显示在顾客端「商品参数」"
+      maxLength={500}
+      showCount
+      autoSize={{ minRows: 2, maxRows: 5 }}
+    />
+    <Text type="secondary" className="shop-listing__hint">
+      若该款在「款式资料」里已按部位录了成分明细（如上装 / 里布），
+      顾客端会优先显示那份明细，这里的整段文字只在明细为空时显示。
+    </Text>
+
+    <div className="shop-edit__field-label">洗涤说明</div>
+    <Input.TextArea
+      value={wash}
+      onChange={(e) => setWash(e.target.value)}
+      placeholder="如：不可漂白；40℃ 以下手洗。显示在顾客端「洗涤说明」"
+      maxLength={500}
+      showCount
+      autoSize={{ minRows: 2, maxRows: 5 }}
+    />
+
+    <div className="shop-edit__field-label">款式详情（图文介绍）</div>
+    <Input.TextArea
+      value={desc}
+      onChange={(e) => setDesc(e.target.value)}
+      placeholder="顾客端「款式详情」正文。可直接粘贴带图片的图文（支持 HTML）"
+      maxLength={20000}
+      showCount
+      autoSize={{ minRows: 4, maxRows: 12 }}
+    />
   </div>
   );
 };

@@ -12,10 +12,10 @@ import { filterRows, useShopListing } from './hooks/useShopListing';
 import { useListingEditor } from './hooks/useListingEditor';
 import { unwrap } from './unwrap';
 import type { ListingFilter, ListingRow } from './types';
+import { readPageSize } from '@/utils/pageSizeStore';
 import './index.css';
 
 const { Text } = Typography;
-const PAGE_SIZE = 10;
 
 /**
  * 商品上架管理（D-768）——店铺商品运营专用页：
@@ -27,6 +27,10 @@ const ShopListing: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [filter, setFilter] = useState<ListingFilter>('all');
   const [page, setPage] = useState(1);
+  // 每页条数由分页器与 localStorage 共同管理：
+  // 此前这里是常量 PAGE_SIZE=10，而 ResizableTable 会把 pageSize 规范化成 20，
+  // 导致"分页器按 20 算页数、数据按 10 切片"——页数减半、后半数据永远翻不到。
+  const [pageSize, setPageSize] = useState(readPageSize(20));
   // D-769：批量调价（动钱操作，勾选后才出现入口）
   const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -59,10 +63,6 @@ const ShopListing: React.FC = () => {
 
   const listedCount = useMemo(() => rows.filter((r) => r.shopListed === 1).length, [rows]);
   const filtered = useMemo(() => filterRows(rows, filter), [rows, filter]);
-  const paged = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page],
-  );
 
   // 抽屉里的商品状态跟着列表走，上下架后即时同步
   const currentRow: ListingRow | null = ed.row
@@ -194,15 +194,15 @@ const ShopListing: React.FC = () => {
               onChange: (keys) => setSelectedIds(keys),
             }}
           columns={columns}
-          dataSource={paged}
+          dataSource={filtered}
           loading={loading}
           scroll={{ x: 1180 }}
           pagination={{
             current: page,
-            pageSize: PAGE_SIZE,
+            pageSize,
             total: filtered.length,
             showTotal: (t) => `共 ${t} 条`,
-            onChange: (p) => setPage(p),
+            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
           }}
           emptyDescription={
             rows.length === 0
@@ -227,6 +227,12 @@ const ShopListing: React.FC = () => {
         setColorImages={ed.setColorImages}
         remark={ed.remark}
         setRemark={ed.setRemark}
+        fabric={ed.fabric}
+        setFabric={ed.setFabric}
+        wash={ed.wash}
+        setWash={ed.setWash}
+        desc={ed.desc}
+        setDesc={ed.setDesc}
         listed={drawerListed}
         toggling={togglingId === ed.row?.id}
         onToggleListing={(listed) => {

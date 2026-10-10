@@ -329,9 +329,18 @@ export const shopProductApi = {
   /** 款式详情（取 cover / remark 等） */
   getStyle: (id: number | string) => api.get<ShopStyleInfoRow>(`/style/info/${id}`),
 
-  /** 保存款式字段（主图 cover / 商品说明 remark） */
-  updateStyle: (body: { id: number | string; cover?: string | null; remark?: string | null }) =>
-    api.put<unknown>('/style/info', body),
+  /**
+   * 保存款式字段（主图 / 商品说明 / 详情页三块内容）。
+   * 后端 PUT /style/info 走 MyBatis-Plus 局部更新：只提交改动过的字段即可。
+   */
+  updateStyle: (body: {
+    id: number | string;
+    cover?: string | null;
+    remark?: string | null;
+    fabricComposition?: string | null;
+    washInstructions?: string | null;
+    description?: string | null;
+  }) => api.put<unknown>('/style/info', body),
 
   /** 某款式全部 SKU */
   searchSkus: (styleId: number | string) =>
@@ -357,6 +366,12 @@ export interface ShopStyleInfoRow {
   tagPrice?: number | null;
   shopListed?: number;
   shopListingTime?: string | null;
+  /* 顾客端详情页「商品参数 / 洗涤说明 / 款式详情」三块的内容源。
+     此前这三块在顾客端有渲染、在**上架编辑页却没有入口**，
+     商家只能跑去「款式资料」那个给生产车间用的大表单里填。 */
+  fabricComposition?: string | null;
+  washInstructions?: string | null;
+  description?: string | null;
 }
 
 /**
