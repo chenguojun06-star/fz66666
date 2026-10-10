@@ -233,6 +233,8 @@ const ShopListing: React.FC = () => {
         setWash={ed.setWash}
         desc={ed.desc}
         setDesc={ed.setDesc}
+        category={ed.category}
+        setCategory={ed.setCategory}
         listed={drawerListed}
         toggling={togglingId === ed.row?.id}
         onToggleListing={(listed) => {

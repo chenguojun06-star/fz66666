@@ -60,6 +60,10 @@ class ShopCartOrchestratorTest {
     @Mock
     private StyleInfoService styleInfoService;
 
+    /** D-784：加购计数（看板用）。缺这个 mock 会让 add() 在统计处 NPE（虽被兜住，但不该靠兜） */
+    @Mock
+    private com.fashion.supplychain.shop.mapper.ShopStatDailyMapper statDailyMapper;
+
     @InjectMocks
     private ShopCartOrchestrator orchestrator;
 

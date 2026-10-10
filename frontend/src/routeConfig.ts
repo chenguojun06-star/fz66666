@@ -39,6 +39,8 @@ export const paths = {
   register: '/register',
 
   dashboard: '/dashboard',
+  /** 收银台（POS 开单）：一屏完成选货 → 改价 → 收款 */
+  pos: '/pos',
 
   styleInfoList: '/style-info',
   styleInfoNew: '/style-info/new',
@@ -441,6 +443,8 @@ export function getPageSuggestions(pathname: string): string[] {
 
 export const permissionCodes = {
   dashboard: 'MENU_DASHBOARD',
+  // 收银台独立权限码（动库存与应收，默认只给管理员，由「角色权限」按需分配）
+  pos: 'MENU_POS',
   styleInfo: 'MENU_STYLE_INFO',
   orderManagement: 'MENU_ORDER_MANAGEMENT',
   dataCenter: 'MENU_DATA_CENTER',
@@ -537,6 +541,14 @@ export const menuConfig: MenuSection[] = [
     key: 'dashboard',
     icon: React.createElement(DashboardOutlined),
     path: paths.dashboard,
+  },
+  {
+    // 收银台放在最前面：档口场景下这是每天点得最多的入口
+    title: '收银台',
+    shortTitle: '收银',
+    key: 'pos',
+    icon: React.createElement(DollarOutlined),
+    path: paths.pos,
   },
   {
     title: '选品中心',

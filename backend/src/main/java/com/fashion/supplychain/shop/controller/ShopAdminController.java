@@ -2,6 +2,7 @@ package com.fashion.supplychain.shop.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.shop.orchestration.ShopAdminOrchestrator;
+import com.fashion.supplychain.shop.orchestration.ShopDashboardOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopListingContentOrchestrator;
 import com.fashion.supplychain.shop.orchestration.ShopStyleLayoutService;
 import lombok.extern.slf4j.Slf4j;
@@ -26,12 +27,26 @@ public class ShopAdminController {
 
     private final ShopListingContentOrchestrator shopListingContentOrchestrator;
 
+    private final ShopDashboardOrchestrator shopDashboardOrchestrator;
+
     public ShopAdminController(ShopAdminOrchestrator shopAdminOrchestrator,
                                 ShopStyleLayoutService shopStyleLayoutService,
-                                ShopListingContentOrchestrator shopListingContentOrchestrator) {
+                                ShopListingContentOrchestrator shopListingContentOrchestrator,
+                                ShopDashboardOrchestrator shopDashboardOrchestrator) {
         this.shopAdminOrchestrator = shopAdminOrchestrator;
         this.shopStyleLayoutService = shopStyleLayoutService;
         this.shopListingContentOrchestrator = shopListingContentOrchestrator;
+        this.shopDashboardOrchestrator = shopDashboardOrchestrator;
+    }
+
+    /**
+     * 店铺数据看板（日报）：浏览 → 加购 → 下单 → 下单金额。
+     *
+     * @param days 回看天数（默认 30，后端夹取到 1~90）
+     */
+    @GetMapping("/dashboard/daily")
+    public Result<?> dashboardDaily(@RequestParam(defaultValue = "30") int days) {
+        return Result.success(shopDashboardOrchestrator.daily(days));
     }
 
     /** 我的店铺配置（无则建，slug 默认 t{tenantId}，默认打烊） */

@@ -26,6 +26,35 @@ export interface ShopConfig {
   carouselIntervalMs?: number | null;
 }
 
+/**
+ * 店铺数据看板（日报）。
+ *
+ * 只四个数：浏览 → 加购 → 下单 → 下单金额。
+ * 浏览/加购来自按天计数器（购物车行结算后会被删、浏览日志按顾客+款式合并，事后算不出），
+ * 下单与金额实时查订单表 —— 所以两边口径必须一起看，不能只看一个。
+ */
+export interface ShopDashboardDailyRow {
+  date: string;
+  browseCount: number;
+  cartAddCount: number;
+  orderCount: number;
+  orderAmount: number;
+}
+
+export interface ShopDashboardSummary {
+  label: string;
+  days: number;
+  browseCount: number;
+  cartAddCount: number;
+  orderCount: number;
+  orderAmount: number;
+}
+
+export interface ShopDashboardData {
+  records: ShopDashboardDailyRow[];
+  summary: ShopDashboardSummary[];
+}
+
 export interface ShopOrder {
   id: string;
   orderNo: string;
@@ -189,6 +218,23 @@ export interface ShopStyleSku {
 }
 
 export const shopAdminApi = {
+  /**
+   * 店铺数据看板（日报）。
+   *
+   * 返回 Result 信封，调用方必须 unwrapApiData 取 data。
+   */
+  dashboardDaily: (days = 30) =>
+    api.get<unknown>('/shop/admin/dashboard/daily', { params: { days } }),
+
+  /**
+   * 类目词表（中文规范类目）。
+   *
+   * 走上架页可选类目 —— 类目字段在库里是自由文本（老数据有 WOMAN/上衣/SKIRT 混着存），
+   * 让商家从同一份词表里选，才不会继续产生中英混杂的数据。
+   * 这是公开接口（类目名本来就公开），无需额外权限。
+   */
+  categoryOptions: () => api.get<unknown>('/shop/public/platform/categories'),
+
   /** 店铺配置（首次访问自动建档，slug=t{tenantId}，默认打烊） */
   getConfig: () => api.get<ShopConfig>('/shop/admin/config'),
 
@@ -340,6 +386,7 @@ export const shopProductApi = {
     fabricComposition?: string | null;
     washInstructions?: string | null;
     description?: string | null;
+    category?: string | null;
   }) => api.put<unknown>('/style/info', body),
 
   /** 某款式全部 SKU */
@@ -356,6 +403,14 @@ export const shopProductApi = {
 };
 
 /** /style/info/list 返回的行（只声明店铺运营用到的字段） */
+export interface ShopCategoryOption {
+  /** 规范代码（存库用） */
+  category: string;
+  /** 中文名（展示用） */
+  name: string;
+  cnt?: number;
+}
+
 export interface ShopStyleInfoRow {
   id: number;
   styleNo?: string;
@@ -372,6 +427,8 @@ export interface ShopStyleInfoRow {
   fabricComposition?: string | null;
   washInstructions?: string | null;
   description?: string | null;
+  /** 商品分类（自由文本字段，老数据有 WOMAN/上衣 混着存；上架页提供词表下拉统一口径） */
+  category?: string | null;
 }
 
 /**
@@ -423,6 +480,10 @@ export interface PlatformShopProductRow {
   styleNo?: string | null;
   styleName?: string | null;
   category?: string | null;
+  /** 中文类目（后端用类目词表归一，老数据里的 WOMAN/上衣 会归到同一个中文名） */
+  categoryName?: string | null;
+  /** 1=在架 0=已下架（平台治理列表含已下架，否则下架后就没法恢复） */
+  shopListed?: number;
   cover?: string | null;
   shopName?: string | null;
   slug?: string | null;
@@ -442,9 +503,29 @@ export const platformShopApi = {
    */
   overview: () => api.get<unknown>('/shop/admin/platform/overview'),
 
-  /** 平台全站在架商品（跨租户只读，仅平台超管） */
-  products: (params: { page?: number; pageSize?: number; keyword?: string }) =>
-    api.get<unknown>('/shop/admin/platform/products', { params }),
+  /**
+   * 平台全站商品（跨租户，仅平台超管）。
+   *
+   * listedOnly：不传=全部 / true=只看在架 / false=只看已下架。
+   */
+  products: (params: {
+    page?: number;
+    pageSize?: number;
+    keyword?: string;
+    listedOnly?: boolean;
+  }) => api.get<unknown>('/shop/admin/platform/products', { params }),
+
+  /**
+   * 平台一键下架（跨租户，仅平台超管）。
+   *
+   * 必须填原因：原因会随通知发给商家。不告诉商家为什么，商家只会反复重新上架。
+   */
+  takedown: (styleId: number, reason: string) =>
+    api.post<unknown>('/shop/admin/platform/listing/takedown', { styleId, reason }),
+
+  /** 平台恢复上架（下架必须可逆，否则等于平台能一键把别人的生意做没） */
+  relist: (styleId: number) =>
+    api.post<unknown>('/shop/admin/platform/listing/relist', { styleId }),
 };
 
 export default shopAdminApi;

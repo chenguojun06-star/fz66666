@@ -38,6 +38,8 @@ interface Props {
   setWash: (v: string) => void;
   desc: string;
   setDesc: (v: string) => void;
+  category: string;
+  setCategory: (v: string) => void;
   listed: boolean;
   toggling: boolean;
   onToggleListing: (listed: boolean) => void;
@@ -93,7 +95,7 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; warn?: boolean }> 
 const ListingEditDrawer: React.FC<Props> = ({
   open, loading, saving, row, skus, setSkus,
   cover, setCover, colorImages, setColorImages, remark, setRemark,
-  fabric, setFabric, wash, setWash, desc, setDesc,
+  fabric, setFabric, wash, setWash, desc, setDesc, category, setCategory,
   listed, toggling, onToggleListing, onClose, onSave,
 }) => {
   const colors = useMemo(() => {
@@ -266,6 +268,8 @@ const ListingEditDrawer: React.FC<Props> = ({
                 setWash={setWash}
                 desc={desc}
                 setDesc={setDesc}
+                category={category}
+                setCategory={setCategory}
               />
             </Section>
           </Space>

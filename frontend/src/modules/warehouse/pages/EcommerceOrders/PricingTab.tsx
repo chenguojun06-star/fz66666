@@ -52,9 +52,9 @@ const PricingTab: React.FC = () => {
         stickyHeader
         emptyDescription="暂无商品编码数据"
         scroll={{ x: 900 }}
-        pagination={{ current: h.page, pageSize: 20, total: h.total,
+        pagination={{ current: h.page, pageSize: h.pageSize, total: h.total,
           showTotal: t => `共 ${t} 个 商品编码`,
-          onChange: p => h.setPage(p) }}
+          onChange: (p, ps) => { h.setPage(p); h.setPageSize(ps); } }}
       />
     </div>
   );

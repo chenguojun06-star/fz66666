@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.shop.entity.ShopCartItem;
 import com.fashion.supplychain.shop.mapper.ShopCartItemMapper;
 import com.fashion.supplychain.shop.mapper.ShopPlatformMapper;
+import com.fashion.supplychain.shop.mapper.ShopStatDailyMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -44,6 +45,8 @@ public class ShopCartOrchestrator {
     private final ShopPlatformMapper platformMapper;
     private final ProductSkuService productSkuService;
     private final StyleInfoService styleInfoService;
+    /** 加购计数（数据看板用）：购物车行结算后会被删除，事后算不出「当天加购几次」 */
+    private final ShopStatDailyMapper statDailyMapper;
 
     /** 购物车（按店铺分组 + 汇总） */
     public Map<String, Object> cart(String consumerId) {
@@ -137,6 +140,14 @@ public class ShopCartOrchestrator {
             patch.setId(existing.getId());
             patch.setQuantity(target);
             cartItemMapper.updateById(patch);
+        }
+
+        // 加购计数（数据看板）：与购物车行同一个事务，回滚时计数一并回滚，不会虚高。
+        // 统计失败不影响加购本身（顾客能不能买成，比看板数字重要）。
+        try {
+            statDailyMapper.bumpCartAdd(sku.getTenantId());
+        } catch (Exception e) {
+            log.debug("[ShopCart] 加购计数失败 tenant={} err={}", sku.getTenantId(), e.getMessage());
         }
     }
 

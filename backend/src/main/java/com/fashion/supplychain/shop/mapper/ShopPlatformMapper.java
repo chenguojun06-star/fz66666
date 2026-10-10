@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 import java.util.Map;
@@ -33,9 +34,13 @@ public interface ShopPlatformMapper {
             + "SELECT COUNT(*) FROM t_style_info s WHERE s.shop_listed = 1 "
             + "<if test='keyword != null'> AND (s.style_name LIKE CONCAT('%', #{keyword}, '%') "
             + "  OR s.style_no LIKE CONCAT('%', #{keyword}, '%')) </if>"
-            + "<if test='category != null'> AND s.category = #{category} </if>"
+            + "<if test='categories != null and categories.size() > 0'>"
+            + "  AND s.category IN "
+            + "  <foreach collection='categories' item='c' open='(' separator=',' close=')'>#{c}</foreach>"
+            + "</if>"
             + "</script>")
-    long countListedStyles(@Param("keyword") String keyword, @Param("category") String category);
+    long countListedStyles(@Param("keyword") String keyword,
+                           @Param("categories") List<String> categories);
 
     /**
      * 平台商品池：分页查已上架款式（带所属店铺 slug / 店名，供前端「进店」跳转）。
@@ -55,7 +60,10 @@ public interface ShopPlatformMapper {
             + "WHERE s.shop_listed = 1 "
             + "<if test='keyword != null'> AND (s.style_name LIKE CONCAT('%', #{keyword}, '%') "
             + "  OR s.style_no LIKE CONCAT('%', #{keyword}, '%')) </if>"
-            + "<if test='category != null'> AND s.category = #{category} </if>"
+            + "<if test='categories != null and categories.size() > 0'>"
+            + "  AND s.category IN "
+            + "  <foreach collection='categories' item='c' open='(' separator=',' close=')'>#{c}</foreach>"
+            + "</if>"
             + "<choose>"
             + "  <when test='sort == \"price_asc\"'>"
             + "    ORDER BY COALESCE((SELECT MIN(sk.sales_price) FROM t_product_sku sk "
@@ -70,7 +78,7 @@ public interface ShopPlatformMapper {
             + "LIMIT #{offset}, #{size}"
             + "</script>")
     List<Map<String, Object>> pageListedStyles(@Param("keyword") String keyword,
-                                               @Param("category") String category,
+                                               @Param("categories") List<String> categories,
                                                @Param("sort") String sort,
                                                @Param("offset") int offset,
                                                @Param("size") int size);
@@ -93,10 +101,17 @@ public interface ShopPlatformMapper {
             + "ORDER BY c.enabled DESC, c.shop_name ASC")
     List<Map<String, Object>> listShops();
 
-    /** 平台商品池类目聚合（按在架款式数倒序） */
+    /**
+     * 平台商品池类目聚合（按在架款式数倒序）。
+     *
+     * <p>取的是**原始值**分组（老数据里同一个类目可能是 {@code SKIRT} 也可能是「半身裙」），
+     * 由 {@code ShopCategorySupport} 在应用层归并成中文规范类目 ——
+     * 这样不用批量改库（类目字段是生产/裁床等模块共用的，改库风险远大于收益）。
+     * LIMIT 提到 200：归并前不能先砍行数，否则会把某个类目的量砍掉。
+     */
     @Select("SELECT category AS category, COUNT(*) AS cnt FROM t_style_info "
             + "WHERE shop_listed = 1 AND category IS NOT NULL AND category != '' "
-            + "GROUP BY category ORDER BY cnt DESC LIMIT 20")
+            + "GROUP BY category ORDER BY cnt DESC LIMIT 200")
     List<Map<String, Object>> listCategories();
 
     /** 平台只读总览：店铺 / 在架款式 / 注册用户 / 订单 计数 */
@@ -228,4 +243,72 @@ public interface ShopPlatformMapper {
             + "       r.create_time AS createTime "
             + "FROM t_shop_review r WHERE r.order_no = #{orderNo}")
     List<Map<String, Object>> listReviewsByOrderNo(@Param("orderNo") String orderNo);
+
+    /* ── P2：平台治理（下架 / 恢复上架） ────────────────────────────────── */
+
+    /**
+     * 取款式概要（跨租户）。平台下架前必须知道它属于哪个租户 ——
+     * 通知要发给对应商家，不是发给「所有人」。
+     */
+    @Select("SELECT s.id AS styleId, s.tenant_id AS tenantId, s.style_no AS styleNo, "
+            + "       s.style_name AS styleName, s.shop_listed AS shopListed, "
+            + "       c.shop_name AS shopName "
+            + "FROM t_style_info s "
+            + "LEFT JOIN t_shop_config c ON c.tenant_id = s.tenant_id "
+            + "WHERE s.id = #{styleId} LIMIT 1")
+    Map<String, Object> findStyleBrief(@Param("styleId") Long styleId);
+
+    /**
+     * 跨租户改在架状态（平台治理专用）。
+     *
+     * <p>为什么不用 {@code styleInfoService.updateById}：那是**带租户过滤**的常规服务，
+     * 平台超管改别的租户的数据会被拦掉（或误改自己租户的同 id 记录）。
+     * 本 Mapper 类级 {@code @InterceptorIgnore} 才是这条链路该用的入口。
+     *
+     * <p>只改 shop_listed / shop_listing_time 两列，**不碰款式其它字段** ——
+     * 平台治理的权限边界是「能不能卖」，不是「改商家的商品资料」。
+     */
+    @Update("UPDATE t_style_info SET shop_listed = #{listed}, "
+            + "       shop_listing_time = CASE WHEN #{listed} = 1 THEN NOW() ELSE shop_listing_time END "
+            + "WHERE id = #{styleId}")
+    int updateListed(@Param("styleId") Long styleId, @Param("listed") int listed);
+
+    /**
+     * 平台方看全站款式（含**已下架**，可按在架状态过滤）。
+     *
+     * <p>与商品池的 {@code pageListedStyles} 刻意分开：商品池是顾客看的，
+     * 只能出现在架商品；平台治理要看得到被下架的，否则下架之后就没法恢复了。
+     */
+    @Select("<script>"
+            + "SELECT s.id AS styleId, s.tenant_id AS tenantId, s.style_no AS styleNo, "
+            + "       s.style_name AS styleName, s.category AS category, s.cover AS cover, "
+            + "       s.shop_listed AS shopListed, s.shop_listing_time AS shopListingTime, "
+            + "       c.slug AS slug, c.shop_name AS shopName "
+            + "FROM t_style_info s "
+            + "LEFT JOIN t_shop_config c ON c.tenant_id = s.tenant_id "
+            + "WHERE 1 = 1 "
+            + "<if test='keyword != null'> AND (s.style_name LIKE CONCAT('%', #{keyword}, '%') "
+            + "  OR s.style_no LIKE CONCAT('%', #{keyword}, '%')) </if>"
+            + "<if test='listedOnly != null and listedOnly'> AND s.shop_listed = 1 </if>"
+            + "<if test='listedOnly != null and !listedOnly'>"
+            + "  AND (s.shop_listed IS NULL OR s.shop_listed != 1) </if>"
+            + "ORDER BY s.shop_listing_time DESC, s.id DESC "
+            + "LIMIT #{offset}, #{size}"
+            + "</script>")
+    List<Map<String, Object>> pageStylesForAdmin(@Param("keyword") String keyword,
+                                                 @Param("listedOnly") Boolean listedOnly,
+                                                 @Param("offset") int offset,
+                                                 @Param("size") int size);
+
+    /** 平台方看全站款式的总数（与 pageStylesForAdmin 同条件） */
+    @Select("<script>"
+            + "SELECT COUNT(*) FROM t_style_info s WHERE 1 = 1 "
+            + "<if test='keyword != null'> AND (s.style_name LIKE CONCAT('%', #{keyword}, '%') "
+            + "  OR s.style_no LIKE CONCAT('%', #{keyword}, '%')) </if>"
+            + "<if test='listedOnly != null and listedOnly'> AND s.shop_listed = 1 </if>"
+            + "<if test='listedOnly != null and !listedOnly'>"
+            + "  AND (s.shop_listed IS NULL OR s.shop_listed != 1) </if>"
+            + "</script>")
+    long countStylesForAdmin(@Param("keyword") String keyword,
+                             @Param("listedOnly") Boolean listedOnly);
 }

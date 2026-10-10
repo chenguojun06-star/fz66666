@@ -55,10 +55,11 @@ export const buildMergedPagination = (
   const interceptedOnChange = (page: number, pageSize: number) => {
     const nextPageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
     if (trackedPageSize === undefined || nextPageSize !== trackedPageSize) {
+      // 页面级 key 必须写：页面普遍用 useState(readPageSize(20)) 初始化，
+      // 只写表级 key 的话它们永远读到兜底 20，"每页条数选了不生效/刷新又变回 20"。
+      savePageSize(nextPageSize);
       if (pageSizeStorageKey) {
         savePageSizeByKey(pageSizeStorageKey, nextPageSize);
-      } else {
-        savePageSize(nextPageSize);
       }
     }
     originalOnChange?.(page, nextPageSize);

@@ -214,4 +214,131 @@ class ShopPlatformSchemaGuardTest {
                 .as("未维护售价的排最后（COALESCE 兜底），不能因为 NULL 就跑到最前面")
                 .contains("COALESCE(");
     }
+
+    /* ─────────── D-784 浏览行为与推荐 / 数据看板 / 平台治理 / 类目词表 / 收银台 ─────────── */
+
+    @Test
+    @DisplayName("⑫ 浏览行为：详情页必须记浏览，且匿名只计数不建档")
+    void browseRecordingRules() throws Exception {
+        String orc = read("shop/orchestration/ShopRecommendOrchestrator.java");
+        assertThat(orc)
+                .as("匿名也要计数（看板要），但不建个人明细（匿名没有稳定身份，建档即垃圾数据）")
+                .contains("statDailyMapper.bumpBrowse(tenantId)");
+        assertThat(orc)
+                .as("个人明细只记登录顾客")
+                .contains("if (!StringUtils.hasText(consumerId)) {");
+
+        String detail = read("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(detail)
+                .as("浏览在详情方法里记 —— 只有真正渲染成功的详情才算一次浏览")
+                .contains("shopRecommendOrchestrator.recordView(");
+        assertThat(detail)
+                .as("推荐只推本店（跨店会把顾客带离当前店铺，而订单不跨店）")
+                .contains("config.getTenantId(), styleId, consumerId, limit");
+    }
+
+    @Test
+    @DisplayName("⑬ 数据看板：计数器表必须存在，且浏览/加购用 upsert 累加")
+    void dashboardCounters() throws Exception {
+        String sql = read("db/migration/V202710100003__create_shop_stat_daily.sql");
+        assertThat(sql).contains("CREATE TABLE IF NOT EXISTS `t_shop_stat_daily`");
+        assertThat(sql)
+                .as("按「租户+日期」唯一，否则同一天会插出多行、汇总翻倍")
+                .contains("uk_tenant_date");
+
+        String mapper = read("shop/mapper/ShopStatDailyMapper.java");
+        assertThat(mapper)
+                .as("必须 ON DUPLICATE KEY UPDATE 累加：先查再改在并发下会丢计数")
+                .contains("ON DUPLICATE KEY UPDATE browse_count = browse_count + 1");
+        assertThat(mapper).contains("ON DUPLICATE KEY UPDATE cart_add_count = cart_add_count + 1");
+
+        String dash = read("shop/orchestration/ShopDashboardOrchestrator.java");
+        assertThat(dash)
+                .as("没有数据的日期要补 0 —— 否则趋势图把「没人看」画成「不存在」")
+                .contains("today.minusDays(i)");
+    }
+
+    @Test
+    @DisplayName("⑭ 平台治理：下架必填原因、可恢复、通知只发该租户、只改在架状态")
+    void platformGovernanceRules() throws Exception {
+        String orc = read("shop/orchestration/ShopPlatformGovernanceOrchestrator.java");
+        assertThat(orc)
+                .as("必须填原因（不告诉商家为什么，治理就是猫鼠游戏）")
+                .contains("请填写下架原因");
+        assertThat(orc)
+                .as("下架必须可逆，否则平台能一键把别人的生意做没")
+                .contains("public Map<String, Object> relist(");
+        assertThat(orc)
+                .as("通知只发给该商品所属租户，不是全站广播")
+                .contains("sysNoticeOrchestrator.sendToTenant(");
+
+        String mapper = read("shop/mapper/ShopPlatformMapper.java");
+        assertThat(mapper)
+                .as("平台只改 shop_listed，不碰商品资料 —— 权限边界是「能不能卖」")
+                .contains("UPDATE t_style_info SET shop_listed = #{listed}");
+        assertThat(mapper)
+                .as("平台列表必须能看到已下架的，否则下架后没法恢复")
+                .contains("pageStylesForAdmin");
+
+        String notice = read("production/orchestration/SysNoticeOrchestrator.java");
+        assertThat(notice)
+                .as("平台→商家的定向通知必须存在")
+                .contains("public void sendToTenant(");
+    }
+
+    @Test
+    @DisplayName("⑮ 类目统一：必须有词表、商品池按别名集合筛选、商品池返回中文类目")
+    void categoryUnification() throws Exception {
+        String support = read("shop/orchestration/ShopCategorySupport.java");
+        assertThat(support).as("中文词表").contains("半身裙");
+        assertThat(support)
+                .as("别名集合用于 SQL IN —— 筛「半身裙」必须同时命中 SKIRT/JUPE/半身裙")
+                .contains("aliasesOf");
+        assertThat(support)
+                .as("词表外的自定义类目原样保留，不能吞掉")
+                .contains("return hit != null ? hit : s;");
+
+        String mapper = read("shop/mapper/ShopPlatformMapper.java");
+        assertThat(mapper)
+                .as("筛选走别名 IN，而不是等值 —— 否则老数据会漏")
+                .contains("s.category IN");
+        assertThat(mapper)
+                .as("归并前不能先砍行数")
+                .contains("GROUP BY category ORDER BY cnt DESC LIMIT 200");
+
+        String orc = read("shop/orchestration/ShopPlatformOrchestrator.java");
+        assertThat(orc)
+                .as("商品池必须返回中文类目名（此前平台首页中英混杂）")
+                .contains("row.put(\"categoryName\"");
+    }
+
+    @Test
+    @DisplayName("⑯ 收银台：挂账才生成应收、出库走既有正路、金额服务端算")
+    void posRules() throws Exception {
+        String sql = read("db/migration/V202710100004__create_pos_sale.sql");
+        assertThat(sql).contains("CREATE TABLE IF NOT EXISTS `t_pos_sale`");
+        assertThat(sql).contains("CREATE TABLE IF NOT EXISTS `t_pos_sale_item`");
+
+        String orc = read("pos/orchestration/PosSaleOrchestrator.java");
+        assertThat(orc)
+                .as("出库复用既有 freeOutbound —— 库存与台账口径必须与店铺订单一致")
+                .contains("finishedWarehouseOperationOrchestrator.freeOutbound(params)");
+        assertThat(orc)
+                .as("挂账才生成应收（当场收款生成应收 = 同一笔钱记两次）")
+                .contains("if (PAY_CREDIT.equals(payMethod)) {");
+        assertThat(orc)
+                .as("挂账必须有手机号（应收单的 customer_id 不能为空）")
+                .contains("挂账需要填写客户手机号");
+        assertThat(orc)
+                .as("改价留痕：明细同时存吊牌价与成交价")
+                .contains("it.setTagPrice(sku.getTagPrice())");
+        assertThat(orc)
+                .as("收款方式走白名单，不接真实支付通道")
+                .contains("PAY_METHODS.contains(payMethod)");
+
+        String controller = read("pos/controller/PosController.java");
+        assertThat(controller)
+                .as("收银台不能像 C 端店铺页那样免登录（它动库存与应收）")
+                .doesNotContain("permitAll");
+    }
 }

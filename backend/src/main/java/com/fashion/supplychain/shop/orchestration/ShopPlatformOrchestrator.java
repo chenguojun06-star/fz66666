@@ -35,6 +35,9 @@ public class ShopPlatformOrchestrator {
 
     private final ShopPlatformMapper platformMapper;
 
+    /** 类目词表：把「自由文本类目」归并成中文规范类目（不批量改库） */
+    private final ShopCategorySupport categorySupport;
+
     /**
      * 平台首页数据：店铺列表 + 类目 + 精选商品 + 概览数字。
      */
@@ -42,7 +45,8 @@ public class ShopPlatformOrchestrator {
         Map<String, Object> data = new LinkedHashMap<>();
         List<Map<String, Object>> shops = normalizeShops(platformMapper.listShops());
         data.put("shops", shops);
-        data.put("categories", platformMapper.listCategories());
+        // 类目一律走词表：老数据里 WOMAN / 上衣 / SKIRT 混着存，归并后顾客只看到中文类目
+        data.put("categories", categorySupport.optionsWithCount(platformMapper.listCategories()));
         data.put("featured", buildProductRows(
                 platformMapper.pageListedStyles(null, null, null, 0, FEATURED_SIZE)));
         Map<String, Object> stats = new LinkedHashMap<>();
@@ -58,12 +62,15 @@ public class ShopPlatformOrchestrator {
         int p = Math.max(1, page);
         int size = Math.min(Math.max(1, pageSize), MAX_PAGE_SIZE);
         String kw = StringUtils.hasText(keyword) ? keyword.trim() : null;
-        String cat = StringUtils.hasText(category) ? category.trim() : null;
         String order = normalizeSort(sort);
+        // 类目筛选按**别名集合**匹配：传「半身裙」要能同时命中库里存的 SKIRT / JUPE / 半身裙，
+        // 否则老数据会漏掉（这正是中英混杂数据必须付出的代价，比批量改库安全得多）。
+        List<String> cats = StringUtils.hasText(category)
+                ? categorySupport.aliasesOf(category) : null;
 
-        long total = platformMapper.countListedStyles(kw, cat);
+        long total = platformMapper.countListedStyles(kw, cats);
         List<Map<String, Object>> rows = buildProductRows(
-                platformMapper.pageListedStyles(kw, cat, order, (p - 1) * size, size));
+                platformMapper.pageListedStyles(kw, cats, order, (p - 1) * size, size));
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("records", rows);
@@ -88,9 +95,14 @@ public class ShopPlatformOrchestrator {
         return normalizeShops(platformMapper.listShops());
     }
 
-    /** 平台商品池类目 */
+    /**
+     * 平台商品池类目（中文规范类目 + 在架数量）。
+     *
+     * <p>返回**词表全量**（数量为 0 的也返回）：商家上架时要从同一份词表里选，
+     * 只返回「已有商品的类目」会让新类目永远选不到。
+     */
     public List<Map<String, Object>> categories() {
-        return platformMapper.listCategories();
+        return categorySupport.optionsWithCount(platformMapper.listCategories());
     }
 
     /** 平台只读总览（平台超管用） */
@@ -169,6 +181,9 @@ public class ShopPlatformOrchestrator {
             row.put("minPrice", minPrice);
             row.put("totalStock", totalStock);
             row.put("colorCount", colors.size());
+            // 类目中文化：库里可能是 WOMAN / 上衣 / SKIRT 任意写法，统一转成中文给顾客看
+            String catName = categorySupport.displayName(row.get("category"));
+            row.put("categoryName", catName == null ? null : catName);
             // P2：没有评价时给 0 / 0，前端据此显示「暂无评价」而不是 0 星
             Map<String, Object> rs = styleId == null ? null : reviewStats.get(styleId);
             row.put("rating", rs == null || rs.get("avgRating") == null

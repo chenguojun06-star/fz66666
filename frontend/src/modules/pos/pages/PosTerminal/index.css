@@ -1,0 +1,123 @@
+/* 收银台：一屏完成选货 → 改价 → 收款。刻意不用大留白/大卡片，信息密度优先。 */
+
+.pos-page {
+  padding: 12px 16px 24px;
+}
+
+.pos-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.pos-head__title {
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pos-body {
+  align-items: flex-start;
+}
+
+.pos-card {
+  border-radius: 10px;
+}
+
+.pos-results {
+  margin-top: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.pos-sku {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pos-sku:hover {
+  border-color: #ff5000;
+  background: #fff8f5;
+}
+
+.pos-sku--out {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pos-sku__name {
+  font-size: 13.5px;
+  color: #222;
+}
+
+.pos-sku__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.pos-sku__price {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ff5000;
+}
+
+.pos-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 2px;
+}
+
+.pos-amount {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pos-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #fff7f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.pos-total__num {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ff5000;
+}
+
+.pos-done__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13.5px;
+}
+
+.pos-done__row--total {
+  border-top: 1px solid #f0f0f0;
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}

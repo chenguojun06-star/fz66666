@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -536,6 +537,54 @@ public class SysNoticeOrchestrator {
         log.info("[SysNotice] 全租户广播已发送 type={} tenantCount={}", type, notices.size());
         return notices.size();
     }
+
+    /**
+     * 向**指定租户**的主账号发一条通知（平台方 → 商家）。
+     *
+     * <p>与 {@link #broadcastGlobal} 的区别：那个是「所有租户都收到同一份公告」，
+     * 这个只发给一个租户，用于平台治理类通知（如「商品已被平台下架，原因…」）。
+     *
+     * <p>收件人取租户 owner 的姓名（查不到回落「管理员」），与广播口径一致 ——
+     * 商家侧的通知列表就是按「租户 + 收件人姓名」查的，口径不一致会收到但看不到。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void sendToTenant(Long tenantId, String type, String title, String content) {
+        if (tenantId == null) {
+            return;
+        }
+        String toName = resolveTenantOwnerName(tenantId);
+
+        SysNotice notice = new SysNotice();
+        notice.setTenantId(tenantId);
+        notice.setToName(toName);
+        notice.setFromName("平台");
+        notice.setOrderNo("");
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setNoticeType(StringUtils.hasText(type) ? type : "platform_notice");
+        notice.setIsRead(0);
+        notice.setCreatedAt(LocalDateTime.now());
+        sysNoticeService.save(notice);
+
+        log.info("[SysNotice] 平台通知已发送 tenant={} title={}", tenantId, title);
+    }
+
+    /** 取租户主账号显示名（查不到回落「管理员」，与 broadcastGlobal 同口径） */
+    private String resolveTenantOwnerName(Long tenantId) {
+        try {
+            Tenant t = tenantService.getById(tenantId);
+            if (t != null && t.getOwnerUserId() != null) {
+                User owner = userService.getById(t.getOwnerUserId());
+                if (owner != null) {
+                    return owner.getName() != null ? owner.getName() : owner.getUsername();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[SysNotice] 解析租户主账号失败 tenant={} err={}", tenantId, e.getMessage());
+        }
+        return "管理员";
+    }
+
 
     /**
      * 获取当前登录用户的通知列表（最近30条）

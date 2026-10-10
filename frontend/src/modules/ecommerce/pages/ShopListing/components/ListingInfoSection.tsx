@@ -1,5 +1,8 @@
 import React from 'react';
-import { Alert, Input, Space, Switch, Tag, Typography } from 'antd';
+import { Alert, Input, Select, Space, Switch, Tag, Typography } from 'antd';
+import shopAdminApi from '@/services/shop/shopApi';
+import type { ShopCategoryOption } from '@/services/shop/shopApi';
+import { unwrap } from '../unwrap';
 import { looksLikeProductionContent, PRODUCTION_CONTENT_HINT } from '../listingCompliance';
 
 const { Text } = Typography;
@@ -20,6 +23,10 @@ interface Props {
   setWash: (v: string) => void;
   desc: string;
   setDesc: (v: string) => void;
+  /* 商品分类：库里是自由文本，老数据有 WOMAN/上衣/SKIRT 混着存。
+     这里给同一份中文词表下拉，让新数据不再继续混。 */
+  category: string;
+  setCategory: (v: string) => void;
 }
 
 /**
@@ -30,10 +37,36 @@ interface Props {
  */
 const ListingInfoSection: React.FC<Props> = ({
   listed, onToggleListing, toggling, remark, setRemark,
-  fabric, setFabric, wash, setWash, desc, setDesc,
+  fabric, setFabric, wash, setWash, desc, setDesc, category, setCategory,
 }) => {
   // D-781：边写边提示，别等保存后才发现顾客端看不到
   const isProcessContent = looksLikeProductionContent(remark);
+
+  // 类目词表（一次性拉取；拿不到就只显示当前值，不让下拉变空）
+  const [catOptions, setCatOptions] = React.useState<ShopCategoryOption[]>([]);
+  React.useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const list = unwrap<ShopCategoryOption[]>(await shopAdminApi.categoryOptions()) ?? [];
+        if (alive) setCatOptions(Array.isArray(list) ? list : []);
+      } catch {
+        if (alive) setCatOptions([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 当前值不在词表里时补一个选项：老数据里的自定义类目不能因为下拉没有就被抹掉
+  const catSelectOptions = React.useMemo(() => {
+    const opts = catOptions.map((o) => ({ value: o.category, label: o.name }));
+    if (category && !opts.some((o) => o.value === category)) {
+      opts.unshift({ value: category, label: category });
+    }
+    return opts;
+  }, [catOptions, category]);
   return (
   <div className="shop-edit__block">
     <div className="shop-listing__block-title">店铺状态</div>
@@ -49,6 +82,22 @@ const ListingInfoSection: React.FC<Props> = ({
     </Space>
     <Text type="secondary" className="shop-listing__hint">
       开关即时生效（不需要点保存）
+    </Text>
+
+    <div className="shop-listing__block-title shop-listing__block-title--mt">商品分类</div>
+    <Select
+      style={{ width: '100%' }}
+      value={category || undefined}
+      onChange={(v) => setCategory(v ?? '')}
+      options={catSelectOptions}
+      placeholder="从词表里选（顾客端与平台商城按这个类目归类）"
+      allowClear
+      showSearch
+      optionFilterProp="label"
+    />
+    <Text type="secondary" className="shop-listing__hint">
+      统一用词表里的类目，平台商城首页的类目才不会中英混杂（老数据里的
+      WOMAN / 上衣 会显示成同一个中文类目，不会被丢掉）。
     </Text>
 
     <div className="shop-listing__block-title shop-listing__block-title--mt">商品说明</div>

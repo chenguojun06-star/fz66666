@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Segmented, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Row, Segmented, Space, Spin, Statistic, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -24,8 +24,11 @@ import type {
   ShopOrderStats,
   ShopReviewRow,
   ShopReviewSummary,
+  ShopDashboardData,
+  ShopDashboardDailyRow,
 } from '@/services/shop/shopApi';
 import api, { unwrapApiData } from '@/utils/api';
+import { formatMoney } from '@/utils/format';
 import { readPageSize } from '@/utils/pageSizeStore';
 import './index.css';
 
@@ -145,6 +148,11 @@ const ShopManage: React.FC = () => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<ShopReviewSummary | null>(null);
 
+  // 数据看板（日报）：浏览 → 加购 → 下单 → 下单金额
+  const [dashDays, setDashDays] = useState(30);
+  const [dashData, setDashData] = useState<ShopDashboardData | null>(null);
+  const [dashLoading, setDashLoading] = useState(false);
+
   // 详情页图片轮播：自动播放开关 + 间隔（店铺级统一，顾客端详情页生效）
   const [carouselAuto, setCarouselAuto] = useState(true);
   const [carouselGap, setCarouselGap] = useState(4);
@@ -226,6 +234,24 @@ const ShopManage: React.FC = () => {
     void fetchConfig();
   }, [fetchConfig]);
 
+  /**
+   * 数据看板（日报）。
+   *
+   * 失败时清空数据并提示：看板数字与钱有关，宁可不显示也不能显示错。
+   */
+  const fetchDashboard = useCallback(async (days: number) => {
+    setDashLoading(true);
+    try {
+      const res = await shopAdminApi.dashboardDaily(days);
+      setDashData(unwrapApiData<ShopDashboardData>(res, '加载看板失败'));
+    } catch (e) {
+      setDashData(null);
+      message.error(e instanceof Error ? e.message : '加载看板失败');
+    } finally {
+      setDashLoading(false);
+    }
+  }, []);
+
   /** P2：本店铺评价分页 */
   const fetchReviews = useCallback(async (p: number, styleNo?: string, rating?: number, ps?: number) => {
     setReviewLoading(true);
@@ -270,7 +296,9 @@ const ShopManage: React.FC = () => {
       void fetchReviews(1);
       void fetchReviewSummary();
     }
-  }, [fetchStyles, styleKw, fetchOrders, fetchStats, fetchReviews, fetchReviewSummary]);
+    if (v === 'dashboard') void fetchDashboard(dashDays);
+  }, [fetchStyles, styleKw, fetchOrders, fetchStats, fetchReviews, fetchReviewSummary,
+      fetchDashboard, dashDays]);
 
   const handleSaveConfig = async () => {
     if (!shopName.trim()) return message.warning('店铺名称不能为空');
@@ -767,6 +795,7 @@ const ShopManage: React.FC = () => {
           { value: 'listing', label: '商品上架' },
           { value: 'orders', label: '店铺订单' },
           { value: 'reviews', label: '商品评价' },
+          { value: 'dashboard', label: '数据看板' },
         ]}
       />
 
@@ -1121,6 +1150,117 @@ const ShopManage: React.FC = () => {
               },
             }}
             emptyDescription="还没有店铺订单"
+          />
+        </Card>
+      )}
+
+      {/* 数据看板（日报）：浏览 → 加购 → 下单 → 下单金额 */}
+      {tab === 'dashboard' && (
+        <Card>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="只看四个数：浏览 → 加购 → 下单 → 下单金额"
+            description={
+              <span style={{ fontSize: 12.5 }}>
+                浏览与加购来自按天计数（购物车结算成功后会清空、浏览明细按「顾客+款式」合并，
+                这两项事后都还原不出按天的数）；下单与下单金额实时取自订单表，已剔除取消订单。
+                没数据的日期显示 0，而不是消失——否则趋势图会把「那天没人看」画成「那天不存在」。
+              </span>
+            }
+          />
+          <div className="shop-toolbar">
+            <Segmented
+              value={String(dashDays)}
+              onChange={(v) => {
+                const d = Number(v);
+                setDashDays(d);
+                void fetchDashboard(d);
+              }}
+              options={[
+                { value: '7', label: '近 7 天' },
+                { value: '30', label: '近 30 天' },
+                { value: '90', label: '近 90 天' },
+              ]}
+            />
+            <div className="shop-toolbar__spacer" />
+            <Tooltip title="重新拉取">
+              <Button
+                icon={<ReloadOutlined />}
+                loading={dashLoading}
+                onClick={() => void fetchDashboard(dashDays)}
+              >
+                刷新
+              </Button>
+            </Tooltip>
+          </div>
+
+          <Row gutter={12} style={{ marginBottom: 12 }}>
+            {(dashData?.summary ?? []).map((sm) => (
+              <Col xs={24} md={8} key={sm.label} style={{ marginBottom: 12 }}>
+                <Card size="small" title={sm.label}>
+                  <Row gutter={8}>
+                    <Col span={12}>
+                      <Statistic title="浏览" value={Number(sm.browseCount ?? 0)} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="加购" value={Number(sm.cartAddCount ?? 0)} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic title="下单" value={Number(sm.orderCount ?? 0)} />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="下单金额"
+                        value={Number(sm.orderAmount ?? 0)}
+                        precision={2}
+                        prefix="¥"
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          <Table<ShopDashboardDailyRow>
+            rowKey="date"
+            size="small"
+            loading={dashLoading}
+            dataSource={dashData?.records ?? []}
+            pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (t) => `共 ${t} 天` }}
+            locale={{ emptyText: '暂无数据' }}
+            columns={[
+              { title: '日期', dataIndex: 'date', width: 120 },
+              {
+                title: '浏览',
+                dataIndex: 'browseCount',
+                width: 90,
+                align: 'right',
+                render: (v: number) => Number(v ?? 0),
+              },
+              {
+                title: '加购',
+                dataIndex: 'cartAddCount',
+                width: 90,
+                align: 'right',
+                render: (v: number) => Number(v ?? 0),
+              },
+              {
+                title: '下单',
+                dataIndex: 'orderCount',
+                width: 90,
+                align: 'right',
+                render: (v: number) => Number(v ?? 0),
+              },
+              {
+                title: '下单金额',
+                dataIndex: 'orderAmount',
+                align: 'right',
+                render: (v: number) => formatMoney(v),
+              },
+            ]}
           />
         </Card>
       )}

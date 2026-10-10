@@ -26,6 +26,8 @@ import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview } from './modules/ecommerce';
+// 收银台：独立模块（不放进 ecommerce —— 它动的是库存与应收，不是店铺运营）
+const PosTerminal = React.lazy(() => import('./modules/pos/pages/PosTerminal'));
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
 
@@ -190,6 +192,16 @@ const AppRoutes: React.FC = () => {
         <Route path={paths.register} element={<Register />} />
 
         <Route element={<PrivateRoute />}>
+          <Route
+            path={paths.pos}
+            element={
+              <RouteErrorBoundary pageName="收银台">
+                <Suspense fallback={routeFallback}>
+                  <PosTerminal />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
           <Route path={paths.dashboard} element={<RouteErrorBoundary pageName="首页"><Suspense fallback={routeFallback}><Dashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoList} element={<RouteErrorBoundary pageName="款号列表"><Suspense fallback={routeFallback}><StyleInfoList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoNew} element={<RouteErrorBoundary pageName="新建款号"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />

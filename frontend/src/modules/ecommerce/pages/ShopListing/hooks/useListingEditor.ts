@@ -24,6 +24,8 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
   const [fabric, setFabric] = useState('');
   const [wash, setWash] = useState('');
   const [desc, setDesc] = useState('');
+  // 商品分类：库里是自由文本，上架页用词表下拉统一口径（否则平台首页会继续中英混杂）
+  const [category, setCategory] = useState('');
   const [colorImages, setColorImages] = useState<Record<string, string>>({});
   const [baseline, setBaseline] = useState({
     cover: null as string | null,
@@ -31,6 +33,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
     fabric: '',
     wash: '',
     desc: '',
+    category: '',
     colorImages: {} as Record<string, string>,
   });
 
@@ -66,12 +69,14 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       const fb = detail?.fabricComposition ?? '';
       const ws = detail?.washInstructions ?? '';
       const ds = detail?.description ?? '';
+      const cg = detail?.category ?? '';
       setCover(c);
       setRemark(rm);
       setFabric(fb);
       setWash(ws);
       setDesc(ds);
-      setBaseline({ cover: c, remark: rm, fabric: fb, wash: ws, desc: ds, colorImages: imgs });
+      setCategory(cg);
+      setBaseline({ cover: c, remark: rm, fabric: fb, wash: ws, desc: ds, category: cg, colorImages: imgs });
     } catch (e: unknown) {
       message.error(errText(e, '商品详情加载失败'));
     } finally {
@@ -97,12 +102,14 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         fabricComposition?: string | null;
         washInstructions?: string | null;
         description?: string | null;
+        category?: string | null;
       } = { id: row.id };
       if (cover !== baseline.cover) stylePatch.cover = cover;
       if (remark !== baseline.remark) stylePatch.remark = remark;
       if (fabric !== baseline.fabric) stylePatch.fabricComposition = fabric.trim() || null;
       if (wash !== baseline.wash) stylePatch.washInstructions = wash.trim() || null;
       if (desc !== baseline.desc) stylePatch.description = desc.trim() || null;
+      if (category !== baseline.category) stylePatch.category = category.trim() || null;
       if (Object.keys(stylePatch).length > 1) {
         await shopProductApi.updateStyle(stylePatch);
       }
@@ -131,18 +138,18 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         message.success('已保存');
       }
       setSkus((prev) => prev.map((s) => ({ ...s, dirty: false })));
-      setBaseline({ cover, remark, fabric, wash, desc, colorImages });
+      setBaseline({ cover, remark, fabric, wash, desc, category, colorImages });
       onSaved(row.id);
     } catch (e: unknown) {
       message.error(errText(e, '保存失败'));
     } finally {
       setSaving(false);
     }
-  }, [row, cover, remark, fabric, wash, desc, colorImages, skus, baseline, onSaved]);
+  }, [row, cover, remark, fabric, wash, desc, category, colorImages, skus, baseline, onSaved]);
 
   return {
     open, row, loading, saving, skus, setSkus, cover, setCover, remark, setRemark,
-    fabric, setFabric, wash, setWash, desc, setDesc,
+    fabric, setFabric, wash, setWash, desc, setDesc, category, setCategory,
     colorImages, setColorImages, openFor, close, save,
   };
 }

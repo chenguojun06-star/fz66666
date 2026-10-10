@@ -55,11 +55,37 @@ public class ShopPublicController {
         }
     }
 
-    /** 商品详情：款式 + 全部 SKU（颜色/尺码/价格/可售库存） */
+    /**
+     * 商品详情：款式 + 全部 SKU（颜色/尺码/价格/可售库存）。
+     *
+     * <p>D-784：带 {@code X-Shop-Token} 访问时顺带记一份个人浏览历史（用于推荐）；
+     * 未登录也记一次按天浏览计数（数据看板用）。记录失败不影响详情返回。
+     */
     @GetMapping("/{slug}/products/{styleId}")
-    public Result<?> detail(@PathVariable String slug, @PathVariable Long styleId) {
+    public Result<?> detail(@PathVariable String slug, @PathVariable Long styleId,
+                            HttpServletRequest request) {
         try {
-            return Result.success(shopOrderOrchestrator.productDetail(slug, styleId));
+            String consumerId = consumerTokenSupport.resolveConsumerId(request);
+            return Result.success(shopOrderOrchestrator.productDetail(slug, styleId, consumerId));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 商品详情页底部「猜你喜欢」（D-784）。
+     *
+     * <p>免登录可用：登录顾客按「个人浏览偏好 + 同品类 + 热度」混合推荐，
+     * 匿名访客走「同品类 + 热度」——不假装有个性化。只推本店商品。
+     */
+    @GetMapping("/{slug}/products/{styleId}/recommendations")
+    public Result<?> recommendations(@PathVariable String slug, @PathVariable Long styleId,
+                                     @RequestParam(defaultValue = "8") int limit,
+                                     HttpServletRequest request) {
+        try {
+            String consumerId = consumerTokenSupport.resolveConsumerId(request);
+            return Result.success(
+                    shopOrderOrchestrator.recommendations(slug, styleId, consumerId, limit));
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
         }

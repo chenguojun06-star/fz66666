@@ -105,6 +105,17 @@
   .d-carousel .cell .ph{color:#d5d5d5;font-size:40px;background:#f7f7f7;}
   /* 左右箭头放在图片垂直居中处 —— 此前与左上角的返回键同坐标重叠，
      返回键 z-index 更高，顾客点左箭头会变成"返回"，等于左滑永远用不了 */
+  /* D-784：详情页底部「猜你喜欢」 */
+  .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding-top:8px;}
+  .rec-card{background:#fff;border-radius:10px;overflow:hidden;}
+  .rec-card .thumb{position:relative;width:100%;padding-top:133%;background:#f5f5f5;overflow:hidden;}
+  .rec-card .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .rec-card .nm{font-size:12.5px;line-height:1.45;color:#222;margin:6px 8px 2px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .rec-card .ft{display:flex;align-items:baseline;justify-content:space-between;gap:4px;margin:0 8px 8px;}
+  .rec-card .why{font-size:10.5px;color:#c2410c;background:#fff1e6;border-radius:8px;padding:1px 6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58%;}
+
   .d-carousel .navbtn{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.4);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
   .d-carousel .navbtn.prev{left:10px;}
   .d-carousel .navbtn.next{right:10px;}
@@ -1036,6 +1047,47 @@
    *   上一版在此处直接引用 DETAIL_RENDERERS，触发 ReferenceError：
    *   错误被 route() 上层吞掉，症状是详情页永远停在「加载中…」，且控制台无报错。
    */
+  /* ── D-784：详情页底部「猜你喜欢」 ── */
+
+  /** 推荐容器（先给骨架，数据到了再显示，避免空标题闪烁） */
+  function recSectionHtml() {
+    return '<div class="d-sec" id="recSec" style="display:none">'
+      + '<div class="lbl">猜你喜欢<span class="hint">本店好物</span></div>'
+      + '<div class="rec-grid" id="recGrid"></div></div>';
+  }
+
+  /**
+   * 拉推荐并填充。
+   *
+   * 传 fail 回调而不是用默认 toast：推荐是「锦上添花」，接口异常时静默隐藏即可，
+   * 不该在商品详情页弹一个「加载失败」吓顾客（详情本身是好的）。
+   */
+  function loadRecommend(styleId) {
+    get(API + '/' + slug + '/products/' + styleId + '/recommendations?limit=8', function (list) {
+      if (!list || !list.length) return;
+      var sec = document.getElementById('recSec');
+      var grid = document.getElementById('recGrid');
+      if (!sec || !grid) return;
+      var h = '';
+      list.forEach(function (p) {
+        h += '<div class="rec-card" data-id="' + p.styleId + '">'
+          + '<div class="thumb">' + thumbHtml(p.cover) + '</div>'
+          + '<div class="nm">' + esc(p.styleName || p.styleNo || '') + '</div>'
+          + '<div class="ft">' + priceHtml(p.minPrice)
+          + (p.reason ? '<span class="why">' + esc(p.reason) + '</span>' : '')
+          + '</div></div>';
+      });
+      grid.innerHTML = h;
+      sec.style.display = '';
+      Array.prototype.forEach.call(grid.querySelectorAll('.rec-card'), function (el) {
+        el.onclick = function () {
+          go('#/p/' + el.getAttribute('data-id'));
+          window.scrollTo(0, 0);
+        };
+      });
+    }, function () { /* 静默：推荐拿不到不影响看商品 */ });
+  }
+
   function renderDetailModules(d, order, renderers) {
     renderers = renderers || {};
     var parts = {};
@@ -1363,6 +1415,12 @@ title: function (d) {
 
 var html = renderDetailModules(d, order, DETAIL_RENDERERS);
 
+      // D-784：详情页底部「猜你喜欢」。
+      // 刻意放在模块化布局**之外** —— 布局开关是给「商品内容模块」用的，
+      // 而底部推荐是电商通用版式，不该被商家误关掉。内容异步填充，
+      // 加载失败或没有可推的商品时整块隐藏（不给顾客看空标题）。
+      html += recSectionHtml();
+
       // D-777：给固定购买栏留出底部空间，否则最后一块内容被压住
       html += '<div class="d-bar-space"></div>';
 
@@ -1375,6 +1433,8 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
         + '</div></div>';
 
       app.innerHTML = '<div class="d-page">' + html + '</div>';
+
+      loadRecommend(styleId);
 
       // D-777：所有绑定一律走容错的 on()，任何一个元素缺失都不再影响其余绑定
       on('dk', back);

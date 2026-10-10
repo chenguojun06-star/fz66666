@@ -37,6 +37,10 @@ class ShopPlatformOrchestratorTest {
     @Mock
     private ShopPlatformMapper platformMapper;
 
+    /** 用真实例而不是 mock：类目归并逻辑（别名/中文化）本身就是要验证的东西 */
+    @org.mockito.Spy
+    private ShopCategorySupport categorySupport = new ShopCategorySupport();
+
     @InjectMocks
     private ShopPlatformOrchestrator orchestrator;
 
@@ -46,6 +50,8 @@ class ShopPlatformOrchestratorTest {
         m.put("tenantId", tenantId);
         m.put("styleNo", "SN" + id);
         m.put("styleName", "款" + id);
+        // 老数据里类目是中英混杂的（WOMAN / 上衣 / SKIRT），这里刻意用英文代码验证中文化
+        m.put("category", "WOMAN");
         m.put("cover", "https://img/" + id + ".jpg");
         m.put("slug", slug);
         m.put("shopName", slug == null ? null : "店" + slug);
@@ -80,6 +86,8 @@ class ShopPlatformOrchestratorTest {
         assertEquals(new BigDecimal("89.50"), rows.get(0).get("minPrice"));
         assertEquals(10, rows.get(0).get("totalStock"));
         assertEquals(2, rows.get(0).get("colorCount"));
+        // 类目必须已中文化（平台首页一度是 WOMAN / 上衣 / SKIRT 混排）
+        assertEquals("女装", rows.get(0).get("categoryName"));
         assertEquals(2L, resp.get("total"));
     }
 

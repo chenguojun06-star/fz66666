@@ -225,7 +225,7 @@
 var API = '/api/shop/public';
 var TOKEN_KEY = 'shop_consumer_token';
 var USER_KEY = 'shop_consumer';
-var state = { page: 1, pageSize: 20, keyword: '', category: '', sort: 'newest', total: 0, loading: false };
+var state = { page: 1, pageSize: 20, keyword: '', category: '', categoryName: '', sort: 'newest', total: 0, loading: false };
 var cartState = { groups: [], selected: {}, itemCount: 0, validAmount: 0 };
 
 function $(id){ return document.getElementById(id); }
@@ -290,14 +290,15 @@ var Home = {
     state.page = 1; $('grid').innerHTML = '';
     this.load(false);
   },
-  pickCat: function(cat){
+  pickCat: function(cat, name){
     state.category = (state.category === cat) ? '' : cat;
+    state.categoryName = state.category ? (name || cat) : '';
     var chips = document.querySelectorAll('#cats .chip');
     for (var i = 0; i < chips.length; i++) {
       var c = chips[i].getAttribute('data-c') || '';
       chips[i].className = 'chip' + (c === (state.category || '') ? ' on' : '');
     }
-    $('listTitle').textContent = state.category ? ('类目：' + state.category) : '全部商品';
+    $('listTitle').textContent = state.categoryName ? ('类目：' + state.categoryName) : '全部商品';
     this.reset();
   },
   load: function(more){
@@ -352,11 +353,17 @@ function card(p){
 }
 
 function renderCats(cats){
-  if (!cats.length) { $('cats').innerHTML = ''; return; }
-  var html = '<div class="chip on" data-c="" onclick="Home.pickCat(\'\')">全部</div>';
-  html += cats.map(function(c){
-    return '<div class="chip" data-c="' + esc(c.category) + '" onclick="Home.pickCat(\'' + esc(c.category) + '\')">'
-      + esc(c.category) + ' (' + c.cnt + ')</div>';
+  // 词表有 40 个类目，全列出来顾客会被淹没 → 只展示「有商品」的。
+  // 展示一律用中文名（c.name）：库里同一个类目可能是 WOMAN 也可能是「女装」，
+  // 后端已归并成中文规范类目，这里不再自己拼。
+  var list = (cats || []).filter(function(c){ return num(c.cnt) > 0; });
+  if (!list.length) { $('cats').innerHTML = ''; return; }
+  var html = '<div class="chip on" data-c="" onclick="Home.pickCat(\'\',\'\')">全部</div>';
+  html += list.map(function(c){
+    var name = c.name || c.category;
+    return '<div class="chip" data-c="' + esc(c.category) + '"'
+      + ' onclick="Home.pickCat(\'' + esc(c.category) + '\',\'' + esc(name) + '\')">'
+      + esc(name) + ' (' + num(c.cnt) + ')</div>';
   }).join('');
   $('cats').innerHTML = html;
 }

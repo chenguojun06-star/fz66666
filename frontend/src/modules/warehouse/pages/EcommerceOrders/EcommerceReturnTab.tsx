@@ -6,6 +6,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { getSalesReturnList, approveSalesReturn, rejectSalesReturn, markRefunded, createSalesReturn } from '@/modules/crm/api/salesReturn';
 import type { SalesReturn } from '@/modules/crm/types/salesReturn';
 import { formatMoney } from '@/utils/format';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   PENDING: { label: '待审核', color: 'orange' },
@@ -33,7 +34,9 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<SalesReturn[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // 每页条数走统一持久化：字面量 10 会被 ResizableTable 规范化成 20，
+  // 造成"请求 10 条、分页器按 20 算页数"，后半数据翻不到。
+  const [pageSize, setPageSize] = useState(readPageSize(20));
   const [total, setTotal] = useState(0);
   const [form] = Form.useForm();
   const [createOpen, setCreateOpen] = useState(false);

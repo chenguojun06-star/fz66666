@@ -72,6 +72,10 @@ public class ShopOrderOrchestrator {
     @Autowired
     private ShopTenantContextRunner tenantContextRunner;
 
+    /** D-784：浏览行为记录 + 商品推荐（详情页底部「猜你喜欢」） */
+    @Autowired
+    private ShopRecommendOrchestrator shopRecommendOrchestrator;
+
     @Autowired
     private ShopOrderMapper shopOrderMapper;
 
@@ -237,7 +241,19 @@ public class ShopOrderOrchestrator {
         data.put(key, value);
     }
 
+    /** 顾客端商品详情（无浏览者身份；保留 2 参版，既有调用零改动） */
     public Map<String, Object> productDetail(String slug, Long styleId) {
+        return productDetail(slug, styleId, null);
+    }
+
+    /**
+     * 顾客端商品详情（带浏览者身份）。
+     *
+     * <p>浏览在这里记，而不是在控制器里记 —— 只有真正渲染成功的详情才算一次浏览
+     * （商品不存在/已下架会提前抛异常，不该被计入）。
+     * 无论是否登录都记一次按天计数（看板用）；登录顾客另记一份个人历史（推荐用）。
+     */
+    public Map<String, Object> productDetail(String slug, Long styleId, String consumerId) {
         ShopConfig config = resolveBySlug(slug);
         if (config == null) {
             throw new IllegalArgumentException("店铺不存在");
@@ -393,7 +409,26 @@ public class ShopOrderOrchestrator {
         Integer interval = config.getCarouselIntervalMs();
         data.put("carouselIntervalMs", interval == null || interval < 2000 || interval > 10000
                 ? 4000 : interval);
+        // D-784：记一次浏览（计数 + 登录顾客的个人历史），失败不影响详情返回
+        shopRecommendOrchestrator.recordView(
+                config.getTenantId(), consumerId, styleId, style.getStyleNo());
         return data;
+    }
+
+    /**
+     * 商品详情页底部「猜你喜欢」（D-784）。
+     *
+     * <p>只推**同一店铺**的商品：跨店推荐会把顾客带离当前店铺，
+     * 而各租户直收钱、订单也不跨店，推荐跨店对成交没有帮助（甚至制造困惑）。
+     */
+    public List<Map<String, Object>> recommendations(String slug, Long styleId,
+                                                     String consumerId, int limit) {
+        ShopConfig config = resolveBySlug(slug);
+        if (config == null) {
+            throw new IllegalArgumentException("店铺不存在");
+        }
+        return shopRecommendOrchestrator.recommend(
+                config.getTenantId(), styleId, consumerId, limit);
     }
 
     private Map<Long, List<ProductSku>> groupSkus(Long tenantId, List<Long> styleIds) {
