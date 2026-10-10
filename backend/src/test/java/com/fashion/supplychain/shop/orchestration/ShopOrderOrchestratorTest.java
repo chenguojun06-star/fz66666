@@ -201,6 +201,48 @@ class ShopOrderOrchestratorTest {
         assertNotNull(data.get("description"));
     }
 
+    /**
+     * D-785：商品说明（remark）此前是个**假提示** —— 上架页一直显示
+     * 「这段会被顾客端隐藏」，但服务端只拦了 description、remark 照原样下发，
+     * 顾客在详情页照样看得到整段工艺要求。提示必须是真的。
+     */
+    @Test
+    @DisplayName("顾客端详情：remark 是生产工艺资料时也不能下发")
+    void productionContentInRemarkMustNotLeakToCustomer() {
+        openShop();
+        StyleInfo style = listedStyle();
+        style.setRemark("大货工艺要求：一. 裁剪工艺说明：裁剪前需松布和缩水，确认布号、"
+                + "正反面及验布无误后方可裁剪；裁片按顺序编号分包，避免大货出现色差现象。");
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+        when(styleLayoutService.layoutOf(1L)).thenReturn(List.of());
+
+        Map<String, Object> data = orchestrator.productDetail("test-shop", 1L);
+
+        assertNull(data.get("remark"), "生产工艺原文不能出现在顾客端响应体里");
+        assertFalse(String.valueOf(data).contains("裁剪工艺"), "响应体任何位置都不得残留工艺原文");
+    }
+
+    /** 正常商品说明（如发货时效）必须照常下发 */
+    @Test
+    @DisplayName("顾客端详情：正常商品说明照常下发")
+    void normalRemarkStillVisibleToCustomer() {
+        openShop();
+        StyleInfo style = listedStyle();
+        style.setRemark("江浙沪次日达，偏远地区顺丰到付，支持 7 天无理由退换。");
+        when(styleInfoService.getById(1L)).thenReturn(style);
+        when(productSkuService.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of());
+        when(shopListingContentOrchestrator.find(any(), any())).thenReturn(null);
+        when(styleLayoutService.layoutOf(1L)).thenReturn(List.of());
+
+        Map<String, Object> data = orchestrator.productDetail("test-shop", 1L);
+
+        assertNotNull(data.get("remark"));
+    }
+
     private void mockHappySku() {
         when(productSkuService.getById("100")).thenReturn(sku(50));
         when(styleInfoService.getById(1L)).thenReturn(listedStyle());

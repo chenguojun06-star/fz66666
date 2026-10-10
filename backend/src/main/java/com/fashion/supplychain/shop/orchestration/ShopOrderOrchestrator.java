@@ -294,7 +294,13 @@ public class ShopOrderOrchestrator {
         data.put("styleNo", style.getStyleNo());
         data.put("styleName", style.getStyleName());
         data.put("cover", style.getCover());
-        data.put("remark", style.getRemark());
+        // D-781 补修②：商品说明（remark）同样可能是车间用的工艺文档。
+        // 上架页一直提示「这段会被顾客端隐藏」，但服务端**只拦了 description、
+        // 没拦 remark** —— 提示是假的，顾客在详情页照样看得到整段裁剪/缝纫要求。
+        // 提示必须是真的：要么服务端拦，要么别提示。这里选择服务端拦。
+        if (!ProductionContentDetector.looksLikeProductionContent(style.getRemark())) {
+            data.put("remark", style.getRemark());
+        }
         data.put("skus", skuRows);
         data.put("colorImages", colorImages);
         // D-769：顾客端详情页缺失面料成分/尺寸表/详情介绍。

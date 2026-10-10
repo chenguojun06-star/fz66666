@@ -1405,12 +1405,13 @@ title: function (d) {
           return reviewsBoxHtml();
         },
         recommend: function (d) {
-          // D-784：底部推荐。
-          // ⚠️ 底部推荐**刻意不作为可布局模块**：它在 renderDetail 里统一追加，
-          // 放在模块表里会出现重复的 DOM id，getElementById 只命中第一个，
-          // 第二个永远填不上数据 —— 页面上一个推荐区有数据、另一个空白。
-          // 返回空串表示「本区块不由模块系统渲染」。
-          return '';
+          // D-784 补修：原先这里 return ''、真正的容器在 renderDetail 末尾硬追加，
+          // 结果「猜你喜欢」在布局编辑器里是个**点了没用的假开关** ——
+          // 商家关掉它，顾客端照样显示。
+          // 现在交给模块系统渲染，开关与排序真正生效；
+          // 内容仍由 loadRecommends(styleId) 异步填充（它按 id 找容器，
+          // 模块被关掉时容器不存在、直接 return，不会报错）。
+          return recommendSectionHtml();
         },
         params: function () {
           // D-770 修复：原先直接把 fabricParts（JSON 结构）当文本渲染，
@@ -1465,12 +1466,6 @@ title: function (d) {
       };
 
 var html = renderDetailModules(d, order, DETAIL_RENDERERS);
-
-      // D-784：详情页底部「猜你喜欢」。
-      // 底部推荐：放在模块化布局**之外** —— 布局开关是给「商品内容模块」用的，
-      // 而底部推荐是电商通用版式，不该被商家误关掉。内容异步填充，
-      // 加载失败或没有可推的商品时整块隐藏（不给顾客看空标题）。
-      html += recommendSectionHtml();
 
       // D-777：给固定购买栏留出底部空间，否则最后一块内容被压住
       html += '<div class="d-bar-space"></div>';

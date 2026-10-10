@@ -22,6 +22,13 @@ interface Props {
   setColorImages: (v: Record<string, string>) => void;
   /** 该款式实际存在的颜色（来自 SKU 列表） */
   colors: string[];
+  /**
+   * D-785：只显示主图（颜色图已挪进详情页的「颜色选择」模块）。
+   *
+   * <p>同一个内容不能既在这里、又在模块开关旁边 —— 商家改了一处、另一处还是旧值，
+   * 是「开关在这里、内容在那边」最常见的来源。
+   */
+  onlyCover?: boolean;
 }
 
 /**
@@ -33,7 +40,7 @@ interface Props {
  * 边选边提示，而不是等上架被平台驳回才发现。
  */
 const CoverColorImagesSection: React.FC<Props> = ({
-  cover, setCover, colorImages, setColorImages, colors,
+  cover, setCover, colorImages, setColorImages, colors, onlyCover = false,
 }) => {
   const [coverBad, setCoverBad] = useState(false);
   const [coverMeta, setCoverMeta] = useState<CoverImageMeta | null>(null);
@@ -123,6 +130,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
           ) : null}
         </div>
 
+        {onlyCover ? null : (
         <div className="shop-listing__colors">
           {/* D-513：「每个颜色一张图」的说明已上提到分区副标题，此处不再重复 */}
           {colors.length === 0 ? (
@@ -168,6 +176,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
             </div>
           )}
         </div>
+        )}
       </div>
 
       {!cover ? (

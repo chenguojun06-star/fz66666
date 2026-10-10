@@ -729,12 +729,13 @@ class ShopSizeChartGuardTest {
     @Test
     @DisplayName("㉛ 上架编辑页必须提供 面料成分 / 洗涤说明 / 款式详情 三个入口")
     void listingEditorMustEditDetailModules() throws Exception {
-        // 本类 readAny 的候选路径以 ShopListing/ 为基准，故只传相对该目录的路径
-        String section = readAny("components/ListingInfoSection.tsx");
+        // D-785 起这三块归入「详情页模块」：开关、顺序、内容合一，
+        // 组件从 ListingInfoSection 搬到了 DetailModuleContent。
+        String content = readAny("components/DetailModuleContent.tsx");
         // 界面上的字段名是 fabric/wash/desc，落到款式字段名（fabricComposition…）在 hook 里
-        assertThat(section).as("面料成分输入").contains("面料成分").contains("setFabric");
-        assertThat(section).as("洗涤说明输入").contains("洗涤说明").contains("setWash");
-        assertThat(section).as("款式详情输入").contains("款式详情").contains("setDesc");
+        assertThat(content).as("面料成分输入").contains("面料成分").contains("setFabric");
+        assertThat(content).as("洗涤说明输入").contains("洗涤说明").contains("setWash");
+        assertThat(content).as("款式详情输入").contains("款式详情").contains("setDesc");
 
         String hook = readAny("hooks/useListingEditor.ts");
         assertThat(hook)
@@ -745,6 +746,83 @@ class ShopSizeChartGuardTest {
         assertThat(hook)
                 .as("只提交真正改动过的字段（PUT /style/info 是局部更新，全量提交会用旧值覆盖新值）")
                 .contains("if (Object.keys(stylePatch).length > 1)");
+    }
+
+    /**
+     * D-785：用户原话「不要开关在这里，内容在那边」。
+     *
+     * <p>此前开关在「详情页布局」、内容在「详情内容」「上架与商品说明」三个区，
+     * 商家对不上哪个开关管哪段文字。这里把「合一」钉成契约：
+     * 模块卡片里必须同时渲染开关与该模块的内容编辑器。
+     */
+    /**
+     * D-785：前后端判定口径必须一致。
+     *
+     * <p>前端 {@code listingCompliance.looksLikeProductionContent} 只负责给运营提示，
+     * 后端 {@code ProductionContentDetector} 才真正隐藏。两边特征词/阈值一旦漂移，
+     * 就会出现「前端说没问题、后端偷偷把内容藏了」—— 运营完全不知道发生了什么。
+     * 原来只有一行注释提醒，改代码的人很容易漏掉，所以在这里钉成测试。
+     */
+    @Test
+    @DisplayName("㉞ 前后端「生产工艺资料」判定口径必须一致")
+    void productionContentDetectorMustMatchFrontend() throws Exception {
+        String backend = readAny("shop/orchestration/ProductionContentDetector.java");
+        String frontend = readAny("listingCompliance.ts");
+
+        java.util.regex.Matcher bm = java.util.regex.Pattern
+                .compile("\"([^\"]+)\"")
+                .matcher(backend.substring(backend.indexOf("PROCESS_MARKERS"),
+                        backend.indexOf("MIN_HITS")));
+        java.util.Set<String> backendMarkers = new java.util.LinkedHashSet<>();
+        while (bm.find()) {
+            backendMarkers.add(bm.group(1));
+        }
+        java.util.regex.Matcher fm = java.util.regex.Pattern
+                .compile("'([^']+)'")
+                .matcher(frontend.substring(frontend.indexOf("PROCESS_MARKERS"),
+                        frontend.indexOf("PROCESS_MIN_HITS")));
+        java.util.Set<String> frontendMarkers = new java.util.LinkedHashSet<>();
+        while (fm.find()) {
+            frontendMarkers.add(fm.group(1));
+        }
+
+        assertThat(backendMarkers).as("前后端特征词必须完全一致").isEqualTo(frontendMarkers);
+        assertThat(backendMarkers).as("特征词不能被清空").isNotEmpty();
+        assertThat(backend).contains("private static final int MIN_HITS = 2;");
+        assertThat(frontend).contains("const PROCESS_MIN_HITS = 2;");
+        assertThat(backend).contains("private static final int MIN_LENGTH = 40;");
+        assertThat(frontend).contains("const PROCESS_MIN_LENGTH = 40;");
+    }
+
+    @Test
+    @DisplayName("㉟ 模块开关与它的内容必须在同一个组件里渲染")
+    void moduleSwitchAndContentMustLiveTogether() throws Exception {
+        String editor = readAny("components/DetailModuleEditor.tsx");
+        assertThat(editor).as("按模块取内容编辑器").contains("MODULE_CONTENT[m.moduleKey]");
+        assertThat(editor).as("在模块卡片内渲染内容").contains("<Editor ctx={ctx} />");
+        assertThat(editor).as("没有内容的模块要说清来源")
+                .contains("所以这里没有输入框");
+
+        String drawer = readAny("components/ListingEditDrawer.tsx");
+        assertThat(drawer).as("旧的分区组件必须下线")
+                .doesNotContain("LayoutEditorSection")
+                .doesNotContain("ListingInfoSection")
+                .doesNotContain("ListingContentSection");
+    }
+
+    /**
+     * D-784 补修：「猜你喜欢」原先在布局里是个**假开关** —— 渲染器返回空串、
+     * 真正的容器在别处硬追加，商家关掉它顾客端照样显示。
+     */
+    @Test
+    @DisplayName("㉞ 猜你喜欢必须是真模块（开关生效且只渲染一次）")
+    void recommendMustBeRealModule() throws Exception {
+        String page = shopPage();
+        assertThat(page).as("recommend 要由模块系统渲染")
+                .contains("recommend: function (d) {\n          // D-784 补修")
+                .contains("return recommendSectionHtml();");
+        assertThat(page).as("不能再在 renderDetail 里硬追加，否则会出现重复 id")
+                .doesNotContain("html += recommendSectionHtml();");
     }
 
     @Test

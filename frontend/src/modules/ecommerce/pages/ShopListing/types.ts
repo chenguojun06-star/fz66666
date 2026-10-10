@@ -29,3 +29,20 @@ export type EditableSku = {
 };
 
 export type ListingFilter = 'all' | 'listed' | 'unlisted';
+
+/**
+ * 详情页模块内容（D-782 落库字段）。
+ *
+ * <p>D-785 起由各模块自己的编辑器维护（见 DetailModuleContent），
+ * 声明放在这里，避免组件之间互相 import 类型形成环。
+ */
+export type ListingContent = {
+  gallery: string[];
+  videoUrl: string | null;
+  brand: string | null;
+  /** 手工尺码表；留空则按 SKU 矩阵自动生成 */
+  sizeChart: string | null;
+  points: string[];
+  faq: Array<{ q: string; a: string }>;
+  priceNote: string | null;
+};

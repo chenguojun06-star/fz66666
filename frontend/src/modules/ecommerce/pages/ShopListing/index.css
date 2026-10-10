@@ -248,3 +248,33 @@
   gap: 4px;
   align-items: flex-start;
 }
+/* ── D-785：详情页模块编辑器（开关 + 排序 + 内容合一） ── */
+
+/* 模块标题行：拖动把 + 模块名 + 「顾客端看到什么」 */
+.shop-module__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.shop-module__grip {
+  margin-top: 4px;
+  color: var(--color-text-quaternary);
+}
+
+.shop-module__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+/* 字段标题：与输入框贴紧，比 block-title 轻，避免长表单里全是重标题 */
+.shop-edit__field-label {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
