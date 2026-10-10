@@ -56,6 +56,14 @@ public class ShopConfig {
     /** 其它服务承诺（逗号分隔的自由文本），为空则不展示 */
     private String promiseExtra;
 
+    /* ── 顾客端详情页图片轮播（店铺级统一设置）── */
+
+    /** 1=自动播放（默认）0=不自动播放，顾客手动切换 */
+    private Integer carouselAutoplay;
+
+    /** 轮播间隔毫秒（2000~10000），默认 4000 */
+    private Integer carouselIntervalMs;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

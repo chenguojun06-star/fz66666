@@ -646,4 +646,70 @@ class ShopSizeChartGuardTest {
                 .as("兜底仍走 putIfPresent，空值不下发")
                 .contains("putIfPresent(data, \"washInstructions\", washFromParts)");
     }
+
+    /* ─────────────── ㉑ 图片轮播（用户实测：不自动动 / 不能左右滑动 / 无间隔设置） ─────────────── */
+
+    /**
+     * 用户实测反馈：「图片轮播也不自动动 也没有设置这些时间的地方 还有用户都无法左右滑动
+     * 看图片这些 全都是死的」。
+     *
+     * <p>根因不是「没写交互」，而是**渲染与绑定的图片列表不是同一份**：
+     * 画廊按商家排好的 {@code d.gallery} 渲染，交互却按「主图 + 各颜色图」重算总数。
+     * 商家配了轮播图时两者数量对不上（常见 5 张 vs 1 张），
+     * {@code if (galTotal > 1)} 为假 → 左右按钮、指示点、触摸滑动全部不绑定。
+     */
+    @Test
+    @DisplayName("㉑ 轮播总数必须以「渲染出来的图片数」为准，不得另算一份列表")
+    void carouselTotalMustComeFromRenderedDom() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("必须以渲染出来的 cell 数为唯一真源")
+                .contains("ctrack.children.length");
+        assertThat(s)
+                .as("不得再按「主图+各色图」另算一份 —— 这正是滑动/按钮全失效的根因")
+                .doesNotContain("var galImgs = []");
+    }
+
+    @Test
+    @DisplayName("㉒ 轮播必须支持自动播放、间隔可配、顾客操作时暂停")
+    void carouselMustAutoplayAndPause() throws Exception {
+        String s = shopPage();
+        assertThat(s).as("自动播放定时器").contains("startAuto");
+        assertThat(s).as("间隔由店铺配置下发，默认 4 秒").contains("d.carouselIntervalMs");
+        assertThat(s).as("开关由店铺配置下发").contains("d.carouselAutoplay");
+        assertThat(s)
+                .as("顾客上手就暂停（否则手指刚碰到图就自己翻走）")
+                .contains("ctrack.addEventListener(ev, stopAuto");
+        assertThat(s).as("后台标签页不空转").contains("document.hidden");
+    }
+
+    @Test
+    @DisplayName("㉓ 左右箭头不得与左上角返回键同坐标（否则点左箭头变成返回）")
+    void navButtonsMustNotOverlapBack() throws Exception {
+        String s = shopPage();
+        int i = s.indexOf(".d-carousel .navbtn{");
+        assertThat(i).isGreaterThan(0);
+        String rule = s.substring(i, Math.min(i + 320, s.length()));
+        assertThat(rule)
+                .as("左右箭头应垂直居中，不能和 .d-back 一样贴 top + left:10px")
+                .contains("top:50%")
+                .doesNotContain("env(safe-area-inset-top)");
+    }
+
+    @Test
+    @DisplayName("㉔ 店铺配置必须能设置轮播开关与间隔（否则商家无从下手）")
+    void shopConfigMustExposeCarouselSettings() throws Exception {
+        String admin = readAny("shop/orchestration/ShopAdminOrchestrator.java");
+        assertThat(admin).as("保存轮播开关").contains("setCarouselAutoplay");
+        assertThat(admin).as("保存轮播间隔").contains("setCarouselIntervalMs");
+        assertThat(admin)
+                .as("间隔必须做上下限校验（太快看不清、太慢像卡住）")
+                .contains("轮播间隔请设置在 2~10 秒之间");
+
+        String detail = readAny("shop/orchestration/ShopOrderOrchestrator.java");
+        assertThat(detail)
+                .as("详情接口必须把轮播设置下发给顾客端")
+                .contains("carouselIntervalMs")
+                .contains("carouselAutoplay");
+    }
 }

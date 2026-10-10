@@ -105,6 +105,9 @@ public class ShopAdminOrchestrator {
             config.setShippingEnabled(0);
             config.setShippingFee(BigDecimal.ZERO);
             config.setFreeShippingThreshold(BigDecimal.ZERO);
+            // 详情页轮播：默认开启、4 秒（与主流电商一致；关掉由商家自己选）
+            config.setCarouselAutoplay(1);
+            config.setCarouselIntervalMs(4000);
             config.setCreateTime(LocalDateTime.now());
             config.setUpdateTime(LocalDateTime.now());
             shopConfigMapper.insert(config);
@@ -145,6 +148,24 @@ public class ShopAdminOrchestrator {
         }
         if (body.get("shippingNote") != null) {
             patch.setShippingNote(String.valueOf(body.get("shippingNote")).trim());
+        }
+        // 详情页图片轮播：自动播放开关 + 间隔（限制 2~10 秒，太快看不清、太慢像卡住）
+        if (body.get("carouselAutoplay") != null) {
+            boolean on = "1".equals(String.valueOf(body.get("carouselAutoplay")))
+                    || Boolean.parseBoolean(String.valueOf(body.get("carouselAutoplay")));
+            patch.setCarouselAutoplay(on ? 1 : 0);
+        }
+        if (body.get("carouselIntervalMs") != null) {
+            int ms;
+            try {
+                ms = Integer.parseInt(String.valueOf(body.get("carouselIntervalMs")).trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("轮播间隔必须是数字（毫秒）");
+            }
+            if (ms < 2000 || ms > 10000) {
+                throw new IllegalArgumentException("轮播间隔请设置在 2~10 秒之间");
+            }
+            patch.setCarouselIntervalMs(ms);
         }
         // 收运费但运费为 0 = 规则无意义，直接拦截（避免"设置了却看不出效果"）
         int willBeEnabled = patch.getShippingEnabled() != null

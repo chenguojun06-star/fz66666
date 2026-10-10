@@ -26,6 +26,7 @@ import type {
   ShopReviewSummary,
 } from '@/services/shop/shopApi';
 import api, { unwrapApiData } from '@/utils/api';
+import { readPageSize } from '@/utils/pageSizeStore';
 import './index.css';
 
 const { Text, Paragraph } = Typography;
@@ -89,11 +90,15 @@ const ShopManage: React.FC = () => {
   const [styles, setStyles] = useState<StyleRow[]>([]);
   const [styleLoading, setStyleLoading] = useState(false);
   const [listingFilter, setListingFilter] = useState<string>('all');
+  const [stylePage, setStylePage] = useState(1);
+  // 每页条数交给 state + localStorage：分页器不再被 ResizableTable 写死成 20
+  const [stylePageSize, setStylePageSize] = useState(readPageSize(20));
 
   // 订单
   const [orders, setOrders] = useState<ShopOrder[]>([]);
   const [orderTotal, setOrderTotal] = useState(0);
   const [orderPage, setOrderPage] = useState(1);
+  const [orderPageSize, setOrderPageSize] = useState(readPageSize(20));
   const [orderStatus, setOrderStatus] = useState<string>('');
   const [orderKw, setOrderKw] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
@@ -134,10 +139,15 @@ const ShopManage: React.FC = () => {
   const [reviewRows, setReviewRows] = useState<ShopReviewRow[]>([]);
   const [reviewTotal, setReviewTotal] = useState(0);
   const [reviewPage, setReviewPage] = useState(1);
+  const [reviewPageSize, setReviewPageSize] = useState(readPageSize(20));
   const [reviewStyleNo, setReviewStyleNo] = useState('');
   const [reviewRating, setReviewRating] = useState<number | undefined>(undefined);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<ShopReviewSummary | null>(null);
+
+  // 详情页图片轮播：自动播放开关 + 间隔（店铺级统一，顾客端详情页生效）
+  const [carouselAuto, setCarouselAuto] = useState(true);
+  const [carouselGap, setCarouselGap] = useState(4);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -155,6 +165,9 @@ const ShopManage: React.FC = () => {
       setPromiseInStock(cfg?.promiseInStock === 1);
       setPromiseAuthentic(cfg?.promiseAuthentic === 1);
       setPromiseExtra(cfg?.promiseExtra || '');
+      // 轮播：默认开、4 秒（后端默认值一致）
+      setCarouselAuto(cfg?.carouselAutoplay !== 0);
+      setCarouselGap(Math.round((Number(cfg?.carouselIntervalMs) || 4000) / 1000));
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '店铺配置加载失败');
     }
@@ -165,8 +178,9 @@ const ShopManage: React.FC = () => {
     try {
       // 注意：后端 keyword 才对 款号/款名/品类 做 OR 模糊匹配；
       // 同时传 styleName+styleNo 会被 AND 起来，等于搜不到。
+      // pageSize 取接口上限 500：此前写 50，款式超过 50 条时翻页器再往下也翻不到。
       const res: any = await api.get('/style/info/list', {
-        params: { keyword: kw || undefined, page: 1, pageSize: 50 },
+        params: { keyword: kw || undefined, page: 1, pageSize: 500 },
       });
       const data = res?.data?.records ?? res?.data ?? [];
       setStyles(Array.isArray(data) ? data : []);
@@ -177,12 +191,13 @@ const ShopManage: React.FC = () => {
     }
   }, []);
 
-  const fetchOrders = useCallback(async (p: number, status?: string, keyword?: string) => {
+  const fetchOrders = useCallback(async (p: number, status?: string, keyword?: string, ps?: number) => {
     setOrderLoading(true);
     try {
+      const pageSize = ps ?? orderPageSize;
       const res: any = await shopAdminApi.orders({
         page: p,
-        pageSize: 20,
+        pageSize,
         status: (status ?? orderStatus) || undefined,
         keyword: (keyword ?? orderKw) || undefined,
       });
@@ -195,7 +210,7 @@ const ShopManage: React.FC = () => {
     } finally {
       setOrderLoading(false);
     }
-  }, [orderStatus, orderKw]);
+  }, [orderStatus, orderKw, orderPageSize]);
 
   /** D-513：订单概览统计（待发货 / 今日 / 累计） */
   const fetchStats = useCallback(async () => {
@@ -212,12 +227,12 @@ const ShopManage: React.FC = () => {
   }, [fetchConfig]);
 
   /** P2：本店铺评价分页 */
-  const fetchReviews = useCallback(async (p: number, styleNo?: string, rating?: number) => {
+  const fetchReviews = useCallback(async (p: number, styleNo?: string, rating?: number, ps?: number) => {
     setReviewLoading(true);
     try {
       const res = await shopAdminApi.reviews({
         page: p,
-        pageSize: 20,
+        pageSize: ps ?? reviewPageSize,
         styleNo: (styleNo ?? reviewStyleNo) || undefined,
         rating: rating ?? reviewRating,
       });
@@ -231,7 +246,7 @@ const ShopManage: React.FC = () => {
     } finally {
       setReviewLoading(false);
     }
-  }, [reviewStyleNo, reviewRating]);
+  }, [reviewStyleNo, reviewRating, reviewPageSize]);
 
   /** P2：本店铺评价概览 */
   const fetchReviewSummary = useCallback(async () => {
@@ -278,6 +293,8 @@ const ShopManage: React.FC = () => {
         promiseInStock,
         promiseAuthentic,
         promiseExtra: promiseExtra.trim(),
+        carouselAutoplay: carouselAuto,
+        carouselIntervalMs: Math.round(Number(carouselGap) || 4) * 1000,
       });
       unwrapApiData(res, '保存失败');
       message.success('店铺配置已保存，顾客端即时生效');
@@ -887,6 +904,33 @@ const ShopManage: React.FC = () => {
                 showCount
               />
             </div>
+            {/* 详情页图片轮播：此前顾客端既不自动播放、也没有任何设置入口 */}
+            <div className="shop-field">
+              <label>详情页图片轮播</label>
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                <Space>
+                  <Switch checked={carouselAuto} onChange={setCarouselAuto} />
+                  <span>{carouselAuto ? '自动播放' : '不自动播放（顾客手动切换）'}</span>
+                </Space>
+                {carouselAuto ? (
+                  <Space>
+                    <span>切换间隔</span>
+                    <InputNumber
+                      value={carouselGap}
+                      onChange={(v) => setCarouselGap(Number(v) || 4)}
+                      min={2}
+                      max={10}
+                      style={{ width: 96 }}
+                      addonAfter="秒"
+                    />
+                    <Text type="secondary" className="u-fs-12">2~10 秒；顾客左右滑动时自动暂停</Text>
+                  </Space>
+                ) : null}
+                <Text type="secondary" className="u-fs-12">
+                  顾客端商品详情页的图片轮播，全店统一；只有一张图的商品不轮播。
+                </Text>
+              </Space>
+            </div>
             <div className="shop-field">
               <label>店铺链接</label>
               <Paragraph className="shop-url" copyable={{ text: shopUrl }}>
@@ -942,13 +986,14 @@ const ShopManage: React.FC = () => {
               defaultValue={styleKw}
               onSearch={(v) => {
                 setStyleKw(v);
+                setStylePage(1);
                 void fetchStyles(v);
               }}
               enterButton
             />
             <Segmented
               value={listingFilter}
-              onChange={(v) => setListingFilter(String(v))}
+              onChange={(v) => { setListingFilter(String(v)); setStylePage(1); }}
               options={[
                 { value: 'all', label: '全部' },
                 { value: 'listed', label: '已上架' },
@@ -969,7 +1014,13 @@ const ShopManage: React.FC = () => {
             columns={styleColumns}
             dataSource={shownStyles}
             loading={styleLoading}
-            pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
+            pagination={{
+              current: stylePage,
+              pageSize: stylePageSize,
+              total: shownStyles.length,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p, ps) => { setStylePage(p); setStylePageSize(ps); },
+            }}
             emptyDescription={
               styles.length === 0
                 ? '没有查到款式，换个款号或款名试试'
@@ -1061,9 +1112,13 @@ const ShopManage: React.FC = () => {
             pagination={{
               current: orderPage,
               total: orderTotal,
-              pageSize: 20,
+              pageSize: orderPageSize,
               showTotal: (t) => `共 ${t} 条`,
-              onChange: (p) => { setSelectedOrderIds([]); void fetchOrders(p); },
+              onChange: (p, ps) => {
+                setSelectedOrderIds([]);
+                setOrderPageSize(ps);
+                void fetchOrders(p, undefined, undefined, ps);
+              },
             }}
             emptyDescription="还没有店铺订单"
           />
@@ -1153,9 +1208,12 @@ const ShopManage: React.FC = () => {
             pagination={{
               current: reviewPage,
               total: reviewTotal,
-              pageSize: 20,
+              pageSize: reviewPageSize,
               showTotal: (t) => `共 ${t} 条`,
-              onChange: (p) => void fetchReviews(p),
+              onChange: (p, ps) => {
+                setReviewPageSize(ps);
+                void fetchReviews(p, undefined, undefined, ps);
+              },
             }}
             emptyDescription="还没有顾客评价"
           />

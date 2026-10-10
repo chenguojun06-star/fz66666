@@ -103,7 +103,9 @@
   .d-carousel .cell{flex:0 0 100%;width:100%;}
   .d-carousel .cell img,.d-carousel .cell .ph{width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;}
   .d-carousel .cell .ph{color:#d5d5d5;font-size:40px;background:#f7f7f7;}
-  .d-carousel .navbtn{position:absolute;top:calc(10px + env(safe-area-inset-top));width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.4);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  /* 左右箭头放在图片垂直居中处 —— 此前与左上角的返回键同坐标重叠，
+     返回键 z-index 更高，顾客点左箭头会变成"返回"，等于左滑永远用不了 */
+  .d-carousel .navbtn{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.4);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
   .d-carousel .navbtn.prev{left:10px;}
   .d-carousel .navbtn.next{right:10px;}
   /* 返回入口恒在（不再由图片数决定曾导致单图款式整页失效） */
@@ -1378,14 +1380,15 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
       on('dk', back);
       on('tocart', function () { go('#/cart'); });
 
-      // 轮播交互：左右按钮 + 触摸滑动
-      var galImgs = [];
-      if (d.cover) galImgs.push(d.cover);
-      (function () {
-        var ci2 = d.colorImages || {};
-        for (var k2 in ci2) { if (ci2[k2] && ci2[k2] !== d.cover) galImgs.push(ci2[k2]); }
-      })();
-      var galTotal = galImgs.length;
+      // 轮播交互：左右按钮 + 指示点 + 触摸滑动 + 自动播放
+      //
+      // ⚠️ 总数一律以**渲染出来的 cell 数**为准。
+      //    此前这里按「主图 + 各颜色图」重算了一份列表，而画廊渲染用的是商家排好的
+      //    d.gallery —— 两份列表不是同一个东西。商家配了轮播图时两者数量对不上
+      //    （常见 5 张 vs 1 张），galTotal 算成 1 → if (galTotal > 1) 为假
+      //    → 左右按钮、指示点、触摸滑动**全部不绑定**，顾客看到的就是「全是死的」。
+      var ctrack = document.getElementById('ctrack');
+      var galTotal = ctrack ? ctrack.children.length : 0;
       var galIdx = 0;
       if (galTotal > 1) {
         on('cprev', function () { galIdx = galleryGo((galIdx - 1 + galTotal) % galTotal, galTotal); });
@@ -1397,22 +1400,51 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
             dot.onclick = function () { galIdx = galleryGo(di, galTotal); };
           });
         }
-        var track = document.getElementById('ctrack');
-        if (track) {
+        if (ctrack) {
           var sx = 0, sy = 0, moved = false;
-          track.addEventListener('touchstart', function (e) {
+          ctrack.addEventListener('touchstart', function (e) {
             sx = e.touches[0].clientX; sy = e.touches[0].clientY; moved = false;
           }, { passive: true });
-          track.addEventListener('touchmove', function (e) {
+          ctrack.addEventListener('touchmove', function (e) {
             if (Math.abs(e.touches[0].clientX - sx) > 12) moved = true;
           }, { passive: true });
-          track.addEventListener('touchend', function (e) {
+          ctrack.addEventListener('touchend', function (e) {
             if (!moved) return;
             var dx = (e.changedTouches[0].clientX - sx);
             var dy = (e.changedTouches[0].clientY - sy);
             if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
             galIdx = galleryGo((galIdx + (dx < 0 ? 1 : galTotal - 1)) % galTotal, galTotal);
           }, { passive: true });
+        }
+
+        // 自动播放：店铺级开关 + 间隔（详情接口已下发，默认开 / 4 秒）
+        if (d.carouselAutoplay !== false) {
+          var gap = Number(d.carouselIntervalMs) || 4000;
+          if (gap < 2000 || gap > 10000) gap = 4000;
+          var autoTimer = null;
+          var stopAuto = function () { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } };
+          var startAuto = function () {
+            stopAuto();
+            autoTimer = setInterval(function () {
+              if (document.hidden) return;                                   // 后台标签页不空转
+              if (!document.getElementById('ctrack')) { stopAuto(); return; }  // 已离开详情页
+              galIdx = galleryGo((galIdx + 1) % galTotal, galTotal);
+            }, gap);
+          };
+          startAuto();
+          // 顾客一上手就停、松手再继续 —— 避免「手指刚碰到图就自己翻走」
+          if (ctrack) {
+            ['touchstart', 'mousedown'].forEach(function (ev) {
+              ctrack.addEventListener(ev, stopAuto, { passive: true });
+            });
+            ['touchend', 'mouseup', 'touchcancel'].forEach(function (ev) {
+              ctrack.addEventListener(ev, startAuto, { passive: true });
+            });
+          }
+          // 手动点过按钮/指示点后重新计时，别刚点完又被自动翻走
+          if (cdots) cdots.addEventListener('click', startAuto);
+          on('cprev', startAuto);
+          on('cnext', startAuto);
         }
       }
 

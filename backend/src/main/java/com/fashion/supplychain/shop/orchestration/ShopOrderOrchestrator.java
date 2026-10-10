@@ -387,6 +387,12 @@ public class ShopOrderOrchestrator {
             return m;
         }).collect(java.util.stream.Collectors.toList()));
         putIfPresent(data, "season", style.getSeason());
+        // 详情页图片轮播设置（店铺级）：随详情下发，避免顾客端再发一次请求。
+        // 只给「自动播放开关 + 间隔毫秒」，默认开、4 秒。
+        data.put("carouselAutoplay", !Integer.valueOf(0).equals(config.getCarouselAutoplay()));
+        Integer interval = config.getCarouselIntervalMs();
+        data.put("carouselIntervalMs", interval == null || interval < 2000 || interval > 10000
+                ? 4000 : interval);
         return data;
     }
 

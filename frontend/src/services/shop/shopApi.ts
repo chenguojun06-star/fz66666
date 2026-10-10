@@ -20,6 +20,10 @@ export interface ShopConfig {
   freeShippingThreshold?: number | null;
   /** 配送说明（买家可见） */
   shippingNote?: string | null;
+  /** 详情页图片轮播：1=自动播放 0=不自动（默认 1） */
+  carouselAutoplay?: number | null;
+  /** 轮播间隔毫秒（2000~10000，默认 4000） */
+  carouselIntervalMs?: number | null;
 }
 
 export interface ShopOrder {
@@ -202,6 +206,9 @@ export const shopAdminApi = {
   promiseInStock?: number | boolean;
   promiseAuthentic?: number | boolean;
   promiseExtra?: string | null;
+    /** 详情页图片轮播：自动播放开关 + 间隔（秒 → 后端毫秒） */
+    carouselAutoplay?: number | boolean;
+    carouselIntervalMs?: number;
   }) => api.post<null>('/shop/admin/config', body),
 
   /** 上架/下架款式 */
