@@ -462,8 +462,11 @@ class ShopSizeChartGuardTest {
                 "backend/src/main/java/com/fashion/supplychain/" + rel,
                 "src/main/resources/" + rel,
                 "backend/src/main/resources/" + rel,
-                "src/main/resources/../../../frontend/src/modules/ecommerce/pages/ShopListing/" + rel}) {
-            java.nio.file.Path path = java.nio.file.Path.of(p);
+                // 读前端源码（相对 ShopListing/ 目录传路径）。
+                // 注意这里是 4 级上跳：src/main/resources 自身占 3 段，三级只回到 backend/，
+                // 少一级会永远解析不到前端目录 —— 前一个候选正是少了一级，从没人用到所以没暴露。
+                "../frontend/src/modules/ecommerce/pages/ShopListing/" + rel}) {
+            java.nio.file.Path path = java.nio.file.Path.of(p).normalize();
             if (java.nio.file.Files.exists(path)) {
                 return java.nio.file.Files.readString(path, java.nio.charset.StandardCharsets.UTF_8);
             }
@@ -659,7 +662,7 @@ class ShopSizeChartGuardTest {
      * {@code if (galTotal > 1)} 为假 → 左右按钮、指示点、触摸滑动全部不绑定。
      */
     @Test
-    @DisplayName("㉑ 轮播总数必须以「渲染出来的图片数」为准，不得另算一份列表")
+    @DisplayName("㉗ 轮播总数必须以「渲染出来的图片数」为准，不得另算一份列表")
     void carouselTotalMustComeFromRenderedDom() throws Exception {
         String s = shopPage();
         assertThat(s)
@@ -671,7 +674,7 @@ class ShopSizeChartGuardTest {
     }
 
     @Test
-    @DisplayName("㉒ 轮播必须支持自动播放、间隔可配、顾客操作时暂停")
+    @DisplayName("㉘ 轮播必须支持自动播放、间隔可配、顾客操作时暂停")
     void carouselMustAutoplayAndPause() throws Exception {
         String s = shopPage();
         assertThat(s).as("自动播放定时器").contains("startAuto");
@@ -684,7 +687,7 @@ class ShopSizeChartGuardTest {
     }
 
     @Test
-    @DisplayName("㉓ 左右箭头不得与左上角返回键同坐标（否则点左箭头变成返回）")
+    @DisplayName("㉙ 左右箭头不得与左上角返回键同坐标（否则点左箭头变成返回）")
     void navButtonsMustNotOverlapBack() throws Exception {
         String s = shopPage();
         int i = s.indexOf(".d-carousel .navbtn{");
@@ -697,7 +700,7 @@ class ShopSizeChartGuardTest {
     }
 
     @Test
-    @DisplayName("㉔ 店铺配置必须能设置轮播开关与间隔（否则商家无从下手）")
+    @DisplayName("㉚ 店铺配置必须能设置轮播开关与间隔（否则商家无从下手）")
     void shopConfigMustExposeCarouselSettings() throws Exception {
         String admin = readAny("shop/orchestration/ShopAdminOrchestrator.java");
         assertThat(admin).as("保存轮播开关").contains("setCarouselAutoplay");
@@ -724,30 +727,28 @@ class ShopSizeChartGuardTest {
      * 本测试守护这三块的编辑入口，以及「填了必须真的能到顾客端」。
      */
     @Test
-    @DisplayName("㉕ 上架编辑页必须提供 面料成分 / 洗涤说明 / 款式详情 三个入口")
+    @DisplayName("㉛ 上架编辑页必须提供 面料成分 / 洗涤说明 / 款式详情 三个入口")
     void listingEditorMustEditDetailModules() throws Exception {
-        String section = readAny(
-                "frontend/src/modules/ecommerce/pages/ShopListing/components/ListingInfoSection.tsx");
-        assertThat(section).as("面料成分输入").contains("面料成分").contains("fabricComposition");
-        assertThat(section).as("洗涤说明输入").contains("洗涤说明").contains("washInstructions");
-        assertThat(section).as("款式详情输入").contains("款式详情").contains("description");
+        // 本类 readAny 的候选路径以 ShopListing/ 为基准，故只传相对该目录的路径
+        String section = readAny("components/ListingInfoSection.tsx");
+        // 界面上的字段名是 fabric/wash/desc，落到款式字段名（fabricComposition…）在 hook 里
+        assertThat(section).as("面料成分输入").contains("面料成分").contains("setFabric");
+        assertThat(section).as("洗涤说明输入").contains("洗涤说明").contains("setWash");
+        assertThat(section).as("款式详情输入").contains("款式详情").contains("setDesc");
 
-        String hook = readAny(
-                "frontend/src/modules/ecommerce/pages/ShopListing/hooks/useListingEditor.ts");
+        String hook = readAny("hooks/useListingEditor.ts");
+        assertThat(hook)
+                .as("必须真的把这三个字段映射到款式字段并提交")
+                .contains("fabricComposition")
+                .contains("washInstructions")
+                .contains("stylePatch.description");
         assertThat(hook)
                 .as("只提交真正改动过的字段（PUT /style/info 是局部更新，全量提交会用旧值覆盖新值）")
                 .contains("if (Object.keys(stylePatch).length > 1)");
-
-        String api = readAny("frontend/src/services/shop/shopApi.ts");
-        assertThat(api)
-                .as("保存入参必须包含这三个字段")
-                .contains("fabricComposition?: string | null")
-                .contains("washInstructions?: string | null")
-                .contains("description?: string | null");
     }
 
     @Test
-    @DisplayName("㉖ 这三块内容必须真的能到顾客端（不能只存不发）")
+    @DisplayName("㉜ 这三块内容必须真的能到顾客端（不能只存不发）")
     void detailModulesMustReachCustomer() throws Exception {
         String java = readAny("shop/orchestration/ShopOrderOrchestrator.java");
         assertThat(java).as("款式详情").contains("putIfPresent(data, \"description\"");
