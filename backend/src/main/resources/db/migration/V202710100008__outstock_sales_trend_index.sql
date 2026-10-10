@@ -29,13 +29,21 @@ SET @ddl := IF(@idx_exists = 0,
 PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- ② SKU（款+色+码）级销量趋势：下单页矩阵按色码出图的主查询
+--
+-- ⚠️ 为什么 color/size 必须用前缀索引（V202708202000 把两列扩到了 VARCHAR(500)）：
+--   InnoDB utf8mb4 单列上限 3072 字节，而 500 字符 × 4 字节 = 2000 字节，
+--   加上 tenant_id(8) + style_id(36×4=144) + create_time(8) 后**超出上限**，
+--   实测报 `Error Code 1071 Specified key was too long; max key length is 3072 bytes`，
+--   导致整个迁移失败（Flyway 已自动清理失败记录并回退，服务未受影响，但迁移没生效）。
+--   颜色/尺码实际取值（「象牙白」「L(170/84A)」等）远短于 64 字符，
+--   取前 64 字符足以区分，且索引体积小得多。
 SET @idx_exists := (
   SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
   WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 't_product_outstock'
     AND INDEX_NAME = 'idx_outstock_trend_sku'
 );
 SET @ddl := IF(@idx_exists = 0,
-  'ALTER TABLE `t_product_outstock` ADD INDEX `idx_outstock_trend_sku` (`tenant_id`, `style_id`, `color`, `size`, `create_time`)',
+  'ALTER TABLE `t_product_outstock` ADD INDEX `idx_outstock_trend_sku` (`tenant_id`, `style_id`, `color`(64), `size`(64), `create_time`)',
   'DO 0');
 PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
