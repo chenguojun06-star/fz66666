@@ -212,3 +212,15 @@ yizhilian-mini-program/yizhilian-mini-program.design
 # 轻量服务器本地密钥配置（不入库）
 deploy/lighthouse/.env
 deploy/lighthouse/.env.backend
+
+# 轻量服务器运行时产物（2026-10-10）
+# 以下只存在于生产机 /opt/fz66666，是部署过程的副产物：
+#  · autodeploy.log*      —— cron 每 2 分钟跑一次的部署日志（会轮转成 .log.1/.log.2）
+#  · *.bak_*              —— 人工改动配置前的临时备份（如 Caddyfile.bak_d763）
+# 加进来后服务器 `git status` 才干净 —— 否则 autodeploy 的
+# `git pull --ff-only` 会长期带着「未知未跟踪文件」的噪声，
+# 排查时容易误以为有人改了线上配置。
+autodeploy.log
+autodeploy.log.*
+deploy/lighthouse/*.bak_*
+deploy/lighthouse/*.bak
