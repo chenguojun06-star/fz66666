@@ -660,18 +660,6 @@
       });
   }
 
-  /**
-   * 上报浏览行为（推荐的数据来源）。
-   *
-   * <p>只在登录状态下上报 —— 匿名顾客没有稳定身份，入库既无法跨设备复用、
-   * 又容易变成无法清理的垃圾数据。上报失败静默，绝不能影响顾客浏览。
-   */
-  function reportView(styleId, styleNo) {
-    if (!isLoggedIn()) return;
-    post(API + '/' + slug + '/products/' + encodeURIComponent(styleId) + '/view',
-      { styleNo: styleNo }, function () {}, function () {});
-  }
-
   /* ══════════════ 顾客账号（D-783） ══════════════
    * 此前页面会读 shop_consumer_token，但**从来没有写入过** ——
    * 没有登录界面，令牌是死代码，于是「评价/我的订单」这类需要身份的
@@ -1654,7 +1642,9 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
       window.__currentStyleNo = d.styleNo;
       loadReviews(styleId, d.styleNo);
       loadRecommends(styleId);
-      reportView(styleId, d.styleNo);
+      // 浏览由**服务端**在详情接口里记（GET /{slug}/products/{styleId}）：
+      // 只有真正渲染成功的详情才算一次浏览，且不依赖前端配合、匿名也计数。
+      // 前端**不要**再上报一次 —— 同一次浏览记两遍，热度与看板都会翻倍。
 
       function paintBadges() {
         var b = document.querySelector('.d-bar .mini .badge');

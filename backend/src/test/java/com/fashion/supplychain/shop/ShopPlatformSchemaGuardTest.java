@@ -235,6 +235,18 @@ class ShopPlatformSchemaGuardTest {
         assertThat(detail)
                 .as("推荐只推本店（跨店会把顾客带离当前店铺，而订单不跨店）")
                 .contains("config.getTenantId(), styleId, consumerId, limit");
+
+        // 同一份数据源只允许一个入口。此前控制器里另有一个 POST /{slug}/products/{id}/view，
+        // 而顾客端详情页在 GET 详情之后又调它 → 登录顾客每看一次商品被记两遍，
+        // 看板浏览数翻倍、热度虚高、个人偏好权重失真。已删除该端点，这里守住不许回来。
+        String page = read("static/shop/index.html");
+        assertThat(page)
+                .as("顾客端不得自行上报浏览 —— 服务端已在详情接口记录，前端再报一次就是双计")
+                .doesNotContain("/view'");
+        String controller = read("shop/controller/ShopPublicController.java");
+        assertThat(controller)
+                .as("公开接口不得再暴露一个重复的浏览上报端点（与详情接口同源，必然双计）")
+                .doesNotContain("products/{styleId}/view");
     }
 
     @Test

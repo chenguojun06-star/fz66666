@@ -160,15 +160,25 @@ class ShopCustomerReviewTest {
         assertThat(s).as("缺价时用 null 判定而不是 >0").contains("r.minPrice != null");
     }
 
+    /**
+     * 浏览是「同一份数据源」，只能有一个入口。
+     *
+     * <p>此前这里断言「前端必须有 reportView 且仅登录时上报」。但服务端已经在
+     * {@code GET /{slug}/products/{styleId}} 里记过一次（按天计数对所有人 +
+     * 个人明细对登录顾客），前端在详情渲染完再 POST 一次 {@code /view}
+     * 就成了<b>同一次浏览记两遍</b>：看板浏览数翻倍、热度虚高、个人偏好权重失真。
+     *
+     * <p>所以改成守住「只有一条路径」：前端不得再自行上报。服务端那条路径由
+     * {@code ShopPlatformSchemaGuardTest#browseRecordingRules} 守住。
+     */
     @Test
-    @DisplayName("⑫ 浏览行为只在登录时上报，且失败静默")
-    void browseReportOnlyWhenLoggedIn() throws Exception {
+    @DisplayName("⑫ 浏览只由服务端记一次：前端不得再自行上报（否则同一次浏览记两遍）")
+    void browseRecordedOnlyOnce() throws Exception {
         String s = page();
-        assertThat(s).as("必须有上报函数").contains("function reportView");
         assertThat(s)
-                .as("匿名不上报——无稳定身份，会变成无法清理的垃圾数据")
-                .contains("if (!isLoggedIn()) return;");
-        assertThat(s).as("上报失败不得打扰顾客").contains("function () {}, function () {}");
+                .as("前端不得再上报浏览 —— 服务端已在详情接口记过，再报一次热度与看板都会翻倍")
+                .doesNotContain("function reportView")
+                .doesNotContain("/view'");
     }
     /**
      * D-784 / D-777 同类 P0：去重两套推荐实现时，我删掉了 recSectionHtml，
@@ -190,7 +200,6 @@ class ShopCustomerReviewTest {
                 {"loadRecommends", "function loadRecommends("},
                 {"loadReviews", "function loadReviews("},
                 {"carouselHtml", "function carouselHtml("},
-                {"reportView", "function reportView("},
         };
         for (String[] p : pairs) {
             assertThat(s).as(p[0] + " 必须有定义（否则调用即 ReferenceError）").contains(p[1]);
