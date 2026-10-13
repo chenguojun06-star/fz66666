@@ -543,14 +543,6 @@ export const menuConfig: MenuSection[] = [
     path: paths.dashboard,
   },
   {
-    // 收银台放在最前面：档口场景下这是每天点得最多的入口
-    title: '收银台',
-    shortTitle: '收银',
-    key: 'pos',
-    icon: React.createElement(DollarOutlined),
-    path: paths.pos,
-  },
-  {
     title: '选品中心',
     shortTitle: '选品',
     key: 'selection',
@@ -631,6 +623,10 @@ export const menuConfig: MenuSection[] = [
       { label: '商品上架管理', path: paths.shopListing, icon: React.createElement(ShoppingCartOutlined) },
       // P0：平台级商城总览（全站店铺/在架商品/注册用户/订单，只读；仅平台超管）
       { label: '平台商城总览', path: paths.platformShopOverview, icon: React.createElement(AppstoreOutlined), superAdminOnly: true },
+      // 收银台（POS 开单）：不单独占一个主菜单，归到「电商运营」下。
+      // 权限码仍是独立的 MENU_POS —— 它动库存与应收，不该因为"在电商组里"
+      // 就跟着 MENU_ECOMMERCE 一起放开（那等于悄悄扩大了授权范围）。
+      { label: '收银台', path: paths.pos, icon: React.createElement(DollarOutlined) },
     ],
   },
   {

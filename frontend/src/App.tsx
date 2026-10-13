@@ -26,7 +26,9 @@ import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview } from './modules/ecommerce';
-// 收银台：独立模块（不放进 ecommerce —— 它动的是库存与应收，不是店铺运营）
+// 收银台：菜单入口挂在「电商运营」组下（不单独占主菜单），
+// 但页面代码留在 modules/pos —— 它动的是库存与应收，与店铺运营不是一个域，
+// 混进 ecommerce 目录只会让依赖关系变糊。权限码也独立（MENU_POS）。
 const PosTerminal = React.lazy(() => import('./modules/pos/pages/PosTerminal'));
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
