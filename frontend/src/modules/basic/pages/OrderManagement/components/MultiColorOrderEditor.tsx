@@ -99,32 +99,55 @@ const buildComboKey = (color: string, size: string) => `${normalizeKey(color)}__
  *  - 无销售记录（hasData=false）时根本不渲染，由调用方显示「—」；
  *  - 柱高按本组最大值归一化，避免绝对值大小影响视觉误判。
  */
-const MiniSalesBars: React.FC<{ points: SalesTrendPoint[]; width?: number; height?: number }> = ({
-  points,
-  width = 96,
-  height = 20,
-}) => {
-  const bars = useMemo(() => {
-    if (!points || points.length === 0) return [];
-    const max = Math.max(...points.map((p) => p.qty || 0), 0);
-    const n = points.length;
-    const barWidth = Math.max(1, width / n - 1);
-    return points.map((p, i) => ({
-      x: (width / n) * i,
-      h: max > 0 && (p.qty || 0) > 0 ? Math.max(1.5, ((p.qty || 0) / max) * (height - 2)) : 0,
-      w: barWidth,
-      qty: p.qty || 0,
-    }));
-  }, [points, width, height]);
+/**
+ * 色码销量横向条形图（D-800）
+ *
+ * <p>为什么不用「逐日柱状图」：服装是低频大批，一个季度可能只出一次货。
+ * 90 天逐日 = 90 根柱子挤在窄格里，只有一根有值，看上去就是一条线（实测踩过）。
+ * 真正有决策价值的是**每个色码累计卖了多少件**，所以直接按色码横向铺条，
+ * 条长=件数，一眼可读。
+ *
+ * <p>无任何数据时不渲染（调用方已提示「暂无数据」），不画空坐标系。
+ */
+const SizeColorSalesBars: React.FC<{ matrix: Record<string, Record<string, SalesTrendCell>> }> = ({ matrix }) => {
+  const items = useMemo(() => {
+    const out: Array<{ color: string; size: string; qty: number }> = [];
+    Object.entries(matrix || {}).forEach(([color, sizes]) => {
+      Object.entries(sizes || {}).forEach(([size, cell]) => {
+        if (cell?.hasData && (cell.totalQty ?? 0) > 0) {
+          out.push({ color, size, qty: cell.totalQty ?? 0 });
+        }
+      });
+    });
+    return out.sort((a, b) => b.qty - a.qty);
+  }, [matrix]);
 
-  const hasAny = bars.some((b) => b.h > 0);
+  if (items.length === 0) return null;
+  const max = items[0].qty;
+
   return (
-    <svg width={width} height={height} style={{ display: 'block' }} aria-label="销量趋势">
-      <line x1={0} y1={height - 1} x2={width} y2={height - 1} stroke="var(--color-border)" strokeWidth={1} />
-      {hasAny && bars.map((b, i) => (
-        <rect key={i} x={b.x} y={height - 1 - b.h} width={b.w} height={b.h} fill="var(--color-primary)" opacity={0.75} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {items.map((it) => (
+        <div key={`${it.color}__${it.size}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', minWidth: 120, textAlign: 'right' }}>
+            {it.color} {it.size}
+          </span>
+          <div style={{ flex: 1, height: 14, background: 'var(--color-bg-subtle)', borderRadius: 2, overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${Math.max(2, (it.qty / max) * 100)}%`,
+                height: '100%',
+                background: 'var(--color-primary)',
+                borderRadius: 2,
+              }}
+            />
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600, minWidth: 40 }}>
+            {it.qty} 件
+          </span>
+        </div>
       ))}
-    </svg>
+    </div>
   );
 };
 
@@ -481,12 +504,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
             {styleNoForTrend ? (
               salesTrendMeta.hasData ? (
                 <>
-                  数据区间：{salesTrendMeta.dataRange || '—'}。每格下方柱状图为该色码逐日出库量，悬停可看累计件数。
+                  数据区间：{salesTrendMeta.dataRange || '—'}。表格内「售 N」为该色码近{salesTrendMeta.days ?? 90}天累计售出件数，「—」表示无销售记录。
                   {salesTrendMeta.windowExpanded && (
                     <span style={{ color: 'var(--color-warning-deep)' }}>
                       {' '}（近{salesTrendMeta.days ?? 0}天窗口内无记录，系统已自动向前回溯查找，请注意数据可能来自较早时段）
                     </span>
                   )}
+                  <div style={{ marginTop: 8 }}>
+                    <SizeColorSalesBars matrix={salesTrendMatrix} />
+                  </div>
                 </>
               ) : (
                 <>
@@ -565,12 +591,14 @@ const avail = getAvailability(row.color, size);
                             </div>
                           ) : null}
                           {trendExpanded && (
-                            <div className="u-ta-center" style={{ lineHeight: 1.2 }}>
-                              {trendCell && trendCell.hasData && trendCell.points && trendCell.points.length > 0 ? (
+                            <div className="u-ta-center" style={{ lineHeight: 1.3 }}>
+                              {trendCell && trendCell.hasData ? (
                                 <Tooltip
                                   title={`近${salesTrendMeta.days ?? 90}天累计售出 ${trendCell.totalQty ?? 0} 件，出库台账记录 ${trendCell.recordDays ?? 0} 天`}
                                 >
-                                  <span><MiniSalesBars points={trendCell.points} /></span>
+                                  <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: 12 }}>
+                                    售 {trendCell.totalQty ?? 0}
+                                  </span>
                                 </Tooltip>
                               ) : (
                                 <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }} title={`该色码近${salesTrendMeta.days ?? 90}天没有销售出库记录`}>—</span>
