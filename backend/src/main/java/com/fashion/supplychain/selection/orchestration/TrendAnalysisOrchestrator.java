@@ -1,6 +1,7 @@
 package com.fashion.supplychain.selection.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -244,13 +245,10 @@ public class TrendAnalysisOrchestrator {
         String suggestion = content;
         if (content != null && content.contains("\"total\"")) {
             try {
-                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-                // 提取JSON片段
-                int jsonStart = content.indexOf('{');
-                int jsonEnd = content.lastIndexOf('}');
-                if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                    String json = content.substring(jsonStart, jsonEnd + 1);
-                    Map<?, ?> jsonMap = om.readValue(json, Map.class);
+                // 统一走 LlmJsonUtils（去围栏 / 去前后解释 / 截断时补结构）
+                String json = LlmJsonUtils.extractJson(content);
+                if (json != null) {
+                    Map<?, ?> jsonMap = LlmJsonUtils.parse(json, Map.class);
                     if (jsonMap.get("total") instanceof Number) {
                         totalScore = ((Number) jsonMap.get("total")).intValue();
                     }

@@ -1,6 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration.agent;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.dto.SmartNotification;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -28,8 +28,6 @@ public class MultiAgentDebateOrchestrator {
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
-
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * 对关键订单进行多维度联合诊断
@@ -66,11 +64,19 @@ public class MultiAgentDebateOrchestrator {
                 left(pmcReport, 20), left(financeReport, 20), left(qcReport, 20));
 
         // 4. CEO 智能体（总协调）：进行权衡与最终决策
+        //
+        // ⚠️ 字段顺序是刻意的：**短字段/枚举放前面，长文本放最后**。
+        // 2026-10-13 线上翻车：模型把 recommendedAction 写成一大段，撞到输出长度上限被截断，
+        // 而它排在中间 → 后面的 priority/notificationType 全丢，整条 JSON 解析失败、
+        // 诊断降级成"解析失败"。现在即使被截断，前面那些字段也还在。
+        // 同时给了字数上限提示，从源头降低被截断的概率。
         String ceoSystemPrompt = "你是服装厂的厂长 (CEO)。" +
                 "你手下的 PMC、财务、品控刚刚对订单 " + order.getOrderNo() + " 提交了各自视角的分析报告。" +
                 "你需要综合他们的意见（处理他们之间的冲突，比如 PMC要赶工而财务嫌贵），得出最终的最优决策。" +
                 "请直接输出一段 JSON，不要任何 Markdown 标记。格式如下：" +
-                "{\"title\":\"诊断标题\",\"content\":\"综合分析说明\",\"recommendedAction\":\"具体的操作建议\",\"priority\":\"high/normal/low\",\"notificationType\":\"risk\"}";
+                "{\"priority\":\"high/normal/low\",\"notificationType\":\"risk\"," +
+                "\"title\":\"诊断标题（30字内）\",\"content\":\"综合分析说明（300字内）\"," +
+                "\"recommendedAction\":\"具体操作建议（300字内，分条写）\"}";
         
         String ceoUserPrompt = String.format("【PMC报告】：%s\n【财务报告】：%s\n【品控报告】：%s\n请给出最终 JSON 决策。", 
                 pmcReport, financeReport, qcReport);
@@ -78,8 +84,10 @@ public class MultiAgentDebateOrchestrator {
         String ceoDecisionJson = askAgent("ceo-agent", ceoSystemPrompt, ceoUserPrompt);
 
         // 5. 解析并封装为标准通知格式
+        // 走 LlmJsonUtils：模型爱加 Markdown 围栏、爱在前后加解释、还爱被截断，
+        // 直接 JSON.readValue 只能吃干净 JSON（2026-10-13 就是被截断后整条失败的）。
         try {
-            SmartNotification notification = JSON.readValue(ceoDecisionJson, SmartNotification.class);
+            SmartNotification notification = LlmJsonUtils.parse(ceoDecisionJson, SmartNotification.class);
             notification.setNotificationId(UUID.randomUUID().toString());
             notification.setOrderId(String.valueOf(order.getId()));
             notification.setTenantId(order.getTenantId());

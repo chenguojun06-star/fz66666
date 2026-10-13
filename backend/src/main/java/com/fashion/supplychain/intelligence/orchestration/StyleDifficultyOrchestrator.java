@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.DifficultyAssessment;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -461,9 +462,16 @@ public class StyleDifficultyOrchestrator {
         return factors.stream().limit(5).collect(Collectors.toList());
     }
 
-    private Map<String, Object> parseAiJson(String json) {
-        try { return MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}); }
-        catch (Exception e) { log.warn("[StyleDifficulty] AI 返回 JSON 解析失败: {}", e.getMessage()); return null; }
+    private Map<String, Object> parseAiJson(String raw) {
+        try {
+            // 模型输出未必干净（围栏/前后解释/被截断），统一先抠再解析
+            String json = LlmJsonUtils.extractJson(raw);
+            return json == null ? null
+                    : MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("[StyleDifficulty] AI 返回 JSON 解析失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     private List<String> asStringList(Object value) {
@@ -492,8 +500,7 @@ public class StyleDifficultyOrchestrator {
     }
 
     private String extractJson(String raw) {
-        int start = raw.indexOf('{'); int end = raw.lastIndexOf('}');
-        return (start >= 0 && end > start) ? raw.substring(start, end + 1) : null;
+        return LlmJsonUtils.extractJson(raw);
     }
 
     private DifficultyAssessment defaultAssessment() {

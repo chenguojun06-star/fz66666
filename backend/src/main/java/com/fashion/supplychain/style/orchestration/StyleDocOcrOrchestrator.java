@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.orchestration;
 
 import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -223,11 +224,9 @@ public class StyleDocOcrOrchestrator {
             return fallback;
         }
 
-        // 尝试2: 从第一个 { 到最后一个 } 切片
-        int firstBrace = text.indexOf('{');
-        int lastBrace = text.lastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            String sliced = text.substring(firstBrace, lastBrace + 1);
+        // 尝试2: 抠出最外层 JSON（去围栏 / 去前后解释 / 截断时补结构）
+        String sliced = LlmJsonUtils.extractJson(text);
+        if (sliced != null) {
             java.util.Map<String, Object> parsed2 = tryParseJsonObject(sliced);
             if (parsed2 != null && isValidSizeTablePayload(parsed2)) {
                 fallback.putAll(parsed2);
@@ -396,11 +395,9 @@ public class StyleDocOcrOrchestrator {
             return fallback;
         }
 
-        // 尝试2: 切片 { ... }
-        int firstBrace = text.indexOf('{');
-        int lastBrace = text.lastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            String sliced = text.substring(firstBrace, lastBrace + 1);
+        // 尝试2: 抠出最外层 JSON（去围栏 / 去前后解释 / 截断时补结构）
+        String sliced = LlmJsonUtils.extractJson(text);
+        if (sliced != null) {
             java.util.Map<String, Object> parsed2 = tryParseJsonObject(sliced);
             if (parsed2 != null && isValidBomPayload(parsed2)) {
                 fallback.putAll(parsed2);

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
@@ -759,13 +760,9 @@ public class SelfCriticHelper {
         double[] defaults = {70.0, 70.0, 70.0, 70.0, 70.0};
         if (content == null || content.isBlank()) return defaults;
         try {
-            String json = content.trim();
-            int start = json.indexOf('{');
-            int end = json.lastIndexOf('}');
-            if (start < 0 || end < 0) return defaults;
-            json = json.substring(start, end + 1);
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            var node = mapper.readTree(json);
+            String json = LlmJsonUtils.extractJson(content);
+            if (json == null) return defaults;
+            var node = LlmJsonUtils.parse(json, com.fasterxml.jackson.databind.JsonNode.class);
             return new double[]{
                     clampScore(node.path("data_accuracy").asDouble(70)),
                     clampScore(node.path("tool_efficiency").asDouble(70)),

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
@@ -132,9 +133,9 @@ public class GoldenEvalService {
 
     private double parseOnlineScore(String content) {
         try {
-            int start = content.indexOf('{'), end = content.lastIndexOf('}');
-            if (start < 0 || end < 0) return 75;
-            var node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(content.substring(start, end + 1));
+            String json = LlmJsonUtils.extractJson(content);
+            if (json == null) return 75;
+            var node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
             return node.path("overall").asDouble(75);
         } catch (Exception e) { return 75; }
     }

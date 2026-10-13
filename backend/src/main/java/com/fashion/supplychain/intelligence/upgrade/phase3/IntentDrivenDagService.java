@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.upgrade.phase3;
 
 import com.fashion.supplychain.intelligence.agent.AiMessage;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.agent.dag.DagGraph;
 import com.fashion.supplychain.intelligence.agent.dag.DagNode;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -169,25 +170,12 @@ public class IntentDrivenDagService {
     private com.fasterxml.jackson.databind.JsonNode extractJson(String content) {
         if (content == null) return null;
         try {
-            String trimmed = content.trim();
-            if (trimmed.startsWith("```json")) {
-                trimmed = trimmed.substring(7);
-                if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.length() - 3);
-            } else if (trimmed.startsWith("```")) {
-                trimmed = trimmed.substring(3);
-                if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.length() - 3);
-            }
-            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(trimmed.trim());
+            // 去围栏 / 去前后解释 / 截断时补结构，统一交给 LlmJsonUtils
+            String json = LlmJsonUtils.extractJson(content);
+            return json == null ? null
+                    : new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
         } catch (Exception e) {
-            int start = content.indexOf('{');
-            int end = content.lastIndexOf('}');
-            if (start >= 0 && end > start) {
-                try {
-                    return new com.fasterxml.jackson.databind.ObjectMapper().readTree(content.substring(start, end + 1));
-                } catch (Exception ex) {
-                    log.warn("[IntentDag] 容错解析JSON失败: {}", ex.getMessage());
-                }
-            }
+            log.warn("[IntentDag] 容错解析JSON失败: {}", e.getMessage());
             return null;
         }
     }

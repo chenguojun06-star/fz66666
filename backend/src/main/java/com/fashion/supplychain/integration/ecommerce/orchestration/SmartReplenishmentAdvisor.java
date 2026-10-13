@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.ecommerce.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcPurchaseSuggestion;
@@ -182,14 +183,12 @@ public class SmartReplenishmentAdvisor {
 
     private AiVerdict parseAiVerdict(String content) {
         if (content == null) return null;
-        // 容错提取 JSON
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start < 0 || end <= start) return null;
-        String json = content.substring(start, end + 1);
+        // 容错提取 JSON（去围栏 / 去前后解释 / 截断时补结构）
+        String json = LlmJsonUtils.extractJson(content);
+        if (json == null) return null;
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(json);
+            com.fasterxml.jackson.databind.JsonNode node =
+                    LlmJsonUtils.parse(json, com.fasterxml.jackson.databind.JsonNode.class);
             AiVerdict v = new AiVerdict();
             v.type = node.has("type") ? node.get("type").asText() : null;
             v.confidence = node.has("confidence") ? node.get("confidence").asInt() : 60;

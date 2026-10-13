@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -318,11 +319,9 @@ public class VisionAnalysisService {
         result.setTaskType(taskType);
 
         try {
-            // 尝试解析 JSON
-            int jsonStart = raw.indexOf('{');
-            int jsonEnd = raw.lastIndexOf('}');
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                String jsonStr = raw.substring(jsonStart, jsonEnd + 1);
+            // 尝试解析 JSON（去围栏 / 去前后解释 / 截断时补结构）
+            String jsonStr = LlmJsonUtils.extractJson(raw);
+            if (jsonStr != null) {
                 Map<String, Object> jsonMap = MAPPER.readValue(jsonStr, new TypeReference<Map<String, Object>>() {});
 
                 result.setSeverity(extractString(jsonMap, "severity", "NONE"));
@@ -926,11 +925,7 @@ public class VisionAnalysisService {
     }
 
     private String extractJsonFragment(String raw) {
-        if (raw == null) return null;
-        int start = raw.indexOf('{');
-        int end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) return raw.substring(start, end + 1);
-        return null;
+        return LlmJsonUtils.extractJson(raw);
     }
 
     private String str(Object o, String def) {

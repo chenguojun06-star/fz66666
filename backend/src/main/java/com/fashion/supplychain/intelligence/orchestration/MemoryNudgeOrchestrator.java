@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.entity.MemoryNudge;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.MemoryNudgeMapper;
@@ -151,14 +152,10 @@ public class MemoryNudgeOrchestrator {
                                     String sessionId, String conversationId) {
         if (response == null || response.contains("NONE")) return null;
         try {
-            int start = response.indexOf('{');
-            int end = response.lastIndexOf('}');
-            if (start < 0 || end <= start) return null;
-            String json = response.substring(start, end + 1);
-
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String json = LlmJsonUtils.extractJson(response);
+            if (json == null) return null;
             @SuppressWarnings("unchecked")
-            Map<String, Object> map = mapper.readValue(json, Map.class);
+            Map<String, Object> map = LlmJsonUtils.parse(json, Map.class);
 
             MemoryNudge n = new MemoryNudge();
             n.setId("nudge_" + UUID.randomUUID().toString().replace("-", "").substring(0, 20));

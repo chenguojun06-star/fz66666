@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.entity.UserProfileEvolution;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.UserProfileEvolutionMapper;
@@ -178,10 +179,8 @@ public class UserProfileEvolutionOrchestrator {
     private Map<String, Map.Entry<String, BigDecimal>> parseProfileExtraction(String response) {
         Map<String, Map.Entry<String, BigDecimal>> result = new LinkedHashMap<>();
         try {
-            int start = response.indexOf('{');
-            int end = response.lastIndexOf('}');
-            if (start < 0 || end <= start) return result;
-            String json = response.substring(start, end + 1);
+            String json = LlmJsonUtils.extractJson(response);
+            if (json == null) return result;
 
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             Map<String, Object> map = mapper.readValue(json, Map.class);

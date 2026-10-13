@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -328,12 +329,9 @@ public class ProductionAgenticCrewOrchestrator {
         return ref;
     }
 
-    /** 从 LLM 响应文本中提取第一个 JSON 对象块 */
+    /** 从 LLM 响应文本中抠出 JSON（去围栏 / 去前后解释 / 截断时补结构） */
     private String extractJsonBlock(String text) {
-        if (text == null) return null;
-        int start = text.indexOf('{');
-        int end   = text.lastIndexOf('}');
-        return (start >= 0 && end > start) ? text.substring(start, end + 1) : null;
+        return LlmJsonUtils.extractJson(text);
     }
 
     private String trunc(String s, int n) {

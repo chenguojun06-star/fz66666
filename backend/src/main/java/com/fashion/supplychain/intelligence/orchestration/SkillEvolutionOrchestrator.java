@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.entity.ConversationReflection;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
@@ -179,10 +180,8 @@ public class SkillEvolutionOrchestrator {
     private SkillTemplate parseSkillFromLlm(String response, ConversationReflection reflection) {
         if (response == null || response.contains("NONE")) return null;
         try {
-            String json = response;
-            int start = json.indexOf('{');
-            int end = json.lastIndexOf('}');
-            if (start >= 0 && end > start) json = json.substring(start, end + 1);
+            String json = LlmJsonUtils.extractJson(response);
+            if (json == null) return null;
 
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")

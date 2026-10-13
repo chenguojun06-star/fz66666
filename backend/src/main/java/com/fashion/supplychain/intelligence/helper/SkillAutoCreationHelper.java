@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.SkillTemplateMapper;
 import com.fashion.supplychain.intelligence.service.MemoryBankService;
@@ -174,11 +175,8 @@ public class SkillAutoCreationHelper {
     private SkillTemplate parseResponse(String response, Long tenantId, String sessionId) {
         if (response == null || response.contains("NONE")) return null;
         try {
-            String json = response;
-            int start = json.indexOf('{');
-            int end = json.lastIndexOf('}');
-            if (start < 0 || end <= start) return null;
-            json = json.substring(start, end + 1);
+            String json = LlmJsonUtils.extractJson(response);
+            if (json == null) return null;
 
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")

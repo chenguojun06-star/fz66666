@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -419,15 +420,9 @@ public class MaterialPurchaseDocOrchestrator {
     }
 
     private String extractJson(String raw) {
-        // 剥离 markdown ```json ... ``` 包裹
-        Pattern md = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
-        Matcher mdm = md.matcher(raw);
-        if (mdm.find()) return mdm.group(1).trim();
-        // 直接找第一个 { 到最后一个 }
-        int start = raw.indexOf('{');
-        int end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) return raw.substring(start, end + 1);
-        return raw;
+        // 统一走 LlmJsonUtils（去围栏 / 去前后解释 / 截断时补结构）；抠不到原样返回
+        String json = LlmJsonUtils.extractJson(raw);
+        return json != null ? json : raw;
     }
 
     private Map<String, Object> parseItemObject(String objStr) {

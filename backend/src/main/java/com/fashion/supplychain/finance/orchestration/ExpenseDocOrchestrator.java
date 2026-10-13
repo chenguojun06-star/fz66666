@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementDocService;
@@ -206,13 +207,10 @@ public class ExpenseDocOrchestrator {
     }
 
     private String extractJson(String raw) {
-        Pattern md = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
-        Matcher mdm = md.matcher(raw);
-        if (mdm.find()) return mdm.group(1).trim();
-        int start = raw.indexOf('{');
-        int end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) return raw.substring(start, end + 1);
-        return raw;
+        // 统一走 LlmJsonUtils（去围栏 / 去前后解释 / 截断时补结构）。
+        // 抠不到就原样返回，交给调用方的解析失败分支兜底 —— 保持原有语义不变。
+        String json = LlmJsonUtils.extractJson(raw);
+        return json != null ? json : raw;
     }
 
     /** 提取字符串字段（去除引号和null） */

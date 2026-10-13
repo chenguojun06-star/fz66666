@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.agent.AiMessage;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -237,13 +238,7 @@ public class TaskDecompositionEngine {
      * 提取JSON
      */
     private String extractJson(String content) {
-        if (content == null) return null;
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            return content.substring(start, end + 1);
-        }
-        return null;
+        return LlmJsonUtils.extractJson(content);
     }
 
     /**

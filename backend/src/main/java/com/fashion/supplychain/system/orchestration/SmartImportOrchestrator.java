@@ -1,6 +1,7 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.system.importer.ExcelImportHelper;
 import com.fashion.supplychain.system.importer.InMemoryMultipartFile;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -206,15 +207,10 @@ public class SmartImportOrchestrator {
 
     /** 剥掉 markdown 代码栅栏后解析 JSON，失败返回 null */
     private JsonNode parseJsonLenient(String content) {
-        String text = content.trim();
-        if (text.startsWith("```")) {
-            text = text.replaceAll("^```[a-zA-Z]*\\s*", "").replaceAll("```\\s*$", "").trim();
-        }
-        int start = text.indexOf('{');
-        int end = text.lastIndexOf('}');
-        if (start < 0 || end <= start) return null;
         try {
-            return objectMapper.readTree(text.substring(start, end + 1));
+            // 去围栏 / 去前后解释 / 截断时补结构，全部交给 LlmJsonUtils
+            String json = LlmJsonUtils.extractJson(content);
+            return json == null ? null : LlmJsonUtils.parse(json, JsonNode.class);
         } catch (Exception e) {
             return null;
         }

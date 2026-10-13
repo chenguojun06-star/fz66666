@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.ecommerce.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
@@ -259,10 +260,9 @@ public class DistributorBillReconciliationOrchestrator {
     }
 
     private String extractJson(String text) {
-        int start = text.indexOf('{');
-        int end = text.lastIndexOf('}');
-        if (start >= 0 && end > start) return text.substring(start, end + 1);
-        return text;
+        // 统一走 LlmJsonUtils；抠不到原样返回，由调用方兜底
+        String json = LlmJsonUtils.extractJson(text);
+        return json != null ? json : text;
     }
 
     private String buildRuleFallback(String diffType, BigDecimal diffAmount) {

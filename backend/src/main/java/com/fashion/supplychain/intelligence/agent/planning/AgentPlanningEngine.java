@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.planning;
 
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -297,13 +298,7 @@ public class AgentPlanningEngine {
     }
 
     private String extractJson(String content) {
-        if (content == null) return null;
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            return content.substring(start, end + 1);
-        }
-        return null;
+        return LlmJsonUtils.extractJson(content);
     }
 
     private int getInt(Map<String, Object> map, String key, int defaultValue) {

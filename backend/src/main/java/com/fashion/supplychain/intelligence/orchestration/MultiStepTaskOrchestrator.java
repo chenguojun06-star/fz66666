@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -305,9 +306,6 @@ public class MultiStepTaskOrchestrator {
     }
 
     private String extractJsonBlock(String text) {
-        if (text == null) return null;
-        int start = text.indexOf('{');
-        int end = text.lastIndexOf('}');
-        return (start >= 0 && end > start) ? text.substring(start, end + 1) : null;
+        return LlmJsonUtils.extractJson(text);
     }
 }

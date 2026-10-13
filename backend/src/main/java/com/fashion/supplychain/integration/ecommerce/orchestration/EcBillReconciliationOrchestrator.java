@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.ecommerce.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.EcSalesRevenue;
@@ -231,12 +232,11 @@ public class EcBillReconciliationOrchestrator {
 
     private AiAnalysis parseAiAnalysis(String content) {
         if (content == null) return null;
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start < 0 || end <= start) return null;
+        String json = LlmJsonUtils.extractJson(content);
+        if (json == null) return null;
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(content.substring(start, end + 1));
+            com.fasterxml.jackson.databind.JsonNode node =
+                    LlmJsonUtils.parse(json, com.fasterxml.jackson.databind.JsonNode.class);
             AiAnalysis a = new AiAnalysis();
             a.analysis = node.has("analysis") ? node.get("analysis").asText() : null;
             a.confidence = node.has("confidence") ? node.get("confidence").asInt() : 60;

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -465,9 +466,7 @@ public class QualityAiSuggestionOrchestrator {
 
     private String extractJson(String content) {
         if (!StringUtils.hasText(content)) return null;
-        int start = content.indexOf('{');
-        int end   = content.lastIndexOf('}');
-        return (start >= 0 && end > start) ? content.substring(start, end + 1) : null;
+        return LlmJsonUtils.extractJson(content);
     }
 
     private String nvl(String val, String def) {

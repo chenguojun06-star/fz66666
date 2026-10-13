@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
@@ -509,17 +510,9 @@ public class MaterialColorCardOrchestrator {
         }
     }
 
-    /** 从 AI 文本中提取 JSON 部分（去掉 ```json 包裹） */
+    /** 从 AI 文本中提取 JSON 部分（去围栏 / 去前后解释 / 截断时补结构） */
     private static String extractJson(String text) {
-        if (text == null) return null;
-        String cleaned = text.trim();
-
-        int start = cleaned.indexOf('{');
-        int end = cleaned.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            return cleaned.substring(start, end + 1);
-        }
-        return null;
+        return LlmJsonUtils.extractJson(text);
     }
 
     // ==================== 整卡拍照：多色号条目一键识别 ====================

@@ -1,15 +1,20 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.common.util.LlmJsonUtils;
 import com.fashion.supplychain.intelligence.entity.AgentExecutionLog;
 import com.fashion.supplychain.intelligence.entity.PatternDiscovery;
 import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
 import com.fashion.supplychain.intelligence.mapper.PatternDiscoveryMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +32,12 @@ import org.springframework.context.annotation.Lazy;
 @Service
 @Lazy
 public class PatternDiscoveryOrchestrator {
+
+    /** 单轮最多落库几条规律（模型一次可能给一堆，落太多反而没人看） */
+    private static final int MAX_PATTERNS_PER_ROUND = 5;
+
+    /** 从"80分"这类文本里抠数字 */
+    private static final Pattern NUMBER_IN_TEXT = Pattern.compile("-?\\d+");
 
     @Autowired private PatternDiscoveryMapper patternMapper;
     @Autowired private AgentExecutionLogMapper executionLogMapper;
@@ -128,44 +139,67 @@ public class PatternDiscoveryOrchestrator {
         return 0.0;
     }
 
-    private List<PatternDiscovery> parseAndSavePatterns(Long tenantId, String json, int lookbackDays, LocalDateTime since) {
-        java.util.ArrayList<PatternDiscovery> saved = new java.util.ArrayList<>();
+    /**
+     * 解析模型输出并落库。
+     *
+     * <p><b>2026-10-13 重写</b>：原实现是手写"简易 JSON 数组解析"——按 {@code },{ 拆串 +
+     * 正则抠字段。它有三处硬伤，线上都踩过：
+     * <ol>
+     *   <li>模型加 Markdown 围栏或前后加解释 → {@code startsWith("[")} 为假 → 整轮白跑；</li>
+     *   <li>输出被长度截断时 {@code substring(1, len-1)} 会砍掉一个有效字符；</li>
+     *   <li>字符串值里出现 {@code },{ 就被拆坏（description 里写个代码片段就中招）。</li>
+     * </ol>
+     * 现在统一走 {@link LlmJsonUtils}（去围栏 → 抠最外层数组 → 截断时修补结构），
+     * 再交给 Jackson 按节点取字段 —— 值里有花括号、有转义引号都不会错。
+     */
+    private List<PatternDiscovery> parseAndSavePatterns(Long tenantId, String raw, int lookbackDays,
+                                                       LocalDateTime since) {
+        List<PatternDiscovery> saved = new ArrayList<>();
+        String json = LlmJsonUtils.extractJson(raw);
+        if (json == null) {
+            log.warn("[Pattern] 模型输出里找不到 JSON 数组，跳过本轮（原始输出前 200 字: {}）",
+                    left(raw, 200));
+            return saved;
+        }
         try {
-            // 简易JSON数组解析 — 按 },{ 拆分
-            String trimmed = json.trim();
-            if (!trimmed.startsWith("[")) return saved;
-            trimmed = trimmed.substring(1, trimmed.length() - 1); // 去掉 [ ]
-            String[] items = trimmed.split("\\},\\s*\\{");
-            for (String item : items) {
-                if (!item.startsWith("{")) item = "{" + item;
-                if (!item.endsWith("}")) item = item + "}";
+            JsonNode root = LlmJsonUtils.parse(json, JsonNode.class);
+            if (!root.isArray()) {
+                log.warn("[Pattern] 期望 JSON 数组，实际是 {}，跳过本轮", root.getNodeType());
+                return saved;
+            }
+            for (JsonNode item : root) {
                 PatternDiscovery pd = buildFromJsonItem(tenantId, item, lookbackDays, since);
                 if (pd != null) {
                     patternMapper.insert(pd);
                     saved.add(pd);
                 }
-                if (saved.size() >= 5) break;
+                if (saved.size() >= MAX_PATTERNS_PER_ROUND) {
+                    break;
+                }
             }
+            log.info("[Pattern] 本轮落库 {} 条规律（模型返回 {} 条）", saved.size(), root.size());
         } catch (Exception e) {
-            log.warn("[Pattern] 解析LLM输出异常", e);
+            // 解析不了就这轮不产出，绝不抛给调度器
+            log.warn("[Pattern] 解析 LLM 输出失败: {}", e.getMessage());
         }
         return saved;
     }
 
-    private PatternDiscovery buildFromJsonItem(Long tenantId, String json, int lookbackDays, LocalDateTime since) {
+    private PatternDiscovery buildFromJsonItem(Long tenantId, JsonNode item, int lookbackDays,
+                                               LocalDateTime since) {
         PatternDiscovery pd = new PatternDiscovery();
         pd.setTenantId(tenantId);
-        pd.setPatternType(extractField(json, "type", "recurring"));
-        pd.setPatternName(extractField(json, "name", "未命名规律"));
-        pd.setDescription(extractField(json, "description", ""));
+        pd.setPatternType(text(item, "type", "recurring"));
+        pd.setPatternName(text(item, "name", "未命名规律"));
+        pd.setDescription(text(item, "description", ""));
         pd.setDataSource("agent_execution_log");
         pd.setTimeRangeStart(since);
         pd.setTimeRangeEnd(LocalDateTime.now());
-        pd.setConfidence(parseIntField(json, "confidence", 50));
-        pd.setImpactScore(parseIntField(json, "impact", 50));
+        pd.setConfidence(intOf(item, "confidence", 50));
+        pd.setImpactScore(intOf(item, "impact", 50));
         pd.setRecurrenceCount(0);
         pd.setLastSeen(LocalDateTime.now());
-        pd.setSuggestedAction(extractField(json, "action", ""));
+        pd.setSuggestedAction(text(item, "action", ""));
         pd.setIsActionable(pd.getConfidence() >= 60 ? 1 : 0);
         pd.setStatus("discovered");
         pd.setDeleteFlag(0);
@@ -174,26 +208,37 @@ public class PatternDiscoveryOrchestrator {
         return pd;
     }
 
-    private String extractField(String json, String field, String def) {
-        String key = "\"" + field + "\":\"";
-        int idx = json.indexOf(key);
-        if (idx < 0) return def;
-        int start = idx + key.length();
-        int end = json.indexOf('"', start);
-        return end > start ? json.substring(start, end) : def;
+    /** 取字符串字段；缺失/为 null 时给默认值 */
+    private static String text(JsonNode node, String field, String def) {
+        JsonNode v = node.get(field);
+        return v == null || v.isNull() ? def : v.asText(def);
     }
 
-    private int parseIntField(String json, String field, int def) {
-        String key = "\"" + field + "\":";
-        int idx = json.indexOf(key);
-        if (idx < 0) return def;
-        int start = idx + key.length();
-        StringBuilder sb = new StringBuilder();
-        for (int i = start; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (Character.isDigit(c)) sb.append(c);
-            else if (sb.length() > 0) break;
+    /** 取整数字段；模型偶尔写成 "80分" 这种，抠出数字，抠不到给默认值 */
+    private static int intOf(JsonNode node, String field, int def) {
+        JsonNode v = node.get(field);
+        if (v == null || v.isNull()) {
+            return def;
         }
-        try { return Integer.parseInt(sb.toString()); } catch (Exception e) { return def; }
+        if (v.isNumber()) {
+            return v.asInt(def);
+        }
+        Matcher m = NUMBER_IN_TEXT.matcher(v.asText(""));
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group());
+            } catch (NumberFormatException ignore) {
+                return def;
+            }
+        }
+        return def;
+    }
+
+    private static String left(String s, int n) {
+        if (s == null) {
+            return "";
+        }
+        String t = s.replace('\n', ' ');
+        return t.length() <= n ? t : t.substring(0, n) + "…";
     }
 }
