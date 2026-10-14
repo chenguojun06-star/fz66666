@@ -1,12 +1,22 @@
 package com.fashion.supplychain.intelligence.mapper;
 
+import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import org.apache.ibatis.annotations.Select;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * {@code AiJobRunLogMapper} SQL 契约测试。
@@ -26,6 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("AiJobRunLogMapper - 系统级日志查询不得按租户过滤")
 class AiJobRunLogMapperSqlTest {
 
+    private final AiJobRunLogService service = new AiJobRunLogService();
+
     private static String sqlOf(String methodName, Class<?>... paramTypes) throws Exception {
         Method m = AiJobRunLogMapper.class.getMethod(methodName, paramTypes);
         Select select = m.getAnnotation(Select.class);
@@ -44,12 +56,20 @@ class AiJobRunLogMapperSqlTest {
     }
 
     @Test
-    @DisplayName("selectRecentByStatus 不得含 tenant_id")
+    @DisplayName("selectRecentByStatus 不得含 tenant_id，且必须是等值条件（不能用 IS NULL OR，那会让索引失效）")
     void selectRecentByStatusMustNotFilterByTenant() throws Exception {
         String sql = sqlOf("selectRecentByStatus", int.class, String.class);
-        assertThat(sql).doesNotContain("tenant_id");
-        // 用 (status IS NULL OR status = ?) 实现"可选筛选"，避免动态 SQL 便于静态审计
-        assertThat(sql).contains("#{status} IS NULL");
+        assertThat(sql)
+                .as("一旦出现 tenant_id 过滤，接口会因 tenant_id 全为 NULL 而永远返回空（D-542）")
+                .doesNotContain("tenant_id");
+        assertThat(sql)
+                .as("必须是等值条件，优化器才能用上 V202710140002 补的 (status, start_time) 复合索引")
+                .contains("WHERE status = #{status}");
+        assertThat(sql)
+                .as("(status IS NULL OR status = ?) 这种 OR 谓词会让索引失效 —— 2026-10-14 在 250 万行的"
+                        + "表上实测全表扫 + filesort，慢日志一天出现 16 次。"
+                        + "「不传 status」的兼容应由 Service 层分流到 selectRecent，不要塞进 SQL")
+                .doesNotContain("IS NULL OR");
     }
 
     @Test
@@ -75,5 +95,36 @@ class AiJobRunLogMapperSqlTest {
         assertThat(sqlOf("selectStats", int.class)).contains("start_time >=");
         assertThat(sqlOf("selectSlowestJobs", int.class, int.class)).contains("start_time >=");
         assertThat(sqlOf("selectFailureTop", int.class, int.class)).contains("start_time >=");
+    }
+
+    // ==================== Service 层分流 ====================
+
+    @Test
+    @DisplayName("不传 status 时必须走 selectRecent —— 可选筛选的兼容放 Service 层，不塞进 SQL")
+    void queryRecentRoutesBlankStatusToSelectRecent() {
+        AiJobRunLogMapper mapper = mock(AiJobRunLogMapper.class);
+        when(mapper.selectRecent(anyInt())).thenReturn(List.of());
+        AiJobRunLogService spy = org.mockito.Mockito.spy(service);
+        doReturn(mapper).when(spy).getBaseMapper();
+
+        spy.queryRecent(50, null);
+        spy.queryRecent(50, "   ");
+
+        verify(mapper, times(2)).selectRecent(50);
+        verify(mapper, never()).selectRecentByStatus(anyInt(), any());
+    }
+
+    @Test
+    @DisplayName("传了 status 才走 selectRecentByStatus（走新补的 (status,start_time) 复合索引）")
+    void queryRecentRoutesStatusToSelectRecentByStatus() {
+        AiJobRunLogMapper mapper = mock(AiJobRunLogMapper.class);
+        when(mapper.selectRecentByStatus(anyInt(), any())).thenReturn(List.of());
+        AiJobRunLogService spy = org.mockito.Mockito.spy(service);
+        doReturn(mapper).when(spy).getBaseMapper();
+
+        spy.queryRecent(30, "  FAILED  ");
+
+        verify(mapper).selectRecentByStatus(30, "FAILED");
+        verify(mapper, never()).selectRecent(anyInt());
     }
 }

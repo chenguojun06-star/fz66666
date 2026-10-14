@@ -114,6 +114,10 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
      * 原先的 {@code WHERE tenant_id = ?} 使本方法**永远返回空**（详见 Mapper 注释与 D-542）。
      * 本表是系统级作业日志，调用方仅限超管，查全量是正确的。
      *
+     * <p>⚠️ 2026-10-14 修正：不筛选状态时改走 {@code selectRecent}，
+     * 不再用 {@code (#{status} IS NULL OR status = #{status})} —— 那种 OR 谓词
+     * 让索引失效，在 250 万行的表上实测全表扫 + filesort（慢日志一天 16 次）。
+     *
      * @param limit  条数上限，内部夹到 [1, 500]
      * @param status 可选状态筛选（SUCCESS/FAILED/SKIPPED），null 或空表示不筛选
      */
@@ -124,6 +128,9 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
         try {
             int safeLimit = Math.min(Math.max(limit, 1), 500);
             String safeStatus = (status == null || status.isBlank()) ? null : status.trim();
+            if (safeStatus == null) {
+                return getBaseMapper().selectRecent(safeLimit);
+            }
             return getBaseMapper().selectRecentByStatus(safeLimit, safeStatus);
         } catch (Exception e) {
             onWriteFailure(e, "查询日志失败");

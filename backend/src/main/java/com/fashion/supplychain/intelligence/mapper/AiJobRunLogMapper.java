@@ -82,13 +82,20 @@ public interface AiJobRunLogMapper extends BaseMapper<AiJobRunLog> {
     List<Map<String, Object>> selectFailureTop(@Param("days") int days, @Param("limit") int limit);
 
     /**
-     * 按状态筛选的最近 N 条日志（status 为 null/空时等同 {@link #selectRecent}）。
+     * 按状态筛选的最近 N 条日志。
      *
-     * <p>用 {@code (#{status} IS NULL OR status = #{status})} 而不是动态 SQL，
-     * 保持单条注解语句、便于审计脚本静态检查。
+     * <p>⚠️ 2026-10-14 修复（生产库慢日志实证）：原写法是
+     * {@code WHERE (#{status} IS NULL OR status = #{status}) ORDER BY start_time DESC LIMIT n}。
+     * 这种 OR 谓词让优化器**无法使用索引**（status 传 null 时整个条件恒真），
+     * 实测在这张 250 万行的表上退化成全表扫描 + filesort，
+     * 一天内在慢日志里出现 16 次。
+     *
+     * <p>改成"没有 status 就走不带条件的 selectRecent（单列 idx_start_time 可覆盖排序），
+     * 有 status 就走带等值条件的查询（V202710140002 补的 (status, start_time) 复合索引可覆盖）"，
+     * 两条路都能走索引。动态 SQL 反而做不到这一点 —— 这也是保留两条注解语句而不是
+     * 合成一条的原因。
      */
-    @Select("SELECT * FROM t_ai_job_run_log "
-            + "WHERE (#{status} IS NULL OR status = #{status}) "
+    @Select("SELECT * FROM t_ai_job_run_log WHERE status = #{status} "
             + "ORDER BY start_time DESC LIMIT #{limit}")
     List<AiJobRunLog> selectRecentByStatus(@Param("limit") int limit, @Param("status") String status);
 }

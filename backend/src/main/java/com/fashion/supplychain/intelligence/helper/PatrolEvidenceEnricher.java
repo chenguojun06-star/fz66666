@@ -59,11 +59,21 @@ public class PatrolEvidenceEnricher {
             StringBuilder sb = new StringBuilder();
 
             // 1. 订单基本盘 + 2. 真实环节 + 停滞时长（一条联查）
+            //
+            // ⚠️ 2026-10-14 修复（生产库核对列后重写）：原 SQL 关联写的是
+            //    {@code t_order_no = o.order_no}、分组/投影写 {@code progress_stage}，
+            //    而 t_production_process_tracking 的真实列叫 **production_order_no**，
+            //    也**没有 progress_stage**（有的是 process_code / process_name / process_order）。
+            //    两个查询每次都抛 Unknown column，被 catch 成 debug 后返回空 ——
+            //    AI 巡检从上线起就拿不到任何订单证据，只能凭 issue_type 空口判断。
+            //
+            // 已用生产库 SHOW COLUMNS 逐个核对下列列名。
             List<Map<String, Object>> heads = jdbcTemplate.queryForList(
                     "SELECT o.status, o.production_progress, o.material_arrival_rate, o.factory_name, " +
-                    "       o.expected_ship_date, t.progress_stage AS last_stage, t.scan_time AS last_scan " +
+                    "       o.expected_ship_date, o.order_quantity, o.completed_quantity, " +
+                    "       t.process_name AS last_stage, t.scan_time AS last_scan " +
                     "FROM t_production_order o " +
-                    "LEFT JOIN t_production_process_tracking t ON t.order_no = o.order_no AND t.tenant_id = o.tenant_id " +
+                    "LEFT JOIN t_production_process_tracking t ON t.production_order_no = o.order_no AND t.tenant_id = o.tenant_id " +
                     "WHERE o.order_no = ? AND o.delete_flag = 0 " +
                     "ORDER BY t.scan_time DESC LIMIT 1", orderNo);
 
@@ -89,21 +99,23 @@ public class PatrolEvidenceEnricher {
                 }
             }
 
-            // 3. 环节积压对照：各环节完成件数，找最大断点
+            // 3. 环节积压对照：各环节完成件数，找最大断点（列名同上，progress_stage → process_name）
             List<Map<String, Object>> stageCounts = jdbcTemplate.queryForList(
-                    "SELECT progress_stage, COUNT(*) AS cnt FROM t_production_process_tracking " +
-                    "WHERE order_no = ? AND scan_status = 'scanned' " +
-                    "GROUP BY progress_stage", orderNo);
+                    "SELECT process_name, SUM(scanned_quantity) AS cnt FROM t_production_process_tracking " +
+                    "WHERE production_order_no = ? AND scan_status = 'scanned' " +
+                    "GROUP BY process_name", orderNo);
             if (stageCounts.size() >= 2) {
                 String stageLine = stageCounts.stream()
-                        .map(sc -> String.valueOf(sc.get("progress_stage")) + ":" + sc.get("cnt"))
+                        .map(sc -> String.valueOf(sc.get("process_name")) + ":" + sc.get("cnt"))
                         .reduce((a, b) -> a + " / " + b)
                         .orElse("");
                 sb.append("。各环节完成量：").append(stageLine);
             }
             return sb.toString();
         } catch (Exception e) {
-            log.debug("[PatrolEvidence] 证据包构建失败（静默降级）: orderNo={}, err={}", orderNo, e.getMessage());
+            // ⚠️ 必须 warn：原来只打 debug，SQL 列名错了半年完全看不见，
+            //    表现是"AI 巡检的订单工单永远没有证据附件"
+            log.warn("[PatrolEvidence] 证据包构建失败: orderNo={}, err={}", orderNo, e.getMessage());
             return "";
         }
     }

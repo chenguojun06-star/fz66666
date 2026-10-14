@@ -37,6 +37,21 @@ jobs:
     - name: 校验新增迁移的列依赖（拦截引用不存在列的事故）
       run: python3 scripts/check-flyway-column-deps.py
 
+    # 2026-10-14 新增。此前线上接连踩同一个坑：原生 SQL 引用了生产库不存在的列，
+    # 每次都是抛 Unknown column 后被 catch 成 debug/warn 吞掉，功能静默失效数月。
+    # 实测已命中的：AuditLogCleanupJob.create_time（日志清理 6 个月没删过数据）、
+    # PayrollSettlementMapper.settlement_time（工资打款必 500）、
+    # AiSelfEvolutionService 共 7 个列（AI 自进化取不到样本）、
+    # SelfDrillOrchestrator.t_tenant.delete_flag（自演练一个租户都不跑）、
+    # PatrolEvidenceEnricher.order_no/progress_stage（AI 巡检无证据）。
+    # 本步骤拿生产库真实列快照离线核对，不连库。
+    - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
+      run: |
+        echo "🔍 核对原生 SQL 里的列名是否真的存在于数据库..."
+        python3 scripts/check-native-sql-columns.py
+        echo "✅ 原生 SQL 列名核对通过"
+        echo "提示：迁移上线后记得跑 scripts/check-native-sql-columns.py --refresh 更新列快照"
+
     - name: 检查小程序 eventBus 订阅（防止操作后不刷新）
       run: node scripts/check-eventbus-subscription.js
 

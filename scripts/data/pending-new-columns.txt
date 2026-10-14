@@ -1,0 +1,2 @@
+# 本提交的迁移新增、但尚未部署到生产库的列（部署后跑 --refresh 会自动剔除）
+t_payroll_settlement.settlement_time

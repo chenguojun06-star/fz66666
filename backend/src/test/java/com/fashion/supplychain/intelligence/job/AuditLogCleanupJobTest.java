@@ -13,9 +13,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -113,30 +115,84 @@ class AuditLogCleanupJobTest {
     @DisplayName("分批删除：满批继续、不满批停止，返回总删除数")
     void batchDeleteLoopsUntilPartialBatch() {
         // 500 → 500 → 120（不满批，停止）
-        when(jdbcTemplate.update(anyString(), anyInt())).thenReturn(500, 500, 120);
+        when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(500, 500, 120);
 
         int total = ReflectionTestUtils.invokeMethod(
-                job, "batchDelete", "DELETE FROM t_ai_job_run_log WHERE start_time < ? LIMIT 500", 90);
+                job, "batchDelete", "DELETE FROM t_ai_job_run_log WHERE start_time < ? LIMIT 500", new Object[]{90});
 
         assertThat(total).isEqualTo(1120);
-        verify(jdbcTemplate, times(3)).update(anyString(), anyInt());
+        verify(jdbcTemplate, times(3)).update(anyString(), any(Object[].class));
     }
 
     @Test
     @DisplayName("第一批就 0 条 → 只执行一次，不死循环")
     void batchDeleteStopsImmediatelyWhenNothingToDelete() {
-        when(jdbcTemplate.update(anyString(), anyInt())).thenReturn(0);
+        when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
 
         int total = ReflectionTestUtils.invokeMethod(
-                job, "batchDelete", "DELETE FROM t_ai_job_run_log WHERE start_time < ? LIMIT 500", 90);
+                job, "batchDelete", "DELETE FROM t_ai_job_run_log WHERE start_time < ? LIMIT 500", new Object[]{90});
 
         assertThat(total).isZero();
-        verify(jdbcTemplate, times(1)).update(anyString(), anyInt());
+        verify(jdbcTemplate, times(1)).update(anyString(), any(Object[].class));
     }
 
     @Test
     @DisplayName("批大小常量与 SQL 里的 LIMIT 保持一致 —— 改一处忘改另一处会提前截断删除")
     void batchSizeMatchesSqlLimit() {
         assertThat(AuditLogCleanupJob.DELETE_BATCH_SIZE).isEqualTo(500);
+    }
+
+    // ==================== 2026-10-14 回归：列名写错 + 阶段间不独立 ====================
+
+    @Test
+    @DisplayName("审计日志 DELETE 必须用真实列名 created_at —— 回归：写成 create_time 会让每日清理必失败")
+    void auditLogDeleteUsesRealColumnName() {
+        when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), anyString())).thenReturn(null);
+
+        ReflectionTestUtils.invokeMethod(job, "cleanAuditLog");
+
+        assertThat(capturedSqlContaining("t_intelligence_audit_log"))
+                .contains("created_at")
+                .doesNotContain("create_time"); // 该列在 t_intelligence_audit_log 里不存在
+    }
+
+    @Test
+    @DisplayName("巡检工单 DELETE 必须用 COALESCE 取完工时间 —— AUTO_EXECUTED 的 close_time 全为 NULL")
+    void patrolDeleteCoalescesFinishTime() {
+        when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), anyString())).thenReturn(null);
+
+        ReflectionTestUtils.invokeMethod(job, "cleanPatrolActions");
+
+        assertThat(capturedSqlContaining("t_ai_patrol_action")).contains("COALESCE(close_time");
+    }
+
+    @Test
+    @DisplayName("三个阶段互相独立：审计日志清理失败也不许连累巡检工单 / AI 任务日志的清理")
+    void cleanupPhasesAreIndependent() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), anyString())).thenReturn(null);
+        // 复现当时的故障：审计日志那段的 DELETE 抛 Unknown column
+        when(jdbcTemplate.update(contains("t_intelligence_audit_log"), any(Object[].class)))
+                .thenThrow(new RuntimeException("Unknown column 'create_time' in 'field list'"));
+        when(jdbcTemplate.update(contains("t_ai_patrol_action"), any(Object[].class))).thenReturn(0);
+        when(jdbcTemplate.update(contains("t_ai_job_run_log"), any(Object[].class))).thenReturn(0);
+
+        job.cleanupOldAuditLogs();
+
+        // 关键断言：就算审计日志那段炸了，另外两段仍然必须执行到
+        verify(jdbcTemplate).update(contains("t_ai_patrol_action"), any(Object[].class));
+        // AI 任务日志是两级保留（普通流水 + 失败记录），故两次
+        verify(jdbcTemplate, times(2)).update(contains("t_ai_job_run_log"), any(Object[].class));
+    }
+
+    /** 抓出所有真正执行过的 DELETE 里，涉及指定表的那一条 */
+    private String capturedSqlContaining(String table) {
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate, atLeastOnce()).update(sql.capture(), any(Object[].class));
+        return sql.getAllValues().stream()
+                .filter(s -> s != null && s.contains(table))
+                .reduce((first, second) -> second)
+                .orElse("");
     }
 }

@@ -239,13 +239,34 @@ public class SelfDrillOrchestrator {
         }
     }
 
+    /**
+     * 取需要推演的租户。
+     *
+     * <p>⚠️ 2026-10-14 修复（线上实测后重写）：原 SQL 是
+     * {@code WHERE status NOT IN ('DISABLED','SUSPENDED') AND delete_flag = 0}，
+     * **两个条件都是错的**：
+     * <ol>
+     *   <li>{@code t_tenant} 没有 {@code delete_flag} 列 → 每次查询直接抛
+     *       {@code Unknown column}，被 catch 成 warn 后返回空列表。
+     *       而调用方只是 {@code for (Long tenantId : activeTenants)} 遍历空列表，
+     *       **于是自演练一个租户都不跑就"正常结束"了**，全程无异常、无告警可感知；</li>
+     *   <li>就算去掉 delete_flag，{@code NOT IN ('DISABLED','SUSPENDED')} 也筛不掉任何租户 ——
+     *       生产库真实的 status 取值是小写的 {@code active} / {@code inactive}
+     *       （实测 active 7 个、inactive 1 个），大写那两组值一个都不存在。
+     *       那样会把 inactive 的租户也拖进来推演。</li>
+     * </ol>
+     *
+     * <p>现在按真实取值精确匹配 {@code status = 'active'}。
+     * 注：实测 7 个 active 租户里有 6 个 {@code expire_time} 已过期，
+     * 但自演练只是读历史数据、不产生业务影响，是否要一并排除属业务口径，此处不擅自加条件。
+     */
     private List<Long> getActiveTenants() {
         try {
             return jdbcTemplate.queryForList(
-                    "SELECT id FROM t_tenant WHERE status NOT IN ('DISABLED','SUSPENDED') AND delete_flag = 0",
+                    "SELECT id FROM t_tenant WHERE status = 'active' ORDER BY id",
                     Long.class);
         } catch (Exception e) {
-            log.warn("[SelfDrill] 查询活跃租户失败: {}", e.getMessage());
+            log.error("[SelfDrill] 查询活跃租户失败: {}", e.getMessage());
             return Collections.emptyList();
         }
     }

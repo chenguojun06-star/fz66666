@@ -45,6 +45,15 @@ public class PayrollSettlement {
 
     private String paymentStatus;
 
+    /**
+     * 结算时间：本结算单被全额付清的时刻（付清时由 PayrollSettlementMapper.atomicAddPaidAmount 写入）。
+     *
+     * <p>此前该字段在实体和库里都不存在，而 Mapper 的 UPDATE 一直在写它 ——
+     * 于是每次打款都报 {@code Unknown column 'settlement_time'} 并回滚，
+     * 工资打款功能完全不可用（2026-10-14 线上修复，对应迁移 V202710140001）。
+     */
+    private LocalDateTime settlementTime;
+
     private String status;
 
     private String remark;
