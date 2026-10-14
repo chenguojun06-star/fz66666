@@ -81,6 +81,22 @@ public class PerformanceMonitor {
     private final ConcurrentHashMap<String, MethodStats> statsMap = new ConcurrentHashMap<>();
 
     /**
+     * 已经"热"过的方法（每个方法只记一次）。
+     *
+     * <p><b>为什么要它</b>（2026-10-14）：进程刚起来时，第一次调用某个方法会带上
+     * 类加载、JIT 编译、Spring 代理与连接池首次初始化等开销，动辄上千毫秒。
+     * 实测生产日志：`AiAdvisorService.cleanupStaleCounters()` 只有一行
+     * `removeIf`，却被报「执行耗时 1252ms」—— 那是启动后 20 分钟的首次调用。
+     * 同样形态的还有 `CronSchedulerService.tick()`、`AsyncIntelligenceAuditService.flush()`。
+     *
+     * <p>危害不是"多几条日志"，而是<b>假告警会训练人忽略真告警</b> ——
+     * 每次重启都刷几条，看久了就没人再看这一行了，
+     * 而这行恰恰是发现真慢方法的唯一入口。所以首次调用不计入告警，
+     * 只打 debug；统计（statsMap）仍然照常记录，不影响平均/最大值。
+     */
+    private final java.util.Set<String> warmedUp = ConcurrentHashMap.newKeySet();
+
+    /**
      * 定义切入点：所有Service层方法
      */
     @Pointcut("execution(* com.fashion.supplychain..service..*.*(..))")
@@ -104,10 +120,17 @@ public class PerformanceMonitor {
             MethodStats stats = statsMap.computeIfAbsent(methodName, k -> new MethodStats());
             stats.record(executionTime);
 
+            // 首次调用属预热（类加载/JIT/首次初始化），不计入慢方法告警
+            boolean firstCall = warmedUp.add(methodName);
+
             // 如果执行时间超过阈值，记录警告日志
             long warnThreshold = resolveWarnThreshold(methodName);
             if (executionTime > warnThreshold) {
-                logger.warn("慢方法警告: {} 执行耗时 {}ms (阈值={}ms)", methodName, executionTime, warnThreshold);
+                if (firstCall) {
+                    logger.debug("首次调用（含预热开销，不计入慢方法告警）: {} 耗时 {}ms", methodName, executionTime);
+                } else {
+                    logger.warn("慢方法警告: {} 执行耗时 {}ms (阈值={}ms)", methodName, executionTime, warnThreshold);
+                }
             }
 
             // 记录调试日志
