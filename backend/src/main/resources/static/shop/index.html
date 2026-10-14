@@ -813,6 +813,39 @@
     return i;
   }
 
+  /* ══════════════ 查看器的「穿透点击」防线 ══════════════ */
+
+  /**
+   * 查看器关闭后，浏览器补发的「穿透 click」必须全局吞掉。
+   *
+   * <p><b>为什么</b>：手指抬起时浏览器会依次补发 mousedown / mouseup / click。
+   * 查看器是在 touchend 里同步移除的，所以这次 click 的落点**已经不是查看器**，
+   * 而是下面刚露出来的详情页元素。实测（iPhone 触摸模拟）：
+   * <pre>
+   *   4.91s touchend → IMG.        （查看器在此刻被移除）
+   *   4.92s click    → IMG.        （补发的 click 落在商品主图上）
+   *   4.92s ＋查看器插入            （主图点击处理又把大图打开）
+   * </pre>
+   * 于是「点一下关不掉、再点一下还是关不掉」，顾客被困在全屏大图里回不了详情页。
+   * 右上角关闭键同样中招 —— 它正好压在图片上方，落点也穿透到图片。
+   *
+   * <p>危害不止是关不掉：穿透的落点可能是**任何**元素 —— 颜色/尺码按钮（误选）、
+   * 加入购物车 / 立即购买（误下单）。所以这里在 document 捕获阶段统一拦截，
+   * 而不是只堵「重新打开大图」这一条路。
+   *
+   * <p>和它配套的还有两处，改动此段前务必一起看：{@code mask} 的 touchend 里
+   * {@code preventDefault()}（从源头掐掉补发事件，兼容引擎上根本不会产生穿透），
+   * 以及关闭时的 {@code swallowClicks()} 时间窗（部分内核掐不干净时兜底）。
+   */
+  var swallowClicksUntil = 0;
+  function swallowClicks(ms) { swallowClicksUntil = Date.now() + ms; }
+  document.addEventListener('click', function (e) {
+    if (Date.now() < swallowClicksUntil) {
+      e.stopPropagation();
+      if (e.preventDefault) e.preventDefault();
+    }
+  }, true);
+
   /**
    * 图片查看器：轻点主图放大。
    *
@@ -836,6 +869,7 @@
     var prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
+    var sx = 0, sy = 0, moved = false, closed = false;
     function paint() {
       var box = document.getElementById('vwImgBox');
       if (box) box.innerHTML = thumbHtml(imgs[idx]);
@@ -843,13 +877,16 @@
       if (cnt) cnt.textContent = (idx + 1) + ' / ' + imgs.length;
     }
     function close() {
+      if (closed) return;          // 关闭键的 click 与 touchend 可能各调一次，只认第一次
+      closed = true;
+      // 时间窗兜底：掐掉紧随其后的穿透 click（详见 swallowClicks 的注释）
+      swallowClicks(350);
       if (mask.parentNode) mask.parentNode.removeChild(mask);
       document.body.style.overflow = prevOverflow;
     }
     paint();
     on('vwClose', function (e) { if (e && e.stopPropagation) e.stopPropagation(); close(); });
 
-    var sx = 0, sy = 0, moved = false;
     function down(x, y) { sx = x; sy = y; moved = false; }
     function move(x, y) { if (Math.abs(x - sx) > 12 || Math.abs(y - sy) > 12) moved = true; }
     function up(x, y) {
@@ -865,7 +902,14 @@
     }
     mask.addEventListener('touchstart', function (e) { down(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
     mask.addEventListener('touchmove', function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-    mask.addEventListener('touchend', function (e) { up(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: true });
+    // ⚠️ 必须非 passive：这里要 preventDefault 掐掉浏览器在触摸流末尾补发的
+    //    mousedown/mouseup/click。否则查看器刚移除，补发的 click 就穿透到
+    //    下面露出来的商品主图上，把它又打开 —— 顾客再也回不到详情页。
+    mask.addEventListener('touchend', function (e) {
+      if (e.cancelable !== false && e.preventDefault) e.preventDefault();
+      up(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    }, { passive: false });
+    mask.addEventListener('touchcancel', function () { moved = false; }, { passive: true });
     mask.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
     mask.addEventListener('mousemove', function (e) { if (e.buttons) move(e.clientX, e.clientY); });
     mask.addEventListener('mouseup', function (e) { up(e.clientX, e.clientY); });

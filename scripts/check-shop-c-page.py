@@ -24,7 +24,15 @@
 
   D. 图片没有任何点击行为，也没有全屏查看器 —— "点开放大"这个功能根本没做。
 
-本脚本只做静态断言，防止上述四类问题再次被写回来。退出码 0=通过，1=发现回归。
+  E. 补上查看器之后，手机端「点开大图就回不去详情页」（2026-10-14 追加核实）：
+     查看器是在 touchend 里同步移除的，而浏览器紧接着会**补发一次 click**，
+     落点已经不是查看器，而是下面刚露出来的商品主图 → 主图的点击处理又把大图打开，
+     于是「点一下关不掉、再点一下还是关不掉」。右上角关闭键同样中招（它压在图片上方）。
+     实测事件流：touchend→IMG ｜ 查看器移除 ｜ click→IMG ｜ 查看器插入。
+     危害不止关不掉：穿透落点可能是颜色/尺码按钮（误选）或加购/立即购买（误下单）。
+     电脑端没有这个补发事件，所以只在手机/微信里犯。
+
+本脚本只做静态断言，防止上述五类问题再次被写回来。退出码 0=通过，1=发现回归。
 """
 import os
 import re
@@ -125,6 +133,36 @@ def main():
         fail("轮播没有绑定 click 打开大图，顾客点图片不会有反应")
     if ".d-viewer{" not in html.replace(" ", ""):
         fail("缺少 .d-viewer 查看器样式，放大层会显示异常")
+
+    # ── E. 查看器必须掐掉触摸后补发的「穿透 click」（否则手机上关不掉、回不去详情页）──
+    if "openImageViewer(" in js:
+        if len(re.findall(r"swallowClicks\(", js)) < 2:
+            fail(
+                "查看器关闭后没有吞掉浏览器补发的「穿透 click」—— 手机上点开大图会关不掉、"
+                "一直自己弹回来，顾客回不到详情页（2026-10-14 线上故障 E）"
+            )
+        if not re.search(r"document\.addEventListener\(\s*['\"]click['\"][\s\S]{0,260}?,\s*true\s*\)", js):
+            fail(
+                "穿透 click 的拦截必须挂在 document 的**捕获阶段**（addEventListener(..., true)）："
+                "落点可能是颜色/尺码/加购按钮造成误触，只堵「重新打开大图」这一条路不够"
+                "（2026-10-14 线上故障 E）"
+            )
+        m = re.search(r"mask\.addEventListener\(\s*['\"]touchend['\"]([\s\S]{0,360}?)\}\s*,\s*\{([^}]*)\}", js)
+        if not m:
+            fail("查看器缺少 touchend 处理，轻点关闭会失效")
+        else:
+            if "preventDefault" not in m.group(1):
+                fail(
+                    "查看器 touchend 里没有 preventDefault —— 掐不掉浏览器补发的兼容鼠标事件，"
+                    "关闭后会穿透到下层元素（2026-10-14 线上故障 E）"
+                )
+            if "passive" not in m.group(2) or "false" not in m.group(2):
+                fail(
+                    "查看器 touchend 仍是 passive 监听 —— passive 监听里 preventDefault 不生效，"
+                    "穿透点击拦不住（2026-10-14 线上故障 E）"
+                )
+        if re.search(r"mask\.addEventListener\(\s*['\"]touchend['\"][\s\S]{0,240}?passive:\s*true", js):
+            fail("查看器 touchend 被改回 passive:true —— 穿透点击会重新出现（2026-10-14 线上故障 E）")
 
     return report()
 
