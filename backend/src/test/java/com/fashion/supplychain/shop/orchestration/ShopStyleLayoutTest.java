@@ -159,7 +159,7 @@ class ShopStyleLayoutTest {
                 .contains("d.colorImages");
         assertThat(s)
                 .as("返回入口恒定渲染")
-                .contains("carouselHtml(imgs, true)");
+                .contains("carouselHtml(galImgs, true)");
     }
 
     @Test

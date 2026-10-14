@@ -398,9 +398,11 @@ class ShopPublicExperienceTest {
     @DisplayName("㉔ 轮播图优先于自动回落")
     void galleryMustPreferMerchantOrder() throws Exception {
         String s = shopPage();
-        int g = s.indexOf("gallery: function (d)");
-        assertThat(g).as("应有轮播图渲染逻辑").isGreaterThan(0);
-        String body = s.substring(g, Math.min(g + 1600, s.length()));
+        // 2026-10-14：清单计算抽成 galleryImages(d)，轮播渲染与「选颜色换图」共用同一份，
+        // 所以断言要打在这个函数上（原先打在 gallery 渲染器内联的那段代码上）。
+        int g = s.indexOf("function galleryImages(d)");
+        assertThat(g).as("应有轮播图清单逻辑（galleryImages）").isGreaterThan(0);
+        String body = s.substring(g, Math.min(g + 1200, s.length()));
         assertThat(body).as("先用手填轮播图").contains("d.gallery");
         assertThat(body)
                 .as("没有手填时才回落到主图+颜色图")
@@ -660,6 +662,13 @@ class ShopSizeChartGuardTest {
      * 画廊按商家排好的 {@code d.gallery} 渲染，交互却按「主图 + 各颜色图」重算总数。
      * 商家配了轮播图时两者数量对不上（常见 5 张 vs 1 张），
      * {@code if (galTotal > 1)} 为假 → 左右按钮、指示点、触摸滑动全部不绑定。
+     *
+     * <p><b>2026-10-14 修订</b>：原断言写的是 {@code doesNotContain("var galImgs = []")}，
+     * 想表达「不许另算一份列表」。但它只是「不许出现这个变量名」的代理断言 ——
+     * 当年把变量删掉、却漏删了读它的那几行，于是选颜色时抛
+     * {@code galImgs is not defined}，处理函数在刷新尺码前中断，尺码永远不出现（线上实测 45% 款式命中）。
+     * 现改为断言**真正的不变量**：清单只有一个来源 {@code galleryImages(d)}，
+     * 渲染与选色换图共用同一个数组；「主图 + 各颜色图」的回落逻辑全文件只允许出现一处。
      */
     @Test
     @DisplayName("㉗ 轮播总数必须以「渲染出来的图片数」为准，不得另算一份列表")
@@ -669,8 +678,23 @@ class ShopSizeChartGuardTest {
                 .as("必须以渲染出来的 cell 数为唯一真源")
                 .contains("ctrack.children.length");
         assertThat(s)
-                .as("不得再按「主图+各色图」另算一份 —— 这正是滑动/按钮全失效的根因")
-                .doesNotContain("var galImgs = []");
+                .as("轮播清单只能有一个来源，且渲染与选色换图共用它")
+                .contains("galImgs = galleryImages(d)")
+                .contains("carouselHtml(galImgs, true)")
+                .contains("galImgs.indexOf(own)");
+        assertThat(countOf(s, "imgs.push(d.cover)"))
+                .as("「主图 + 各颜色图」的回落逻辑只允许存在一处 —— 渲染与交互各算一份正是滑动全失效的根因")
+                .isEqualTo(1);
+        assertThat(s)
+                .as("galImgs 必须先声明：曾经漏删读它的代码，导致选颜色抛 ReferenceError、尺码永不出现")
+                .contains("var galImgs = [];");
+    }
+
+    /** 统计子串出现次数（用于「只允许一处」这类断言） */
+    private static int countOf(String haystack, String needle) {
+        int n = 0, i = 0;
+        while ((i = haystack.indexOf(needle, i)) >= 0) { n++; i += needle.length(); }
+        return n;
     }
 
     @Test
@@ -682,7 +706,17 @@ class ShopSizeChartGuardTest {
         assertThat(s).as("开关由店铺配置下发").contains("d.carouselAutoplay");
         assertThat(s)
                 .as("顾客上手就暂停（否则手指刚碰到图就自己翻走）")
-                .contains("ctrack.addEventListener(ev, stopAuto");
+                .contains("addEventListener(ev, stopAuto");
+        // 2026-10-14：拖动事件从 .track 改绑到轮播容器。
+        // 左右箭头/返回键是 .track 的兄弟节点，手指落在箭头上时事件不冒泡到 .track，
+        // 滑动会被整条吞掉（实测从图片右缘起手左滑无任何反应）。
+        assertThat(s)
+                .as("拖动事件必须绑在轮播容器上，绑 .track 会被左右箭头吞掉手势")
+                .doesNotContain("ctrack.addEventListener('touch")
+                .contains("dragEl.addEventListener('touchstart'");
+        assertThat(s)
+                .as("电脑端打开分享链接时箭头曾失效，必须也能用鼠标拖动切图")
+                .contains("dragEl.addEventListener('mousedown'");
         assertThat(s).as("后台标签页不空转").contains("document.hidden");
     }
 
