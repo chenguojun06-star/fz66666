@@ -31,9 +31,26 @@ describe('模块与内容合一（D-785）', () => {
     expect(s).toContain('<Editor ctx={ctx} />');
   });
 
-  it('有内容的模块默认展开，商家一眼看到开关管的是哪段内容', () => {
+  it('D-800：模块默认只展开第一个，不再全部展开（原行为会把页面撑成十几屏）', () => {
     const s = readEditor();
-    expect(s).toContain('setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey])');
+    // 旧断言锁的是「有内容的模块全部展开」：
+    //   setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey])...)
+    // 16 个模块里 9 个有编辑框 → 一次展开 9 个输入区，是页面混乱的直接原因。
+    // 现改为只展开第一个有内容的模块，其余按需点开。
+    expect(s).not.toContain('setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey])');
+    expect(s).toContain('const firstWithContent = merged.find((m) => !!MODULE_CONTENT[m.moduleKey])?.moduleKey');
+    expect(s).toContain('setOpenKeys(firstWithContent ? [firstWithContent] : [])');
+  });
+
+  it('D-800：模块说明文字移入展开区，收起时每行只显示「模块名 + 状态」', () => {
+    const s = readEditor();
+    // 每行都带一句说明 → 16 行说明把这块撑出一屏。
+    // 说明必须只在 children（展开区）里出现，不能在 label 里。
+    const labelStart = s.indexOf('label: (');
+    const labelEnd = s.indexOf('extra:', labelStart);
+    const labelBlock = s.slice(labelStart, labelEnd);
+    expect(labelBlock).not.toContain('shop-module__desc');
+    expect(s).toContain('className="shop-module__desc" style={{ marginBottom: 6 }}');
   });
 
   it('没有输入框的模块必须说明内容来自哪里，不能留空白让人以为系统坏了', () => {

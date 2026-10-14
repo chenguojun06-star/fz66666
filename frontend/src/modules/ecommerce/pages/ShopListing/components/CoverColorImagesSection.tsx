@@ -202,41 +202,45 @@ const CoverColorImagesSection: React.FC<Props> = ({
        *  此前把「短边低于平台底线」做成红色「影响上架/展示」的阻断式提示，
        *  运营看到的是"系统不让传"，而不是"这样传平台可能不给推荐"。
        *  本店自己展示会裁切/留白，但绝不会因此拦住上传 —— 提示与限制必须分开。*/}
-      {blockers.length > 0 || warnings.length > 0 ? (
-        <Alert
-          type="info"
-          showIcon
-          className="shop-listing__alert"
-          message={`主图建议（${blockers.length + warnings.length} 项，不影响上传）`}
-          description={
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {[...blockers, ...warnings].map((b, i) => (
-                <li key={`a-${i}`}>
-                  <b>{b.message}</b>；{b.action}
-                </li>
+      {/* D-800：建议项收进折叠。
+          原来「3 条机器建议 + 6 条人工确认」直接平铺，实测占掉半屏，
+          把图片框挤到首屏之外。改为一行摘要 + 点击展开 ——
+          「提示」不该在「做事」的主视觉位置长期占位。 */}
+      {blockers.length > 0 || warnings.length > 0 || cover ? (
+        <details className="shop-listing__alert" style={{ cursor: 'pointer' }}>
+          <summary style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            主图合规提示
+            {blockers.length + warnings.length > 0
+              ? `（${blockers.length + warnings.length} 项建议，不影响上传）`
+              : '（含平台无法自动判定的项）'}
+            <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>▾</span>
+          </summary>
+          <div style={{ marginTop: 6 }}>
+            {[...blockers, ...warnings].length > 0 && (
+              <ul style={{ margin: '0 0 8px', paddingLeft: 18, fontSize: 12 }}>
+                {[...blockers, ...warnings].map((b, i) => (
+                  <li key={`a-${i}`}>
+                    <b>{b.message}</b>；{b.action}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              以下平台要求机器无法判定，请人工确认：
+            </Text>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: '#8c8c8c' }}>
+              {manualCoverChecks().map((c, i) => (
+                <li key={`m-${i}`}>{c}</li>
               ))}
             </ul>
-          }
-        />
+          </div>
+        </details>
       ) : null}
 
       {analyzing ? (
         <Alert type="info" showIcon className="shop-listing__alert" message="正在检测主图规范…" />
       ) : null}
 
-      {/* 机器判不了、但平台明确禁止的项——必须显式告知，不能默默通过 */}
-      {cover ? (
-        <div className="shop-listing__alert">
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            以下平台要求机器无法判定，请人工确认：
-          </Text>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: '#8c8c8c' }}>
-            {manualCoverChecks().map((c, i) => (
-              <li key={`m-${i}`}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </div>
   );
 };

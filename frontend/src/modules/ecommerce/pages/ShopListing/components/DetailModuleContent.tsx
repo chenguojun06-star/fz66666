@@ -336,6 +336,20 @@ const DetailContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         showCount
         autoSize={{ minRows: 4, maxRows: 12 }}
       />
+      {/* D-800：识别「款式资料同步过来的生产工艺原文」。
+          实测发现这里经常是 703 字的大货工艺 HTML 源码（裁剪工艺说明/绣花要求/针距…），
+          运营在店铺上架页看到的是原始源码，既不好看也不该在这里编辑 ——
+          它属于「款式资料」的工艺数据，且顾客端本就会隐藏（后端 ProductionContentDetector）。
+          这里明确提示并指向正确去处，而不是让运营对着源码发呆。 */}
+      {looksLikeProductionContent(desc) && (
+        <Alert
+          type="warning"
+          showIcon
+          className="shop-listing__alert"
+          message="这里当前是生产工艺原文"
+          description="顾客端会自动隐藏这类内容（它属于车间内部资料）。若要给顾客看，请改写成商品卖点描述；工艺原文请到「款式资料 → 工艺」维护。"
+        />
+      )}
 
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>商品说明</div>
       <TextArea

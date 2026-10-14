@@ -116,8 +116,19 @@ export function DetailModuleEditor({
         canHide: d.canHide,
         enabled: true,
       })));
-      // 有内容输入框的模块默认展开：让商家一眼看到"开关管的是哪段内容"
-      setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey]).map((m) => m.moduleKey));
+      // D-800：**默认全部收起**，只展开第一个有内容输入框的模块。
+      //
+      // 【为什么改】原来这行是「有内容输入框的模块全部展开」：
+      //   merged.filter((m) => !!MODULE_CONTENT[m.moduleKey]).map((m) => m.moduleKey)
+      // 16 个模块里 9 个有编辑框 → 一次展开 9 个输入区叠加，
+      // 页面从 1 屏拉成十几屏，运营自己都找不到要看的东西。
+      // 这也是全项目唯一违反 Shopify 官方设计规范「默认收起」的地方
+      // （官方规范：Use tabs for secondary navigation / Tabs should never wrap）。
+      //
+      // 【现在】默认只开第一个，让商家看到「开关管的是哪段内容」的范式，
+      // 其余按需点开。展开状态仍由 openKeys 记住，不影响已展开的用户。
+      const firstWithContent = merged.find((m) => !!MODULE_CONTENT[m.moduleKey])?.moduleKey;
+      setOpenKeys(firstWithContent ? [firstWithContent] : []);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '模块布局加载失败');
     } finally {
@@ -203,18 +214,17 @@ export function DetailModuleEditor({
       label: (
         <div className="shop-module__head">
           <HolderOutlined className="shop-module__grip" />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Space size={6} wrap>
-              <Text strong>{m.defaultTitle}</Text>
-              {!m.canHide ? <Tag color="blue">必需</Tag> : null}
-              {Editor ? (
-                <Tag color={hint && !hint.startsWith('未') && !hint.includes('0/') ? 'green' : 'default'}>
-                  {hint}
-                </Tag>
-              ) : null}
-            </Space>
-            <div className="shop-module__desc">{meta?.desc}</div>
-          </div>
+          {/* D-800：收起态只显示「模块名 + 状态」，不再每行都带一句说明。
+              16 个模块各带说明会把这块撑出一屏；说明文字改为展开后再显示。 */}
+          <Space size={6} wrap style={{ flex: 1, minWidth: 0 }}>
+            <Text strong>{m.defaultTitle}</Text>
+            {!m.canHide ? <Tag color="blue">必需</Tag> : null}
+            {Editor ? (
+              <Tag color={hint && !hint.startsWith('未') && !hint.includes('0/') ? 'green' : 'default'}>
+                {hint}
+              </Tag>
+            ) : null}
+          </Space>
         </div>
       ),
       extra: (
@@ -244,7 +254,11 @@ export function DetailModuleEditor({
         </Space>
       ),
       children: Editor ? (
-        <Editor ctx={ctx} />
+        <div>
+          {/* D-800：说明文字移到展开区内，收起时不再每行占一行 */}
+          <div className="shop-module__desc" style={{ marginBottom: 6 }}>{meta?.desc}</div>
+          <Editor ctx={ctx} />
+        </div>
       ) : (
         <Alert
           type="info"

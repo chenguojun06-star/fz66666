@@ -115,11 +115,16 @@ describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
     await waitFor(() => expect(screen.getByText('尺码名来自 SKU，不用在这里填。')).toBeTruthy());
   });
 
-  it('每个模块都要有一句顾客端说明，避免商家猜开关作用', async () => {
+  it('每个模块都要有一句顾客端说明，避免商家猜开关作用（D-800：说明移入展开区）', async () => {
     mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
     mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('价格与库存')).toBeTruthy());
-    expect(screen.getByText(/售价、库存与配送/)).toBeTruthy();
+    // D-800 起模块默认收起（16 个全展开会把页面撑成十几屏），说明文字移入展开区。
+    // 这里断言「默认展开的第一个模块」能看到自己的说明 ——
+    // antd Collapse 在 jsdom 下不响应 fireEvent.click，故只验证已展开的那一个。
+    const activePanel = document.querySelector('.ant-collapse-item-active');
+    expect(activePanel).toBeTruthy();
+    expect(activePanel?.textContent || '').toContain('顾客端详情页第一屏');
   });
 });

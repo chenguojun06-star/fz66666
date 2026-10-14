@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import CoverColorImagesSection from '../../modules/ecommerce/pages/ShopListing/components/CoverColorImagesSection';
 
 /**
@@ -83,10 +83,13 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
     expect(screen.queryByText(/主图建议/)).toBeNull();
   });
 
-  it('低于平台底线仍然照常上传，只作为建议提示', async () => {
+  it('低于平台底线仍然照常上传，只作为建议提示（D-800：建议收在折叠块内）', async () => {
     mocked = { w: 399, h: 832, white: 0, subject: 1 };
-    render(<CoverColorImagesSection {...props} cover="/api/file/x/small.png" />);
-    await waitFor(() => expect(screen.getByText(/主图建议/)).toBeTruthy());
+    const { container } = render(<CoverColorImagesSection {...props} cover="/api/file/x/small.png" />);
+    // D-800：3 条建议 + 6 条人工确认原本平铺，实测占掉半屏、把图片框挤出首屏。
+    // 改为 <details> 折叠：收起时只留一行摘要，展开后内容完整。
+    await waitFor(() => expect(container.querySelector('details')).toBeTruthy());
+    fireEvent.click(container.querySelector('summary') as HTMLElement);
     // 关键：不得出现阻断式措辞
     expect(screen.queryByText(/主图不合规/)).toBeNull();
     expect(screen.queryByText(/会影响上架/)).toBeNull();
@@ -122,8 +125,10 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
     expect(screen.queryByText(/超过平台上限/)).toBeNull();
   });
 
-  it('必须显式列出机器判不了的人工检查项', async () => {
-    render(<CoverColorImagesSection {...props} cover="/api/file/x/ok.png" />);
+  it('必须显式列出机器判不了的人工检查项（D-800：折叠块展开后可见）', async () => {
+    const { container } = render(<CoverColorImagesSection {...props} cover="/api/file/x/ok.png" />);
+    await waitFor(() => expect(container.querySelector('details')).toBeTruthy());
+    fireEvent.click(container.querySelector('summary') as HTMLElement);
     expect(screen.getByText(/机器无法判定/)).toBeTruthy();
     expect(screen.getByText(/联系方式/)).toBeTruthy();
   });
