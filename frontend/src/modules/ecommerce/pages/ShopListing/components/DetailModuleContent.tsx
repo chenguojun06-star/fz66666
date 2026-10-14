@@ -177,8 +177,14 @@ const PointsContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   return (
     <div className="shop-edit__block">
       <Text type="secondary" className="shop-listing__hint">
-        一条一行，顾客端在价格下方逐条展示。建议写「材质 + 工艺 + 版型」这类具体卖点，
-        最多 8 条。
+        一条一行，顾客端在价格下方逐条展示。建议写「材质 + 工艺 + 版型」这类具体卖点。
+        {/*
+          D-800：补 Amazon 官方口径。
+          Amazon 卖家中心明确要求「至少 4 条卖点（Product Feature Bullets）」，
+          且每条 10-255 字符、用句式片段不写句末标点。
+          之前只写「最多 8 条」，运营看不出写几条才算合格 —— 现在直接给下限。
+        */}
+        <b style={{ color: 'var(--color-warning)' }}>建议 4-8 条</b>（亚马逊等平台要求至少 4 条）。
       </Text>
       <div style={{ marginTop: 8 }}>
         {content.points.map((p, i) => (

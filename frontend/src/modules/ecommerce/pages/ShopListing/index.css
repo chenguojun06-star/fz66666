@@ -178,14 +178,24 @@
 /* ── D-800 重做：规整表单（标题 + 内容），去掉一切装饰框 ────────────── */
 
 /* 分区：没有边框、没有圆角、没有背景，靠留白 + 顶部细线分隔 */
+/* 分区卡片：每个区块一张卡，**卡内不再有卡/线/框**。
+   Polaris 规范：「Group similar data points or tasks in the same card」
+   —— 卡片用于分组，但组内靠留白和字号层次，不靠嵌套边框。 */
 .shop-edit__block {
   width: 100%;
-  margin-bottom: 28px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 16px 18px 18px;
+  margin-bottom: 16px;
 }
 
+/* Polaris：「Use size, weight, and contrast to introduce sections of the UI.
+   Divider lines are used to delimit rows in tables, and **rarely elsewhere**.」
+   → 区块标题用字号+字重建立层次，卡内不再画分隔线。 */
 .shop-edit__block-heading {
   margin: 0 0 2px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
   color: var(--color-text-primary);
@@ -200,17 +210,20 @@
 }
 
 /* 模块列表：平铺，每块之间一条细线 */
+/* 模块平铺：卡内**不用分隔线**（Polaris 明确反对用线做非表格分组），
+   靠「标题行加粗 + 内容区缩进 + 间距」建立层次。 */
 .shop-module-list {
-  border-top: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .shop-module-item {
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 10px 0 14px;
 }
 
 .shop-module-item:last-child {
-  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .shop-module-item-head {
@@ -219,6 +232,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+  padding: 4px 0;
 }
 
 .shop-module-item-name {
@@ -287,4 +301,16 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+/* 表单内容收窄：Polaris「Don't allow form layout items to be wider than necessary.
+   100% 宽的输入框在大屏上会形成大片空白，读起来费力。
+   限宽 860px（约 60 字符一行，接近可读舒适区）。 */
+.shop-edit__form {
+  max-width: 860px;
+}
+
+/* 模块内容区：比标题行缩进一点，视觉上「标题在外、内容在内」 */
+.shop-module-item-body {
+  padding-left: 2px;
 }

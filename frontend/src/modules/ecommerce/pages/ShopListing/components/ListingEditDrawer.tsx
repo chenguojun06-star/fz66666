@@ -303,8 +303,8 @@ const ListingEditDrawer: React.FC<Props> = ({
         </>
       }
       footerExtra={
-        <Text type="secondary">
-          上下架开关、模块开关与顺序即时生效；文字与图片改动点「保存内容」后生效
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          开关键即时生效；文字与图片改动需点「保存内容」
         </Text>
       }
     >
@@ -353,40 +353,48 @@ const ListingEditDrawer: React.FC<Props> = ({
             <div style={{ flex: 1, minWidth: 0 }}>
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
             <Section title="上架检查" desc="下面这些填齐了顾客才能正常看到并下单。">
-              <ListingSetupChecklist
-                required={setupSteps}
-                optional={setupOptional}
-                blockIssues={setupIssues}
-                listed={listed}
-              />
+              <div className="shop-edit__form">
+                <ListingSetupChecklist
+                  required={setupSteps}
+                  optional={setupOptional}
+                  blockIssues={setupIssues}
+                  listed={listed}
+                />
+              </div>
             </Section>
 
             <Section
               title="主图"
               desc="店铺列表卡片和详情页兜底大图都用它。合规体检只提示、不拦截上传。各颜色的大图在下面「详情页内容 → 颜色选择」里配。"
             >
-              <CoverColorImagesSection
-                cover={cover}
-                setCover={setCover}
-                colorImages={colorImages}
-                setColorImages={setColorImages}
-                colors={colors}
-                onlyCover
-              />
+              <div className="shop-edit__form">
+                <CoverColorImagesSection
+                  cover={cover}
+                  setCover={setCover}
+                  colorImages={colorImages}
+                  setColorImages={setColorImages}
+                  colors={colors}
+                  onlyCover
+                />
+              </div>
             </Section>
 
             <Section
               title="规格、价格与库存"
               desc="这里调整 SKU 的售价与可售数量，不走出入库台账。库存变动请走「仓库 → 入库 / 出库」。"
             >
-              <SkuPriceStockSection skus={skus} setSkus={setSkus} />
+              <div className="shop-edit__form">
+                <SkuPriceStockSection skus={skus} setSkus={setSkus} />
+              </div>
             </Section>
 
             <Section
               title="详情页内容"
               desc="顾客端详情页由下面这些模块组成。勾选＝展示，开关点一下即生效。没有内容的模块会自动跳过。"
             >
-              <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
+              <div className="shop-edit__form">
+                <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
+              </div>
             </Section>
             </Space>
             </div>

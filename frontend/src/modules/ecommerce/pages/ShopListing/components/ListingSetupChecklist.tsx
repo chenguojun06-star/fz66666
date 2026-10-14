@@ -94,7 +94,7 @@ const ListingSetupChecklist: React.FC<ListingSetupChecklistProps> = ({
 
   if (allDone && blockers.length === 0) {
     return (
-      <div style={{ padding: '10px 12px', background: 'var(--color-bg-subtle)', borderRadius: 6 }}>
+      <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <CheckCircleFilled style={{ color: 'var(--color-success)' }} />
           <strong style={{ fontSize: 13 }}>
@@ -109,7 +109,7 @@ const ListingSetupChecklist: React.FC<ListingSetupChecklistProps> = ({
   }
 
   return (
-    <div style={{ padding: '10px 12px', background: 'var(--color-bg-subtle)', borderRadius: 6 }}>
+    <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <strong style={{ fontSize: 13 }}>
           {listed ? '已上架（修改会立即对顾客生效）' : '上架准备清单'}
