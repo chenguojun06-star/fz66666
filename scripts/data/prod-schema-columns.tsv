@@ -3459,6 +3459,7 @@ t_payroll_settlement.remaining_amount
 t_payroll_settlement.deduction_amount
 t_payroll_settlement.advance_amount
 t_payroll_settlement.payment_status
+t_payroll_settlement.settlement_time
 t_payroll_settlement_item.id
 t_payroll_settlement_item.settlement_id
 t_payroll_settlement_item.operator_id
