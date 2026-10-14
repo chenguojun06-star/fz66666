@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Row, Segmented, Space, Spin, Statistic, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, Card, Col, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Result, Row, Segmented, Space, Spin, Statistic, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -28,7 +29,7 @@ import type {
   ShopDashboardData,
   ShopDashboardDailyRow,
 } from '@/services/shop/shopApi';
-import api, { unwrapApiData } from '@/utils/api';
+import { unwrapApiData } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import { readPageSize } from '@/utils/pageSizeStore';
 import './index.css';
@@ -55,21 +56,13 @@ const AFTER_SALE_TYPE_MAP: Record<string, string> = {
   RETURN_REFUND: '退货退款',
 };
 
-interface StyleRow {
-  id: number;
-  styleNo: string;
-  styleName: string;
-  cover?: string;
-  shopListed?: number;
-}
-
 /**
- * D-763：店铺管理——配置（名称/公告/打烊）/ 款式上架开关 / 店铺订单。
+ * D-763：店铺管理——配置（名称/公告/打烊）/ 商品上架引导 / 店铺订单。
  * 店铺门面：/shop/index.html?s={slug}（游客免登录，淘宝风格手机端页面）。
  */
 const ShopManage: React.FC = () => {
   const [tab, setTab] = useState<string>('config');
-
+  const navigate = useNavigate();
   // 配置
   const [config, setConfig] = useState<ShopConfig | null>(null);
   const [shopName, setShopName] = useState('');
@@ -89,14 +82,6 @@ const ShopManage: React.FC = () => {
   const [promiseAuthentic, setPromiseAuthentic] = useState(false);
   const [promiseExtra, setPromiseExtra] = useState('');
 
-  // 款式上架
-  const [styleKw, setStyleKw] = useState('');
-  const [styles, setStyles] = useState<StyleRow[]>([]);
-  const [styleLoading, setStyleLoading] = useState(false);
-  const [listingFilter, setListingFilter] = useState<string>('all');
-  const [stylePage, setStylePage] = useState(1);
-  // 每页条数交给 state + localStorage：分页器不再被 ResizableTable 写死成 20
-  const [stylePageSize, setStylePageSize] = useState(readPageSize(20));
 
   // 订单
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -179,24 +164,6 @@ const ShopManage: React.FC = () => {
       setCarouselGap(Math.round((Number(cfg?.carouselIntervalMs) || 4000) / 1000));
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '店铺配置加载失败');
-    }
-  }, []);
-
-  const fetchStyles = useCallback(async (kw: string) => {
-    setStyleLoading(true);
-    try {
-      // 注意：后端 keyword 才对 款号/款名/品类 做 OR 模糊匹配；
-      // 同时传 styleName+styleNo 会被 AND 起来，等于搜不到。
-      // pageSize 取接口上限 500：此前写 50，款式超过 50 条时翻页器再往下也翻不到。
-      const res: any = await api.get('/style/info/list', {
-        params: { keyword: kw || undefined, page: 1, pageSize: 500 },
-      });
-      const data = res?.data?.records ?? res?.data ?? [];
-      setStyles(Array.isArray(data) ? data : []);
-    } catch {
-      setStyles([]);
-    } finally {
-      setStyleLoading(false);
     }
   }, []);
 
@@ -288,7 +255,6 @@ const ShopManage: React.FC = () => {
   const handleTabChange = useCallback((v: string) => {
     setTab(v);
     // 页签数据在切入时拉取（事件驱动，避免 effect 依赖棘轮豁免）
-    if (v === 'listing') void fetchStyles(styleKw);
     if (v === 'orders') {
       void fetchOrders(1);
       void fetchStats();
@@ -298,7 +264,7 @@ const ShopManage: React.FC = () => {
       void fetchReviewSummary();
     }
     if (v === 'dashboard') void fetchDashboard(dashDays);
-  }, [fetchStyles, styleKw, fetchOrders, fetchStats, fetchReviews, fetchReviewSummary,
+  }, [fetchOrders, fetchStats, fetchReviews, fetchReviewSummary,
       fetchDashboard, dashDays]);
 
   const handleSaveConfig = async () => {
@@ -336,18 +302,6 @@ const ShopManage: React.FC = () => {
     }
   };
 
-  const handleToggleListing = async (row: StyleRow, listed: boolean) => {
-    try {
-      // 注意：api 客户端对「HTTP 200 + 业务 code!=200」不抛错，只返回信封体；
-      // 必须用 unwrapApiData 判 code，否则失败也会提示成功（后端 setListing 失败走 Result.fail）。
-      unwrapApiData(await shopAdminApi.setListing(row.id, listed), '操作失败');
-      message.success(`「${row.styleName || row.styleNo}」已${listed ? '上架' : '下架'}`);
-      setStyles((prev) => prev.map((s) => (s.id === row.id ? { ...s, shopListed: listed ? 1 : 0 } : s)));
-      setPreviewKey((k) => k + 1);
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '操作失败');
-    }
-  };
 
   /**
    * D-513：订单发货。C 端下单时已扣库存/挂应收，商家只需登记发货信息把订单推进到「已发货」。
@@ -561,12 +515,6 @@ const ShopManage: React.FC = () => {
   };
 
   const shopUrl = config ? `${window.location.origin}/shop/index.html?s=${config.slug}` : '';
-  const listedCount = useMemo(() => styles.filter((s) => s.shopListed === 1).length, [styles]);
-  const shownStyles = useMemo(() => {
-    if (listingFilter === 'listed') return styles.filter((s) => s.shopListed === 1);
-    if (listingFilter === 'unlisted') return styles.filter((s) => s.shopListed !== 1);
-    return styles;
-  }, [styles, listingFilter]);
 
   /** 电脑上打开店铺：固定开一个手机尺寸窗口，避免被拉成全屏巨幅 */
   const openShop = () => {
@@ -583,42 +531,6 @@ const ShopManage: React.FC = () => {
       message.warning('复制失败，请手动复制：' + shopUrl);
     }
   };
-
-  const styleColumns: ColumnsType<StyleRow> = [
-    {
-      title: '封面',
-      width: 78,
-      render: (_, r) =>
-        r.cover ? (
-          <img src={r.cover} alt="" className="shop-cell-cover" />
-        ) : (
-          <div className="shop-cell-cover shop-cell-cover--empty"><ShoppingOutlined /></div>
-        ),
-    },
-    { title: '款号', dataIndex: 'styleNo', width: 130 },
-    { title: '款名', dataIndex: 'styleName', ellipsis: true },
-    {
-      title: '店铺状态',
-      width: 110,
-      render: (_, r) =>
-        r.shopListed === 1 ? (
-          <Tag color="orange">已上架</Tag>
-        ) : (
-          <Tag>未上架</Tag>
-        ),
-    },
-    {
-      title: '操作',
-      width: 130,
-      align: 'right',
-      render: (_, r) =>
-        r.shopListed === 1 ? (
-          <Button size="small" danger onClick={() => void handleToggleListing(r, false)}>下架</Button>
-        ) : (
-          <Button size="small" type="primary" onClick={() => void handleToggleListing(r, true)}>上架到店铺</Button>
-        ),
-    },
-  ];
 
   /** P2：评价列表列定义（商家只看得到自己店铺的评价） */
   const reviewColumns: ColumnsType<ShopReviewRow> = [
@@ -996,69 +908,19 @@ const ShopManage: React.FC = () => {
 
       {tab === 'listing' && (
         <Card>
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 12 }}
-            message="怎么上架：在下面找到款式，点右侧「上架到店铺」——顾客马上就能在店铺里看到并下单"
-            description={
-              <span style={{ fontSize: 12.5 }}>
-                商品在店铺里显示的价格 = 该款 SKU 的「售价」，可售数量 = SKU 库存；
-                如果显示 ¥— 或「已售罄」，说明款式还没维护 SKU 售价 / 库存。
-                列表里「封面」是灰块也说明该款没传封面图，去「款式资料」补封面、售价、库存后再上架。
-              </span>
-            }
-          />
-          <div className="shop-toolbar">
-            <Input.Search
-              allowClear
-              style={{ width: 280 }}
-              placeholder="输入款号 / 款名 / 品类后回车"
-              defaultValue={styleKw}
-              onSearch={(v) => {
-                setStyleKw(v);
-                setStylePage(1);
-                void fetchStyles(v);
-              }}
-              enterButton
-            />
-            <Segmented
-              value={listingFilter}
-              onChange={(v) => { setListingFilter(String(v)); setStylePage(1); }}
-              options={[
-                { value: 'all', label: '全部' },
-                { value: 'listed', label: '已上架' },
-                { value: 'unlisted', label: '未上架' },
-              ]}
-            />
-            <div className="shop-toolbar__spacer" />
-            <Text type="secondary">
-              共 {styles.length} 款，已上架 <Text strong style={{ color: 'var(--color-warning)' }}>{listedCount}</Text> 款
-            </Text>
-            <Tooltip title="重新拉取款式列表">
-              <Button icon={<ReloadOutlined />} onClick={() => void fetchStyles(styleKw)}>刷新</Button>
-            </Tooltip>
-          </div>
-          <ResizableTable
-            rowKey="id"
-            size="small"
-            columns={styleColumns}
-            dataSource={shownStyles}
-            loading={styleLoading}
-            pagination={{
-              current: stylePage,
-              pageSize: stylePageSize,
-              total: shownStyles.length,
-              showTotal: (t) => `共 ${t} 条`,
-              onChange: (p, ps) => { setStylePage(p); setStylePageSize(ps); },
-            }}
-            emptyDescription={
-              styles.length === 0
-                ? '没有查到款式，换个款号或款名试试'
-                : listingFilter === 'listed'
-                  ? '还没有上架的款式，去「全部」里点上架'
-                  : '该筛选下没有款式'
-            }
+          {/* D-800：本页原有一份「商品上架」退化列表（仅 5 列，无售价/库存/毛利/体检），
+              与「商品上架管理」页功能重叠且更差 —— 运营走错入口就什么都干不了。
+              按业界惯例（Medusa「浏览归浏览、编辑归编辑」）收敛为单一入口：
+              本 tab 只做引导跳转，功能全部在商品上架管理页。 */}
+          <Result
+            icon={<ShoppingOutlined style={{ color: 'var(--color-primary)' }} />}
+            title="商品上架管理已独立成页"
+            subTitle="这里提供售价、可售库存、毛利、刊登体检、批量调价与详情页编辑，上架流程请前往商品上架管理页。"
+            extra={(
+              <Button type="primary" onClick={() => navigate('/ecommerce/shop-listing')}>
+                前往商品上架管理
+              </Button>
+            )}
           />
         </Card>
       )}

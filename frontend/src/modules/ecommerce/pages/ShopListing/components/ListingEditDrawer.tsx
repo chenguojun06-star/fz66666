@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Select, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Space, Spin, Switch, Tag, Typography } from 'antd';
 import {
   PictureOutlined,
   TagsOutlined,
   LayoutOutlined,
 } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
+import ListingSetupChecklist from './ListingSetupChecklist';
+import { diagnoseListingFromSummary } from '../listingCompliance';
 import CoverColorImagesSection from './CoverColorImagesSection';
 import SkuPriceStockSection from './SkuPriceStockSection';
 import DetailModuleEditor from './DetailModuleEditor';
@@ -168,6 +170,62 @@ const ListingEditDrawer: React.FC<Props> = ({
     };
   }, []);
 
+  // D-800：上架前检查清单数据源。
+  // 必做项全部可由本地已有状态判定，不额外发请求；阻断项复用既有体检与违禁词库
+  // （diagnoseListingFromSummary 已覆盖款号/标题/主图/售价/库存/违禁词）。
+  const setupIssues = useMemo(
+    () => diagnoseListingFromSummary({
+      styleNo: row?.styleNo,
+      styleName: row?.styleName,
+      cover,
+      minPrice: skus.reduce<number | null>(
+        (acc, s) => (s.salesPrice == null ? acc : acc == null ? s.salesPrice : Math.min(acc, s.salesPrice)),
+        null,
+      ),
+      maxPrice: skus.reduce<number | null>(
+        (acc, s) => (s.salesPrice == null ? acc : acc == null ? s.salesPrice : Math.max(acc, s.salesPrice)),
+        null,
+      ),
+      totalStock,
+      skuCount: skus.length,
+    }),
+    [row?.styleNo, row?.styleName, cover, skus, totalStock],
+  );
+
+  const setupSteps = useMemo(() => {
+    const pricedCount = skus.filter((s) => s.salesPrice != null && Number(s.salesPrice) > 0).length;
+    return [
+      { key: 'cover', label: '主图已上传', done: !!cover, anchor: 'cover', action: '待上传' },
+      {
+        key: 'price', label: '售价已设置',
+        done: pricedCount > 0,
+        anchor: 'sku',
+        action: pricedCount > 0 ? `${pricedCount}/${skus.length} 个SKU已定价` : '顾客看不到价格',
+      },
+      {
+        key: 'stock', label: '可售库存大于 0',
+        done: totalStock > 0,
+        anchor: 'sku',
+        action: totalStock > 0 ? `共 ${totalStock} 件` : '售罄',
+      },
+      {
+        key: 'title', label: '商品标题已填写',
+        done: !!(row?.styleName || '').trim() && !setupIssues.some((i) => i.level === 'block' && i.field === '商品标题'),
+        action: '标题是顾客搜索的入口',
+      },
+    ];
+  }, [cover, skus, totalStock, row?.styleName, setupIssues]);
+
+  const setupOptional = useMemo(() => [
+    {
+      key: 'colorimg', label: '各颜色大图',
+      done: colors.length > 0 && coloredCount >= colors.length,
+      action: colors.length === 0 ? '未配置颜色' : `${coloredCount}/${colors.length}`,
+    },
+    { key: 'detail', label: '详情描述', done: !!(desc || '').trim(), action: '提升转化率' },
+    { key: 'fabric', label: '面料成分', done: !!(fabric || '').trim(), action: '降低退货率' },
+  ], [colors.length, coloredCount, desc, fabric]);
+
   const categorySelectOptions = useMemo(() => {
     const opts = catOptions.map((o) => ({ value: o.category, label: o.name }));
     if (category && !opts.some((o) => o.value === category)) {
@@ -271,6 +329,16 @@ const ListingEditDrawer: React.FC<Props> = ({
           </div>
 
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
+            {/* D-800：上架前检查清单（对标 Saleor ProductSetupCard）。
+                放在摘要条正下方 —— 运营打开抽屉第一眼就该知道「还差什么才能上架」，
+                而不是逐个区块翻找。 */}
+            <ListingSetupChecklist
+              required={setupSteps}
+              optional={setupOptional}
+              blockIssues={setupIssues}
+              listed={listed}
+            />
+
             <Section
               index={1}
               icon={<PictureOutlined />}

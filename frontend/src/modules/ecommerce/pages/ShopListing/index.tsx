@@ -13,6 +13,7 @@ import { useListingEditor } from './hooks/useListingEditor';
 import { unwrap } from './unwrap';
 import type { ListingFilter, ListingRow } from './types';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import './index.css';
 
 const { Text } = Typography;
@@ -63,6 +64,13 @@ const ShopListing: React.FC = () => {
 
   const listedCount = useMemo(() => rows.filter((r) => r.shopListed === 1).length, [rows]);
   const filtered = useMemo(() => filterRows(rows, filter), [rows, filter]);
+
+  // D-800：款式图列走统一列工厂（StyleImageCell，自带预览与缺图占位），
+  // 不再裸 <img>。款号已是本列表的权威字段，直接按款号取款级封面。
+  const { imageMap, fetchByStyleNos } = useStyleCoverImages();
+  useEffect(() => {
+    void fetchByStyleNos(filtered.map((r) => r.styleNo));
+  }, [fetchByStyleNos, filtered]);
 
   // 抽屉里的商品状态跟着列表走，上下架后即时同步
   const currentRow: ListingRow | null = ed.row
@@ -116,6 +124,7 @@ const ShopListing: React.FC = () => {
 
   const columns = buildListingColumns({
     summary,
+    imageMap,
     editingId,
     togglingId,
     onEdit: handleEdit,

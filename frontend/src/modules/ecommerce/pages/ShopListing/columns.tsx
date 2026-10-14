@@ -1,7 +1,8 @@
 import type { ColumnsType } from 'antd/es/table';
 import { Button, Popconfirm, Tag, Tooltip, Typography } from 'antd';
-import { CheckCircleOutlined, PictureOutlined } from '@ant-design/icons';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { CheckCircleOutlined } from '@ant-design/icons';
+import StyleImageCell from '@/components/common/StyleImageCell';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import type { ListingRow, ShopSkuSummary } from './types';
 import {
   diagnoseListingFromSummary, summarizeListingIssues, calcStyleProfit, profitLevelOf,
@@ -22,6 +23,8 @@ const priceRange = (s?: ShopSkuSummary) => {
 
 interface Params {
   summary: Record<string, ShopSkuSummary>;
+  /** 款式封面映射（D-800：用统一列工厂，缺图时降级为占位灰块，不裸 <img>） */
+  imageMap: StyleImageMap;
   editingId: number | null;
   togglingId: number | null;
   onEdit: (row: ListingRow) => void;
@@ -29,20 +32,19 @@ interface Params {
 }
 
 export function buildListingColumns({
-  summary, editingId, togglingId, onEdit, onToggleListing,
+  summary, imageMap, editingId, togglingId, onEdit, onToggleListing,
 }: Params): ColumnsType<ListingRow> {
   return [
     {
-      title: '主图',
+      title: '款式图',
       width: 76,
-      render: (_, r) =>
-        r.cover ? (
-          <img src={getFullAuthedFileUrl(r.cover)} alt="" className="shop-listing__thumb" />
-        ) : (
-          <div className="shop-listing__thumb shop-listing__thumb--empty">
-            <PictureOutlined />
-          </div>
-        ),
+      render: (_, r) => (
+        <StyleImageCell
+          styleNo={r.styleNo}
+          imageMap={imageMap}
+          size={48}
+        />
+      ),
     },
     { title: '款号', dataIndex: 'styleNo', width: 130 },
     { title: '款名', dataIndex: 'styleName', ellipsis: true },

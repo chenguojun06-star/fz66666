@@ -16,6 +16,8 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import StyleImageCell from "@/components/common/StyleImageCell";
+import { useStyleCoverImages } from "@/hooks/useStyleCoverImages";
 import {
   ReloadOutlined,
   ShopOutlined,
@@ -58,6 +60,11 @@ const PlatformShopOverview: React.FC = () => {
 
   // 全站商品（含已下架，平台治理需要看得到被下架的才能恢复）
   const [products, setProducts] = React.useState<PlatformShopProductRow[]>([]);
+  // D-800：款式图列按款号取款级封面（列表已有权威 styleNo，无需 SKU 解析）
+  const { imageMap, fetchByStyleNos } = useStyleCoverImages();
+  React.useEffect(() => {
+    void fetchByStyleNos(products.map((p) => p.styleNo));
+  }, [fetchByStyleNos, products]);
   const [productTotal, setProductTotal] = React.useState(0);
   const [productPage, setProductPage] = React.useState(1);
   const [productKeyword, setProductKeyword] = React.useState("");
@@ -217,6 +224,16 @@ const PlatformShopOverview: React.FC = () => {
   ];
 
   const productColumns: ColumnsType<PlatformShopProductRow> = [
+    {
+      // D-800：补款式图列。此前该表完全没有图片，运营无从判断是什么商品
+      //（接口本就返回 cover 字段却没用）。用统一 StyleImageCell，
+      //自带点击放大与缺图占位，符合 CLAUDE.md 铁律 15。
+      title: "款式图",
+      width: 76,
+      render: (_: unknown, row) => (
+        <StyleImageCell styleNo={row.styleNo} imageMap={imageMap} size={48} />
+      ),
+    },
     {
       title: "商品",
       dataIndex: "styleName",
