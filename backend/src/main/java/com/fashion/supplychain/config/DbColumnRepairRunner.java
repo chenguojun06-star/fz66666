@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +36,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // 本次启动实际"动过"的结构，逐条记下来，最后统一输出
+        List<String> actions = new ArrayList<>();
         try (Connection conn = dataSource.getConnection()) {
             String schema = conn.getCatalog();
             int repaired = 0;
@@ -45,8 +48,14 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                 if (!tableExists(conn, schema, entry.getKey())) {
                     try (Statement stmt = conn.createStatement()) {
                         stmt.execute(entry.getValue());
+                    } catch (Exception e) {
+                        log.error("[DbRepair] 创建缺失表 {} 失败：{}", entry.getKey(), e.getMessage());
+                        continue;
                     }
-                    log.warn("[DbRepair] 已创建缺失表: {}", entry.getKey());
+                    // ⚠️ ERROR 而非 warn：缺表意味着 Flyway 迁移缺失或没跑成功，
+                    //    这是结构真相源问题，必须能在监控里被看见（2026-10-14 从 warn 提级）
+                    log.error("[DbRepair] 已创建缺失表 {} —— Flyway 迁移缺失或未执行，请补齐迁移", entry.getKey());
+                    actions.add("表 " + entry.getKey());
                     repairedTables++;
                 }
             }
@@ -61,7 +70,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                 }
                 for (String[] col : columns) {
                     if (!existingColumns.contains(col[0])) {
-                        repaired += addColumn(conn, table, col[0], col[1]);
+                        if (addColumn(conn, table, col[0], col[1]) > 0) {
+                            log.error("[DbRepair] 已补缺失列 {}.{} —— Flyway 迁移缺失或未执行，请补齐迁移",
+                                    table, col[0]);
+                            actions.add(table + "." + col[0]);
+                        }
                     }
                 }
             }
@@ -71,22 +84,22 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             // 属例行刷新非缺失修复，不计入 repaired——否则每次启动都误报"共修复 2 个缺失列"
             DbViewRepairHelper.ensureFlowStageSnapshotView(conn, schema);
             DbViewRepairHelper.ensureStageDoneAggView(conn, schema);
-            repaired += ensureColumnType(conn, schema, "t_style_info", "size_color_config",
-                    "mediumtext", "MODIFY COLUMN `size_color_config` MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
-            repaired += ensureColumnType(conn, schema, "t_style_size", "tolerance",
-                    "varchar", "MODIFY COLUMN `tolerance` VARCHAR(50) DEFAULT NULL");
-            repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
-                    "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
-            repaired += ensureColumnIsNullable(conn, schema, "t_style_attachment", "style_no", "VARCHAR(64)");
-            if (repaired > 0) {
-                log.warn("[DbRepair] 共修复 {} 个缺失列", repaired);
+            if (ensureColumnType(conn, schema, "t_style_info", "size_color_config",
+                    "mediumtext", "MODIFY COLUMN `size_color_config` MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'") > 0) {
+                actions.add("t_style_info.size_color_config(类型修正)");
             }
-            if (repairedTables > 0) {
-                log.warn("[DbRepair] 共修复 {} 张缺失表", repairedTables);
+            if (ensureColumnType(conn, schema, "t_style_size", "tolerance",
+                    "varchar", "MODIFY COLUMN `tolerance` VARCHAR(50) DEFAULT NULL") > 0) {
+                actions.add("t_style_size.tolerance(类型修正)");
             }
-            if (repaired == 0 && repairedTables == 0) {
-                log.info("[DbRepair] 关键表结构完整，无需修复");
+            if (ensureColumnType(conn, schema, "t_production_process_tracking", "id",
+                    "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'") > 0) {
+                actions.add("t_production_process_tracking.id(类型修正)");
             }
+            if (ensureColumnIsNullable(conn, schema, "t_style_attachment", "style_no", "VARCHAR(64)") > 0) {
+                actions.add("t_style_attachment.style_no(可空性修正)");
+            }
+            repaired += actions.size();
         } catch (Exception e) {
             log.error("[DbRepair] 列修复失败，应用继续启动。原因: {}", e.getMessage());
         }
@@ -103,6 +116,32 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         }
 
         ensureCriticalCompositeIndexes();
+
+        reportRepairSummary(actions);
+    }
+
+    /**
+     * 汇总本次启动动过的结构。
+     *
+     * <p><b>为什么要有这一行</b>（2026-10-14）：这个自愈器此前每次动手都只打一条
+     * {@code log.warn}，散落在几百行启动日志里，**没有任何告警会注意到它**。
+     * 后果是 Flyway 漂移被它悄悄盖住 —— 结构真相源本该只有 Flyway，
+     * 现在却有两套，谁错了看不出来。本次把每次动手提到 ERROR，
+     * 并在最后单独汇总一行，方便 grep / 配告警。
+     *
+     * <p>保留自愈行为本身：老库/缺表的部署场景仍需要兜底，不能一关了之。
+     */
+    private void reportRepairSummary(List<String> actions) {
+        if (actions.isEmpty()) {
+            log.info("[DbRepair] 关键表结构完整，无需修复（结构真相源=Flyway，无漂移）");
+            return;
+        }
+        // 最多列 10 条，避免极端情况下刷屏
+        List<String> shown = actions.size() > 10 ? actions.subList(0, 10) : actions;
+        String more = actions.size() > 10 ? " …等共 " + actions.size() + " 处" : "";
+        log.error("[DbRepair] ⚠ 本次启动修复了 {} 处结构缺失：{}{}。"
+                        + "这意味着 Flyway 迁移缺失或未执行 —— 结构真相源只能是 Flyway，请补齐迁移后本处应归零",
+                actions.size(), String.join(", ", shown), more);
     }
 
     private void ensureCriticalCompositeIndexes() {
@@ -122,7 +161,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             if (dbHelper.addIndexIfAbsent("t_material_purchase", "idx_mpu_tenant_order", "tenant_id, order_id")) created++;
         }
         if (created > 0) {
-            log.warn("[DbRepair] 已创建 {} 个缺失联合索引", created);
+            log.error("[DbRepair] 已创建 {} 个缺失联合索引 —— Flyway 迁移缺失或未执行，请补齐迁移", created);
         }
     }
 

@@ -37,6 +37,14 @@ jobs:
     - name: 校验新增迁移的列依赖（拦截引用不存在列的事故）
       run: python3 scripts/check-flyway-column-deps.py
 
+    # 本项目有两条"结构真相源"：Flyway 迁移 + DbColumnRepairRunner 的启动自愈清单
+    # （DbTableDefinitions 74 张表 / DbColumnDefinitions 1138 条补列）。
+    # 自愈器原先每次动手只打 log.warn，散落在启动日志里没人看，
+    # 于是 Flyway 漂移被它悄悄盖住（2026-10-14 已把日志提到 ERROR 并汇总一行）。
+    # 本步骤在构建期堵住"继续往自愈清单加条目"的口子。
+    - name: 自愈清单新增条目必须有 Flyway 迁移
+      run: python3 scripts/check-db-repair-vs-flyway.py
+
     # 2026-10-14 新增。此前线上接连踩同一个坑：原生 SQL 引用了生产库不存在的列，
     # 每次都是抛 Unknown column 后被 catch 成 debug/warn 吞掉，功能静默失效数月。
     # 实测已命中的：AuditLogCleanupJob.create_time（日志清理 6 个月没删过数据）、
