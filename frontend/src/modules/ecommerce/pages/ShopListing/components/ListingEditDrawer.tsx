@@ -6,6 +6,7 @@ import {
   LayoutOutlined,
 } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
+import CustomerPreview from './CustomerPreview';
 import ListingSetupChecklist from './ListingSetupChecklist';
 import { diagnoseListingFromSummary } from '../listingCompliance';
 import CoverColorImagesSection from './CoverColorImagesSection';
@@ -170,6 +171,24 @@ const ListingEditDrawer: React.FC<Props> = ({
     };
   }, []);
 
+  // D-800：顾客端预览需要店铺 slug（门店页 URL 参数），随抽屉一起取一次。
+  // 取不到不阻断编辑 —— 只是预览区显示空态，其余功能照常。
+  const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const cfg = unwrap<{ slug?: string }>(await shopAdminApi.getConfig());
+        if (alive) setShopSlug(cfg?.slug ?? null);
+      } catch {
+        if (alive) setShopSlug(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [open]);
+
   // D-800：上架前检查清单数据源。
   // 必做项全部可由本地已有状态判定，不额外发请求；阻断项复用既有体检与违禁词库
   // （diagnoseListingFromSummary 已覆盖款号/标题/主图/售价/库存/违禁词）。
@@ -277,6 +296,9 @@ const ListingEditDrawer: React.FC<Props> = ({
               // 绝不能「内容保存失败但照样提示已保存」。
               await saveContent();
               onSave();
+              // D-800：保存后自动刷新右侧顾客端预览，让运营立刻看到改动效果，
+              // 不用手动点「刷新」再去对照。
+              setPreviewKey((k) => k + 1);
             }}
             disabled={loading}
           >
@@ -328,6 +350,11 @@ const ListingEditDrawer: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* D-800：左编辑 / 右预览 分栏。
+              预览直接 iframe 线上真实门店页，保证「预览即线上」，
+              不另写一套渲染器（否则会出现预览好看、上线不一样）。 */}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
             {/* D-800：上架前检查清单（对标 Saleor ProductSetupCard）。
                 放在摘要条正下方 —— 运营打开抽屉第一眼就该知道「还差什么才能上架」，
@@ -373,6 +400,27 @@ const ListingEditDrawer: React.FC<Props> = ({
               <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
             </Section>
           </Space>
+            </div>
+
+            {/* 右侧：顾客端实时预览（窄屏时自动落到下方） */}
+            <div
+              style={{
+                flex: '0 0 auto',
+                position: 'sticky',
+                top: 8,
+                maxWidth: 372,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <CustomerPreview
+                slug={shopSlug}
+                styleId={row?.id ?? null}
+                refreshKey={previewKey}
+              />
+            </div>
+          </div>
 
           <Alert
             type="info"
