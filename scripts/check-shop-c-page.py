@@ -33,6 +33,11 @@
      电脑端没有这个补发事件，所以只在手机/微信里犯。
 
 本脚本只做静态断言，防止上述五类问题再次被写回来。退出码 0=通过，1=发现回归。
+
+另外守护「查看器能缩放」（2026-10-14 顾客追加反馈「图片不能缩放」）：
+  查看器铺满全屏，必须 `touch-action:none` 挡掉浏览器对整页的原生缩放
+  （否则缩的是整个网页、图片并不会变大），代价是缩放手势全部自己实现。
+  于是捏合、双击、滚轮、平移限位、缩放层样式缺一不可，见下面 F 组。
 """
 import os
 import re
@@ -147,7 +152,7 @@ def main():
                 "落点可能是颜色/尺码/加购按钮造成误触，只堵「重新打开大图」这一条路不够"
                 "（2026-10-14 线上故障 E）"
             )
-        m = re.search(r"mask\.addEventListener\(\s*['\"]touchend['\"]([\s\S]{0,360}?)\}\s*,\s*\{([^}]*)\}", js)
+        m = re.search(r"mask\.addEventListener\(\s*['\"]touchend['\"]([\s\S]{0,900}?)\}\s*,\s*\{([^}]*)\}", js)
         if not m:
             fail("查看器缺少 touchend 处理，轻点关闭会失效")
         else:
@@ -161,8 +166,28 @@ def main():
                     "查看器 touchend 仍是 passive 监听 —— passive 监听里 preventDefault 不生效，"
                     "穿透点击拦不住（2026-10-14 线上故障 E）"
                 )
-        if re.search(r"mask\.addEventListener\(\s*['\"]touchend['\"][\s\S]{0,240}?passive:\s*true", js):
-            fail("查看器 touchend 被改回 passive:true —— 穿透点击会重新出现（2026-10-14 线上故障 E）")
+
+    # ── F. 查看器必须能缩放（捏合 / 双击 / 滚轮），且平移要有边界 ──
+    #  主流电商的全屏看图都能放大看细节。查看器铺满全屏必须 touch-action:none
+    #  挡掉浏览器对整页的原生缩放，代价是缩放手势全得自己算 —— 少一环就会「捏不动」。
+    if "openImageViewer(" in js:
+        for need, why in [
+            ("pinchStart(", "双指捏合缩放"),
+            ("zoomAt(", "以触点/光标为锚点的缩放"),
+            ("lastTap", "双击放大 / 还原"),
+            ("MAXS", "最大放大倍数上限"),
+            ("clampT(", "平移限位（否则图片会被拖出屏幕外）"),
+            ("addEventListener('wheel'", "电脑端滚轮缩放"),
+        ]:
+            if need not in js:
+                fail(f"查看器缺少「{why}」的实现（找不到 {need}）—— 顾客无法放大看细节")
+        if "touch-action:none" not in html:
+            fail(
+                ".d-viewer 丢了 touch-action:none —— 双指捏合会去缩放整个网页而不是图片，"
+                "自己实现的缩放也会被原生手势抢走"
+            )
+        if ".d-viewer .box" not in html:
+            fail("缺少 .d-viewer .box 缩放层样式，缩放/平移会作用到错误的元素上")
 
     return report()
 

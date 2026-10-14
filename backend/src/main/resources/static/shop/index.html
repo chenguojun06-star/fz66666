@@ -121,12 +121,16 @@
   .carousel-dots i.on{width:16px;background:var(--tb-orange);}
   .carousel-idx{position:absolute;right:10px;bottom:8px;background:rgba(0,0,0,.45);color:#fff;font-size:11px;line-height:16px;padding:0 8px;border-radius:9px;}
 
-  /* 图片查看器（轻点主图放大；全屏可左右切换、轻点关闭） */
+  /* 图片查看器（轻点主图放大；全屏可捏合/双击缩放、左右切换、轻点关闭） */
   .d-viewer{position:fixed;inset:0;background:#000;z-index:200;display:flex;align-items:center;justify-content:center;touch-action:none;overflow:hidden;}
   .d-viewer img{max-width:100%;max-height:100%;object-fit:contain;}
   .d-viewer .ph{color:#666;font-size:52px;}
-  .d-viewer .close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
-  .d-viewer .cnt{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#fff;font-size:12.5px;background:rgba(255,255,255,.18);border-radius:12px;padding:3px 12px;}
+  /* 缩放平移只动这一层（transform 不影响布局，所以 contain 适配算出来的尺寸始终有效） */
+  .d-viewer .box{width:100%;height:100%;display:flex;align-items:center;justify-content:center;will-change:transform;}
+  .d-viewer .close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .d-viewer .cnt{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#fff;font-size:12.5px;background:rgba(255,255,255,.18);border-radius:12px;padding:3px 12px;z-index:2;}
+  .d-viewer .hint{position:absolute;bottom:calc(54px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:rgba(255,255,255,.9);font-size:12px;background:rgba(0,0,0,.42);border-radius:12px;padding:4px 12px;pointer-events:none;transition:opacity .45s;z-index:2;}
+  .d-viewer .hint.off{opacity:0;}
 
   /* 价格区：纯色白底，价格用品牌色，不用渐变 */
   .d-price{background:#fff;padding:14px;}
@@ -847,13 +851,21 @@
   }, true);
 
   /**
-   * 图片查看器：轻点主图放大。
+   * 图片查看器：轻点主图放大，全屏内可**捏合 / 双击 / 滚轮**缩放、拖动看图。
    *
    * <p>此前详情页的图**没有任何点击行为**，顾客想看细节只能靠双指捏合，
    * 在微信里往往被页面滚动抢走手势 —— 等于"看不了大图"。
    *
-   * <p>行为对齐主流电商：轻点图片打开全屏；全屏内左右滑动切图、轻点任意处关闭；
-   * 右上角另给关闭键。返回上一张/下一张只影响查看器，不改详情页当前主图。
+   * <p>行为对齐主流电商（淘宝/京东/拼多多/Amazon 的全屏看图都是这一套）：
+   * 轻点图片打开全屏 → **捏合或双击放大**（双击在 1 倍与 2.5 倍之间切换）→
+   * 放大后拖动看图、拖到图片边缘继续拖则切上/下一张 →
+   * 轻点任意处关闭、右上角另有关闭键。切换图片只影响查看器，不改详情页当前主图。
+   *
+   * <p><b>为什么自己实现缩放</b>：查看器铺满全屏，必须 `touch-action:none` 挡掉
+   * 浏览器对整页的原生缩放（否则缩的是整个网页，图片并不会变大，还会把页面顶飞）。
+   * 代价就是浏览器不会再帮我们做任何缩放手势 —— 全部自己算。
+   * 页面 meta 里也没有禁用 user-scalable，所以在详情页上双指捏合会缩放整个网页，
+   * 这是移动端 H5 的常见坑，看图必须走查看器。
    */
   function openImageViewer(imgs, start) {
     imgs = (imgs || []).filter(Boolean);
@@ -862,23 +874,72 @@
     var mask = document.createElement('div');
     mask.className = 'd-viewer';
     mask.innerHTML = '<button class="close" id="vwClose">&#10005;</button>'
-      + '<div id="vwImgBox" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div>'
+      + '<div id="vwImgBox" class="box"></div>'
+      + '<span class="hint" id="vwHint">双击或捏合可放大</span>'
       + (imgs.length > 1 ? '<span class="cnt" id="vwCnt"></span>' : '');
     document.body.appendChild(mask);
     // 查看器铺满全屏期间禁止背景跟着滚
     var prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    var sx = 0, sy = 0, moved = false, closed = false;
+    var MAXS = 4;               // 最大放大倍数（再大就是马赛克，主流电商也是 3~4 倍）
+    var boxEl = document.getElementById('vwImgBox');
+    var closed = false;
+
+    /* ── 缩放/平移状态 ──
+       变换作用在 .box 上（transform 不影响布局），所以「contain 适配后的显示尺寸」
+       始终能算得出来，平移边界也就有了准确依据。 */
+    var scale = 1, tx = 0, ty = 0;
+
+    function apply(animate) {
+      if (!boxEl) return;
+      boxEl.style.transition = animate ? 'transform .2s ease-out' : 'none';
+      boxEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+    }
+    /** 图片在 1 倍下的实际显示尺寸（按 contain 适配算，和 CSS 的 max-width/max-height 一致） */
+    function dispSize() {
+      var img = boxEl && boxEl.querySelector('img');
+      var bw = mask.clientWidth, bh = mask.clientHeight;
+      var nw = img ? img.naturalWidth : 0, nh = img ? img.naturalHeight : 0;
+      if (!nw || !nh) return { w: bw, h: bh };     // 还没加载出来，先按铺满算
+      var fit = Math.min(bw / nw, bh / nh);
+      return { w: nw * fit, h: nh * fit };
+    }
+    /** 平移量限死在「图片边缘不离开屏幕」的范围内；mx/my 是允许的最大偏移 */
+    function clampT(x, y) {
+      var d = dispSize();
+      var mx = Math.max(0, (d.w * scale - mask.clientWidth) / 2);
+      var my = Math.max(0, (d.h * scale - mask.clientHeight) / 2);
+      return { x: Math.max(-mx, Math.min(mx, x)), y: Math.max(-my, Math.min(my, y)), mx: mx, my: my };
+    }
+    function resetZoom(animate) { scale = 1; tx = 0; ty = 0; apply(animate); }
+    /**
+     * 以屏幕点 (cx,cy) 为锚点缩放到 ns，保证该点下方的画面不动。
+     * 记锚点相对屏幕中心的偏移 v、内容点相对中心的距离 d=(v-t)/s，
+     * 缩放后要让它仍落在 v 上：t' = v - (ns/s)·(v - t)。
+     */
+    function zoomAt(ns, cx, cy, animate) {
+      ns = Math.max(1, Math.min(MAXS, ns));
+      var vx = cx - mask.clientWidth / 2, vy = cy - mask.clientHeight / 2;
+      var k = ns / scale;
+      tx = vx - k * (vx - tx);
+      ty = vy - k * (vy - ty);
+      scale = ns;
+      var c = clampT(tx, ty);
+      tx = c.x; ty = c.y;
+      apply(animate);
+    }
+
     function paint() {
-      var box = document.getElementById('vwImgBox');
-      if (box) box.innerHTML = thumbHtml(imgs[idx]);
+      if (boxEl) boxEl.innerHTML = thumbHtml(imgs[idx]);
       var cnt = document.getElementById('vwCnt');
       if (cnt) cnt.textContent = (idx + 1) + ' / ' + imgs.length;
+      resetZoom(false);
     }
     function close() {
       if (closed) return;          // 关闭键的 click 与 touchend 可能各调一次，只认第一次
       closed = true;
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
       // 时间窗兜底：掐掉紧随其后的穿透 click（详见 swallowClicks 的注释）
       swallowClicks(350);
       if (mask.parentNode) mask.parentNode.removeChild(mask);
@@ -886,33 +947,134 @@
     }
     paint();
     on('vwClose', function (e) { if (e && e.stopPropagation) e.stopPropagation(); close(); });
+    // 提示只留一会儿，之后自己淡出，别一直压着图片
+    var hintTimer = setTimeout(function () {
+      var h = document.getElementById('vwHint');
+      if (h) h.classList.add('off');
+    }, 2600);
 
-    function down(x, y) { sx = x; sy = y; moved = false; }
-    function move(x, y) { if (Math.abs(x - sx) > 12 || Math.abs(y - sy) > 12) moved = true; }
-    function up(x, y) {
-      if (moved) {
-        var dx = x - sx, dy = y - sy;
-        if (Math.abs(dx) >= 40 && Math.abs(dx) >= Math.abs(dy) && imgs.length > 1) {
-          idx = (idx + (dx < 0 ? 1 : imgs.length - 1)) % imgs.length;
-          paint();
-        }
+    /* ── 手势 ──
+       mode：'' 空闲 ｜ 'pan' 单指拖动/平移 ｜ 'pinch' 双指缩放 */
+    var sx = 0, sy = 0, moved = false;
+    var mode = '';
+    var t0x = 0, t0y = 0;        // 手势开始时的平移量
+    var s0 = 1;                  // 手势开始时的倍数
+    var p0d = 1, v0x = 0, v0y = 0;   // 双指起始间距 / 起始中点（相对屏幕中心）
+    var overX = 0;               // 拖动越界的量，松手时用来判断「切上一张/下一张」
+    var lastTap = 0, lastTapX = 0, lastTapY = 0;
+    var closeTimer = null;
+
+    function down(x, y) {
+      sx = x; sy = y; moved = false; overX = 0;
+      t0x = tx; t0y = ty; mode = 'pan';
+    }
+    function drag(x, y) {
+      if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) moved = true;
+      if (mode !== 'pan' || scale <= 1) return;      // 1 倍时交给松手后的「切图」判断
+      var wantX = t0x + (x - sx), wantY = t0y + (y - sy);
+      var c = clampT(wantX, wantY);
+      tx = c.x; ty = c.y;
+      overX = wantX - c.x;                           // 越界多少，松手时决定是否切图
+      apply(false);
+    }
+    function pinchStart(e) {
+      var a = e.touches[0], b = e.touches[1];
+      p0d = Math.max(1, Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2)));
+      v0x = (a.clientX + b.clientX) / 2 - mask.clientWidth / 2;
+      v0y = (a.clientY + b.clientY) / 2 - mask.clientHeight / 2;
+      s0 = scale; t0x = tx; t0y = ty;
+      mode = 'pinch'; moved = true;                  // 双指永远不算「轻点」
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+    }
+    function pinchMove(e) {
+      var a = e.touches[0], b = e.touches[1];
+      var d = Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2));
+      var cx = (a.clientX + b.clientX) / 2, cy = (a.clientY + b.clientY) / 2;
+      var ns = Math.max(1, Math.min(MAXS, s0 * d / p0d));
+      var k = ns / s0;
+      // 锚点用「手势起始的中点」、位置用「当前中点」→ 既以双指中心缩放，又跟着手指走
+      tx = (cx - mask.clientWidth / 2) - k * v0x;
+      ty = (cy - mask.clientHeight / 2) - k * v0y;
+      scale = ns;
+      var c = clampT(tx, ty);
+      tx = c.x; ty = c.y;
+      apply(false);
+    }
+    /** 轻点：可能是「关闭」也可能是「双击放大」，等一个双击窗口再决定 */
+    function tap(x, y) {
+      var now = Date.now();
+      if (now - lastTap < 260 && Math.abs(x - lastTapX) < 32 && Math.abs(y - lastTapY) < 32) {
+        lastTap = 0;
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+        if (scale > 1.02) resetZoom(true);           // 已放大 → 缩回适应屏幕
+        else zoomAt(2.5, x, y, true);                // 1 倍 → 以双击点为中心放大
         return;
       }
-      close();   // 轻点任意处关闭（含轻点图片本身）
+      lastTap = now; lastTapX = x; lastTapY = y;
+      if (closeTimer) clearTimeout(closeTimer);
+      closeTimer = setTimeout(function () { closeTimer = null; close(); }, 240);
     }
-    mask.addEventListener('touchstart', function (e) { down(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-    mask.addEventListener('touchmove', function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    function up(x, y) {
+      var wasPinch = (mode === 'pinch');
+      mode = '';
+      if (wasPinch) {
+        if (scale < 1.05) resetZoom(true);           // 捏回接近 1 倍就居中归位
+        moved = false; lastTap = 0;                  // 双指结束后的抬手不算轻点
+        return;
+      }
+      if (moved) {
+        var dx = x - sx, dy = y - sy;
+        if (scale > 1) {
+          // 放大状态下拖到图片边缘还继续拖 → 切上/下一张（和淘宝一致）
+          if (Math.abs(overX) >= 60 && Math.abs(dx) > Math.abs(dy) && imgs.length > 1) {
+            idx = (idx + (overX > 0 ? imgs.length - 1 : 1)) % imgs.length;
+            overX = 0;
+            paint();
+            return;
+          }
+          var c = clampT(tx, ty);                    // 没越过阈值就把越界部分弹回去
+          tx = c.x; ty = c.y; overX = 0; apply(true);
+          return;
+        }
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) || imgs.length < 2) return;
+        idx = (idx + (dx < 0 ? 1 : imgs.length - 1)) % imgs.length;
+        paint();
+        return;
+      }
+      tap(x, y);
+    }
+
+    mask.addEventListener('touchstart', function (e) {
+      if (e.touches.length >= 2) pinchStart(e);
+      else down(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    mask.addEventListener('touchmove', function (e) {
+      if (e.touches.length >= 2) { if (mode !== 'pinch') pinchStart(e); pinchMove(e); return; }
+      if (mode === 'pinch') return;                  // 双指刚松开一指，这一帧先不当拖动
+      drag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
     // ⚠️ 必须非 passive：这里要 preventDefault 掐掉浏览器在触摸流末尾补发的
     //    mousedown/mouseup/click。否则查看器刚移除，补发的 click 就穿透到
     //    下面露出来的商品主图上，把它又打开 —— 顾客再也回不到详情页。
     mask.addEventListener('touchend', function (e) {
       if (e.cancelable !== false && e.preventDefault) e.preventDefault();
+      if (e.touches && e.touches.length) {
+        // 双指松开一指：接续成单指拖动，不要把这次当成手势结束
+        var t = e.touches[0];
+        sx = t.clientX; sy = t.clientY; t0x = tx; t0y = ty; mode = 'pan'; moved = true;
+        return;
+      }
       up(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }, { passive: false });
-    mask.addEventListener('touchcancel', function () { moved = false; }, { passive: true });
+    mask.addEventListener('touchcancel', function () { mode = ''; moved = false; }, { passive: true });
     mask.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
-    mask.addEventListener('mousemove', function (e) { if (e.buttons) move(e.clientX, e.clientY); });
+    mask.addEventListener('mousemove', function (e) { if (e.buttons) drag(e.clientX, e.clientY); });
     mask.addEventListener('mouseup', function (e) { up(e.clientX, e.clientY); });
+    // 电脑端：滚轮缩放（以光标为锚点），没有触摸屏也能看清细节
+    mask.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      zoomAt(scale * (e.deltaY > 0 ? 1 / 1.15 : 1.15), e.clientX, e.clientY, false);
+    }, { passive: false });
   }
 
   /* ══════════════ 评价（D-783） ══════════════ */
