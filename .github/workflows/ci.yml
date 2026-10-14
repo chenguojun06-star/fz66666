@@ -40,6 +40,12 @@ jobs:
     - name: 检查小程序 eventBus 订阅（防止操作后不刷新）
       run: node scripts/check-eventbus-subscription.js
 
+    - name: 顾客端店铺页交互守护（切图 / 放大 / 选色出尺码）
+      run: |
+        echo "🔍 校验顾客端店铺详情页交互..."
+        python3 scripts/check-shop-c-page.py
+        echo "✅ 顾客端店铺页交互守护通过"
+
     - name: 多租户隔离审计（P0铁律：Entity/Mapper 必须带 tenant_id）
       run: |
         echo "🔍 开始多租户隔离审计..."

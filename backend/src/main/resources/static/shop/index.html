@@ -100,9 +100,14 @@
   /* 轮播 */
   .d-carousel{position:relative;background:#fff;overflow:hidden;}
   .d-carousel .track{display:flex;transition:transform .28s ease;}
-  .d-carousel .cell{flex:0 0 100%;width:100%;}
+  .d-carousel .cell{flex:0 0 100%;width:100%;cursor:zoom-in;}
   .d-carousel .cell img,.d-carousel .cell .ph{width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;}
   .d-carousel .cell .ph{color:#d5d5d5;font-size:40px;background:#f7f7f7;}
+  /* 电脑端拖图切图时别触发浏览器原生的「拖动图片」——那会把 mousemove 吞掉 */
+  .d-carousel .cell img{-webkit-user-drag:none;user-select:none;}
+  /* 横向轮播自己处理左右拖动：只把纵向留给浏览器，
+     避免手机上的边缘返回手势/横向回弹把滑动吃掉 */
+  .d-carousel{touch-action:pan-y;}
   /* 左右箭头放在图片垂直居中处 —— 此前与左上角的返回键同坐标重叠，
      返回键 z-index 更高，顾客点左箭头会变成"返回"，等于左滑永远用不了 */
 
@@ -115,6 +120,13 @@
   .carousel-dots i{width:6px;height:6px;border-radius:3px;background:rgba(0,0,0,.2);}
   .carousel-dots i.on{width:16px;background:var(--tb-orange);}
   .carousel-idx{position:absolute;right:10px;bottom:8px;background:rgba(0,0,0,.45);color:#fff;font-size:11px;line-height:16px;padding:0 8px;border-radius:9px;}
+
+  /* 图片查看器（轻点主图放大；全屏可左右切换、轻点关闭） */
+  .d-viewer{position:fixed;inset:0;background:#000;z-index:200;display:flex;align-items:center;justify-content:center;touch-action:none;overflow:hidden;}
+  .d-viewer img{max-width:100%;max-height:100%;object-fit:contain;}
+  .d-viewer .ph{color:#666;font-size:52px;}
+  .d-viewer .close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .d-viewer .cnt{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#fff;font-size:12.5px;background:rgba(255,255,255,.18);border-radius:12px;padding:3px 12px;}
 
   /* 价格区：纯色白底，价格用品牌色，不用渐变 */
   .d-price{background:#fff;padding:14px;}
@@ -577,7 +589,7 @@
     var PH = '<div class="ph">&#9634;</div>';
     var PH_ATTR = "'<div class=&quot;ph&quot;>&#9634;</div>'";
     if (!cover) return PH;
-    return '<img src="' + esc(cover) + '" alt=""'
+    return '<img src="' + esc(cover) + '" alt="" draggable="false"'
       + ' onload="if(this.naturalWidth<=1||this.naturalHeight<=1)this.outerHTML=' + PH_ATTR + '"'
       + ' onerror="this.outerHTML=' + PH_ATTR + '">';
   }
@@ -735,6 +747,28 @@
   }
 
   /**
+   * 详情页轮播的图片清单。
+   *
+   * <p>商家排好的轮播图优先；没排才回落「主图 + 各颜色图」（库里已有上百张颜色图）。
+   * <b>单独抽成函数是必须的</b>：此前画廊渲染和「选颜色换图」各自算了一份清单，
+   * 换图那段引用的 `galImgs` 根本没声明 → 顾客一点颜色就抛 ReferenceError，
+   * 处理函数在刷新尺码之前就断了，尺码永远不出现。
+   */
+  function galleryImages(d) {
+    var imgs = [];
+    if (d.gallery && d.gallery.length) {
+      for (var g = 0; g < d.gallery.length; g++) {
+        if (d.gallery[g] && imgs.indexOf(d.gallery[g]) < 0) imgs.push(d.gallery[g]);
+      }
+    } else {
+      if (d.cover) imgs.push(d.cover);
+      var ci = d.colorImages || {};
+      for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
+    }
+    return imgs;
+  }
+
+  /**
    * D-777：真正的图片轮播。
    * 此前把图片收进数组却只渲染 imgs[0]，多图等于没做；且指示点/序号都缺，
    * 顾客看不出还有别的图。现按淘宝/1688 惯例给出指示点 + 第 N/M 张 + 左右切换 + 触摸滑动。
@@ -777,6 +811,64 @@
     var idx = document.getElementById('cidx');
     if (idx) idx.textContent = (i + 1) + '/' + total;
     return i;
+  }
+
+  /**
+   * 图片查看器：轻点主图放大。
+   *
+   * <p>此前详情页的图**没有任何点击行为**，顾客想看细节只能靠双指捏合，
+   * 在微信里往往被页面滚动抢走手势 —— 等于"看不了大图"。
+   *
+   * <p>行为对齐主流电商：轻点图片打开全屏；全屏内左右滑动切图、轻点任意处关闭；
+   * 右上角另给关闭键。返回上一张/下一张只影响查看器，不改详情页当前主图。
+   */
+  function openImageViewer(imgs, start) {
+    imgs = (imgs || []).filter(Boolean);
+    if (!imgs.length) return;
+    var idx = Math.max(0, Math.min(imgs.length - 1, Number(start) || 0));
+    var mask = document.createElement('div');
+    mask.className = 'd-viewer';
+    mask.innerHTML = '<button class="close" id="vwClose">&#10005;</button>'
+      + '<div id="vwImgBox" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div>'
+      + (imgs.length > 1 ? '<span class="cnt" id="vwCnt"></span>' : '');
+    document.body.appendChild(mask);
+    // 查看器铺满全屏期间禁止背景跟着滚
+    var prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function paint() {
+      var box = document.getElementById('vwImgBox');
+      if (box) box.innerHTML = thumbHtml(imgs[idx]);
+      var cnt = document.getElementById('vwCnt');
+      if (cnt) cnt.textContent = (idx + 1) + ' / ' + imgs.length;
+    }
+    function close() {
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      document.body.style.overflow = prevOverflow;
+    }
+    paint();
+    on('vwClose', function (e) { if (e && e.stopPropagation) e.stopPropagation(); close(); });
+
+    var sx = 0, sy = 0, moved = false;
+    function down(x, y) { sx = x; sy = y; moved = false; }
+    function move(x, y) { if (Math.abs(x - sx) > 12 || Math.abs(y - sy) > 12) moved = true; }
+    function up(x, y) {
+      if (moved) {
+        var dx = x - sx, dy = y - sy;
+        if (Math.abs(dx) >= 40 && Math.abs(dx) >= Math.abs(dy) && imgs.length > 1) {
+          idx = (idx + (dx < 0 ? 1 : imgs.length - 1)) % imgs.length;
+          paint();
+        }
+        return;
+      }
+      close();   // 轻点任意处关闭（含轻点图片本身）
+    }
+    mask.addEventListener('touchstart', function (e) { down(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    mask.addEventListener('touchmove', function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    mask.addEventListener('touchend', function (e) { up(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: true });
+    mask.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
+    mask.addEventListener('mousemove', function (e) { if (e.buttons) move(e.clientX, e.clientY); });
+    mask.addEventListener('mouseup', function (e) { up(e.clientX, e.clientY); });
   }
 
   /* ══════════════ 评价（D-783） ══════════════ */
@@ -1282,6 +1374,8 @@
       var minPrice = prices.length ? Math.min.apply(null, prices) : null;
       var totalStock = skus.reduce(function (s, k) { return s + (k.stock || 0); }, 0);
       var sel = { skuId: null, qty: 1, color: null, size: null, stock: 0, price: 0 };
+      // 轮播实际渲染的图片清单（由 gallery 模块填充，选颜色时要用它重排）
+      var galImgs = [];
       // D-768：颜色 → 图片（顾客选颜色时换成该颜色的图，无则回退主图）
       var colorImgMap = d.colorImages || {};
       function heroUrlFor(color) { return (color && colorImgMap[color]) || d.cover || ''; }
@@ -1297,18 +1391,10 @@
       var DETAIL_RENDERERS = {
 gallery: function (d) {
           // D-782：商家排好的轮播图优先；没有才回落「主图 + 各颜色图」
-          // （库里已有 135 张颜色图，此前只显示第一张）。
-          var imgs = [];
-          if (d.gallery && d.gallery.length) {
-            for (var g = 0; g < d.gallery.length; g++) {
-              if (d.gallery[g] && imgs.indexOf(d.gallery[g]) < 0) imgs.push(d.gallery[g]);
-            }
-          } else {
-            if (d.cover) imgs.push(d.cover);
-            var ci = d.colorImages || {};
-            for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
-          }
-          var h = carouselHtml(imgs, true);
+          // （库里已有上百张颜色图，此前只显示第一张）。
+          // galImgs 必须与真正渲染出来的 cell 一一对应：选颜色换图要用同一份清单。
+          galImgs = galleryImages(d);
+          var h = carouselHtml(galImgs, true);
           // D-782：商品视频紧跟图片区
           if (d.videoUrl) {
             h += '<div class="d-sec"><div class="lbl">商品视频</div>'
@@ -1474,41 +1560,63 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
       on('dk', back);
       on('tocart', function () { go('#/cart'); });
 
-      // 轮播交互：左右按钮 + 指示点 + 触摸滑动 + 自动播放
+      // 轮播交互：左右按钮 + 指示点 + 拖动（触摸/鼠标）+ 轻点放大 + 自动播放
       //
-      // ⚠️ 总数一律以**渲染出来的 cell 数**为准。
-      //    此前这里按「主图 + 各颜色图」重算了一份列表，而画廊渲染用的是商家排好的
-      //    d.gallery —— 两份列表不是同一个东西。商家配了轮播图时两者数量对不上
-      //    （常见 5 张 vs 1 张），galTotal 算成 1 → if (galTotal > 1) 为假
-      //    → 左右按钮、指示点、触摸滑动**全部不绑定**，顾客看到的就是「全是死的」。
+      // ⚠️ 三个已修掉的真实故障，改动此段前务必看懂：
+      //  1) 总数一律以**渲染出来的 cell 数**为准。此前这里按「主图 + 各颜色图」重算了一份
+      //     列表，而画廊渲染用的是商家排好的 d.gallery —— 两份不是同一个东西，
+      //     数量对不上（常见 5 张 vs 1 张）→ galTotal 算成 1 → 箭头/指示点/滑动全不绑定。
+      //  2) 事件必须挂在 .d-carousel（而不是 .track）上：左右箭头、返回键都是 .track 的
+      //     **兄弟节点**，手指落在它们上面时事件不会冒泡到 .track ——
+      //     实测从图片右缘（箭头处）起手的滑动会被整条吞掉。
+      //  3) 箭头 onclick 曾被自动播放的 startAuto **覆盖**（on() 用 el.onclick，只能挂一个）
+      //     → 点箭头只重新计时、不换图，桌面上等于完全没法切图。
+      var carouselEl = document.querySelector('.d-carousel');
       var ctrack = document.getElementById('ctrack');
       var galTotal = ctrack ? ctrack.children.length : 0;
       var galIdx = 0;
+      // 拖动过就不再算「轻点」，避免滑完一张顺手把放大层也打开
+      var suppressTap = false;
+      // 自动播放重计时；未开启自动播放时是空操作（箭头/指示点/拖动后统一调它）
+      var restartAuto = function () {};
+
       if (galTotal > 1) {
-        on('cprev', function () { galIdx = galleryGo((galIdx - 1 + galTotal) % galTotal, galTotal); });
-        on('cnext', function () { galIdx = galleryGo((galIdx + 1) % galTotal, galTotal); });
+        on('cprev', function () { galIdx = galleryGo((galIdx - 1 + galTotal) % galTotal, galTotal); restartAuto(); });
+        on('cnext', function () { galIdx = galleryGo((galIdx + 1) % galTotal, galTotal); restartAuto(); });
         var cdots = document.getElementById('cdots');
         if (cdots) {
           Array.prototype.forEach.call(cdots.children, function (dot, di) {
             dot.style.pointerEvents = 'auto';
-            dot.onclick = function () { galIdx = galleryGo(di, galTotal); };
+            dot.onclick = function () { galIdx = galleryGo(di, galTotal); restartAuto(); };
           });
         }
-        if (ctrack) {
+        // 拖动切图：触摸与鼠标共用一套逻辑（电脑上打开分享链接也能左右拖）
+        var dragEl = carouselEl || ctrack;
+        if (dragEl) {
           var sx = 0, sy = 0, moved = false;
-          ctrack.addEventListener('touchstart', function (e) {
-            sx = e.touches[0].clientX; sy = e.touches[0].clientY; moved = false;
-          }, { passive: true });
-          ctrack.addEventListener('touchmove', function (e) {
-            if (Math.abs(e.touches[0].clientX - sx) > 12) moved = true;
-          }, { passive: true });
-          ctrack.addEventListener('touchend', function (e) {
-            if (!moved) return;
-            var dx = (e.changedTouches[0].clientX - sx);
-            var dy = (e.changedTouches[0].clientY - sy);
+          var dragStart = function (x, y) { sx = x; sy = y; moved = false; };
+          var dragMove = function (x, y) {
+            if (Math.abs(x - sx) > 12 || Math.abs(y - sy) > 12) { moved = true; suppressTap = true; }
+          };
+          var dragEnd = function (x, y) {
+            if (!moved) { suppressTap = false; return; }
+            suppressTap = true;
+            setTimeout(function () { suppressTap = false; }, 350);
+            var dx = x - sx, dy = y - sy;
             if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
             galIdx = galleryGo((galIdx + (dx < 0 ? 1 : galTotal - 1)) % galTotal, galTotal);
-          }, { passive: true });
+          };
+          dragEl.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+          dragEl.addEventListener('touchmove', function (e) { dragMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+          dragEl.addEventListener('touchend', function (e) { dragEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: true });
+          dragEl.addEventListener('mousedown', function (e) {
+            // 不 preventDefault 的话，浏览器会开始「拖动图片」原生手势，
+            // 之后的 mousemove 全部收不到 → 电脑上拖不动图
+            if (e.preventDefault) e.preventDefault();
+            dragStart(e.clientX, e.clientY);
+          });
+          dragEl.addEventListener('mousemove', function (e) { if (e.buttons) dragMove(e.clientX, e.clientY); });
+          dragEl.addEventListener('mouseup', function (e) { dragEnd(e.clientX, e.clientY); });
         }
 
         // 自动播放：店铺级开关 + 间隔（详情接口已下发，默认开 / 4 秒）
@@ -1526,26 +1634,40 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
             }, gap);
           };
           startAuto();
+          restartAuto = startAuto;
           // 顾客一上手就停、松手再继续 —— 避免「手指刚碰到图就自己翻走」
-          if (ctrack) {
+          if (dragEl) {
             ['touchstart', 'mousedown'].forEach(function (ev) {
-              ctrack.addEventListener(ev, stopAuto, { passive: true });
+              dragEl.addEventListener(ev, stopAuto, { passive: true });
             });
             ['touchend', 'mouseup', 'touchcancel'].forEach(function (ev) {
-              ctrack.addEventListener(ev, startAuto, { passive: true });
+              dragEl.addEventListener(ev, startAuto, { passive: true });
             });
           }
           // 手动点过按钮/指示点后重新计时，别刚点完又被自动翻走
-          if (cdots) cdots.addEventListener('click', startAuto);
-          on('cprev', startAuto);
-          on('cnext', startAuto);
+          if (cdots) cdots.addEventListener('click', restartAuto);
         }
       }
 
+      // 轻点主图放大：滑动切图不算轻点，箭头/返回/指示点各自的点击也不触发
+      if (carouselEl) {
+        carouselEl.addEventListener('click', function (e) {
+          if (suppressTap) return;
+          var t = e.target;
+          if (t && t.closest && t.closest('.navbtn, .d-back, .carousel-dots, .carousel-idx')) return;
+          openImageViewer(galImgs, galIdx);
+        });
+      }
+
       function refreshSizes() {
-        var list = byColor[sel.color] || [];
         var box = document.getElementById('sizes');
         if (!box) return;
+        var list = byColor[sel.color] || [];
+        if (!list.length) {
+          box.innerHTML = '<span style="font-size:12.5px;color:#bbb">'
+            + (sel.color ? '该颜色暂无尺码' : '请先选择颜色') + '</span>';
+          return;
+        }
         box.innerHTML = list.map(function (k) {
           var dis = (k.stock || 0) <= 0;
           return '<button class="opt' + (dis ? ' dis' : '') + '" data-s="' + esc(k.size) + '"'
@@ -1576,32 +1698,40 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
           sel.color = el.getAttribute('data-c'); sel.size = null; sel.skuId = null;
           var hint = document.getElementById('hint');
           if (hint) hint.textContent = '已选 ' + sel.color;
-          // D-768/D-777：切到该颜色的图。若该颜色有专属图，插到轮播首位
-          var own = heroUrlFor(sel.color);
-          if (own && galTotal > 1 && galImgs.indexOf(own) > 0) {
-            var at = galImgs.indexOf(own);
-            galImgs.splice(at, 1);
-            galImgs.unshift(own);
-            var track2 = document.getElementById('ctrack');
-            if (track2) {
-              track2.innerHTML = galImgs.map(function (u) {
-                return '<div class="cell">' + thumbHtml(u) + '</div>';
-              }).join('');
+          // D-768/D-777：切到该颜色的图。若该颜色有专属图，插到轮播首位。
+          // ⚠️ 整段必须容错：这里一旦抛错，后面的 refreshSizes() 就不会执行，
+          //    症状就是「颜色点得动、尺码永远不出来」——线上那个 bug 正是如此
+          //    （galImgs 未声明 → ReferenceError）。换图失败也绝不能牵连选尺码。
+          try {
+            var own = heroUrlFor(sel.color);
+            if (own && galTotal > 1 && galImgs.indexOf(own) > 0) {
+              var at = galImgs.indexOf(own);
+              galImgs.splice(at, 1);
+              galImgs.unshift(own);
+              var track2 = document.getElementById('ctrack');
+              if (track2) {
+                track2.innerHTML = galImgs.map(function (u) {
+                  return '<div class="cell">' + thumbHtml(u) + '</div>';
+                }).join('');
+              }
+              var dots2 = document.getElementById('cdots');
+              if (dots2) {
+                dots2.innerHTML = galImgs.map(function (_, i3) {
+                  return '<i class="' + (i3 === 0 ? 'on' : '') + '"></i>';
+                }).join('');
+                Array.prototype.forEach.call(dots2.children, function (dot, di) {
+                  dot.style.pointerEvents = 'auto';
+                  dot.onclick = function () { galIdx = galleryGo(di, galImgs.length); };
+                });
+              }
+              galTotal = galImgs.length;
+              galIdx = galleryGo(0, galTotal);
             }
-            var dots2 = document.getElementById('cdots');
-            if (dots2) {
-              dots2.innerHTML = galImgs.map(function (_, i3) {
-                return '<i class="' + (i3 === 0 ? 'on' : '') + '"></i>';
-              }).join('');
-              Array.prototype.forEach.call(dots2.children, function (dot, di) {
-                dot.style.pointerEvents = 'auto';
-                dot.onclick = function () { galIdx = galleryGo(di, galImgs.length); };
-              });
-            }
-            galTotal = galImgs.length;
-            galIdx = galleryGo(0, galTotal);
+          } catch (err) {
+            // 换图是锦上添花，失败不影响选色/选码/加购
           }
           refreshSizes();
+          restartAuto();
         }
       });
       on('qm', function () {
