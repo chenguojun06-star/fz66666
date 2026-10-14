@@ -71,6 +71,53 @@ docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 false
 ```
 已写入 `deploy/lighthouse/README.md`。**改服务器配置前先读那一节。**
 
+## Java / Spring 通用陷阱（2026-10-14 实测，全部「看似正确、实际零效果」）
+
+这三个的共同特征：**代码读起来完全正确、编译通过、单测若不刻意断言也过，
+但运行期行为与预期不符，且症状与原因无关，极难定位**。故长期留档。
+
+### 陷阱 1：自定义 `HandlerMethodArgumentResolver` 对 `@RequestParam` 参数不会被调用
+
+给全站分页参数加上限时，第一版写的是自定义 `HandlerMethodArgumentResolver`
+并在 `WebConfig#addArgumentResolvers` 注册 —— 看着是标准做法，**实际一次都不会执行**。
+
+**根因**：`RequestMappingHandlerAdapter#getDefaultArgumentResolvers()` 的顺序是
+「注解类解析器（`RequestParamMethodArgumentResolver` 等）→ 类型类解析器 →
+**custom（`getCustomArgumentResolvers()`）** → catch-all」。
+所以 `@RequestParam int pageSize` 这种写法会被内置解析器先命中，custom 永远轮不到。
+
+**结论**：自定义 `HandlerMethodArgumentResolver` 只对**内置解析器不支持**的参数生效。
+要拦截已有注解参数，用 **`Filter` + `HttpServletRequestWrapper`**
+（跑在 `DispatcherServlet` 之前，与参数怎么声明无关）。
+本轮最终实现见 `common/web/PageSizeLimitFilter.java`。
+
+### 陷阱 2：三元表达式混用 `Long` 与 `Integer` 会被数值提升成基本类型 `long`
+
+```java
+// ❌ 编译通过，但结果类型被提升成 long，再装箱回 Long
+return t == Long.class ? Long.valueOf(clamped) : Integer.valueOf((int) clamped);
+```
+按 JLS 15.25，两边都是包装类且可转数值时走**二进制数值提升**，
+结果类型是基本类型 `long` → 返回给 `Object` 时自动装箱成 `Long`。
+于是 `Integer` 形参永远收到 `Long`，反射调用控制器方法时类型不匹配。
+
+**改法**：拆成两个独立 `if/return`。本轮是被单元测试
+（`PageSizeLimitFilterTest` 断言 `isInstanceOf(Integer.class)`）当场抓住的，
+否则会一次性打挂 7 个 `Integer pageSize` 的接口。
+
+### 陷阱 3：包装 `HttpServletRequest` 时在构造函数里读 `getParameterMap()` 会提前解析 multipart
+
+```java
+// ❌ 构造期读 getParameterMap() 会强制容器解析 multipart 表单
+ClampedRequest(HttpServletRequest req) { super(req); this.map = clamp(req.getParameterMap()); }
+```
+症状是**文件上传突然失败** —— 等 Spring 的 `MultipartResolver` 再去处理上传请求时就晚了。
+
+**改法**：包装类必须惰性 —— `getParameter`/`getParameterValues` 走单值快路径，
+只有真被问 `getParameterMap()` 时才构造。
+`PageSizeLimitFilterTest#constructionMustNotEagerlyParseParameters`
+用「一被问就记账」的请求把这个约束钉住了。
+
 ## AI 成本归因与止损（D-700）
 
 **先看这里再动 AI 相关配置** —— 本项目曾出现「账单累计 ¥317、单日 ¥7.27，
@@ -243,6 +290,36 @@ Note: **三端测试源码均已入库，无一端被排除**。历史教训：�
 5. **No gradient colors** — pure colors only, use Design Token variables
 6. **SKU system**: 款号+颜色+尺码 三维统一，三端共享
 7. **Full copilot instructions** at `.github/copilot-instructions.md` — read it for complete P0/P1 rules
+8. **禁止静默吞异常**：catch 里不得只打 `log.debug`（生产日志级别看不见）。
+   2026-10-14 盘点出的 8 处原生 SQL 缺陷正是靠这个藏了数月 —— 抛 `Unknown column`
+   被 catch 成 debug、返回空值，功能静默空转。新增由 `scripts/check-silent-catch.py` 阻断；
+   确属可忽略的旁路（缓存未命中、可选调用）加一行注释说明即可。
+9. **原生 SQL 的列名必须有守护**：新增/修改原生 SQL 后跑
+   `python3 scripts/check-native-sql-columns.py`（拿生产库列快照离线核对，
+   覆盖注解 / `jdbcTemplate` 拼串 / XML 三类来源）。
+   迁移上线后记得 `--refresh` 刷新快照。
+10. **分页参数上限统一收口**：`pageSize` / `size` / `limit` 由
+    `common/web/PageSizeLimitFilter` 夹到 `[1, 10000]`，**不要在 Controller 里再各写一遍**。
+    上限取 10000 有依据：前端有 96 处传的分页值超过 200（下拉框全量加载，实测最大 9999），
+    改小会静默截断下拉框。
+
+### CI 门禁里「真实踩过的坑」清单
+
+quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠静默藏了很久**的问题，
+不要以为是形式主义：
+
+| 脚本 | 拦什么 |
+|---|---|
+| `check-native-sql-columns.py` | SQL 引用生产库不存在的列（8 处缺陷的守护） |
+| `check-db-repair-vs-flyway.py` | 往启动自愈清单加条目却不补 Flyway 迁移（结构真相源只能有一个） |
+| `check-silent-catch.py` | 新增「catch 里只打 log.debug」的静默吞异常 |
+| `check-shop-c-page.py` | 顾客端店铺页交互（切图 / 放大 / 选色出尺码） |
+| `audit-tenant-id.py` | Entity/Mapper 缺 tenant_id（P0 铁律） |
+| `check-entity-flyway.py` | 新增 `@TableField` 没有 Flyway 迁移 |
+
+**写这类守护脚本的纪律**：必须**双向验证** —— 对修复前的代码要失败、对修复版要通过。
+不验证就会出现"脚本永远绿灯、其实什么都没拦"。本轮三个新脚本都返工过
+（漏扫 `jdbcTemplate`、误报洪水、被自己写的注释骗过、抓不到单行 catch 写法）。
 
 ## 第三方平台对接与集成规范（P0 铁律）
 
