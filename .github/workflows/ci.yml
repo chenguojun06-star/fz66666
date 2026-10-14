@@ -53,6 +53,12 @@ jobs:
     # SelfDrillOrchestrator.t_tenant.delete_flag（自演练一个租户都不跑）、
     # PatrolEvidenceEnricher.order_no/progress_stage（AI 巡检无证据）。
     # 本步骤拿生产库真实列快照离线核对，不连库。
+    # 8 处引用不存在列的原生 SQL 缺陷能藏半年，根因不是 SQL 写错，
+    # 而是"抛异常被 catch 住、只打 log.debug"—— 生产日志级别下完全看不见。
+    # 存量 32 处暂不动，但不允许再新增。
+    - name: 禁止新增「catch 里只打 log.debug」的静默吞异常
+      run: python3 scripts/check-silent-catch.py
+
     - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
       run: |
         echo "🔍 核对原生 SQL 里的列名是否真的存在于数据库..."
