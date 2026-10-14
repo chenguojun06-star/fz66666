@@ -25,7 +25,7 @@ import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
-import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview } from './modules/ecommerce';
+import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview, ShopSalesRanking } from './modules/ecommerce';
 // 收银台：菜单入口挂在「电商运营」组下（不单独占主菜单），
 // 但页面代码留在 modules/pos —— 它动的是库存与应收，与店铺运营不是一个域，
 // 混进 ecommerce 目录只会让依赖关系变糊。权限码也独立（MENU_POS）。
@@ -308,6 +308,7 @@ const AppRoutes: React.FC = () => {
           <Route path={`${paths.ecommercePlatform}/:platformCode`} element={<RouteErrorBoundary pageName="平台详情"><Suspense fallback={routeFallback}><PlatformDetail /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.shopAdmin} element={<RouteErrorBoundary pageName="店铺管理"><Suspense fallback={routeFallback}><ShopManage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.shopListing} element={<RouteErrorBoundary pageName="商品上架管理"><Suspense fallback={routeFallback}><ShopListing /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.shopSalesRanking} element={<RouteErrorBoundary pageName="商品销量榜"><Suspense fallback={routeFallback}><ShopSalesRanking /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.platformShopOverview} element={<RouteErrorBoundary pageName="平台商城总览"><Suspense fallback={routeFallback}><PlatformShopOverview /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpit} element={<RouteErrorBoundary pageName="智能驾驶舱"><Suspense fallback={routeFallback}><CockpitPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />

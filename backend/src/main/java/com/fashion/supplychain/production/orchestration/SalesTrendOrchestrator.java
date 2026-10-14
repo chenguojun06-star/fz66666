@@ -205,6 +205,85 @@ private static final int DEFAULT_DAYS = 90;
     // ==================== 内部实现 ====================
 
     /**
+     * 全店商品销量榜（D-800）：按款号聚合近 N 天销售出库量。
+     *
+     * <p>用于店铺后台「爆款榜 / 滞销榜」。口径与单款趋势完全一致
+     * （同一 {@code SALE_OUTSTOCK_TYPES} 过滤），因此榜单与趋势图数字可以对得上，
+     * 不会出现「榜单说卖了 100、趋势图说 80」。
+     *
+     * <p><b>数据真实性</b>：全部来自真实出库台账，按 {@code outstock_quantity} 求和。
+     * 冲销单数量已为负（红字）且类型被过滤，因此冲销会自动抵扣销量。
+     *
+     * @param days   统计窗口，默认 90 天
+     * @param limit  返回条数，默认 20
+     * @param asc    true = 升序（滞销榜，卖得最少的在前）；false = 降序（爆款榜）
+     */
+    public Map<String, Object> getStyleSalesRanking(Integer days, Integer limit, Boolean asc) {
+        Long tenantId = UserContext.tenantId();
+        int window = normalizeDays(days);
+        int top = limit == null || limit <= 0 ? 20 : Math.min(limit, 200);
+        boolean ascending = Boolean.TRUE.equals(asc);
+
+        Map<String, Object> result = baseResult(window);
+        result.put("sort", ascending ? "asc" : "desc");
+        if (tenantId == null) {
+            return result;
+        }
+
+        LocalDate to = LocalDate.now();
+        LocalDate from = to.minusDays(window - 1L);
+        try {
+            List<ProductOutstock> rows = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                    .select(ProductOutstock::getStyleId, ProductOutstock::getStyleNo,
+                            ProductOutstock::getOutstockQuantity)
+                    .eq(ProductOutstock::getTenantId, tenantId)
+                    .eq(ProductOutstock::getDeleteFlag, 0)
+                    .in(ProductOutstock::getOutstockType, OutstockTypeConstants.SALE_OUTSTOCK_TYPES)
+                    .isNotNull(ProductOutstock::getStyleNo)
+                    .between(ProductOutstock::getCreateTime,
+                            from.atStartOfDay(), to.atTime(23, 59, 59)));
+
+            Map<String, Integer> qtyByStyle = new LinkedHashMap<>();
+            for (ProductOutstock r : rows) {
+                String no = StringUtils.trimWhitespace(r.getStyleNo());
+                if (no == null || no.isEmpty()) continue;
+                qtyByStyle.merge(no, r.getOutstockQuantity() != null ? r.getOutstockQuantity() : 0, Integer::sum);
+            }
+
+            List<Map<String, Object>> list = new ArrayList<>();
+            int totalQty = 0;
+            for (Map.Entry<String, Integer> e : qtyByStyle.entrySet()) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("styleNo", e.getKey());
+                item.put("qty", e.getValue());
+                list.add(item);
+                totalQty += e.getValue();
+            }
+            list.sort((a, b) -> {
+                int d = ((Integer) a.get("qty")).compareTo((Integer) b.get("qty"));
+                // 同销量时按款号排，保证结果稳定（不随查询顺序抖动）
+                return ascending ? (d != 0 ? d : String.valueOf(a.get("styleNo")).compareTo(String.valueOf(b.get("styleNo"))))
+                        : (d != 0 ? -d : String.valueOf(a.get("styleNo")).compareTo(String.valueOf(b.get("styleNo"))));
+            });
+
+            List<Map<String, Object>> page = list.size() > top ? list.subList(0, top) : list;
+            result.put("items", page);
+            result.put("hasData", !list.isEmpty());
+            result.put("totalStyles", list.size());
+            result.put("totalQty", totalQty);
+            result.put("dataRange", rangeStr(from, to));
+            if (list.isEmpty()) {
+                result.put("noDataReason", "最近 " + window + " 天没有任何销售出库记录");
+            }
+        } catch (Exception e) {
+            log.error("[销量榜] 查询失败: err={}", e.getMessage(), e);
+            result.put("hasData", false);
+            result.put("items", new ArrayList<>());
+        }
+        return result;
+    }
+
+    /**
      * 按「销售口径 + 款号 + 时间窗」查真实出库流水。
      *
      * <p>款号用等值匹配（{@code style_no = ?}），<b>不用 likeRight 前缀匹配</b> ——

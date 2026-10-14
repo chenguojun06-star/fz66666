@@ -21,8 +21,9 @@ import {
   TeamOutlined,
   UserSwitchOutlined,
   ShoppingCartOutlined,
-  ScissorOutlined,
+  BarChartOutlined,
   ThunderboltOutlined,
+  ScissorOutlined,
   FireOutlined,
   RadarChartOutlined,
   AuditOutlined,
@@ -124,6 +125,7 @@ export const paths = {
   ecommercePlatform: '/ecommerce/platform',
   shopAdmin: '/ecommerce/shop',
   shopListing: '/ecommerce/shop-listing',
+  shopSalesRanking: '/ecommerce/shop-sales-ranking',
   // P0：平台级商城总览（仅平台超管可见）
   platformShopOverview: '/ecommerce/platform-shop',
   cockpit: '/cockpit',
@@ -621,6 +623,8 @@ export const menuConfig: MenuSection[] = [
       { label: '店铺管理', path: paths.shopAdmin, icon: React.createElement(ShopOutlined) },
       // D-768：店铺商品运营（改图 / 改售价库存 / 上下架）
       { label: '商品上架管理', path: paths.shopListing, icon: React.createElement(ShoppingCartOutlined) },
+      // D-800：商品销量榜（爆款/滞销）—— 让商家看得见卖得动什么、什么在压仓
+      { label: '商品销量榜', path: paths.shopSalesRanking, icon: React.createElement(BarChartOutlined) },
       // P0：平台级商城总览（全站店铺/在架商品/注册用户/订单，只读；仅平台超管）
       { label: '平台商城总览', path: paths.platformShopOverview, icon: React.createElement(AppstoreOutlined), superAdminOnly: true },
       // 收银台（POS 开单）：不单独占一个主菜单，归到「电商运营」下。

@@ -144,6 +144,23 @@ public class OrderManagementController {
     }
   }
 
+  /**
+   * 全店商品销量榜（D-800）：爆款榜 / 滞销榜。
+   *
+   * <p>口径与单款销量趋势完全一致（同一销售类型过滤），榜单与趋势图数字可互相对账。
+   */
+  @GetMapping("/sales-ranking")
+  public Result<?> getSalesRanking(@RequestParam(value = "days", required = false) Integer days,
+                                   @RequestParam(value = "limit", required = false) Integer limit,
+                                   @RequestParam(value = "asc", required = false) Boolean asc) {
+    try {
+      return Result.success(salesTrendOrchestrator.getStyleSalesRanking(days, limit, asc));
+    } catch (Exception e) {
+      log.error("查询商品销量榜失败", e);
+      return Result.fail("查询失败：" + e.getMessage());
+    }
+  }
+
   private List<String> parseTargetTypes(Object raw) {
     if (raw == null) {
       return null;
