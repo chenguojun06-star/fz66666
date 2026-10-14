@@ -1,10 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Space, Spin, Switch, Tabs, Tag, Typography } from 'antd';
-import {
-  PictureOutlined,
-  TagsOutlined,
-  LayoutOutlined,
-} from '@ant-design/icons';
+import { Alert, Button, Space, Spin, Switch, Tag, Typography } from 'antd';
 import SideDrawer from '@/components/common/SideDrawer';
 import CustomerPreview from './CustomerPreview';
 import ListingSetupChecklist from './ListingSetupChecklist';
@@ -50,34 +45,28 @@ interface Props {
 }
 
 /** 抽屉分区：统一「序号 + 图标 + 标题 + 一句话说明 + 内容」 */
+/**
+ * 表单分区（D-800 重做）
+ *
+ * <p>用户明确要求：「不要折叠了，就是标题与内容编辑区，工工整整的那种」。
+ * 因此这里<b>不用 Card、不用编号圆点、不用图标、不用折叠</b>——
+ * 就是一个标题、一行说明、内容，整齐平铺往下排。
+ *
+ * <p>之前的问题是把「标题」包在一层带边框+圆角+背景的 Card 里，
+ * 里面再套 Stat 卡、检查清单、Tab、Collapse，**五层框嵌套**，
+ * 内外圆角还不一致（外 12px / 内 6px），所以看着乱。
+ * 现在去掉所有装饰，只靠留白和分隔线区分区块。
+ */
 const Section: React.FC<{
-  index: number;
-  icon: React.ReactNode;
   title: string;
-  desc: React.ReactNode;
-  /** D-800：收起时在标题右侧显示的状态摘要（如「5 个SKU · ¥1699」） */
-  summary?: React.ReactNode;
+  desc?: React.ReactNode;
   children: React.ReactNode;
-}> = ({ index, icon, title, desc, summary, children }) => (
-  <Card
-    className="shop-edit__section"
-    size="small"
-    title={
-      <span className="shop-edit__section-title">
-        <span className="shop-edit__section-index">{index}</span>
-        <span className="shop-edit__section-icon">{icon}</span>
-        {title}
-        {summary ? (
-          <Text type="secondary" style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>
-            {summary}
-          </Text>
-        ) : null}
-      </span>
-    }
-  >
-    <div className="shop-edit__section-desc">{desc}</div>
+}> = ({ title, desc, children }) => (
+  <section className="shop-edit__block">
+    <h3 className="shop-edit__block-heading">{title}</h3>
+    {desc ? <div className="shop-edit__block-note">{desc}</div> : null}
     {children}
-  </Card>
+  </section>
 );
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; warn?: boolean }> = ({ label, value, warn }) => (
@@ -363,78 +352,42 @@ const ListingEditDrawer: React.FC<Props> = ({
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
-            {/* D-800：上架前检查清单（对标 Saleor ProductSetupCard）。
-                放在摘要条正下方 —— 运营打开抽屉第一眼就该知道「还差什么才能上架」，
-                而不是逐个区块翻找。 */}
-            <ListingSetupChecklist
-              required={setupSteps}
-              optional={setupOptional}
-              blockIssues={setupIssues}
-              listed={listed}
-            />
+            <Section title="上架检查" desc="下面这些填齐了顾客才能正常看到并下单。">
+              <ListingSetupChecklist
+                required={setupSteps}
+                optional={setupOptional}
+                blockIssues={setupIssues}
+                listed={listed}
+              />
+            </Section>
 
-            {/* D-800：三个大区改 Tab 分区（对标 Shopify 官方规范
-                "Use tabs for secondary navigation / Tabs should never wrap onto multiple lines"）。
-                原先把三块内容全铺开，加上 16 个详情模块也全展开，
-                页面从 1 屏拉成十几屏。现在一次只显示一区，标签上直接带状态摘要。 */}
-            <Tabs
-              defaultActiveKey="media"
-              size="small"
-              items={[
-                {
-                  key: 'media',
-                  label: '① 主图与颜色图',
-                  children: (
-                    <Section
-                      index={1}
-                      icon={<PictureOutlined />}
-                      title="主图"
-                      summary={cover ? `已设置${colors.length ? ` · ${coloredCount}/${colors.length} 色配图` : ''}` : '未设置'}
-                      desc="店铺列表卡片和详情页兜底大图都用它。合规体检只提示、不拦截上传。各颜色的大图在下面「详情页模块 → 颜色选择」里配。"
-                    >
-                      <CoverColorImagesSection
-                        cover={cover}
-                        setCover={setCover}
-                        colorImages={colorImages}
-                        setColorImages={setColorImages}
-                        colors={colors}
-                        onlyCover
-                      />
-                    </Section>
-                  ),
-                },
-                {
-                  key: 'sku',
-                  label: `② 规格价格库存${skus.length ? `（${skus.length} SKU）` : ''}`,
-                  children: (
-                    <Section
-                      index={2}
-                      icon={<TagsOutlined />}
-                      title="规格与价格库存"
-                      summary={`${priceRange ?? '售价未设置'} · 可售 ${totalStock}`}
-                      desc="这里调整 SKU 的售价与可售数量，不走出入库台账。库存变动请走「仓库 → 入库 / 出库」。"
-                    >
-                      <SkuPriceStockSection skus={skus} setSkus={setSkus} />
-                    </Section>
-                  ),
-                },
-                {
-                  key: 'detail',
-                  label: '③ 详情页内容',
-                  children: (
-                    <Section
-                      index={3}
-                      icon={<LayoutOutlined />}
-                      title="详情页模块"
-                      summary="展开后按顾客端展示顺序排列"
-                      desc="顾客端详情页由下面这些模块组成。每一块都把「开关、上下顺序、这里要填什么内容」放在一起，勾选＝显示，点开关即时生效；没有内容的模块会自动跳过。模块默认收起，需要时点开。"
-                    >
-                      <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
-                    </Section>
-                  ),
-                },
-              ]}
-            />
+            <Section
+              title="主图"
+              desc="店铺列表卡片和详情页兜底大图都用它。合规体检只提示、不拦截上传。各颜色的大图在下面「详情页内容 → 颜色选择」里配。"
+            >
+              <CoverColorImagesSection
+                cover={cover}
+                setCover={setCover}
+                colorImages={colorImages}
+                setColorImages={setColorImages}
+                colors={colors}
+                onlyCover
+              />
+            </Section>
+
+            <Section
+              title="规格、价格与库存"
+              desc="这里调整 SKU 的售价与可售数量，不走出入库台账。库存变动请走「仓库 → 入库 / 出库」。"
+            >
+              <SkuPriceStockSection skus={skus} setSkus={setSkus} />
+            </Section>
+
+            <Section
+              title="详情页内容"
+              desc="顾客端详情页由下面这些模块组成。勾选＝展示，开关点一下即生效。没有内容的模块会自动跳过。"
+            >
+              <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
+            </Section>
             </Space>
             </div>
 

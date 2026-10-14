@@ -31,26 +31,24 @@ describe('模块与内容合一（D-785）', () => {
     expect(s).toContain('<Editor ctx={ctx} />');
   });
 
-  it('D-800：模块默认只展开第一个，不再全部展开（原行为会把页面撑成十几屏）', () => {
+  it('D-800：模块不再折叠，全部平铺（标题行 + 内容区）', () => {
     const s = readEditor();
-    // 旧断言锁的是「有内容的模块全部展开」：
-    //   setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey])...)
-    // 16 个模块里 9 个有编辑框 → 一次展开 9 个输入区，是页面混乱的直接原因。
-    // 现改为只展开第一个有内容的模块，其余按需点开。
-    expect(s).not.toContain('setOpenKeys(merged.filter((m) => !!MODULE_CONTENT[m.moduleKey])');
-    expect(s).toContain('const firstWithContent = merged.find((m) => !!MODULE_CONTENT[m.moduleKey])?.moduleKey');
-    expect(s).toContain('setOpenKeys(firstWithContent ? [firstWithContent] : [])');
+    // 历史演进（三轮都记在案，避免第四次改回去）：
+    //   ① 全部展开 → 页面撑成十几屏
+    //   ② 只展开第一个 → 还是要点两次才能改
+    //   ③ 现在：平铺，每块就是「标题行 + 内容区」，用户明确要求「不要折叠了」
+    expect(s).not.toContain('<Collapse');
+    expect(s).toContain('shop-module-list');
+    expect(s).toContain('shop-module-item-head');
+    expect(s).toContain('shop-module-item-body');
+    // 开关、排序（.extra）仍在标题行上
+    expect(s).toContain('shop-module-item-extra');
   });
 
-  it('D-800：模块说明文字移入展开区，收起时每行只显示「模块名 + 状态」', () => {
+  it('D-800：每个模块都要有标题与内容，不能只有标题没有编辑区', () => {
     const s = readEditor();
-    // 每行都带一句说明 → 16 行说明把这块撑出一屏。
-    // 说明必须只在 children（展开区）里出现，不能在 label 里。
-    const labelStart = s.indexOf('label: (');
-    const labelEnd = s.indexOf('extra:', labelStart);
-    const labelBlock = s.slice(labelStart, labelEnd);
-    expect(labelBlock).not.toContain('shop-module__desc');
-    expect(s).toContain('className="shop-module__desc" style={{ marginBottom: 6 }}');
+    // 说明文字在内容区里（收起态不存在了，说明必须始终可读）
+    expect(s).toContain('shop-module__desc');
   });
 
   it('没有输入框的模块必须说明内容来自哪里，不能留空白让人以为系统坏了', () => {

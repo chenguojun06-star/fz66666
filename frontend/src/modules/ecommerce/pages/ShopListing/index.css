@@ -12,9 +12,9 @@
   gap: 16px;
   flex-wrap: wrap;
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 16px 20px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-base);
   margin-bottom: 14px;
 }
 
@@ -82,13 +82,6 @@
   padding: 60px 0;
 }
 
-.shop-listing__section {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 12px;
-  padding: 16px;
-}
-
 .shop-listing__probe {
   display: none;
 }
@@ -127,16 +120,16 @@
 /* ── D-513 编辑抽屉：顶部摘要条 + 编号分区卡片 ─────────────────────────── */
 
 /* 摘要条：不随滚动消失，随时知道在改哪个商品、还差什么 */
+/* 摘要条：仍 sticky（要一直看到在改哪款），但去掉边框与圆角，
+   只靠底部一条细线分隔 —— 少一层框，视觉立刻干净 */
 .shop-edit__summary {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 14px;
-  box-shadow: var(--shadow-sm, 0 1px 4px rgba(0, 0, 0, 0.06));
+  background: var(--color-bg-container);
+  padding: 10px 0 12px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .shop-edit__summary-head {
@@ -182,42 +175,59 @@
   color: var(--color-warning);
 }
 
-/* 分区卡片：序号 + 图标 + 标题，说明作为副标题 */
-.shop-edit__section {
-  border-radius: 12px;
+/* ── D-800 重做：规整表单（标题 + 内容），去掉一切装饰框 ────────────── */
+
+/* 分区：没有边框、没有圆角、没有背景，靠留白 + 顶部细线分隔 */
+.shop-edit__block {
+  width: 100%;
+  margin-bottom: 28px;
 }
 
-.shop-edit__section-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.shop-edit__section-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 11px;
+.shop-edit__block-heading {
+  margin: 0 0 2px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.5;
+  color: var(--color-text-primary);
 }
 
-.shop-edit__section-icon {
-  color: var(--color-text-secondary);
-  font-size: 14px;
-}
-
-.shop-edit__section-desc {
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: var(--color-text-secondary);
+/* 标题下的一句说明，12px 灰字 */
+.shop-edit__block-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-tertiary);
   margin-bottom: 12px;
+}
+
+/* 模块列表：平铺，每块之间一条细线 */
+.shop-module-list {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.shop-module-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.shop-module-item:last-child {
+  border-bottom: none;
+}
+
+.shop-module-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.shop-module-item-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-module-item-extra {
+  flex: 0 0 auto;
 }
 
 /* 分区内部的内容块：不再自带卡片边框（外层 Card 已提供） */

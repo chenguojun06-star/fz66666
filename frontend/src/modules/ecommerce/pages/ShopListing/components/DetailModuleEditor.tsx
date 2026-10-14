@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Collapse, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { Alert, Button, Space, Spin, Switch, Tag, Typography } from 'antd';
 import {
   ArrowDownOutlined, ArrowUpOutlined, HolderOutlined,
 } from '@ant-design/icons';
@@ -76,7 +76,6 @@ export function DetailModuleEditor({
   const [defaultOrder, setDefaultOrder] = useState<ModuleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!styleId) return;
@@ -127,8 +126,6 @@ export function DetailModuleEditor({
       //
       // 【现在】默认只开第一个，让商家看到「开关管的是哪段内容」的范式，
       // 其余按需点开。展开状态仍由 openKeys 记住，不影响已展开的用户。
-      const firstWithContent = merged.find((m) => !!MODULE_CONTENT[m.moduleKey])?.moduleKey;
-      setOpenKeys(firstWithContent ? [firstWithContent] : []);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '模块布局加载失败');
     } finally {
@@ -292,12 +289,27 @@ export function DetailModuleEditor({
         message="开关、顺序、内容都在这一块里"
         description="顾客端详情页按这里的顺序从上到下展示；勾选＝显示，点开关即时生效。没有内容的模块会自动跳过，所以留空也不会出现空白标题。"
       />
-      <Collapse
-        items={items}
-        activeKey={openKeys}
-        onChange={(keys) => setOpenKeys(Array.isArray(keys) ? (keys as string[]) : [])}
-        size="small"
-      />
+      {/* D-800：取消折叠，全部平铺。
+          用户明确要求「不要折叠了，就是标题与内容编辑区，工工整整的那种」。
+          Collapse 每行都要点开才能看到内容，改一次东西要点两次；
+          平铺后每个模块就是「标题行 + 内容区」，从上到下顺序改、顺序看。 */}
+      <div className="shop-module-list">
+        {items.map((it) => {
+          const m = modules.find((x) => x.moduleKey === it.key);
+          const Editor = m ? MODULE_CONTENT[m.moduleKey] : null;
+          return (
+            <div className="shop-module-item" key={it.key}>
+              <div className="shop-module-item-head">
+                <span className="shop-module-item-name">{it.label}</span>
+                <span className="shop-module-item-extra">{it.extra}</span>
+              </div>
+              <div className="shop-module-item-body">
+                {Editor ? <Editor ctx={ctx} /> : it.children}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

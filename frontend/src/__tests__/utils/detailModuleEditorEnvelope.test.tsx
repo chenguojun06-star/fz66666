@@ -120,11 +120,9 @@ describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
     mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('价格与库存')).toBeTruthy());
-    // D-800 起模块默认收起（16 个全展开会把页面撑成十几屏），说明文字移入展开区。
-    // 这里断言「默认展开的第一个模块」能看到自己的说明 ——
-    // antd Collapse 在 jsdom 下不响应 fireEvent.click，故只验证已展开的那一个。
-    const activePanel = document.querySelector('.ant-collapse-item-active');
-    expect(activePanel).toBeTruthy();
-    expect(activePanel?.textContent || '').toContain('顾客端详情页第一屏');
+    // D-800 起模块改为平铺（不再折叠），说明文字始终可见 —— 直接断言。
+    expect(screen.getByText(/顾客端详情页第一屏/)).toBeTruthy();
+    // 平铺结构：每个模块都有自己的内容区
+    expect(document.querySelectorAll('.shop-module-item-body').length).toBeGreaterThan(0);
   });
 });
