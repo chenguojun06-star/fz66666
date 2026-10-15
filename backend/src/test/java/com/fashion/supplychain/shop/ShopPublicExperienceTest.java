@@ -232,9 +232,15 @@ class ShopPublicExperienceTest {
     @DisplayName("⑨ 富文本图片必须自适应，不能横向撑破详情页")
     void richImagesMustFitContainer() throws Exception {
         String s = shopPage();
+        // D-805 行为变更：详情描述改成整条纵向画布，图文改成**通栏**
+        // （负边距 + 加宽，视觉上接近全屏），所以不再是 max-width:100%。
+        // 守护的意图「图片不能撑破容器、宽高比要保住」不变，
+        // 换成断言新机制的通栏写法，并要求 height:auto 保住宽高比。
         assertThat(s)
-                .as("图片需限宽自适应")
-                .contains(".d-desc.rich img{max-width:100%");
+                .as("详情图通栏：负边距抵消容器内边距，且 height:auto 保住宽高比（D-805）")
+                .contains(".d-desc.rich img{width:calc(100% + 28px);max-width:none")
+                .contains("margin:6px -14px")
+                .contains("height:auto");
     }
 
     @Test
@@ -680,7 +686,10 @@ class ShopSizeChartGuardTest {
         assertThat(s)
                 .as("轮播清单只能有一个来源，且渲染与选色换图共用它")
                 .contains("galImgs = galleryImages(d)")
-                .contains("carouselHtml(galImgs, true)")
+                // D-802/D-805：返回入口挪到顶栏后，轮播不再自带返回圈（true → false）。
+                // 守护的意图是「清单只有一个来源、渲染与选色换图共用」，
+                // 这条不变，只是 carouselHtml 的第二个参数变了。
+                .contains("carouselHtml(galImgs, false)")
                 .contains("galImgs.indexOf(own)");
         assertThat(countOf(s, "imgs.push(d.cover)"))
                 .as("「主图 + 各颜色图」的回落逻辑只允许存在一处 —— 渲染与交互各算一份正是滑动全失效的根因")

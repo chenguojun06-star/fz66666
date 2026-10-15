@@ -157,9 +157,17 @@ class ShopStyleLayoutTest {
         assertThat(s)
                 .as("没有手填时才回落到主图+颜色图")
                 .contains("d.colorImages");
+        // D-802/D-805 行为变更：返回入口从「轮播里的悬浮返回圈」挪到顶栏
+        // （两个返回按钮会让顾客不确定哪个真能退回，统一走顶栏），
+        // 所以这里不再断言 carouselHtml(galImgs, true)。
+        // 守护的意图不变 —— **返回入口必须恒定渲染、不得依赖图片数量**，
+        // 改成断言新机制：顶栏锚点常在 + 轮播自己不再渲染返回圈。
         assertThat(s)
-                .as("返回入口恒定渲染")
-                .contains("carouselHtml(galImgs, true)");
+                .as("返回入口恒定渲染：顶栏锚点必须常在（D-802 起由顶栏承担返回）")
+                .contains("<div id=\"anc-top\"></div>");
+        assertThat(s)
+                .as("轮播不再自带返回圈，避免与顶栏重复（D-805）")
+                .contains("carouselHtml(galImgs, false)");
     }
 
     @Test
