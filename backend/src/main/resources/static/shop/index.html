@@ -94,7 +94,8 @@
    *  3) 主图用 contain 而非 cover —— cover 会裁掉衣服边缘，观感与实物不符
    *  4) 为固定购买栏预留底部空间，不再遮挡最后一块内容
    */
-  .d-page{padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+  .d-page{padding-bottom:calc(66px + env(safe-area-inset-bottom));
+    padding-top:calc(44px + env(safe-area-inset-top));}
   .d-bar-space{height:10px;}
 
   /* 轮播 */
@@ -138,7 +139,7 @@
   .d-price .sub{font-size:12px;color:var(--tb-sub);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;}
   .d-price .sub .warn{color:var(--tb-red);}
 
-  .d-title{background:#fff;padding:0 14px 14px;border-bottom:8px solid var(--tb-bg);}
+  .d-title{background:#fff;padding:0 14px 14px;border-top:0;border-bottom:0;}
   .d-title h2{font-size:16.5px;font-weight:600;line-height:1.5;color:var(--tb-text);}
   .d-title .tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
   .d-title .tag{font-size:11px;color:var(--tb-orange);background:#fff3ec;border-radius:3px;padding:2px 7px;}
@@ -148,9 +149,33 @@
   .ptag{display:inline-block;font-size:11px;line-height:18px;color:var(--tb-orange);background:#fff3ec;border-radius:3px;padding:0 7px;margin:0 6px 6px 0;}
   .d-sec .ptag{margin:0 8px 8px 0;}
 
-  .d-sec{background:#fff;margin-top:8px;padding:14px;}
+  .d-sec{background:#fff;margin-top:0;padding:14px;border-top:1px solid var(--tb-line);}
   .d-sec .lbl{font-size:13.5px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
   .d-sec .lbl .hint{font-size:11.5px;color:var(--tb-sub);font-weight:400;}
+
+  /* ── D-802 详情页统一外壳 ────────────────────────────────────────────
+     为什么加：详情页原来只有「一块块白卡片」（模块间 8px 灰缝），
+     加上没有顶栏、没有锚点导航，每个模块字号粗细各写各的 ——
+     顾客看到的不是「一个商品页」，而是「一堆拼起来的块」。
+     主流电商（淘宝/拼多多）的观感来自统一骨架：
+     固定顶栏 + 吸顶锚点 + 连续图文流 + 全站同一套留白节奏。       */
+  .d-nav.solid{border-bottom-color:var(--tb-line);}
+  .d-nav{position:fixed;top:0;left:0;right:0;z-index:40;height:calc(44px + env(safe-area-inset-top));
+    padding-top:env(safe-area-inset-top);display:flex;align-items:center;justify-content:space-between;
+    padding-left:6px;padding-right:6px;background:var(--tb-card);border-bottom:1px solid var(--tb-line);}
+  .d-nav button{width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+    border:none;background:none;color:var(--tb-text);font-size:19px;line-height:1;border-radius:50%;}
+  .d-nav .ttl{font-size:15px;font-weight:600;color:var(--tb-text);max-width:60%;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+
+  /* 吸顶锚点：只做「跳到哪一段」，不做页内路由，避免与购物车返回逻辑打架 */
+  .d-anchors{position:sticky;top:calc(44px + env(safe-area-inset-top));z-index:30;
+    background:var(--tb-card);border-bottom:1px solid var(--tb-line);display:flex;}
+  .d-anchors .anc{flex:1;padding:11px 0 9px;text-align:center;font-size:14px;color:var(--tb-sub);
+    background:none;border:none;position:relative;font-family:inherit;}
+  .d-anchors .anc.on{color:var(--tb-text);font-weight:600;}
+  .d-anchors .anc.on::after{content:'';position:absolute;left:50%;bottom:3px;width:20px;height:2px;
+    transform:translateX(-50%);background:var(--tb-orange);border-radius:1px;}
   .opts{display:flex;flex-wrap:wrap;gap:8px;}
   .opt{border:1px solid #e5e5e5;background:#fafafa;border-radius:6px;padding:7px 14px;font-size:13px;color:#444;}
   .opt.sel{border-color:var(--tb-orange);color:var(--tb-orange);background:#fff3ec;font-weight:600;}
@@ -169,7 +194,8 @@
   .lnk{background:none;border:none;color:var(--tb-red);font-size:12.5px;padding:0;cursor:pointer;}
   .d-spec{width:100%;border-collapse:collapse;font-size:12.5px;margin:0;}
   /* 富文本里的图片必须自适应容器，否则会横向撑破详情页 */
-  .d-desc.rich img{max-width:100%;height:auto;display:block;margin:6px 0;border-radius:4px;}
+  .d-desc.rich img{width:calc(100% + 28px);max-width:none;height:auto;display:block;
+    margin:6px -14px;border-radius:0;}
   .d-desc.rich p{margin:0 0 8px;}
   .d-desc.rich table{max-width:100%;border-collapse:collapse;}
   .d-desc.rich td,.d-desc.rich th{border:1px solid #eee;padding:4px 6px;font-size:12px;}
@@ -1572,6 +1598,65 @@
   }
 
   /* ── 商品详情 ── */
+  /**
+   * D-802：详情页统一外壳的交互。
+   *
+   * ① 顶栏随滚动变实色 —— 滚过轮播后才需要「品牌色」的视觉锚点，
+   *    顶部时保持透明，不跟主图抢注意力。
+   * ② 吸顶锚点：点击平滑滚动 + 滚动反向高亮当前段。
+   *    高亮用 scroll 位置算，不监听每个模块的 IntersectionObserver ——
+   *    模块是商家可配的（顺序/开关都可能变），IO 要重绑，scroll 直接算最稳。
+   * ③ 商家没配的模块（如无人评价）对应锚点不存在 → 隐藏该 tab，
+   *    剩下的平分宽度，而不是点一下没反应。
+   */
+  function initDetailShell() {
+    var nav = document.getElementById('dnav');
+    if (nav) {
+      var onNavScroll = function () {
+        nav.className = window.scrollY > 40 ? 'd-nav solid' : 'd-nav';
+      };
+      window.addEventListener('scroll', onNavScroll, { passive: true });
+      onNavScroll();
+    }
+    var bar = document.getElementById('anchors');
+    if (!bar) return;
+    var all = Array.prototype.slice.call(bar.querySelectorAll('.anc'));
+    var live = all.filter(function (t) {
+      return !!document.getElementById(t.getAttribute('data-t'));
+    });
+    if (!live.length) { bar.parentNode.removeChild(bar); return; }
+    all.forEach(function (t) {
+      if (live.indexOf(t) < 0) t.style.display = 'none';
+    });
+    function offsetTop() {
+      return (nav ? nav.offsetHeight : 0) + (bar.offsetHeight || 0) + 1;
+    }
+    live.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var el = document.getElementById(t.getAttribute('data-t'));
+        if (!el) return;
+        window.scrollTo({
+          top: el.getBoundingClientRect().top + window.scrollY - offsetTop(),
+          behavior: 'smooth'
+        });
+      });
+    });
+    var pick = function () {
+      var head = offsetTop() + 8;
+      var cur = live[0];
+      live.forEach(function (t) {
+        var el = document.getElementById(t.getAttribute('data-t'));
+        if (el && el.getBoundingClientRect().top <= head) cur = t;
+      });
+      live.forEach(function (t) {
+        t.className = live.length && t === cur ? 'anc on' : 'anc';
+      });
+    };
+    window.addEventListener('scroll', pick, { passive: true });
+    window.addEventListener('resize', pick);
+    pick();
+  }
+
   function renderDetail(styleId) {
     app.innerHTML = '<div class="loading"><span class="spin"></span>加载中…</div>';
     // D-770 修复：详情页此前**从不请求 /info**，直接刷新或从外部链接进入时
@@ -1608,7 +1693,9 @@ gallery: function (d) {
           // （库里已有上百张颜色图，此前只显示第一张）。
           // galImgs 必须与真正渲染出来的 cell 一一对应：选颜色换图要用同一份清单。
           galImgs = galleryImages(d);
-          var h = carouselHtml(galImgs, true);
+          // D-802：顶栏+锚点承担返回与导航后，轮播上的悬浮返回圈就是重复控件，
+          // 两个返回按钮会让顾客 unsure 哪个才真的能退回。统一走顶栏。
+          var h = '<div id="anc-top"></div>' + carouselHtml(galImgs, false);
           // D-782：商品视频紧跟图片区
           if (d.videoUrl) {
             h += '<div class="d-sec"><div class="lbl">商品视频</div>'
@@ -1656,7 +1743,7 @@ title: function (d) {
             + '</div></div>';
         },
         size: function (d) {
-          return '<div class="d-sec"><div class="lbl">尺码</div><div class="opts" id="sizes">'
+          return '<div id="anc-size"></div><div class="d-sec"><div class="lbl">尺码</div><div class="opts" id="sizes">'
             + '<span style="font-size:12.5px;color:#bbb">请先选择颜色</span></div></div>';
         },
         quantity: function (d) {
@@ -1690,7 +1777,7 @@ title: function (d) {
         },
         reviews: function (d) {
           // D-783：评价。内容异步拉（需判断登录与是否买过），这里只给容器。
-          return reviewsBoxHtml();
+          return '<div id="anc-rev"></div>' + reviewsBoxHtml();
         },
         recommend: function (d) {
           // D-784 补修：原先这里 return ''、真正的容器在 renderDetail 末尾硬追加，
@@ -1728,7 +1815,7 @@ title: function (d) {
           return h + '</table></div>';
         },
         detail: function (d) {
-          var h = '';
+          var h = '<div id="anc-detail"></div>';
           h += sizeChartHtml(d);
           // D-781：款式详情若是生产工艺/工序资料，顾客端不展示（服务端已判定）。
           // 这里只是最后一道闸，不替代服务端判断。
@@ -1766,11 +1853,39 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
         + '<button class="buy" id="buynow"' + (closed ? ' disabled' : '') + '>' + (closed ? '店铺打烊中' : '立即购买') + '</button>'
         + '</div></div>';
 
-      app.innerHTML = '<div class="d-page">' + html + '</div>';
+      // D-802：顶栏（返回/标题/分享）+ 吸顶锚点条。
+      // 「分享」用原生分享，不引第三方 SDK：没有就退回复制链接 —— 都是真能用的行为。
+      app.innerHTML = '<div class="d-nav">'
+        + '<button id="dnav-back" aria-label="返回">&#8249;</button>'
+        + '<span class="ttl">' + esc(d.styleName || d.styleNo || '商品详情') + '</span>'
+        + '<button id="dnav-share" aria-label="分享">&#8942;</button>'
+        + '</div>'
+        + '<div class="d-page">'
+        + '<div class="d-anchors" id="anchors">'
+        + '<button class="anc" data-t="anc-top">商品</button>'
+        + '<button class="anc" data-t="anc-rev">评价</button>'
+        + '<button class="anc" data-t="anc-size">尺码</button>'
+        + '<button class="anc" data-t="anc-detail">详情</button>'
+        + '</div>'
+        + html + '</div>';
+
+      initDetailShell();
 
       loadRecommends(styleId);
 
       // D-777：所有绑定一律走容错的 on()，任何一个元素缺失都不再影响其余绑定
+      on('dnav-back', back);
+      on('dnav-share', function () {
+        var url = location.href;
+        // 真能用：能原生分享就分享，不能就复制链接。不弹假成功提示。
+        if (navigator.share) {
+          navigator.share({ title: document.title, url: url }).catch(function () {});
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function () { toast('链接已复制'); }, function () {});
+        } else {
+          toast('请复制地址栏链接分享');
+        }
+      });
       on('dk', back);
       on('tocart', function () { go('#/cart'); });
 
