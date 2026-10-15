@@ -1610,7 +1610,11 @@
    *    剩下的平分宽度，而不是点一下没反应。
    */
   function initDetailShell() {
-    var nav = document.getElementById('dnav');
+    // D-802 修复：顶栏最初只有 class 没有 id，这里 getElementById 返回 null，
+    // offsetTop() 少算了顶栏高度 —— 点「尺码」后目标正好被顶栏盖住，
+    // 页面不报错、看起来「点了没反应」，只能靠真点一次才发现。
+    // 故 id 之外再兜一层 class 查询。
+    var nav = document.getElementById('dnav') || document.querySelector('.d-nav');
     if (nav) {
       var onNavScroll = function () {
         nav.className = window.scrollY > 40 ? 'd-nav solid' : 'd-nav';
@@ -1855,7 +1859,7 @@ var html = renderDetailModules(d, order, DETAIL_RENDERERS);
 
       // D-802：顶栏（返回/标题/分享）+ 吸顶锚点条。
       // 「分享」用原生分享，不引第三方 SDK：没有就退回复制链接 —— 都是真能用的行为。
-      app.innerHTML = '<div class="d-nav">'
+      app.innerHTML = '<div class="d-nav" id="dnav">'
         + '<button id="dnav-back" aria-label="返回">&#8249;</button>'
         + '<span class="ttl">' + esc(d.styleName || d.styleNo || '商品详情') + '</span>'
         + '<button id="dnav-share" aria-label="分享">&#8942;</button>'
