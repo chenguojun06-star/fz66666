@@ -162,20 +162,46 @@ class OutstockReceivableHelperTest {
     }
 
     @Test
-    @DisplayName("D-800 回归：备货直发没有生产订单，也必须生成应收（原来会 NPE 被吞、静默不建单）")
+    @DisplayName("D-800 回归：备货直发没有生产订单，也必须生成应收（原来 order.getId() NPE 被吞、静默不建单）")
     void createsReceivableWhenOrderMissing() {
-        // 订单查不到，但客户名能匹配到档案
+        // 订单查不到（备货直发），但客户名能精确匹配到档案
         when(productionOrderService.getOne(any())).thenReturn(null);
+        Customer byName = new Customer();
+        byName.setId("CUST-BY-NAME");
+        // ⚠️ 必须先造好桩再 when(...)：在 when 参数里建 mock 会触发 UnfinishedStubbing
+        var byNameChain = chainStub(1, byName);
+        when(customerService.lambdaQuery()).thenReturn(byNameChain);
         ArgumentCaptor<Receivable> captor = captureCreated();
 
-        // 客户名解析：mock 掉 lambdaQuery 链太难，这里用真实 CustomerService mock 的
-        // 最简可行路径 —— 直接验证「订单为 null 时不会 NPE」这一核心
         helper.createForShipment(outstock("shipment", new BigDecimal("5000.00"),
                 null, LocalDateTime.of(2026, 10, 1, 9, 0)));
 
-        // 订单为 null 时，要么正常建单，要么因客户解析不到而静默跳过 ——
-        // 关键是**不能抛异常**。原来是抛 NPE 被调用方吞掉，货出钱了没记账。
-        verify(receivableOrchestrator, org.mockito.Mockito.atMost(1)).create(any(Receivable.class));
+        // 核心断言：必须真的建单。原实现走到 order.getId() 就 NPE，
+        // 调用方 try-catch 一吞 → 货出去了、应收没记账、钱丢了且无任何报错。
+        verify(receivableOrchestrator).create(captor.capture());
+        Receivable r = captor.getValue();
+        assertThat(r.getCustomerId()).isEqualTo("CUST-BY-NAME");
+        assertThat(r.getAmount()).isEqualByComparingTo("5000.00");
+        // 订单字段必须留空，而不是塞 null 之外的怪值或者再次 NPE
+        assertThat(r.getOrderId()).isNull();
+        assertThat(r.getOrderNo()).isNull();
+    }
+
+    @Test
+    @DisplayName("D-800 回归：同名多个客户时取第一个并告警，不许把应收挂错客户")
+    void takesFirstWhenDuplicateCustomerNames() {
+        when(productionOrderService.getOne(any())).thenReturn(null);
+        Customer first = new Customer();
+        first.setId("CUST-FIRST");
+        var dupChain = chainStub(2, first);
+        when(customerService.lambdaQuery()).thenReturn(dupChain);
+        ArgumentCaptor<Receivable> captor = captureCreated();
+
+        helper.createForShipment(outstock("shipment", new BigDecimal("5000.00"),
+                null, LocalDateTime.of(2026, 10, 1, 9, 0)));
+
+        verify(receivableOrchestrator).create(captor.capture());
+        assertThat(captor.getValue().getCustomerId()).isEqualTo("CUST-FIRST");
     }
 
     @Test
