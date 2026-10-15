@@ -282,7 +282,7 @@ const ListingEditDrawer: React.FC<Props> = ({
     <SideDrawer
       open={open}
       onClose={onClose}
-      width="85%"
+      width="96%"
       title={row ? `店铺商品 · ${row.styleName || row.styleNo || ''}` : '店铺商品'}
       footer={
         <>
@@ -410,7 +410,7 @@ const ListingEditDrawer: React.FC<Props> = ({
                 flex: '0 0 auto',
                 position: 'sticky',
                 top: 8,
-                maxWidth: 372,
+                maxWidth: 420,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
