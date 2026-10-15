@@ -19,6 +19,8 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
   const [saving, setSaving] = useState(false);
   const [skus, setSkus] = useState<EditableSku[]>([]);
   const [cover, setCover] = useState<string | null>(null);
+  /** D-800：主图组（最多 5 张，第 1 张即 cover） */
+  const [coverGroup, setCoverGroup] = useState<string[]>([]);
   const [remark, setRemark] = useState('');
   // 顾客端详情页「商品参数 / 洗涤说明 / 款式详情」三块的内容（此前上架页无入口）
   const [fabric, setFabric] = useState('');
@@ -29,6 +31,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
   const [colorImages, setColorImages] = useState<Record<string, string>>({});
   const [baseline, setBaseline] = useState({
     cover: null as string | null,
+    coverGroup: [] as string[],
     remark: '',
     fabric: '',
     wash: '',
@@ -65,6 +68,17 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       setColorImages(imgs);
       const detail = unwrap<ShopStyleInfoRow | null>(styleRaw);
       const c = detail?.cover ?? r.cover ?? null;
+      // D-800：主图组。历史数据 cover_group 为空时回退为 [cover]，保证老款式零影响。
+      const cg2 = (() => {
+        try {
+          const raw = detail?.coverGroup;
+          if (!raw) return c ? [c] : [];
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) ? (arr.filter(Boolean) as string[]) : (c ? [c] : []);
+        } catch {
+          return c ? [c] : [];
+        }
+      })();
       const rm = detail?.remark ?? r.remark ?? '';
       const fb = detail?.fabricComposition ?? '';
       const ws = detail?.washInstructions ?? '';
@@ -76,7 +90,8 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       setWash(ws);
       setDesc(ds);
       setCategory(cg);
-      setBaseline({ cover: c, remark: rm, fabric: fb, wash: ws, desc: ds, category: cg, colorImages: imgs });
+      setCoverGroup(cg2);
+      setBaseline({ cover: c, coverGroup: cg2, remark: rm, fabric: fb, wash: ws, desc: ds, category: cg, colorImages: imgs });
     } catch (e: unknown) {
       message.error(errText(e, '商品详情加载失败'));
     } finally {
@@ -98,6 +113,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       const stylePatch: {
         id: number | string;
         cover?: string | null;
+        coverGroup?: string | null;
         remark?: string | null;
         fabricComposition?: string | null;
         washInstructions?: string | null;
@@ -105,6 +121,10 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         category?: string | null;
       } = { id: row.id };
       if (cover !== baseline.cover) stylePatch.cover = cover;
+      // D-800：主图组有变化才提交，避免无谓写库
+      if (JSON.stringify(coverGroup) !== JSON.stringify(baseline.coverGroup)) {
+        stylePatch.coverGroup = JSON.stringify(coverGroup);
+      }
       if (remark !== baseline.remark) stylePatch.remark = remark;
       if (fabric !== baseline.fabric) stylePatch.fabricComposition = fabric.trim() || null;
       if (wash !== baseline.wash) stylePatch.washInstructions = wash.trim() || null;
@@ -138,17 +158,17 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         message.success('已保存');
       }
       setSkus((prev) => prev.map((s) => ({ ...s, dirty: false })));
-      setBaseline({ cover, remark, fabric, wash, desc, category, colorImages });
+      setBaseline({ cover, coverGroup, remark, fabric, wash, desc, category, colorImages });
       onSaved(row.id);
     } catch (e: unknown) {
       message.error(errText(e, '保存失败'));
     } finally {
       setSaving(false);
     }
-  }, [row, cover, remark, fabric, wash, desc, category, colorImages, skus, baseline, onSaved]);
+  }, [row, cover, coverGroup, remark, fabric, wash, desc, category, colorImages, skus, baseline, onSaved]);
 
   return {
-    open, row, loading, saving, skus, setSkus, cover, setCover, remark, setRemark,
+    open, row, loading, saving, skus, setSkus, cover, setCover, coverGroup, setCoverGroup, remark, setRemark,
     fabric, setFabric, wash, setWash, desc, setDesc, category, setCategory,
     colorImages, setColorImages, openFor, close, save,
   };

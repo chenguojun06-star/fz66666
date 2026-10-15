@@ -330,6 +330,55 @@ public class StyleInfoOrchestrator {
         }
     }
 
+    /**
+     * D-800：主图组与 cover 双向同步。
+     *
+     * <p><b>为什么要同步</b>：C端列表卡片、商品列表缩略图、款式图列工厂
+     * （styleImageColumns）全都在读 {@code style.cover}，它们不会去解析
+     * {@code coverGroup}。两边不同步就会出现「上传了 5 张主图，列表还是老图」
+     * 这种查不到原因的错位。
+     *
+     * <p><b>规则</b>：
+     * <ul>
+     *   <li>传了 coverGroup → 取第1 张回填 cover（以主图组为准）</li>
+     *   <li>只传了 cover → 组内只有1 张（兼容只改主图的老调用方）</li>
+     *   <li>coverGroup 解析失败 → 记error 并原样保留，<b>不静默清空</b>
+     *       （静默清空等于把商家的 5 张主图删掉）</li>
+     * </ul>
+     */
+    private void syncCoverGroupWithCover(StyleInfo styleInfo) {
+        String groupJson = styleInfo.getCoverGroup();
+        boolean hasGroup = StringUtils.hasText(groupJson);
+        boolean hasCover = StringUtils.hasText(styleInfo.getCover());
+        if (!hasGroup) {
+            // 只传了 cover（或都没传）→ cover 为主，组跟着单图走
+            if (hasCover) {
+                try {
+                    styleInfo.setCoverGroup(new ObjectMapper().writeValueAsString(List.of(styleInfo.getCover())));
+                } catch (Exception e) {
+                    log.warn("[主图组] 序列化失败，跳过: {}", e.getMessage());
+                }
+            }
+            return;
+        }
+        try {
+            List<String> list = new ObjectMapper().readValue(
+                    groupJson, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
+            List<String> cleaned = list.stream()
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    // 上限 5 张，与平台一致；多余的直接截断而不是报错（少图比报错体验好）
+                    .limit(5)
+                    .toList();
+            styleInfo.setCoverGroup(new ObjectMapper().writeValueAsString(cleaned));
+            styleInfo.setCover(cleaned.isEmpty() ? null : cleaned.get(0));
+        } catch (Exception e) {
+            // 解析失败：原样保留 coverGroup 交给 DB，**不要清空** ——
+            // 清空等于把商家已上传的主图全删掉，且用户毫无察觉
+            log.error("[主图组] 解析失败，coverGroup 原样保留: {}", e.getMessage());
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleInfo styleInfo) {
         // D-225b：窄列防御——AI 洞察/视觉原始分析列已扩为 TEXT 仍做极端兜底截断，
@@ -339,6 +388,10 @@ public class StyleInfoOrchestrator {
         // 同步客户信息到款号冗余字段
         styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
         validateStyleInfo(styleInfo);
+        // D-800：主图组与 cover 保持同步 —— coverGroup[0] 即 cover。
+        // C 端列表卡片 / 商品列表缩略图 / 款式图列工厂全都在读 cover，
+        // 两边不一致会导致「上传了主图2但列表还是老图」这种查不到原因的错位。
+        syncCoverGroupWithCover(styleInfo);
         StyleInfo existing = null;
         try {
             if (styleInfo.getId() != null) {

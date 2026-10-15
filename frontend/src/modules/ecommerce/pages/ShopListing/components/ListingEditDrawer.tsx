@@ -24,6 +24,9 @@ interface Props {
   skus: EditableSku[];
   setSkus: React.Dispatch<React.SetStateAction<EditableSku[]>>;
   cover: string | null;
+  /** D-800：主图组（最多 5 张，第 1 张与 cover 同步） */
+  coverGroup: string[];
+  setCoverGroup: React.Dispatch<React.SetStateAction<string[]>>;
   setCover: (v: string | null) => void;
   colorImages: Record<string, string>;
   setColorImages: (v: Record<string, string>) => void;
@@ -90,7 +93,7 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; warn?: boolean }> 
  */
 const ListingEditDrawer: React.FC<Props> = ({
   open, loading, saving, row, skus, setSkus,
-  cover, setCover, colorImages, setColorImages, remark, setRemark,
+  cover, setCover, coverGroup, setCoverGroup, colorImages, setColorImages, remark, setRemark,
   fabric, setFabric, wash, setWash, desc, setDesc, category, setCategory,
   listed, toggling, onToggleListing, onClose, onSave,
 }) => {
@@ -371,6 +374,8 @@ const ListingEditDrawer: React.FC<Props> = ({
                 <CoverColorImagesSection
                   cover={cover}
                   setCover={setCover}
+                  coverList={coverGroup}
+                  setCoverList={setCoverGroup}
                   colorImages={colorImages}
                   setColorImages={setColorImages}
                   colors={colors}

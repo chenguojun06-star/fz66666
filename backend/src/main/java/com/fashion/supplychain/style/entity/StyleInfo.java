@@ -117,6 +117,19 @@ public class StyleInfo {
      */
     private String cover;
 
+    /**
+     * D-800：主图组（JSON 数组，最多 5 张，第 1 张为主图）。
+     *
+     * <p>淘宝 / 拼多多 / 天猫商品主图均为 5 张，第 1 张作为搜索结果展示图，
+     * 原 {@code cover} 是单值只能放 1 张。
+     *
+     * <p><b>与 {@code cover} 的关系</b>：不废弃 cover —— C 端列表卡片、商品列表
+     * 缩略图、款式图列工厂（styleImageColumns）都在读它，改它等于全链路返工。
+     * 约定 <b>coverGroup[0] === cover</b>，由后端写入时保证同步；
+     * 为空（历史数据）时前端与 C 端一律回退读 cover。
+     */
+    private String coverGroup;
+
     /** D-763：是否上架 C 端店铺（仅上架款式在店铺可见，价格/库存以服务端为准） */
     private Integer shopListed;
 

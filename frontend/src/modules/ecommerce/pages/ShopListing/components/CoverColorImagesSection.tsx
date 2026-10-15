@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Space, Tag, Typography } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
+import { COVER_RECOMMEND_SIZE_PX } from '../coverImageRules';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   analyzeCoverPixels,
@@ -18,6 +20,13 @@ const { Text } = Typography;
 interface Props {
   cover: string | null;
   setCover: (v: string | null) => void;
+  /**
+   * D-800：主图组（最多 5 张，与淘宝/拼多多一致）。
+   * **第 1 张即主图**，会同步到 {@link setCover} 供 C 端列表卡片使用；
+   * 全部图片存这里供 C 端详情页轮播使用。
+   */
+  coverList?: string[];
+  setCoverList?: (v: string[]) => void;
   colorImages: Record<string, string>;
   setColorImages: (v: Record<string, string>) => void;
   /** 该款式实际存在的颜色（来自 SKU 列表） */
@@ -40,8 +49,20 @@ interface Props {
  * 边选边提示，而不是等上架被平台驳回才发现。
  */
 const CoverColorImagesSection: React.FC<Props> = ({
-  cover, setCover, colorImages, setColorImages, colors, onlyCover = false,
+  cover, setCover, coverList, setCoverList, colorImages, setColorImages, colors, onlyCover = false,
 }) => {
+  /**
+   * 主图组：外部没传时退化为「只有 cover 一张」的老行为，保证向后兼容
+   * （详情页模块里的颜色图区也复用了本组件）。
+   */
+  const gallery: string[] = coverList ?? (cover ? [cover] : []);
+  const setGallery = (next: string[]) => {
+    setCoverList?.(next);
+    // 第 1 张同步为主图 —— C 端列表卡片读 style.cover，不能断
+    const first = next[0] ?? null;
+    if (first !== cover) setCover(first);
+  };
+
   const [coverBad, setCoverBad] = useState(false);
   const [coverMeta, setCoverMeta] = useState<CoverImageMeta | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -106,15 +127,22 @@ const CoverColorImagesSection: React.FC<Props> = ({
 
       <div className="shop-listing__imgs">
         <div className="shop-listing__cover">
-          <ImageUploadBox
-            value={cover}
-            onChange={(v) => { setCover(v); setCoverBad(false); }}
-            width={132}
-            height={132}
+          {/* D-800：主图 1→5 张。
+              淘宝/拼多多商品主图均为 5 张，第 1 张作为搜索结果展示图。
+              这里用角标区分「主图 / 图N」，运营一眼知道哪张会被顾客搜到。 */}
+          <MultiImageUploadBox
+            value={gallery}
+            onChange={(v) => { setGallery(v); setCoverBad(false); }}
+            maxCount={5}
+            size={96}
             label="主图"
+            badges={gallery.map((_, i) => (i === 0 ? '主图' : `图${i + 1}`))}
+            captions={gallery.map((_, i) => (
+              i === 0 ? `最大3MB · 建议${COVER_RECOMMEND_SIZE_PX}×${COVER_RECOMMEND_SIZE_PX}` : ''
+            ))}
           />
           <Text type="secondary" className="shop-listing__hint">
-            主图：店铺列表卡片与详情页默认大图
+            第 1 张是主图（店铺列表卡片与详情页默认大图），淘宝/拼多多均可传 5 张
           </Text>
           {coverMeta ? (
             <Text type="secondary" className="shop-listing__hint">

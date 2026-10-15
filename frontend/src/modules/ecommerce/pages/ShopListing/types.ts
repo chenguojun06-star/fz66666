@@ -6,6 +6,8 @@ export type ListingRow = {
   styleNo?: string;
   styleName?: string;
   cover?: string | null;
+  /** D-800：主图组 JSON 字符串，最多 5 张，第 1 张即 cover；历史数据为空 */
+  coverGroup?: string | null;
   remark?: string | null;
   shopListed?: number;
   shopListingTime?: string | null;

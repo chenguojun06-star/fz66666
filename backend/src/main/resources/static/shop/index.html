@@ -760,6 +760,14 @@
    */
   function galleryImages(d) {
     var imgs = [];
+    // D-800：主图组（最多 5 张，运营上传）优先入轮播 —— 排在详情图之前，
+    // 因为主图是商家主动挑的「门面图」，优先级高于详情模块里的图。
+    // 历史数据没有 coverGroup 时自动跳过，行为与改动前一致。
+    if (d.coverGroup && d.coverGroup.length) {
+      for (var cg = 0; cg < d.coverGroup.length; cg++) {
+        if (d.coverGroup[cg] && imgs.indexOf(d.coverGroup[cg]) < 0) imgs.push(d.coverGroup[cg]);
+      }
+    }
     if (d.gallery && d.gallery.length) {
       for (var g = 0; g < d.gallery.length; g++) {
         if (d.gallery[g] && imgs.indexOf(d.gallery[g]) < 0) imgs.push(d.gallery[g]);

@@ -412,6 +412,8 @@ export interface ShopCategoryOption {
 }
 
 export interface ShopStyleInfoRow {
+  /** D-800：主图组 JSON 字符串（最多 5 张，第 1 张即 cover） */
+  coverGroup?: string | null;
   id: number;
   styleNo?: string;
   styleName?: string;

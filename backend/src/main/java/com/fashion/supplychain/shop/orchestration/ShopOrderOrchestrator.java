@@ -254,6 +254,28 @@ public class ShopOrderOrchestrator {
      * （商品不存在/已下架会提前抛异常，不该被计入）。
      * 无论是否登录都记一次按天计数（看板用）；登录顾客另记一份个人历史（推荐用）。
      */
+    /**
+     * D-800：解析主图组 JSON。
+     *
+     * <p>解析失败或为空时回退为 {@code List.of(cover)} —— 保证顾客端永远拿得到
+     * 至少一张图（与改动前行为完全一致），不会因为新增字段导致老款式白图。
+     */
+    private List<String> parseCoverGroup(StyleInfo style) {
+        String raw = style.getCoverGroup();
+        if (StringUtils.hasText(raw)) {
+            try {
+                List<String> list = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                        raw, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
+                List<String> cleaned = list.stream()
+                        .filter(StringUtils::hasText).map(String::trim).limit(5).toList();
+                if (!cleaned.isEmpty()) return cleaned;
+            } catch (Exception e) {
+                log.warn("[主图组] 解析失败，回退读 cover: styleId={} err={}", style.getId(), e.getMessage());
+            }
+        }
+        return StringUtils.hasText(style.getCover()) ? List.of(style.getCover()) : List.of();
+    }
+
     public Map<String, Object> productDetail(String slug, Long styleId, String consumerId) {
         ShopConfig config = resolveBySlug(slug);
         if (config == null) {
@@ -294,6 +316,9 @@ public class ShopOrderOrchestrator {
         data.put("styleNo", style.getStyleNo());
         data.put("styleName", style.getStyleName());
         data.put("cover", style.getCover());
+        // D-800：主图组（最多 5 张）—— 顾客端详情页据此渲染轮播，
+        // 运营上传的多张主图才对顾客可见；历史数据为空时前端回退读 cover。
+        data.put("coverGroup", parseCoverGroup(style));
         // D-781 补修②：商品说明（remark）同样可能是车间用的工艺文档。
         // 上架页一直提示「这段会被顾客端隐藏」，但服务端**只拦了 description、
         // 没拦 remark** —— 提示是假的，顾客在详情页照样看得到整段裁剪/缝纫要求。
