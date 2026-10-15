@@ -39,6 +39,7 @@
   （否则缩的是整个网页、图片并不会变大），代价是缩放手势全部自己实现。
   于是捏合、双击、滚轮、平移限位、缩放层样式缺一不可，见下面 F 组。
 """
+import json
 import os
 import re
 import shutil
@@ -47,6 +48,7 @@ import sys
 import tempfile
 
 SHOP_PAGE = sys.argv[1] if len(sys.argv) > 1 else "backend/src/main/resources/static/shop/index.html"
+ROOT = __import__("pathlib").Path(__file__).resolve().parent.parent
 
 FAILURES = []
 
@@ -188,6 +190,77 @@ def main():
             )
         if ".d-viewer .box" not in html:
             fail("缺少 .d-viewer .box 缩放层样式，缩放/平移会作用到错误的元素上")
+
+    # ── G. 详情图纵向连续流（D-805）──────────────────────────────────
+    # 2026-10-15 线上实测：商家配了 5 张详情图，顾客端只显示 1 张。
+    # 根因是 onerror 里内层 class="..." 的双引号提前结束了外层 HTML 属性，
+    # 第 2 张起的标签全被吞掉。**JS 语法完全合法、check 全绿、代码读起来正确**，
+    # 只有真在浏览器里渲染一次才会发现 —— 所以这里直接对拼出的 HTML 做断言。
+    if "function detailImageStack" not in js:
+        fail(
+            "缺少 detailImageStack() —— 商家配的详情图不会被渲染成"
+            "「从上到下连成一条」的形态（历史故障：详情图被压进顶部 1:1 方块轮播，"
+            "配了等于没配）"
+        )
+    else:
+        # 复刻函数体，验证 5 张图能拼出 5 个完整标签
+        m = re.search(r"function detailImageStack\(d\) \{.*?\n  \}", js, re.S)
+        body = m.group(0) if m else ""
+        if not body:
+            fail("detailImageStack 函数体没匹配到，无法校验拼串结果")
+        else:
+            # 直接执行**文件里那一段真实函数体**，不复制一份到脚本里 ——
+            # 复制等于测自己的副本，代码改了脚本还照旧通过，是典型的假门控。
+            esc_js = (
+                "const esc = s => String(s).replace(/[&<>\"']/g, c => "
+                "({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));"
+            )
+            harness = "\n".join([
+                esc_js,
+                body,
+                "const out = detailImageStack({gallery:['a.jpg','b.jpg','c.jpg','d.jpg','e.jpg']});",
+                # 输出 base64，避免 HTML 里的引号在 subprocess 里被再转义一次
+                "process.stdout.write(Buffer.from(out, 'utf8').toString('base64'));",
+            ])
+            try:
+                b64 = subprocess.run(
+                    ["node", "-e", harness],
+                    capture_output=True, text=True, timeout=30,
+                ).stdout.strip()
+            except Exception as e:  # 没装 node 就跳过，不能因此卡住 CI
+                b64 = ""
+            if not b64:
+                pass  # 无 node 环境：跳过，不给 CI 添假红
+            else:
+                import base64
+                produced = base64.b64decode(b64).decode("utf-8", "replace")
+                n_imgs = produced.count("<img ")
+                if n_imgs < 5:
+                    fail(
+                        f"detailImageStack 拼 5 张图只产出 {n_imgs} 个 <img> 标签 —— "
+                        "后面的图被静默丢掉（线上真实故障：配了 5 张只显示 1 张）"
+                    )
+                # 关键断言：onerror 属性里的 JS 字符串必须完整闭合。
+                # 内层 class="..." 的裸双引号会提前结束外层 HTML 属性，
+                # Chrome 会把后面所有图吞进这个属性里（只显示第 1 张），
+                # 而 jsdom 会「好心」恢复成 5 张 —— 所以不能靠解析器判案。
+                for attr in re.findall(r'onerror="([^"]*)"', produced):
+                    if not attr.rstrip().endswith("'"):
+                        fail(
+                            "detailImageStack 的 onerror 属性被内层引号截断："
+                            f"{attr[:60]!r} —— Chrome 会把后续所有详情图吞进这个属性，"
+                            "配了 N 张只显示第 1 张（2026-10-15 线上真实故障）"
+                        )
+                        break
+
+    # 详情图不该再进顶部轮播：轮播是 1:1 方块，详情图是纵向长图，混在一起顺序就失效了
+    gallery_fn = re.search(r"function galleryImages.*?\n  \}", js, re.S)
+    if gallery_fn and "d.gallery" in gallery_fn.group(0):
+        fail(
+            "galleryImages() 又把 d.gallery 塞进顶部轮播了 —— "
+            "详情图必须由 detailImageStack 纵向渲染，"
+            "塞进 1:1 轮播等于配了等于没配"
+        )
 
     return report()
 

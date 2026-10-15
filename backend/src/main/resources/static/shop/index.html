@@ -832,7 +832,7 @@
     for (var i = 0; i < g.length; i++) {
       if (!g[i]) continue;
       h += '<img class="d-stack-img" src="' + esc(g[i]) + '" alt="" loading="lazy"'
-        + ' onerror="this.outerHTML=\'<div class="d-stack-fail">图片加载失败</div>\'">';
+        + ' onerror="this.outerHTML=\'&lt;div class=&quot;d-stack-fail&quot;&gt;图片加载失败&lt;/div&gt;\'">';
     }
     return h ? '<div class="d-stack">' + h + '</div>' : '';
   }
