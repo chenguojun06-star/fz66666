@@ -314,3 +314,14 @@
 .shop-module-item-body {
   padding-left: 2px;
 }
+
+/* D-803：详情描述画布入口 */
+.shop-listing__detail-canvas-entry {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-border);
+}

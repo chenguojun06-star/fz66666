@@ -232,6 +232,8 @@ const ShopListing: React.FC = () => {
         setSkus={ed.setSkus}
         cover={ed.cover}
         setCover={ed.setCover}
+        coverGroup={ed.coverGroup}
+        setCoverGroup={ed.setCoverGroup}
         colorImages={ed.colorImages}
         setColorImages={ed.setColorImages}
         remark={ed.remark}

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Alert, Button, Input, Select, Space, Tag, Typography, Upload } from 'antd';
 import {
-  DeleteOutlined, LeftOutlined, PlusOutlined, RightOutlined, StarFilled,
+  DeleteOutlined, LeftOutlined, PictureOutlined, PlusOutlined, RightOutlined, StarFilled,
 } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
+import DetailImageCanvasEditor from './DetailImageCanvasEditor';
 import api from '@/utils/api';
 import { looksLikeProductionContent, PRODUCTION_CONTENT_HINT } from '../listingCompliance';
 import type { ListingContent } from '../types';
@@ -54,6 +55,8 @@ export interface ModuleContentCtx {
 const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   const { content, setContent } = ctx;
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  /** D-803：详情描述整条画布 */
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const patch = (p: Partial<ListingContent>) => setContent({ ...content, ...p });
 
   const moveImage = (idx: number, dir: -1 | 1) => {
@@ -87,7 +90,7 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         顾客端详情页第一屏的图片，按从左到右轮流播放。留空时自动回落「主图 + 各颜色图」。
       </Text>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-        {content.gallery.map((url, i) => (
+        {content.gallery.slice(0, 5).map((url, i) => (
           <div key={`${url}-${i}`} style={{ textAlign: 'center' }}>
             <ImageUploadBox value={url} onChange={() => undefined} width={92} height={92} showClear={false} />
             <div style={{ marginTop: 4 }}>
@@ -99,15 +102,8 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
                 size="small"
                 type="text"
                 icon={<RightOutlined />}
-                disabled={i === content.gallery.length - 1}
+                disabled={i === Math.min(content.gallery.length, 5) - 1}
                 onClick={() => moveImage(i, 1)}
-              />
-              <Button
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => patch({ gallery: content.gallery.filter((_, k) => k !== i) })}
               />
             </Space>
           </div>
@@ -121,6 +117,7 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
           showClear={false}
         />
       </div>
+
 
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>商品视频</div>
       <Text type="secondary" className="shop-listing__hint">
@@ -142,6 +139,24 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
           </Upload>
         )}
       </div>
+
+      {/* D-803：整条详情图画布。挂在根节点内，避免被外层容器的 overflow 裁掉。
+          92px 小方块看不出「从上到下」的整体顺序，那是运营最需要看的一件事。 */}
+      <div className="shop-listing__detail-canvas-entry">
+        <Button type="primary" size="middle" icon={<PictureOutlined />} onClick={() => setCanvasOpen(true)}>
+          批量编辑详情图（{content.gallery.length} 张）
+        </Button>
+        <Text type="secondary" className="shop-listing__hint">
+          点开后可按真实宽度从上到下连续排列，支持排序、批量删除与大图预览；PC 端与手机端用同一份内容。
+        </Text>
+      </div>
+
+      <DetailImageCanvasEditor
+        open={canvasOpen}
+        images={content.gallery}
+        onChange={(urls) => patch({ gallery: urls })}
+        onClose={() => setCanvasOpen(false)}
+      />
     </div>
   );
 };

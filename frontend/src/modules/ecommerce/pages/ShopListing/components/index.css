@@ -1,0 +1,152 @@
+/* D-803：详情描述画布
+ * 规则：颜色一律 var(--xxx)，间距一律 8 的倍数，禁止渐变与硬编码色值。 */
+
+.deic {
+  display: flex;
+  flex-direction: column;
+  /* 画布本身要能一路往下排，所以头部固定、主体滚动 */
+  max-height: calc(100vh - 220px);
+}
+
+/* ── 工具条 ── */
+.deic__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-container);
+  flex: 0 0 auto;
+}
+.deic__bar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.deic__spec {
+  font-size: 12px;
+}
+
+/* ── 画布 ── */
+.deic__canvas {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 24px;
+  /* 详情图按 750px 基准宽度铺开，居中；这才是「整体详情页」的真实比例 */
+  background: var(--color-bg-layout, var(--color-bg-subtle));
+}
+
+.deic__item {
+  margin: 0 auto 16px;
+  max-width: 750px;
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.deic__item-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-container);
+}
+.deic__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--color-bg-container);
+}
+
+/* ── 空态 ── */
+.deic__empty {
+  margin: 0 auto 24px;
+  max-width: 750px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-container);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  font-size: 32px;
+}
+.deic__empty-title {
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.deic__empty-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: left;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── 末尾添加位 ── */
+.deic__add {
+  margin: 0 auto;
+  max-width: 750px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-container);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  font-size: 24px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.deic__add:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.deic__add.is-full {
+  cursor: not-allowed;
+  color: var(--color-text-tertiary);
+  border-color: var(--color-border);
+}
+.deic__add-title {
+  display: block;
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.deic__add-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+/* ── 大图预览 ── */
+.deic__viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  cursor: zoom-out;
+}
+.deic__viewer img {
+  max-width: 92vw;
+  max-height: 88vh;
+  object-fit: contain;
+}
+.deic__viewer-hint {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 13px;
+}
