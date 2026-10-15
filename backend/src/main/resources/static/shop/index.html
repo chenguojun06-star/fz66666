@@ -153,6 +153,13 @@
   .d-sec .lbl{font-size:13.5px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
   .d-sec .lbl .hint{font-size:11.5px;color:var(--tb-sub);font-weight:400;}
 
+  /* D-805：详情图纵向连续流。
+     刻意不加 margin/border —— 淘宝详情页的图与图之间是无缝衔接的，
+     加了间隙就会变成「一堆图片」而不是「一个整体」。 */
+  .d-stack{background:var(--tb-card);}
+  .d-stack img{display:block;width:100%;height:auto;}
+  .d-stack-fail{padding:24px 14px;text-align:center;font-size:12px;color:var(--tb-sub);}
+
   /* ── D-802 详情页统一外壳 ────────────────────────────────────────────
      为什么加：详情页原来只有「一块块白卡片」（模块间 8px 灰缝），
      加上没有顶栏、没有锚点导航，每个模块字号粗细各写各的 ——
@@ -784,19 +791,21 @@
    * 换图那段引用的 `galImgs` 根本没声明 → 顾客一点颜色就抛 ReferenceError，
    * 处理函数在刷新尺码之前就断了，尺码永远不出现。
    */
+  /**
+   * 顶部轮播图：**只放主图**。
+   *
+   * D-805：原来这里会把商家配的「详情图」(d.gallery) 也塞进顶部轮播，
+   * 于是详情图被压成 1:1 方块、左右滑动 —— 而详情图在淘宝/拼多多是
+   * **从上到下连成一条**的完整描述。两者的展示形态根本不同，
+   * 混在一个轮播里等于「配了等于没配」。现在详情图改由 detailImageStack 渲染。
+   */
   function galleryImages(d) {
     var imgs = [];
-    // D-800：主图组（最多 5 张，运营上传）优先入轮播 —— 排在详情图之前，
-    // 因为主图是商家主动挑的「门面图」，优先级高于详情模块里的图。
+    // D-800：主图组（最多 5 张，运营上传）—— 第 1 张即主图。
     // 历史数据没有 coverGroup 时自动跳过，行为与改动前一致。
     if (d.coverGroup && d.coverGroup.length) {
       for (var cg = 0; cg < d.coverGroup.length; cg++) {
         if (d.coverGroup[cg] && imgs.indexOf(d.coverGroup[cg]) < 0) imgs.push(d.coverGroup[cg]);
-      }
-    }
-    if (d.gallery && d.gallery.length) {
-      for (var g = 0; g < d.gallery.length; g++) {
-        if (d.gallery[g] && imgs.indexOf(d.gallery[g]) < 0) imgs.push(d.gallery[g]);
       }
     } else {
       if (d.cover) imgs.push(d.cover);
@@ -804,6 +813,28 @@
       for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
     }
     return imgs;
+  }
+
+  /**
+   * D-805：商家配的详情图 —— 按数组顺序**从上到下连成一条**。
+   *
+   * <p>这就是主流电商详情页的形态：宽度撑满、自然比例、图与图之间无缝衔接，
+   * 顾客一路往下滑就看完整个描述。
+   *
+   * <p>刻意不做成轮播/网格：详情图是要「按顺序读」的，
+   * 一旦能左右滑，运营排的顺序就失去意义了。
+   *
+   * <p>没有详情图时返回空串 —— 上层会自动跳过，不给顾客留空白块。
+   */
+  function detailImageStack(d) {
+    var g = d.gallery || [];
+    var h = '';
+    for (var i = 0; i < g.length; i++) {
+      if (!g[i]) continue;
+      h += '<img class="d-stack-img" src="' + esc(g[i]) + '" alt="" loading="lazy"'
+        + ' onerror="this.outerHTML=\'<div class="d-stack-fail">图片加载失败</div>\'">';
+    }
+    return h ? '<div class="d-stack">' + h + '</div>' : '';
   }
 
   /**
@@ -1819,7 +1850,9 @@ title: function (d) {
           return h + '</table></div>';
         },
         detail: function (d) {
-          var h = '<div id="anc-detail"></div>';
+          // D-805：详情图纵向连续流，放在详情模块里 —— 与淘宝一致，
+          // 顾客在「详情」段一路往下滑就看完整个描述。
+          var h = '<div id="anc-detail"></div>' + detailImageStack(d);
           h += sizeChartHtml(d);
           // D-781：款式详情若是生产工艺/工序资料，顾客端不展示（服务端已判定）。
           // 这里只是最后一道闸，不替代服务端判断。
