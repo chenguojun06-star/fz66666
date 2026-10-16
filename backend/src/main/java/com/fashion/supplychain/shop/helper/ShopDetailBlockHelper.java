@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * D-806：详情描述内容块（图 + 文交错）的**唯一**解析/归一化出口。
@@ -24,8 +26,11 @@ public final class ShopDetailBlockHelper {
      */
     public static final int MAX_BLOCKS = 20;
 
-    /** 单个文字块的长度上限，防止运营把整篇文章塞进一个块把详情页撑爆。 */
-    public static final int MAX_TEXT_LEN = 2000;
+    /**
+     * 单个文字块的**原始标记**长度上限，防止把整篇文章塞进一个块把详情页撑爆。
+     * 富文本的标签本身也要占字符，所以比纯文本宽松。
+     */
+    public static final int MAX_TEXT_LEN = 5000;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -60,6 +65,15 @@ public final class ShopDetailBlockHelper {
             } else if ("text".equals(type)) {
                 String content = trim(b.get("content"));
                 if (content == null) {
+                    continue;
+                }
+                // D-809：富文本入库前先清洗。渲染层（C 端 richHtml）也会再过滤一次，
+                // 但只在渲染时过滤意味着库里躺着一段可执行的 HTML ——
+                // 任何绕过 C 端的下游（导出、分享卡片、其它端）都会中招。
+                content = sanitizeRichText(content);
+                if (!StringUtils.hasText(content)) {
+                    // 清洗后空了的（整段都是危险标签）直接丢弃，
+                    // 留一个空块会让顾客看到凭空多出一段空白
                     continue;
                 }
                 if (content.length() > MAX_TEXT_LEN) {
@@ -111,6 +125,61 @@ public final class ShopDetailBlockHelper {
     public static List<Map<String, String>> forCustomer(String blocksJson) {
         return parse(blocksJson);
     }
+
+    /**
+     * D-809：富文本白名单清洗。
+     *
+     * <p><b>与 C 端 {@code richHtml} 保持同一份白名单</b>
+     * （p/div/span/strong/em/b/i/u/ul/ol/li/h1–h6/br/img）：两边规则不一致时，
+     * 会出现「后台看着有样式、顾客端整段被转义成文本」的错位。
+     *
+     * <p><b>为什么不用正则一把梭</b>：正则可以绕过（大小写、畸形闭合、
+     * 属性里藏协议）。这里是纵深防御的第一道 —— 渲染层的正则过滤仍然保留，
+     * 两道一起用，而不是二选一。
+     */
+    public static String sanitizeRichText(String html) {
+        if (!StringUtils.hasText(html)) {
+            return "";
+        }
+        String out = html;
+        // ① 整段移除危险标签及其内容
+        out = SCRIPT_LIKE.matcher(out).replaceAll("");
+        // ② 残留的危险开标签（如未闭合的 script）
+        out = DANGEROUS_OPEN.matcher(out).replaceAll("");
+        // ③ 事件属性（onclick / onerror / onload…）
+        out = EVENT_ATTR.matcher(out).replaceAll("");
+        // ④ javascript: 伪协议
+        out = JS_PROTOCOL.matcher(out).replaceAll("");
+        // ⑤ 白名单外的标签：只把开头的 '<' 转义，**保留标签名**。
+        //    整段 replaceAll("&lt;") 会把 <marquee> 连标签名一起吃掉，
+        //    顾客看到的是「&lt;滚动字&lt;」这种乱码 —— 那不是转义，是损坏。
+        Matcher m = NON_WHITELIST_TAG.matcher(out);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            m.appendReplacement(sb, Matcher.quoteReplacement(m.group().replaceFirst("<", "&lt;")));
+        }
+        m.appendTail(sb);
+        return sb.toString().trim();
+    }
+
+    /** 危险标签及其内容（含未闭合写法）。 */
+    private static final Pattern SCRIPT_LIKE = Pattern.compile(
+            "<\\s*(script|iframe|object|embed|link|meta|form|style|svg|math)\\b[\\s\\S]*?(</\\s*\\1\\s*>|$)",
+            Pattern.CASE_INSENSITIVE);
+    /** 残留的危险开标签。 */
+    private static final Pattern DANGEROUS_OPEN = Pattern.compile(
+            "<\\s*/?\\s*(script|iframe|object|embed|link|meta|form|style|svg|math)\\b[^>]*>?",
+            Pattern.CASE_INSENSITIVE);
+    /** on* 事件属性。 */
+    private static final Pattern EVENT_ATTR = Pattern.compile(
+            "\\s+on[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)", Pattern.CASE_INSENSITIVE);
+    /** javascript: 伪协议。 */
+    private static final Pattern JS_PROTOCOL = Pattern.compile(
+            "\\b(javascript|vbscript)\\s*:", Pattern.CASE_INSENSITIVE);
+    /** 白名单外的标签：转义其开标签，避免内容被吞。 */
+    private static final Pattern NON_WHITELIST_TAG = Pattern.compile(
+            "<\\s*/?\\s*(?!img|p|br|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[a-z][a-z0-9]*\\b[^>]*>?",
+            Pattern.CASE_INSENSITIVE);
 
     private static Map<String, String> block(String type, String content, String url) {
         Map<String, String> m = new LinkedHashMap<>();

@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
-  Input,
   Popconfirm,
   Select,
   Space,
@@ -22,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
+import RichTextField from './RichTextField';
 import type { DetailBlock } from '../types';
 import './index.css';
 
@@ -297,12 +297,11 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                     <Paragraph type="secondary" className="deic__text-hint">
                       这段文字会显示在顾客端第 {i + 1} 块的位置，夹在图片之间
                     </Paragraph>
-                    <Input.TextArea
+                    <RichTextField
                       value={b.content}
-                      onChange={(e) => updateText(i, e.target.value)}
+                      onChange={(html) => updateText(i, html)}
                       placeholder="例如：面料 92% 棉 / 8% 氨纶，透气不易变形"
-                      autoSize={{ minRows: 2, maxRows: 10 }}
-                      maxLength={2000}
+                      ariaLabel={`第 ${i + 1} 块文字`}
                     />
                   </div>
                 )}

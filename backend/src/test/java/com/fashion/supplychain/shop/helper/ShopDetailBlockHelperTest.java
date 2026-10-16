@@ -65,13 +65,13 @@ class ShopDetailBlockHelperTest {
     }
 
     @Test
-    @DisplayName("单段文字超长截断到 2000 字")
+    @DisplayName("单段文字超长截断到 5000 字（富文本标签也占字符，比纯文本宽松）")
     void capsTextLength() {
-        String longText = "x".repeat(5000);
+        String longText = "x".repeat(9000);
 
         List<Map<String, String>> out = ShopDetailBlockHelper.normalize(List.of(txt(longText)));
 
-        assertEquals(2000, out.get(0).get("content").length());
+        assertEquals(5000, out.get(0).get("content").length());
     }
 
     @Test
@@ -107,5 +107,74 @@ class ShopDetailBlockHelperTest {
     void emptyNormalizesToEmptyList() {
         assertTrue(ShopDetailBlockHelper.normalize(null).isEmpty());
         assertTrue(ShopDetailBlockHelper.normalize(List.of()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("D-809 富文本：script/iframe 连内容一起剥掉")
+    void stripsDangerousTagsWithContent() {
+        String html = "<p>正常</p><script>alert(1)</script><iframe src=\"//evil\"></iframe><p>也正常</p>";
+
+        String out = ShopDetailBlockHelper.sanitizeRichText(html);
+
+        org.junit.jupiter.api.Assertions.assertFalse(out.contains("script"), out);
+        org.junit.jupiter.api.Assertions.assertFalse(out.contains("iframe"), out);
+        org.junit.jupiter.api.Assertions.assertFalse(out.contains("alert"), out);
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("正常") && out.contains("也正常"), out);
+    }
+
+    @Test
+    @DisplayName("D-809 富文本：on* 事件属性与 javascript: 伪协议被清掉")
+    void stripsEventAttrsAndJsProtocol() {
+        String html = "<p onclick=\"steal()\">点我</p><a href=\"javascript:alert(1)\">链接</a>"
+                + "<img src=\"x\" onerror=\"alert(2)\">";
+
+        String out = ShopDetailBlockHelper.sanitizeRichText(html);
+
+        org.junit.jupiter.api.Assertions.assertFalse(out.contains("onclick"), out);
+        org.junit.jupiter.api.Assertions.assertFalse(out.contains("onerror"), out);
+        org.junit.jupiter.api.Assertions.assertFalse(out.toLowerCase().contains("javascript:"), out);
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("点我"), "标签内容要保留，不能整段吞掉");
+    }
+
+    @Test
+    @DisplayName("D-809 富文本：白名单内的排版标签必须原样保留（清洗不能把样式洗没了）")
+    void keepsWhitelistedFormatting() {
+        String html = "<p><strong>加粗</strong><em>斜体</em><u>下划线</u></p><ul><li>一</li></ul><h3>小标题</h3>";
+
+        String out = ShopDetailBlockHelper.sanitizeRichText(html);
+
+        for (String tag : new String[]{"<strong>", "<em>", "<u>", "<ul>", "<li>", "<h3>"}) {
+            org.junit.jupiter.api.Assertions.assertTrue(out.contains(tag), tag + " 被误删：" + out);
+        }
+    }
+
+    @Test
+    @DisplayName("D-809 富文本：白名单外的标签转义而非删除，内容不丢")
+    void escapesNonWhitelistTag() {
+        String out = ShopDetailBlockHelper.sanitizeRichText("<marquee>滚动字</marquee>");
+
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("&lt;marquee"), "标签名要保留：" + out);
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("滚动字"), "内容不能被吞：" + out);
+    }
+
+    @Test
+    @DisplayName("D-809：整段都是危险标签时丢弃该块，不给顾客留空白段")
+    void dropsBlockThatIsAllDangerous() {
+        List<Map<String, String>> out = ShopDetailBlockHelper.normalize(
+                List.of(txt("<script>alert(1)</script>"), img("a.jpg")));
+
+        assertEquals(1, out.size(), "只剩图片块");
+        assertEquals("image", out.get(0).get("type"));
+    }
+
+    @Test
+    @DisplayName("D-809：保存链路自动清洗，不必依赖调用方自觉")
+    void normalizeSanitizesAutomatically() {
+        List<Map<String, String>> out = ShopDetailBlockHelper.normalize(
+                List.of(txt("<p onclick=\"x()\">文案</p>")));
+
+        assertEquals(1, out.size());
+        org.junit.jupiter.api.Assertions.assertFalse(out.get(0).get("content").contains("onclick"),
+                out.get(0).get("content"));
     }
 }

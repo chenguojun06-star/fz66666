@@ -31,8 +31,9 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     // 块序号 ≠ 图片序号，沿用图片序号会让人误判自己是第几张图
     expect(screen.getByAltText('第 1 块的图片')).toBeTruthy();
     expect(screen.getByAltText('第 3 块的图片')).toBeTruthy();
-    // 文字块必须渲染成可编辑的输入框，而不是被静默丢弃
-    expect(screen.getByDisplayValue('卖点：透气')).toBeTruthy();
+    // 文字块必须渲染成可编辑区域，而不是被静默丢弃（D-809 起是富文本）
+    expect(screen.getByRole('textbox', { name: '第 2 块文字' })).toBeTruthy();
+    expect(screen.getByText('卖点：透气')).toBeTruthy();
   });
 
   it('统计里图与文分开计数，便于运营核对', () => {
@@ -107,7 +108,10 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     const onChange = vi.fn();
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
 
-    fireEvent.change(screen.getByDisplayValue('卖点：透气'), { target: { value: '卖点：更透气' } });
+    const box = screen.getByRole('textbox', { name: '第 2 块文字' });
+    // 富文本是 contentEditable，React 的 change 事件不触发，只能靠 input
+    box.innerHTML = '卖点：更透气';
+    fireEvent.input(box);
 
     expect(onChange).toHaveBeenCalledWith([
       { type: 'image', url: 'a.jpg' },
