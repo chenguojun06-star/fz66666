@@ -157,6 +157,15 @@
      刻意不加 margin/border —— 淘宝详情页的图与图之间是无缝衔接的，
      加了间隙就会变成「一堆图片」而不是「一个整体」。 */
   .d-stack{background:var(--tb-card);}
+  /* D-806：详情图**通栏贴边**，与 .d-desc.rich img 的 -14px 负边距同一套手法。
+     
+     为什么：此前 .d-stack img 只写 width:100%，而它坐在 .d-sec{padding:14px} 里，
+     → 图比屏幕窄、左右各露 14px 白边。而紧挨着它的富文本详情图反而做了通栏，
+     → **同一个「详情」段里两种图宽**，顾客一看就觉得「别家是平铺整个页面、我们不是」。
+     
+     淘宝/1688 的详情长图就是撑满屏宽、图与图无缝衔接，一路往下滑读完。
+     做法：容器自身做 -14px 负边距抵消 .d-sec 的内边距，图片再 width:100% 填满它。 */
+  .d-stack{margin:0 -14px;}
   .d-stack img{display:block;width:100%;height:auto;}
   .d-stack-fail{padding:24px 14px;text-align:center;font-size:12px;color:var(--tb-sub);}
 
@@ -831,7 +840,7 @@
     var h = '';
     for (var i = 0; i < g.length; i++) {
       if (!g[i]) continue;
-      h += '<img class="d-stack-img" src="' + esc(g[i]) + '" alt="" loading="lazy"'
+      h += '<img class="d-stack-img" data-gi="' + i + '" src="' + esc(g[i]) + '" alt="" loading="lazy"'
         + ' onerror="this.outerHTML=\'&lt;div class=&quot;d-stack-fail&quot;&gt;图片加载失败&lt;/div&gt;\'">';
     }
     return h ? '<div class="d-stack">' + h + '</div>' : '';
@@ -932,6 +941,40 @@
    * 页面 meta 里也没有禁用 user-scalable，所以在详情页上双指捏合会缩放整个网页，
    * 这是移动端 H5 的常见坑，看图必须走查看器。
    */
+
+  /**
+   * D-806：详情长图也能点开放大 —— 复用 openImageViewer，不重写缩放逻辑。
+   *
+   * <p>为什么必须做：此前只有顶部轮播接了这个查看器，详情图（d-stack-img）上
+   * 没有任何点击处理 → 顾客想看面料纹理、走线细节时**只能干瞪眼**。
+   * 而这套查看器（捏合缩放 + 双击 + 放大后拖动）是上一轮刚为"图片不能缩放"
+   * 这个顾客反馈做的，能力已经有了，只是没复用过来。
+   *
+   * <p>用**一次性的全局事件委托**，不依赖任何模块闭包：
+   * 详情页是模块化渲染的，每个模块函数只 return HTML 字符串，拿不到闭包里的 d；
+   * 而图片此刻就在 DOM 里且按序排列，直接向 .d-stack 查即可，
+   * 这样也不必给每张图挂一个 onclick（重渲染会叠加监听器）。
+   * loading="lazy" 不影响 —— src 属性始终存在，未加载的图也拿得到 URL。
+   */
+  (function () {
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.classList || !t.classList.contains('d-stack-img')) return;
+      var box = t.closest('.d-stack');
+      if (!box) return;
+      var all = box.querySelectorAll('img.d-stack-img');
+      var imgs = [];
+      var start = 0;
+      for (var i = 0; i < all.length; i++) {
+        var u = all[i].getAttribute('src');
+        if (!u) continue;
+        if (all[i] === t) start = imgs.length;
+        imgs.push(u);
+      }
+      if (imgs.length) openImageViewer(imgs, start);
+    });
+  })();
+
   function openImageViewer(imgs, start) {
     imgs = (imgs || []).filter(Boolean);
     if (!imgs.length) return;

@@ -244,6 +244,35 @@ class ShopPublicExperienceTest {
     }
 
     @Test
+    @DisplayName("⑥.5 详情长图必须通栏贴边（D-806：此前图比屏幕窄、左右露白边）")
+    void detailStackImagesMustBeFullBleed() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("详情图坐在 .d-sec{padding:14px} 里，容器必须做 -14px 负边距抵消，"
+                        + "否则图比屏幕窄 —— 顾客一看就觉得「别家是平铺整个页面、我们不是」")
+                .contains(".d-stack{margin:0 -14px;}");
+        assertThat(s)
+                .as("与 .d-desc.rich img 的通栏手法必须一致，同一个详情段不能两种图宽")
+                .contains(".d-desc.rich img{width:calc(100% + 28px)");
+    }
+
+    @Test
+    @DisplayName("⑥.6 详情长图必须能点开放大 —— 复用 openImageViewer（D-806）")
+    void detailStackImagesMustOpenViewer() throws Exception {
+        String s = shopPage();
+        // 点开的是详情图本身
+        assertThat(s).as("详情图要有可识别的类名").contains("d-stack-img");
+        // 必须真的有监听器去接它，且复用同一套查看器
+        assertThat(s)
+                .as("此前只有顶部轮播接了查看器，详情图上没有任何点击处理，"
+                        + "顾客想看面料纹理/走线细节只能干瞪眼")
+                .contains("t.classList.contains('d-stack-img')");
+        assertThat(s)
+                .as("必须复用 openImageViewer（捏合/双击/拖动），不能另写一套缩放")
+                .contains("if (imgs.length) openImageViewer(imgs, start);");
+    }
+
+    @Test
     @DisplayName("⑥ 图片必须有兜底占位，且同时覆盖加载失败与加载到空图")
     void imageMustHaveFallback() throws Exception {
         String s = shopPage();
