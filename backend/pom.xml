@@ -29,7 +29,7 @@
         <poi.version>5.3.0</poi.version>
         <lombok.version>1.18.40</lombok.version>
         <!-- 编译和构建 -->
-        <maven.compiler.version>3.13.0</maven.compiler.version>
+        <maven.compiler.version>3.15.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
         <!-- D-743：Spring AI 2.0.0 GA（2026-06-12），专为 Boot 4 / Framework 7 构建；1.0 与 Framework 7 二进制不兼容（D-698） -->
