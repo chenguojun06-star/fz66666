@@ -273,6 +273,56 @@ class ShopPublicExperienceTest {
     }
 
     @Test
+    @DisplayName("⑥.7 详情必须是「一条龙」：图文同一个画布、尺码表不插在中间（D-807）")
+    void detailMustBeOneContinuousCanvas() throws Exception {
+        String s = shopPage();
+        // 图 + 富文本必须包在同一个画布里，各自带标题/边框会被切成一段段
+        assertThat(s).as("详情图与描述必须合成同一个 .d-detail-canvas").contains("d-detail-canvas");
+        assertThat(s)
+                .as("画布里不允许再出现「款式详情」这种没有信息量的区块标题 —— "
+                        + "每一个标题都是一个视觉断点")
+                .doesNotContain("<div class=\"lbl\">款式详情</div>");
+        // 尺码表必须移到阅读流之后：它是查阅型内容（顾客要找自己穿多大），
+        // 不该拦腰截断「按顺序读」的阅读流。
+        // 用 render 函数体内两处调用的实际先后顺序来断言，而不是靠字符距离猜。
+        // 锁的是**三段**顺序：图 → 文 → 尺码表。
+        // 只比「首次出现」是不够的 —— 曾写过 `isLessThan(firstOccurrence)`，
+        // 结果把尺码表塞回「图之后、文之前」时首现顺序没变、断言照样通过，
+        // 等于没测。必须逐段锁定。
+        String detailFn = s.substring(s.indexOf("detail: function (d)"),
+                                      s.indexOf("wash: function (d)"));
+        int imagesPos = detailFn.indexOf("detailImageStack(d)");
+        int textPos = detailFn.indexOf("richHtml(d.description)");
+        int chartPos = detailFn.indexOf("sizeChartHtml(d)");
+        assertThat(imagesPos).as("详情模块里应拼详情图栈").isGreaterThan(0);
+        assertThat(textPos).as("详情模块里应拼富文本描述").isGreaterThan(0);
+        assertThat(chartPos).as("详情模块里应调用尺码表").isGreaterThan(0);
+        assertThat(imagesPos).as("描述必须接在图后面，合成同一条画布").isLessThan(textPos);
+        assertThat(textPos).as("尺码表必须在图文之后，不能插在中间拦腰截断阅读流").isLessThan(chartPos);
+        // 还要锁住"图必须真的进了画布"：只比顺序不够
+        // —— 若在图栈之外再 render 一次，首现顺序不变、断言照样过，
+        // 但顾客看到的是两块。所以直接锁画布的初始化语句。
+        assertThat(detailFn)
+                .as("画布必须由图栈初始化，否则图会渲染到画布外面、又变成两块")
+                .contains("var canvas = detailImageStack(d);");
+        // 只锁初始化语句仍不够：若在图栈之外再 render 一次（h += detailImageStack(d)），
+        // 初始化语句和顺序都完好、断言照样过，但顾客看到的是两块。
+        // 所以直接禁止「图栈绕过画布进 h」。
+        assertThat(detailFn.split("h \\+= detailImageStack", -1).length - 1)
+                .as("图栈只允许进画布，不允许直接 append 到页面根上（否则顾客看到两块）")
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("⑥.8 画布里图与文之间不许有缝（D-807）")
+    void detailCanvasMustBeSeamless() throws Exception {
+        String s = shopPage();
+        assertThat(s)
+                .as("富文本跟在图栈后面时不允许再有上边距，否则图与文之间一道白缝")
+                .contains(".d-detail-canvas .d-desc.rich{margin-top:0;}");
+    }
+
+    @Test
     @DisplayName("⑥ 图片必须有兜底占位，且同时覆盖加载失败与加载到空图")
     void imageMustHaveFallback() throws Exception {
         String s = shopPage();

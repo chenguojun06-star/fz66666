@@ -157,6 +157,10 @@
      刻意不加 margin/border —— 淘宝详情页的图与图之间是无缝衔接的，
      加了间隙就会变成「一堆图片」而不是「一个整体」。 */
   .d-stack{background:var(--tb-card);}
+  /* D-807：详情「一条龙」画布 —— 图与文之间不许有缝 */
+  .d-detail-canvas .d-desc.rich{margin-top:0;}
+  .d-detail-canvas .d-stack{margin:0 -14px;}
+  .d-detail-canvas .d-desc.rich img{margin:6px -14px;}
   /* D-806：详情图**通栏贴边**，与 .d-desc.rich img 的 -14px 负边距同一套手法。
      
      为什么：此前 .d-stack img 只写 width:100%，而它坐在 .d-sec{padding:14px} 里，
@@ -1893,16 +1897,32 @@ title: function (d) {
           return h + '</table></div>';
         },
         detail: function (d) {
-          // D-805：详情图纵向连续流，放在详情模块里 —— 与淘宝一致，
-          // 顾客在「详情」段一路往下滑就看完整个描述。
-          var h = '<div id="anc-detail"></div>' + detailImageStack(d);
-          h += sizeChartHtml(d);
+          // D-807：详情「一条龙」。
+          //
+          // 淘宝/拼多多的详情是**一整条从上到下连着的画布**：图、文字、尺码表
+          // 由运营自己排好顺序，顾客一路往下滑就看完，中间没有「区块标题 + 边框」
+          // 把内容切成一段一段。
+          //
+          // 改动前的三个断点：
+          //   ① 详情图栈 和 富文本描述 是两个独立 .d-sec，各带标题和边框；
+          //   ② 尺码表插在**两者中间**，把阅读流拦腰截断；
+          //   ③ 「款式详情」这个标题对顾客没有信息量，只是又一个视觉断点。
+          //
+          // 现在：图 + 文合成同一个 .d-sec（保留 14px 内边距作为通栏基准，
+          // 两边的 -14px 负边距手法都依赖它）、去掉标题；
+          // 尺码表移到详情长图**之后** —— 它是查阅型内容（顾客要找自己穿多大），
+          // 不该打断「按顺序读」的阅读流。
+          var h = '<div id="anc-detail"></div>';
+          var canvas = detailImageStack(d);
           // D-781：款式详情若是生产工艺/工序资料，顾客端不展示（服务端已判定）。
           // 这里只是最后一道闸，不替代服务端判断。
           if (d.description && d.descriptionVisibleToCustomer !== false) {
-            h += '<div class="d-sec"><div class="lbl">款式详情</div>'
-              + '<div class="d-desc rich">' + richHtml(d.description) + '</div></div>';
+            canvas += '<div class="d-desc rich">' + richHtml(d.description) + '</div>';
           }
+          if (canvas) {
+            h += '<div class="d-sec d-detail-canvas">' + canvas + '</div>';
+          }
+          h += sizeChartHtml(d);
           if (d.remark) {
             h += '<div class="d-sec"><div class="lbl">商品说明</div>'
               + '<div class="d-desc">' + esc(d.remark) + '</div></div>';
