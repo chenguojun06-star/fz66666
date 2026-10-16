@@ -3,6 +3,7 @@ package com.fashion.supplychain.shop.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.shop.entity.ShopListingContent;
+import com.fashion.supplychain.shop.helper.ShopDetailBlockHelper;
 import com.fashion.supplychain.shop.mapper.ShopListingContentMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +68,13 @@ public class ShopListingContentOrchestrator {
         List<String> gallery = parseStringList(c.getGalleryJson());
         if (!gallery.isEmpty()) {
             m.put("gallery", gallery);
+        }
+        // D-808：纵向详情流与顶部轮播**分属两个字段** ——
+        // gallery 归顶部轮播（D-782 契约），blocks 归下面的纵向长图流。
+        // 这里不做 gallery 回落：回落会让同一批图在轮播和详情流里各出现一次。
+        List<Map<String, String>> blocks = ShopDetailBlockHelper.forCustomer(c.getBlocksJson());
+        if (!blocks.isEmpty()) {
+            m.put("blocks", blocks);
         }
         List<String> points = parseStringList(c.getPointsJson());
         if (!points.isEmpty()) {
@@ -149,8 +157,14 @@ public class ShopListingContentOrchestrator {
         m.put("brand", c.getBrand());
         m.put("priceNote", c.getPriceNote());
         m.put("sizeChart", c.getSizeChart());
+        // D-806：编辑端也要拿回内容块，否则保存一次就把交错顺序弄丢了
+        List<Map<String, String>> blocks = ShopDetailBlockHelper.parse(c.getBlocksJson());
+        if (!blocks.isEmpty()) {
+            m.put("blocks", blocks);
+        }
         return m;
     }
+
 
     /**
      * 保存。
@@ -171,6 +185,10 @@ public class ShopListingContentOrchestrator {
             c.setStyleId(styleId);
         }
         c.setGalleryJson(toJson(capList(body.get("gallery"), MAX_GALLERY)));
+        // D-806：图+文交错的内容块。与 gallery 并存：
+        // 有内容块时以它为准，没有时顾客端回退读 gallery（老数据零影响）。
+        List<Map<String, String>> blocks = ShopDetailBlockHelper.normalize(body.get("blocks"));
+        c.setBlocksJson(blocks.isEmpty() ? null : ShopDetailBlockHelper.toJson(blocks));
         c.setPointsJson(toJson(capList(body.get("points"), MAX_POINTS)));
         c.setFaqJson(toFaqJson(capFaq(body.get("faq"), MAX_FAQ)));
         c.setVideoUrl(trimToNull(body.get("videoUrl")));

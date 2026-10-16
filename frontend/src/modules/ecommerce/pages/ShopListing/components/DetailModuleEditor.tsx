@@ -25,7 +25,7 @@ type ModuleItem = {
  * 否则商家看到「尺码选择」没有输入框，只会以为系统坏了。
  */
 const MODULE_META: Record<string, { desc: string; source?: string }> = {
-  gallery: { desc: '顾客端详情页第一屏的大图轮播。这里配的图会盖过主图。' },
+  gallery: { desc: '顾客端顶部大图轮播。没设主图时才用这里配的图；设了主图就以主图为准。' },
   price: {
     desc: '顾客端展示售价、库存与配送。',
     source: '来自「规格与价格库存」里每个 SKU 的售价与可售数量，实时算出来，不用在这里填。',

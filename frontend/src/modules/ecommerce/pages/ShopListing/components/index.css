@@ -150,3 +150,23 @@
   color: #fff;
   font-size: 13px;
 }
+/* D-808：图文交错的文字块编辑区 */
+.deic__text-body {
+  padding: 16px;
+}
+.deic__text-hint {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.deic__add-row {
+  display: flex;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 750px;
+}
+.deic__add-row > * {
+  flex: 1;
+}
+.deic__add-row .deic__add {
+  max-width: none;
+}

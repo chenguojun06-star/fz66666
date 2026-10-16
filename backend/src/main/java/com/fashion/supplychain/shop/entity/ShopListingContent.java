@@ -31,6 +31,19 @@ public class ShopListingContent {
     /** 轮播图 URL 数组（JSON 字符串），已按顺序排列，第 1 张即主图 */
     private String galleryJson;
 
+    /**
+     * D-806：详情描述内容块（JSON 数组），支持图与文按顺序交错。
+     *
+     * <p>形如 {@code [{"type":"image","url":"..."},{"type":"text","content":"..."}]}。
+     *
+     * <p><b>为什么不直接用 galleryJson 存</b>：gallery 只能表达「一串图」，
+     * 表达不了「这段文字夹在第 2、3 张图之间」—— 而这正是淘宝详情页的形态。
+     *
+     * <p><b>兼容</b>：为空时前端与顾客端一律回退读 galleryJson，
+     * 老数据零影响，不需要回填、不需要双写。
+     */
+    private String blocksJson;
+
     private String videoUrl;
 
     private String brand;

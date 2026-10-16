@@ -38,8 +38,18 @@ export type ListingFilter = 'all' | 'listed' | 'unlisted';
  * <p>D-785 起由各模块自己的编辑器维护（见 DetailModuleContent），
  * 声明放在这里，避免组件之间互相 import 类型形成环。
  */
+/** D-808：详情描述内容块 —— 图与文按顺序交错（淘宝详情页的形态） */
+export type DetailBlock =
+  | { type: 'image'; url: string }
+  | { type: 'text'; content: string };
+
 export type ListingContent = {
   gallery: string[];
+  /**
+   * D-808：图+文交错的内容块。有它时顾客端按它渲染，
+   * 没有则回退用 gallery（老数据零影响）。
+   */
+  blocks?: DetailBlock[];
   videoUrl: string | null;
   brand: string | null;
   /** 手工尺码表；留空则按 SKU 矩阵自动生成 */

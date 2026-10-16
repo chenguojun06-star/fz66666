@@ -253,13 +253,48 @@ def main():
                         )
                         break
 
-    # 详情图不该再进顶部轮播：轮播是 1:1 方块，详情图是纵向长图，混在一起顺序就失效了
+    # D-808：顶部轮播与纵向详情流**分属两个字段**。
+    # 顶部轮播：主图组 > 手填 gallery（D-782 契约，测试有守护）> 主图+颜色图回落
     gallery_fn = re.search(r"function galleryImages.*?\n  \}", js, re.S)
-    if gallery_fn and "d.gallery" in gallery_fn.group(0):
+    if not gallery_fn:
+        fail("缺少 galleryImages() —— 顶部轮播没有图片清单逻辑")
+    else:
+        gbody = gallery_fn.group(0)
+        # 同样不能只查字符串：把分支条件改成 false 后，循环里的
+        # d.coverGroup[cg] 仍会让字符串检查通过（实测踩过）。
+        if not re.search(r"d\.coverGroup\s*&&\s*d\.coverGroup\.length", gbody):
+            fail(
+                "galleryImages() 没有以主图组为条件的分支 —— "
+                "设了主图（D-801 的 5 张）的款式轮播会继续用旧图"
+            )
+        # 只查 "d.gallery" 这个字符串出现过是不够的：把分支条件改成 `false`
+        # 循环里的 d.gallery[i] 仍然存在，字符串检查照样通过 —— 实测过，守不住。
+        # 必须查**真的存在一个以手填图为条件的分支**，且它排在自动回落之前。
+        mbranch = re.search(r"d\.gallery\s*&&\s*d\.gallery\.length", gbody)
+        if not mbranch:
+            fail(
+                "galleryImages() 里没有以手填图为条件的分支 —— 违反 D-782 契约："
+                "商家排的轮播顺序在顾客端看不出任何变化"
+            )
+        else:
+            # 注意：不能用 find("d.cover") —— 它会匹配到 d.coverGroup 里面去，
+            # 而 coverGroup 一定排在最前面，于是手填分支永远被判为「排在回落之后」，
+            # 正确版本也会误报（实测踩过）。
+            mback = re.search(r"d\.cover(?!Group)", gbody)
+            mfback = mback.start() if mback else -1
+            if mfback >= 0 and mbranch.start() > mfback:
+                fail(
+                    "galleryImages() 里手填图的分支排在自动回落之后 —— "
+                    "优先级反了，设了主图的款式会一直用旧轮播"
+                )
+
+    # 纵向详情流只认 blocks，绝不回落 gallery：
+    # 两个字段混用会让同一批图在顶部轮播和下方详情流里各出现一次。
+    stack_fn = re.search(r"function detailImageStack.*?\n  \}", js, re.S)
+    if stack_fn and "d.gallery" in stack_fn.group(0):
         fail(
-            "galleryImages() 又把 d.gallery 塞进顶部轮播了 —— "
-            "详情图必须由 detailImageStack 纵向渲染，"
-            "塞进 1:1 轮播等于配了等于没配"
+            "detailImageStack() 回落了 d.gallery —— gallery 已归顶部轮播，"
+            "纵向流再用它会导致同一批图在顾客端出现两次（D-808 拆分契约）"
         )
 
     return report()

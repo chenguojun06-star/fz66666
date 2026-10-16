@@ -4,10 +4,10 @@ import {
   DeleteOutlined, LeftOutlined, PictureOutlined, PlusOutlined, RightOutlined, StarFilled,
 } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
-import DetailImageCanvasEditor from './DetailImageCanvasEditor';
+import DetailCanvasEditor from './DetailCanvasEditor';
 import api from '@/utils/api';
 import { looksLikeProductionContent, PRODUCTION_CONTENT_HINT } from '../listingCompliance';
-import type { ListingContent } from '../types';
+import type { DetailBlock, ListingContent } from '../types';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -55,9 +55,14 @@ export interface ModuleContentCtx {
 const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   const { content, setContent } = ctx;
   const [uploadingVideo, setUploadingVideo] = useState(false);
-  /** D-803：详情描述整条画布 */
+  /** D-808：详情描述整条画布（图 + 文交错） */
   const [canvasOpen, setCanvasOpen] = useState(false);
   const patch = (p: Partial<ListingContent>) => setContent({ ...content, ...p });
+
+  // D-808：纵向详情流只看 blocks，与 gallery（顶部轮播回落）**各管一件事**。
+  // 不从 gallery 派生 —— 派生会让运营改详情流时把轮播图也一起搬走。
+  const blocks: DetailBlock[] = content.blocks ?? [];
+  const blockCount = blocks.length;
 
   const moveImage = (idx: number, dir: -1 | 1) => {
     const next = [...content.gallery];
@@ -85,9 +90,10 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
 
   return (
     <div className="shop-edit__block">
-      <div className="shop-edit__field-label">轮播图</div>
+      <div className="shop-edit__field-label">顶部轮播回落图</div>
       <Text type="secondary" className="shop-listing__hint">
-        顾客端详情页第一屏的图片，按从左到右轮流播放。留空时自动回落「主图 + 各颜色图」。
+        <b>只有没设主图时才会用到这里。</b>设了主图（5 张那组）后这一组不再出现在顾客端 ——
+        改它看不到变化不是坏了，是它已经让位给主图。
       </Text>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
         {content.gallery.slice(0, 5).map((url, i) => (
@@ -144,17 +150,17 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
           92px 小方块看不出「从上到下」的整体顺序，那是运营最需要看的一件事。 */}
       <div className="shop-listing__detail-canvas-entry">
         <Button type="primary" size="middle" icon={<PictureOutlined />} onClick={() => setCanvasOpen(true)}>
-          批量编辑详情图（{content.gallery.length} 张）
+          编辑详情长图（图 + 文，{blockCount} 块）
         </Button>
         <Text type="secondary" className="shop-listing__hint">
-          点开后可按真实宽度从上到下连续排列，支持排序、批量删除与大图预览；PC 端与手机端用同一份内容。
+          图和文字按你排的顺序从上到下连成一条（淘宝详情页的形态）。PC 端与手机端用同一份内容。
         </Text>
       </div>
 
-      <DetailImageCanvasEditor
+      <DetailCanvasEditor
         open={canvasOpen}
-        images={content.gallery}
-        onChange={(urls) => patch({ gallery: urls })}
+        blocks={blocks}
+        onChange={(next) => patch({ blocks: next })}
         onClose={() => setCanvasOpen(false)}
       />
     </div>

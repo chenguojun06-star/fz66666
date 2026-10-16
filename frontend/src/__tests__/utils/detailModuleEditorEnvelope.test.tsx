@@ -102,7 +102,7 @@ describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
     mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     // 「图片轮播」展开后应能看到轮播图输入区
-    await waitFor(() => expect(screen.getByText('轮播图')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('顶部轮播回落图')).toBeTruthy());
   });
 
   it('没有内容的模块要说清来源，而不是留一个空输入框', async () => {
@@ -121,7 +121,10 @@ describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('价格与库存')).toBeTruthy());
     // D-800 起模块改为平铺（不再折叠），说明文字始终可见 —— 直接断言。
-    expect(screen.getByText(/顾客端详情页第一屏/)).toBeTruthy();
+    // D-808：展开区里必须说清真实优先级 —— D-801 之后「设了主图就以主图为准」，
+    // 原文案「这里配的图会盖过主图」已经不成立，留在页面上是在骗运营
+    // （他们会改半天看不到任何变化）。
+    expect(screen.getByText(/只有没设主图时/)).toBeTruthy();
     // 平铺结构：每个模块都有自己的内容区
     expect(document.querySelectorAll('.shop-module-item-body').length).toBeGreaterThan(0);
   });

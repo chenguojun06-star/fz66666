@@ -50,7 +50,10 @@ describe('详情页模块内容编辑区（D-785）', () => {
 
   it('轮播图与视频入口在「图片轮播」模块里', () => {
     renderModule('gallery');
-    expect(screen.getByText('轮播图')).toBeTruthy();
+    // D-808：顶部轮播与纵向详情流拆成两个字段后，这一组是
+    // 「没设主图时才生效的回落图」—— 标签必须说清，否则商家改了半天看不到变化
+    expect(screen.getByText('顶部轮播回落图')).toBeTruthy();
+    expect(screen.getByText(/只有没设主图时/)).toBeTruthy();
     expect(screen.getByText('商品视频')).toBeTruthy();
   });
 

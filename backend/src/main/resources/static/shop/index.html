@@ -172,6 +172,11 @@
   .d-stack{margin:0 -14px;}
   .d-stack img{display:block;width:100%;height:auto;}
   .d-stack-fail{padding:24px 14px;text-align:center;font-size:12px;color:var(--tb-sub);}
+  /* D-808：文字块。留白与图片一致，整条流才是一个整体而不是拼贴。 */
+  .d-stack-text{padding:16px 14px;font-size:14px;line-height:1.9;color:var(--tb-text);word-break:break-word;}
+  .d-stack-text p{margin:0 0 8px;}
+  .d-stack-text p:last-child{margin-bottom:0;}
+  .d-stack-text img{max-width:100%;height:auto;display:block;margin:8px 0;}
 
   /* ── D-802 详情页统一外壳 ────────────────────────────────────────────
      为什么加：详情页原来只有「一块块白卡片」（模块间 8px 灰缝），
@@ -820,6 +825,14 @@
       for (var cg = 0; cg < d.coverGroup.length; cg++) {
         if (d.coverGroup[cg] && imgs.indexOf(d.coverGroup[cg]) < 0) imgs.push(d.coverGroup[cg]);
       }
+    } else if (d.gallery && d.gallery.length) {
+      // D-782 契约：商家手填的图必须优先于「主图+颜色图」自动回落，
+      // 否则商家调了顺序在顾客端看不出任何变化。D-805 一度把这一支删掉，
+      // 那是把「顶部轮播」和「纵向详情流」当成同一个字段用两个意思 ——
+      // 详情流已改由 blocks 承担（D-808），这里恢复原契约。
+      for (var g2 = 0; g2 < d.gallery.length; g2++) {
+        if (d.gallery[g2] && imgs.indexOf(d.gallery[g2]) < 0) imgs.push(d.gallery[g2]);
+      }
     } else {
       if (d.cover) imgs.push(d.cover);
       var ci = d.colorImages || {};
@@ -840,14 +853,26 @@
    * <p>没有详情图时返回空串 —— 上层会自动跳过，不给顾客留空白块。
    */
   function detailImageStack(d) {
-    var g = d.gallery || [];
-    var h = '';
-    for (var i = 0; i < g.length; i++) {
-      if (!g[i]) continue;
-      h += '<img class="d-stack-img" data-gi="' + i + '" src="' + esc(g[i]) + '" alt="" loading="lazy"'
-        + ' onerror="this.outerHTML=\'&lt;div class=&quot;d-stack-fail&quot;&gt;图片加载失败&lt;/div&gt;\'">';
+    // D-808：纵向详情流只认 blocks（图/文交错）。
+    // **不回落到 gallery** —— gallery 归顶部轮播，两边都用它会导致
+    // 同一批图在轮播和详情流里各出现一次，顾客看到重复。
+    // 没有 blocks 就是没有详情流，不生成、不兜底。
+    if (d.blocks && d.blocks.length) {
+      var bh = '';
+      for (var bi = 0; bi < d.blocks.length; bi++) {
+        var blk = d.blocks[bi];
+        if (!blk) continue;
+        if (blk.type === 'image' && blk.url) {
+          bh += '<img class="d-stack-img" src="' + esc(blk.url) + '" alt="" loading="lazy"'
+            + ' onerror="this.outerHTML=\'&lt;div class=&quot;d-stack-fail&quot;&gt;图片加载失败&lt;/div&gt;\'">';
+        } else if (blk.type === 'text' && blk.content) {
+          // 商家输入不直接当 HTML 塞页面，走 richHtml 白名单 + 转义
+          bh += '<div class="d-stack-text">' + richHtml(blk.content) + '</div>';
+        }
+      }
+      return bh ? '<div class="d-stack">' + bh + '</div>' : '';
     }
-    return h ? '<div class="d-stack">' + h + '</div>' : '';
+    return '';
   }
 
   /**
@@ -1916,7 +1941,10 @@ title: function (d) {
           var canvas = detailImageStack(d);
           // D-781：款式详情若是生产工艺/工序资料，顾客端不展示（服务端已判定）。
           // 这里只是最后一道闸，不替代服务端判断。
-          if (d.description && d.descriptionVisibleToCustomer !== false) {
+          // D-808：内容块里已包含商家排好的文字时，不再额外渲染 description，
+          // 否则同一段文字会出现两遍。descriptionVisibleToCustomer 仍是闸门。
+          if (!(d.blocks && d.blocks.length)
+              && d.description && d.descriptionVisibleToCustomer !== false) {
             canvas += '<div class="d-desc rich">' + richHtml(d.description) + '</div>';
           }
           if (canvas) {
