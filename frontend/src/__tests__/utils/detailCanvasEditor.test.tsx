@@ -137,4 +137,68 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
 
     expect(screen.getByText('还没有详情内容')).toBeTruthy();
   });
+
+
+  it('D-810：给图片加说明 → 插到该图正下方并标记为图注', () => {
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
+
+    // 给第 1 张图（图块在 index 0）加说明
+    fireEvent.click(screen.getAllByRole('button', { name: '给这张图加说明' })[0]);
+
+    expect(onChange).toHaveBeenCalledWith([
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '', caption: true },
+      { type: 'text', content: '卖点：透气' },
+      { type: 'image', url: 'b.jpg' },
+    ]);
+  });
+
+  it('D-810：图注标记不能被编辑文字时抹掉', () => {
+    const withCaption: DetailBlock[] = [
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '说明', caption: true },
+    ];
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={withCaption} onChange={onChange} onClose={() => {}} />);
+
+    const box = screen.getByRole('textbox', { name: '第 2 块文字' });
+    box.innerHTML = '改过的说明';
+    fireEvent.input(box);
+
+    // 整个对象重建就会把 caption 丢掉，图注样式随之失效
+    expect(onChange).toHaveBeenCalledWith([
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '改过的说明', caption: true },
+    ]);
+  });
+
+  it('D-810：关闭图注开关只改标记，不动内容与顺序', () => {
+    const withCaption: DetailBlock[] = [
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '说明', caption: true },
+    ];
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={withCaption} onChange={onChange} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(onChange).toHaveBeenCalledWith([
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '说明', caption: false },
+    ]);
+  });
+
+  it('D-810：图注与普通文字在统计里分开计数', () => {
+    const mixed: DetailBlock[] = [
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '说明', caption: true },
+      { type: 'text', content: '段落' },
+    ];
+    render(<DetailCanvasEditor open blocks={mixed} onChange={() => {}} onClose={() => {}} />);
+
+    expect(screen.getByText('1 图')).toBeTruthy();
+    expect(screen.getByText('2 段文字')).toBeTruthy();
+    expect(screen.getByText('1 条图注')).toBeTruthy();
+  });
 });

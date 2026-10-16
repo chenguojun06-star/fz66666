@@ -79,7 +79,11 @@ public final class ShopDetailBlockHelper {
                 if (content.length() > MAX_TEXT_LEN) {
                     content = content.substring(0, MAX_TEXT_LEN);
                 }
-                out.add(block("text", content, null));
+                // D-810：caption=1 表示这段文字是「上面那张图的说明」，
+                // 顾客端会用图注样式（紧贴图片、无大间距、字号小一号）。
+                // 运营不勾就是普通段落，行为与 D-809 一致。
+                String caption = b.get("caption");
+                out.add(block("text", content, null, "1".equals(caption) || "true".equals(caption)));
             }
         }
         return out;
@@ -182,6 +186,10 @@ public final class ShopDetailBlockHelper {
             Pattern.CASE_INSENSITIVE);
 
     private static Map<String, String> block(String type, String content, String url) {
+        return block(type, content, url, false);
+    }
+
+    private static Map<String, String> block(String type, String content, String url, boolean caption) {
         Map<String, String> m = new LinkedHashMap<>();
         m.put("type", type);
         if (content != null) {
@@ -189,6 +197,10 @@ public final class ShopDetailBlockHelper {
         }
         if (url != null) {
             m.put("url", url);
+        }
+        // 只在图注时才带这个键，避免每段普通文字都多一个字段
+        if (caption) {
+            m.put("caption", "1");
         }
         return m;
     }
@@ -230,6 +242,10 @@ public final class ShopDetailBlockHelper {
                     }
                     if (c != null) {
                         one.put("content", String.valueOf(c));
+                    }
+                    Object cap = m.get("caption");
+                    if (cap != null) {
+                        one.put("caption", String.valueOf(cap));
                     }
                     out.add(one);
                 }

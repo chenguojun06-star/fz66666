@@ -41,7 +41,16 @@ export type ListingFilter = 'all' | 'listed' | 'unlisted';
 /** D-808：详情描述内容块 —— 图与文按顺序交错（淘宝详情页的形态） */
 export type DetailBlock =
   | { type: 'image'; url: string }
-  | { type: 'text'; content: string };
+  | {
+      type: 'text';
+      content: string;
+      /**
+       * D-810：作为「上面那张图的说明」。
+       * 淘宝详情页的说明文字是紧贴图片下方的，不是一个独立区块 ——
+       * 不区分时，顾客看到的是「图 + 一个新段落」，观感割裂。
+       */
+      caption?: boolean;
+    };
 
 export type ListingContent = {
   gallery: string[];

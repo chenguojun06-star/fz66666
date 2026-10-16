@@ -177,4 +177,42 @@ class ShopDetailBlockHelperTest {
         org.junit.jupiter.api.Assertions.assertFalse(out.get(0).get("content").contains("onclick"),
                 out.get(0).get("content"));
     }
+
+    @Test
+    @DisplayName("D-810：图注标记能存能取，且不影响顺序")
+    void keepsCaptionFlag() {
+        String json = ShopDetailBlockHelper.toJson(Arrays.asList(
+                img("a.jpg"),
+                new java.util.LinkedHashMap<>(Map.of("type", "text", "content", "说明", "caption", "1"))));
+
+        List<Map<String, String>> out = ShopDetailBlockHelper.parse(json);
+
+        assertEquals(2, out.size());
+        assertEquals("image", out.get(0).get("type"));
+        assertEquals("1", out.get(1).get("caption"));
+        assertEquals("说明", out.get(1).get("content"));
+    }
+
+    @Test
+    @DisplayName("D-810：普通文字段不带 caption 键（不制造无意义的字段）")
+    void plainTextHasNoCaptionKey() {
+        List<Map<String, String>> out = ShopDetailBlockHelper.normalize(List.of(txt("普通段落")));
+
+        org.junit.jupiter.api.Assertions.assertFalse(out.get(0).containsKey("caption"));
+    }
+
+    @Test
+    @DisplayName("D-810：caption 只是样式开关，不影响内容清洗")
+    void captionDoesNotBypassSanitize() {
+        Map<String, String> cap = new java.util.LinkedHashMap<>();
+        cap.put("type", "text");
+        cap.put("content", "<p onclick=\"x()\">说明</p>");
+        cap.put("caption", "1");
+
+        List<Map<String, String>> out = ShopDetailBlockHelper.normalize(List.of(cap));
+
+        assertEquals("1", out.get(0).get("caption"));
+        org.junit.jupiter.api.Assertions.assertFalse(out.get(0).get("content").contains("onclick"),
+                "勾了图注也不能跳过清洗");
+    }
 }

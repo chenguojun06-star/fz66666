@@ -231,3 +231,14 @@
   font-size: 15px;
   font-weight: 600;
 }
+
+/* D-810：图注开关 */
+.deic__text-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.deic__text-actions .deic__text-hint {
+  margin-bottom: 0;
+}

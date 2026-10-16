@@ -177,6 +177,9 @@
   .d-stack-text p{margin:0 0 8px;}
   .d-stack-text p:last-child{margin-bottom:0;}
   .d-stack-text img{max-width:100%;height:auto;display:block;margin:8px 0;}
+  /* D-810 图注：这是「上面那张图的说明」，不是新的一段内容。
+     所以内边距要小、字号要小、颜色要弱，让它读起来属于图而不是属于版面。 */
+  .d-stack-text--cap{padding:10px 14px;font-size:13px;line-height:1.75;color:var(--tb-sub);text-align:center;}
 
   /* ── D-802 详情页统一外壳 ────────────────────────────────────────────
      为什么加：详情页原来只有「一块块白卡片」（模块间 8px 灰缝），
@@ -867,7 +870,11 @@
             + ' onerror="this.outerHTML=\'&lt;div class=&quot;d-stack-fail&quot;&gt;图片加载失败&lt;/div&gt;\'">';
         } else if (blk.type === 'text' && blk.content) {
           // 商家输入不直接当 HTML 塞页面，走 richHtml 白名单 + 转义
-          bh += '<div class="d-stack-text">' + richHtml(blk.content) + '</div>';
+          // D-810：caption=1 是「上一张图的说明」—— 紧贴图片、无大间距、字号小一号，
+          // 与淘宝详情页的图注观感一致；不标则按普通段落渲染。
+          var isCap = blk.caption === '1' || blk.caption === true;
+          bh += '<div class="d-stack-text' + (isCap ? ' d-stack-text--cap' : '') + '">'
+            + richHtml(blk.content) + '</div>';
         }
       }
       return bh ? '<div class="d-stack">' + bh + '</div>' : '';

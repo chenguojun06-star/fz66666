@@ -4,6 +4,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Switch,
   Tag,
   Tooltip,
   Typography,
@@ -18,6 +19,7 @@ import {
   FontSizeOutlined,
   InboxOutlined,
   PictureOutlined,
+  CommentOutlined,
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
@@ -65,6 +67,7 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
   const remain = MAX_BLOCKS - list.length;
   const imgCount = list.filter((b) => b.type === 'image').length;
   const txtCount = list.length - imgCount;
+  const captionCount = list.filter((b) => b.type === 'text' && b.caption).length;
 
   /** 只提示不拦截：传满 20 块才被拦等于让运营白传一遍（D-778 既定约定） */
   const checkSize = useCallback(async (file: File) => {
@@ -149,6 +152,31 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     [list, onChange],
   );
 
+  /** D-810：给某张图加说明 —— 插到该图正下方并标记为图注，
+   *  一步完成「图 + 紧贴的说明」，不必手动挪位置再切样式。 */
+  const addCaptionFor = useCallback(
+    (index: number) => {
+      if (remain <= 0) {
+        message.warning(`详情描述最多 ${MAX_BLOCKS} 个内容块，已达上限`);
+        return;
+      }
+      const next = [...list];
+      next.splice(index + 1, 0, { type: 'text', content: '', caption: true });
+      onChange(next);
+    },
+    [remain, list, onChange],
+  );
+
+  const toggleCaption = useCallback(
+    (index: number) => {
+      const next = [...list];
+      const cur = next[index];
+      if (cur.type === 'text') next[index] = { ...cur, caption: !cur.caption };
+      onChange(next);
+    },
+    [list, onChange],
+  );
+
   const addText = useCallback(() => {
     if (remain <= 0) {
       message.warning(`详情描述最多 ${MAX_BLOCKS} 个内容块，已达上限`);
@@ -161,7 +189,8 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     (index: number, content: string) => {
       const next = [...list];
       const cur = next[index];
-      if (cur.type === 'text') next[index] = { type: 'text', content };
+      // 用展开写法而不是整个对象重建：否则会把 caption 标记抹掉
+      if (cur.type === 'text') next[index] = { ...cur, content };
       onChange(next);
     },
     [list, onChange],
@@ -196,6 +225,7 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
               </Tag>
               <Tag>{imgCount} 图</Tag>
               <Tag>{txtCount} 段文字</Tag>
+              {captionCount > 0 && <Tag color="gold">{captionCount} 条图注</Tag>}
               <Text type="secondary" className="deic__spec">
                 单图建议宽 {MIN_W}–{MAX_W}px、高 ≤{MAX_H}px，支持 png/jpg
               </Text>
@@ -237,7 +267,13 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                 <div className="deic__item-bar">
                   <Space size={8}>
                     <Tag color="blue">第 {i + 1} 块</Tag>
-                    {b.type === 'image' ? <Tag color="cyan">图片</Tag> : <Tag color="purple">文字</Tag>}
+                    {b.type === 'image' ? (
+                      <Tag color="cyan">图片</Tag>
+                    ) : b.caption ? (
+                      <Tag color="gold">图注</Tag>
+                    ) : (
+                      <Tag color="purple">文字</Tag>
+                    )}
                     {i === 0 && <Tag color="orange">详情页第一屏</Tag>}
                   </Space>
                   <Space size={4}>
@@ -261,6 +297,18 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                         onClick={() => move(i, 1)}
                       />
                     </Tooltip>
+                    {b.type === 'image' && (
+                      <Tooltip title="给这张图加说明">
+                        <Button
+                          size="middle"
+                          type="text"
+                          aria-label="给这张图加说明"
+                          icon={<CommentOutlined />}
+                          disabled={remain <= 0}
+                          onClick={() => addCaptionFor(i)}
+                        />
+                      </Tooltip>
+                    )}
                     {b.type === 'image' && (
                       <Tooltip title="查看大图">
                         <Button
@@ -297,6 +345,16 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                     <Paragraph type="secondary" className="deic__text-hint">
                       这段文字会显示在顾客端第 {i + 1} 块的位置，夹在图片之间
                     </Paragraph>
+                    <div className="deic__text-actions">
+                      <Switch
+                        size="small"
+                        checked={!!b.caption}
+                        onChange={() => toggleCaption(i)}
+                      />
+                      <Text type="secondary" className="deic__text-hint">
+                        作为上一张图的说明（紧贴图片显示，不单独占一段）
+                      </Text>
+                    </div>
                     <RichTextField
                       value={b.content}
                       onChange={(html) => updateText(i, html)}
