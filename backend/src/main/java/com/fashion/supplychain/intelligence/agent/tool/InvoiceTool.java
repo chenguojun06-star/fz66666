@@ -417,7 +417,12 @@ public class InvoiceTool extends AbstractAgentTool {
         invoice.setStatus("issued");
         invoice.setIssueDate(java.time.LocalDate.now());
         invoiceService.updateById(invoice);
-        return successJson("开票成功", Map.of("invoiceId", invoiceId, "status", "issued"));
+        // D-815：措辞必须与事实一致。本系统未接入税局/税控盘（见 InvoiceOrchestrator），
+        // 这里只是把内部台账标记为已开具，返回「开票成功」会被 AI 当成真的发票开出去了 ——
+        // 而这张记录不能作为报销或入账凭证。AI 的回答会被直接采信，风险比前端按钮更大。
+        return successJson(
+                "已在内部台账标记为已开票（未连接税局，不是真实发票，不能作为报销凭证）",
+                Map.of("invoiceId", invoiceId, "status", "issued", "realTaxInvoiceIssued", false));
     }
 
     private String cancelInvoice(Map<String, Object> args) throws Exception {

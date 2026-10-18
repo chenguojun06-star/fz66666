@@ -382,6 +382,11 @@ public class FinanceTaxExportOrchestrator {
         QueryWrapper<Invoice> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
         qw.eq("delete_flag", 0);
+        // D-815：**必须过滤状态**，否则未开票的 DRAFT 草稿会被导进「月度税务汇总」。
+        // 这张表是拿去报税的，混进草稿等于用没开的票去申报；且 invoice_no 是本系统
+        // 生成的、并非税局号码，报上去也是错的。
+        // 只导出已标记为已开具的记录；作废的单独统计，不混在销售额里。
+        qw.in("status", java.util.List.of("ISSUED", "CANCELLED"));
         if (startDate != null && !startDate.isBlank()) {
             qw.ge("create_time", startDate + " 00:00:00");
         }

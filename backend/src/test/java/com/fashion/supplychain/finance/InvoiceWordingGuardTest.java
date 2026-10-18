@@ -85,4 +85,37 @@ class InvoiceWordingGuardTest {
                 "必须写明票号不是税局下发的");
         assertTrue(s.contains("不能作为报销"), "必须写明不能作为报销凭证");
     }
+
+    @Test
+    @DisplayName("D-815 税务汇总导出必须过滤状态：草稿不能进报税表")
+    void taxExportMustExcludeDrafts() throws IOException {
+        Path p = Paths.get("src", "main", "java", "com", "fashion", "supplychain",
+                "finance", "orchestration", "FinanceTaxExportOrchestrator.java");
+        String s = Files.readString(p, StandardCharsets.UTF_8);
+
+        // 精确定位到真正建表的那一行，而不是注释里出现的字样 ——
+        // 用 indexOf("月度税务汇总") 会先命中方法注释，导致取到的片段不含查询条件，
+        // 测试会「因为找错地方」而恒绿或恒红，都是假信号。
+        int taxExport = s.indexOf("createSheet(\"月度税务汇总\")");
+        assertTrue(taxExport > 0, "应能找到税务汇总导出代码");
+        String block = s.substring(Math.max(0, taxExport - 3000), taxExport);
+        assertTrue(block.contains("status"),
+                "税务汇总查询必须带 status 条件 —— 否则未开票的 DRAFT 草稿会被导进报税表，"
+                        + "等于用没开的票去申报（且票号并非税局下发）");
+        assertFalse(block.contains("\"DRAFT\""),
+                "税务汇总查询里不应出现 DRAFT：草稿不是发票，不能进报税口径");
+    }
+
+    @Test
+    @DisplayName("D-815 AI 开票工具不得回答「开票成功」")
+    void aiToolMustNotClaimRealInvoice() throws IOException {
+        Path p = Paths.get("src", "main", "java", "com", "fashion", "supplychain",
+                "intelligence", "agent", "tool", "InvoiceTool.java");
+        String s = Files.readString(p, StandardCharsets.UTF_8);
+
+        assertFalse(s.contains("\"开票成功\""),
+                "AI 回答会被直接采信，说「开票成功」比前端按钮更容易误导");
+        assertTrue(s.contains("未连接税局"), "必须说明未连接税局");
+        assertTrue(s.contains("realTaxInvoiceIssued"), "应显式给出「是否真实发票」标记供 AI 判断");
+    }
 }
