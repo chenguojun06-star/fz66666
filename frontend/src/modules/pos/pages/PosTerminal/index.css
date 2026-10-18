@@ -24,9 +24,9 @@
   gap: 8px;
 }
 
-/* 本单固定宽 + 选货自适应。
-   宽度固定是**功能需求**不是审美：收银员靠肌肉记忆定位收款键/删除键，
-   百分比宽度会让这些锚点每换一块屏就漂移，高峰期直接变成排队变慢。 */
+/* 本单 : 选货 = 7 : 3
+   比例布局，按主次分配屏幕 —— 本单是收银员盯得最久的地方（对价、改价、收款），
+   选货只是扫码入口，够用即可。 */
 .pos-body {
   display: flex;
   align-items: flex-start;
@@ -34,21 +34,28 @@
 }
 
 .pos-body__bill {
-  flex: 0 0 420px;
-  width: 420px;
+  flex: 0 0 70%;
+  width: 70%;
   min-width: 0;
 }
 
 .pos-body__pick {
-  flex: 1 1 auto;
+  flex: 1 1 30%;
+  width: 30%;
   min-width: 0;
 }
 
-/* 窄屏放弃固定宽（本来就挤，固定宽会把选货区压没），改为上下堆叠 */
+/* 窄屏放弃比例（本来就挤），改为上下堆叠 */
 @media (max-width: 1100px) {
   .pos-body {
     flex-direction: column;
   }
+  .pos-body__bill,
+  .pos-body__pick {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
   .pos-body__bill {
     flex: 1 1 auto;
     width: 100%;
@@ -217,6 +224,8 @@
    收款键必须常驻同一个位置：专业收银不靠"滚动去找按钮"，
    那样高峰期每单都要多花一两秒在找按钮上。 */
 .pos-paybar {
+  /* 收款键位置恒定：收银员不用滚动去找按钮。
+     现在收款条在本单栏内，宽度跟着本单走，不再横跨整页。 */
   position: sticky;
   bottom: 0;
   z-index: 5;

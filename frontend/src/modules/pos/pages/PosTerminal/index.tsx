@@ -865,6 +865,50 @@ const PosTerminal: React.FC = () => {
                   ]}
                 />
               </Card>
+            {/* 吸底收款条：专业收银的收款键位置恒定，收银员不用低头找。
+                应收/实收/找零/收款全部集中在这里，表单区只管填单。 */}
+            <div className="pos-paybar">
+              <div className="pos-paybar__due">
+                <span className="pos-paybar__label">应收</span>
+                <span className="pos-paybar__num">{formatMoney(totalAmount)}</span>
+              </div>
+
+              {payMethod === 'CASH' ? (
+                <>
+                  <div className="pos-paybar__field">
+                    <span className="pos-paybar__label">实收现金</span>
+                    <InputNumber
+                      value={received}
+                      min={0}
+                      precision={2}
+                      placeholder="点右侧键盘输入"
+                      style={{ width: 130 }}
+                      onChange={(v) => setReceived(v == null ? null : Number(v))}
+                    />
+                    <Button icon={<CalculatorOutlined />} onClick={() => setCashOpen(true)}>
+                      键盘
+                    </Button>
+                  </div>
+                  <div className="pos-paybar__field">
+                    <span className="pos-paybar__label">找零</span>
+                    <span className="pos-paybar__change">
+                      {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
+                    </span>
+                  </div>
+                </>
+              ) : null}
+
+              <Button
+                type="primary"
+                size="large"
+                className="pos-paybar__go"
+                loading={submitting}
+                disabled={!lines.length}
+                onClick={() => void submit()}
+              >
+                {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
+              </Button>
+            </div>
             </div>
             <div className="pos-body__pick">
               <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
@@ -923,50 +967,6 @@ const PosTerminal: React.FC = () => {
             </div>
           </div>
 
-          {/* 吸底收款条：专业收银的收款键位置恒定，收银员不用低头找。
-              应收/实收/找零/收款全部集中在这里，表单区只管填单。 */}
-          <div className="pos-paybar">
-            <div className="pos-paybar__due">
-              <span className="pos-paybar__label">应收</span>
-              <span className="pos-paybar__num">{formatMoney(totalAmount)}</span>
-            </div>
-
-            {payMethod === 'CASH' ? (
-              <>
-                <div className="pos-paybar__field">
-                  <span className="pos-paybar__label">实收现金</span>
-                  <InputNumber
-                    value={received}
-                    min={0}
-                    precision={2}
-                    placeholder="点右侧键盘输入"
-                    style={{ width: 130 }}
-                    onChange={(v) => setReceived(v == null ? null : Number(v))}
-                  />
-                  <Button icon={<CalculatorOutlined />} onClick={() => setCashOpen(true)}>
-                    键盘
-                  </Button>
-                </div>
-                <div className="pos-paybar__field">
-                  <span className="pos-paybar__label">找零</span>
-                  <span className="pos-paybar__change">
-                    {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
-                  </span>
-                </div>
-              </>
-            ) : null}
-
-            <Button
-              type="primary"
-              size="large"
-              className="pos-paybar__go"
-              loading={submitting}
-              disabled={!lines.length}
-              onClick={() => void submit()}
-            >
-              {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
-            </Button>
-          </div>
 
           <TicketPrint
             open={!!printTicket}
