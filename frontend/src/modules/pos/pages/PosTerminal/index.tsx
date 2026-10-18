@@ -103,6 +103,12 @@ const PosTerminal: React.FC = () => {
   const [roundOff, setRoundOff] = React.useState<number>(0);
   const [payMethod, setPayMethod] = React.useState<PosPayMethod>('CASH');
   const [cashOpen, setCashOpen] = React.useState(false);
+  // 挂账授权（防资损）：不到账也能出单的唯一方式，必须有人签字
+  const [creditAuthOpen, setCreditAuthOpen] = React.useState(false);
+  const [creditAuth, setCreditAuth] = React.useState<{ user: string; pwd: string }>({
+    user: '',
+    pwd: '',
+  });
   const [received, setReceived] = React.useState<number | null>(null);
   const [remark, setRemark] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -302,11 +308,24 @@ const PosTerminal: React.FC = () => {
       message.warning('挂账需要填写客户手机号');
       return;
     }
+    // 挂账必须先取得店长/财务授权，否则直接拦在提交之前，
+    // 不让收银员先开单再补授权（补了就等于没有约束）
+    if (payMethod === 'CREDIT' && !creditAuth.user.trim()) {
+      message.warning('挂账需要店长或财务授权，请先填写授权账号');
+      setCreditAuthOpen(true);
+      return;
+    }
     setSubmitting(true);
     try {
       const res = (await posApi.checkout({
           items: lines.map((l) => ({ skuId: l.skuId, quantity: l.quantity, unitPrice: l.unitPrice })),
           payMethod,
+          ...(payMethod === 'CREDIT'
+            ? {
+                creditApprover: creditAuth.user.trim(),
+                creditApproverPassword: creditAuth.pwd,
+              }
+            : {}),
           discount: discount || 0,
           roundOff: roundOff || 0,
           customerName: customerName.trim() || undefined,
@@ -648,7 +667,13 @@ const PosTerminal: React.FC = () => {
                 </div>
                 <Radio.Group
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value as PosPayMethod)}
+                  onChange={(e) => {
+                    const next = e.target.value as PosPayMethod;
+                    setPayMethod(next);
+                    // 一选挂账就弹授权：把「要先授权」这件事提前，
+                    // 而不是等到点收款才被拦，节拍上少一次挫败
+                    if (next === 'CREDIT') setCreditAuthOpen(true);
+                  }}
                   optionType="button"
                   buttonStyle="solid"
                   options={PAY_OPTIONS.map((o) => ({
@@ -877,6 +902,54 @@ const PosTerminal: React.FC = () => {
               {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
             </Button>
           </div>
+
+          {/* 挂账授权：不到账就能出单，必须有人签字，否则资损口子敞开 */}
+          <Modal
+            open={creditAuthOpen}
+            title="挂账授权"
+            okText="已授权，去挂账"
+            cancelText="取消"
+            onCancel={() => setCreditAuthOpen(false)}
+            onOk={() => {
+              if (!creditAuth.user.trim()) {
+                message.warning('请填写授权账号');
+                return;
+              }
+              setCreditAuthOpen(false);
+              void submit();
+            }}
+            width={420}
+          >
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 12 }}
+              message="挂账是唯一「不到账也能出单」的收款方式"
+              description="需店长 / 财务输入授权账号与密码。授权人会被记入本单备注，事后对账可追溯。"
+            />
+            <Space direction="vertical" style={{ width: '100%' }} size={10}>
+              <Input
+                placeholder="授权账号"
+                autoComplete="off"
+                value={creditAuth.user}
+                onChange={(e) =>
+                  setCreditAuth((v) => ({ ...v, user: e.target.value, pwd: '' }))
+                }
+              />
+              <Input.Password
+                placeholder="授权密码"
+                autoComplete="new-password"
+                value={creditAuth.pwd}
+                onChange={(e) => setCreditAuth((v) => ({ ...v, pwd: e.target.value }))}
+                onPressEnter={() => {
+                  if (creditAuth.user.trim()) {
+                    setCreditAuthOpen(false);
+                    void submit();
+                  }
+                }}
+              />
+            </Space>
+          </Modal>
 
           {/* 现金数字键盘：大按键盲打，避免在触屏小键盘上输错一分 */}
           <CashNumpad

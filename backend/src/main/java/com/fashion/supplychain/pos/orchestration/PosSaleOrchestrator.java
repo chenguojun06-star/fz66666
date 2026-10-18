@@ -78,6 +78,8 @@ public class PosSaleOrchestrator {
     private final CustomerOrchestrator customerOrchestrator;
     private final PosSaleWriteService writeService;
     private final PaymentOrchestrator paymentOrchestrator;
+    private final com.fashion.supplychain.system.mapper.UserMapper userMapper;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     /* ── 选货 ─────────────────────────────────────────────────────────────── */
 
@@ -229,6 +231,11 @@ public class PosSaleOrchestrator {
         if (PAY_CREDIT.equals(payMethod) && !StringUtils.hasText(customerPhone)) {
             throw new IllegalArgumentException("挂账需要填写客户手机号（要挂到客户名下）");
         }
+        // 挂账是唯一不到账就能出单的方式，必须有授权人签字。
+        // 不做则资损口子敞开：挂账走掉，事后核销抹平，查不出来。
+        String creditApprover = PAY_CREDIT.equals(payMethod)
+                ? authorizeCredit(str(body.get("creditApprover")), str(body.get("creditApproverPassword")))
+                : null;
         if (PAY_ONLINE.contains(payMethod) && !StringUtils.hasText(customerPhone)) {
             // 不强制：扫码支付不需要手机号，但留个提示由前端决定是否要填
             log.debug("[POS] 在线支付未填客户手机号，按散客处理");
@@ -324,7 +331,13 @@ public class PosSaleOrchestrator {
         sale.setTotalAmount(total);
         sale.setPayMethod(payMethod);
         sale.setPayStatus("PAYING");
-        sale.setRemark(str(body.get("remark")));
+        String remark = str(body.get("remark"));
+        if (creditApprover != null) {
+            // 授权人必须落在单据上：事后对账只认单据，不认口头说法
+            remark = (remark == null || remark.isBlank() ? "" : remark + " | ")
+                    + "挂账授权人:" + creditApprover;
+        }
+        sale.setRemark(remark);
         sale.setCashier(UserContext.username());
         sale.setStatus("NORMAL");
         sale.setCreateTime(LocalDateTime.now());
@@ -519,6 +532,43 @@ public class PosSaleOrchestrator {
             out.computeIfAbsent(String.valueOf(it.getSaleId()), k -> new ArrayList<>()).add(m);
         }
         return out;
+    }
+
+    /**
+     * 校验挂账授权人：账号密码必须正确，且该用户具备挂账授权资格。
+     *
+     * <p>资格口径：**租户主账号，或被勾选为「挂账授权人」的用户**。
+     * 不走角色权限体系 —— 角色管的是"能不能进这个功能"，
+     * 这里管的是"这笔单要不要有人签字"，两件事混在一起会互相污染。
+     *
+     * <p>只返回姓名、不回传任何凭据。
+     */
+    private String authorizeCredit(String username, String password) {
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            throw new IllegalArgumentException("挂账需要店长/财务授权：请输入授权账号与密码");
+        }
+        com.fashion.supplychain.system.entity.User approver =
+                userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                        com.fashion.supplychain.system.entity.User>()
+                        .eq(com.fashion.supplychain.system.entity.User::getTenantId, UserContext.tenantId())
+                        .eq(com.fashion.supplychain.system.entity.User::getUsername, username.trim())
+                        .last("LIMIT 1"));
+        if (approver == null || approver.getPassword() == null
+                || !passwordEncoder.matches(password, approver.getPassword())) {
+            // 不区分「账号不存在」和「密码错误」：报了账号是否存在等于给了撞库提示
+            throw new IllegalArgumentException("授权账号或密码不正确");
+        }
+        if (!"ACTIVE".equals(approver.getStatus())) {
+            throw new IllegalArgumentException("授权账号已停用");
+        }
+        boolean owner = Boolean.TRUE.equals(approver.getIsTenantOwner());
+        boolean designated = Boolean.TRUE.equals(approver.getPosCreditApprover());
+        if (!owner && !designated) {
+            throw new IllegalArgumentException("该账号没有挂账授权权限，请联系店长设置");
+        }
+        log.info("[POS] 挂账授权通过: 审批人={} 收银员={}", username, UserContext.username());
+        return approver.getName() != null && !approver.getName().isBlank()
+                ? approver.getName() : username;
     }
 
     // ── 内部 ────────────────────────────────────────────────────────────────

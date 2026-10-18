@@ -73,6 +73,14 @@ public class User {
 
     private String email;
 
+    /**
+     * 是否可授权挂账（店长 / 财务）。
+     *
+     * <p>挂账是唯一「不到账也能出单」的支付方式，必须有人签字。
+     * 租户主账号默认有权限，不必勾选。
+     */
+    private Boolean posCreditApprover;
+
     /** 工号（租户内员工编号，用于人员管理展示与筛选） */
     private String employeeNo;
 

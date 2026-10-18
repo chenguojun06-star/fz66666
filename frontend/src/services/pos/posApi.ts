@@ -49,6 +49,10 @@ export interface PosCheckoutBody {
   customerName?: string;
   customerPhone?: string;
   remark?: string;
+  /** 挂账授权人账号（payMethod=CREDIT 时必填，后端会校验密码与授权资格） */
+  creditApprover?: string;
+  /** 挂账授权密码（只在这一次请求里传输，不做任何缓存） */
+  creditApproverPassword?: string;
 }
 
 export interface PosCheckoutResult {

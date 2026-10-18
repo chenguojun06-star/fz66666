@@ -83,6 +83,12 @@ class PosSaleOrchestratorTest {
     @Mock
     private PaymentOrchestrator paymentOrchestrator;
 
+    @Mock
+    private com.fashion.supplychain.system.mapper.UserMapper userMapper;
+
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private PosSaleOrchestrator orchestrator;
 
@@ -214,8 +220,12 @@ class PosSaleOrchestratorTest {
         assertThrows(IllegalArgumentException.class,
                 () -> orchestrator.checkout(body("CREDIT", List.of(item(1L, 1, null)))));
 
+        // 无授权的挂账已在授权专项测试里覆盖；这里给一份合法授权继续验证应收链路
+        stubApprover("店长王", true, true, true);
         Map<String, Object> b = body("CREDIT", List.of(item(1L, 1, null)));
         b.put("customerPhone", "13800000000");
+        b.put("creditApprover", "boss");
+        b.put("creditApproverPassword", "right");
         orchestrator.checkout(b);
 
         verify(writeService).settle(SALE_ID, "UNPAID", null);
@@ -491,5 +501,128 @@ class PosSaleOrchestratorTest {
 
         verify(writeService).settle(SALE_ID, "PAID", null);
         verify(writeService, never()).settle(anyLong(), eq("UNPAID"), any());
+    }
+
+    /* ── 挂账授权（防资损）───────────────────────────────────────────────────
+     *
+     * 挂账是唯一「不到账也能出单」的收款方式。没有授权就等于把资损口子敞开：
+     * 挂一张单走掉，事后核销抹平，账面对得上、钱回不来、查无此人。
+     * 下面每条都是资损防线，必须守住。
+     */
+
+    private static Map<String, Object> creditBody() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("items", List.of(Map.of("skuId", 9L, "quantity", 1, "unitPrice", new BigDecimal("99.00"))));
+        body.put("payMethod", "CREDIT");
+        body.put("customerPhone", "13800000000");
+        return body;
+    }
+
+    private void stubApprover(String name, boolean owner, boolean designated, boolean pwdOk) {
+        com.fashion.supplychain.system.entity.User u =
+                new com.fashion.supplychain.system.entity.User();
+        u.setId(1L);
+        u.setUsername("boss");
+        u.setName(name);
+        u.setPassword("hashed");
+        u.setStatus("ACTIVE");
+        u.setIsTenantOwner(owner);
+        u.setPosCreditApprover(designated);
+        when(userMapper.selectOne(any())).thenReturn(u);
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(pwdOk);
+    }
+
+    @Test
+    @DisplayName("挂账不给授权信息 → 直接拒单，绝不落库")
+    void creditWithoutApprovalIsRejected() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> orchestrator.checkout(creditBody()));
+        assertTrue(e.getMessage().contains("授权"));
+        verify(writeService, never()).createSale(any(PosSale.class), any());
+    }
+
+    @Test
+    @DisplayName("授权密码错误 → 拒单")
+    void creditWithWrongPasswordIsRejected() {
+        stubApprover("店长王", true, true, false);
+        Map<String, Object> body = creditBody();
+        body.put("creditApprover", "boss");
+        body.put("creditApproverPassword", "wrong");
+        assertThrows(IllegalArgumentException.class, () -> orchestrator.checkout(body));
+        verify(writeService, never()).createSale(any(PosSale.class), any());
+    }
+
+    @Test
+    @DisplayName("账号不存在 → 报错文案不得暴露账号是否存在（防撞库提示）")
+    void creditWithUnknownUserGivesSameMessage() {
+        when(userMapper.selectOne(any())).thenReturn(null);
+        Map<String, Object> body = creditBody();
+        body.put("creditApprover", "nobody");
+        body.put("creditApproverPassword", "whatever");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> orchestrator.checkout(body));
+        assertEquals("授权账号或密码不正确", e.getMessage());
+    }
+
+    @Test
+    @DisplayName("账号存在但无授权资格 → 拒单")
+    void creditWithoutPermissionIsRejected() {
+        stubApprover("普通收银员小李", false, false, true);
+        Map<String, Object> body = creditBody();
+        body.put("creditApprover", "cashier1");
+        body.put("creditApproverPassword", "right");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> orchestrator.checkout(body));
+        assertTrue(e.getMessage().contains("没有挂账授权权限"));
+        verify(writeService, never()).createSale(any(PosSale.class), any());
+    }
+
+    @Test
+    @DisplayName("账号已停用 → 拒单")
+    void creditWithDisabledApproverIsRejected() {
+        stubApprover("离职店长", true, true, true);
+        when(userMapper.selectOne(any())).thenAnswer(inv -> {
+            com.fashion.supplychain.system.entity.User u = new com.fashion.supplychain.system.entity.User();
+            u.setUsername("boss");
+            u.setStatus("DISABLED");
+            u.setIsTenantOwner(true);
+            return u;
+        });
+        Map<String, Object> body = creditBody();
+        body.put("creditApprover", "boss");
+        body.put("creditApproverPassword", "right");
+        assertThrows(IllegalArgumentException.class, () -> orchestrator.checkout(body));
+        verify(writeService, never()).createSale(any(PosSale.class), any());
+    }
+
+    @Test
+    @DisplayName("授权通过 → 放行，且授权人必须写进单据备注（可追溯）")
+    void creditWithApprovalRecordsApprover() {
+        when(productSkuService.getById(9L)).thenReturn(sku(9L, "A-9", "99.00", null, 5));
+        when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
+        stubApprover("店长王", true, true, true);
+        Map<String, Object> body = creditBody();
+        body.put("creditApprover", "boss");
+        body.put("creditApproverPassword", "right");
+
+        orchestrator.checkout(body);
+
+        ArgumentCaptor<PosSale> cap = ArgumentCaptor.forClass(PosSale.class);
+        verify(writeService).createSale(cap.capture(), any());
+        String remark = cap.getValue().getRemark();
+        assertTrue(remark != null && remark.contains("挂账授权人:店长王"),
+                "授权人必须落在单据上，事后对账只认单据");
+    }
+
+    @Test
+    @DisplayName("现金收款**不需要**授权（不能把正常收银也拦住）")
+    void cashDoesNotNeedApproval() {
+        when(productSkuService.getById(9L)).thenReturn(sku(9L, "A-9", "99.00", null, 5));
+        when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
+        Map<String, Object> body = creditBody();
+        body.put("payMethod", "CASH");
+        body.remove("customerPhone");
+        orchestrator.checkout(body);
+        verify(writeService).createSale(any(PosSale.class), any());
     }
 }
