@@ -20,6 +20,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { InputRef } from 'antd';
 import {
+  CalculatorOutlined,
   DeleteOutlined,
   PauseCircleOutlined,
   ProfileOutlined,
@@ -52,6 +53,7 @@ import useStyleCoverImages from '@/hooks/useStyleCoverImages';
 import PosReturnPanel from './PosReturnPanel';
 import PosHoldPanel from './PosHoldPanel';
 import PosShiftPanel from './PosShiftPanel';
+import CashNumpad from './CashNumpad';
 import './index.css';
 
 const { Text } = Typography;
@@ -100,6 +102,7 @@ const PosTerminal: React.FC = () => {
   const [discount, setDiscount] = React.useState<number>(0);
   const [roundOff, setRoundOff] = React.useState<number>(0);
   const [payMethod, setPayMethod] = React.useState<PosPayMethod>('CASH');
+  const [cashOpen, setCashOpen] = React.useState(false);
   const [received, setReceived] = React.useState<number | null>(null);
   const [remark, setRemark] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -565,8 +568,10 @@ const PosTerminal: React.FC = () => {
 
       {tab === 'checkout' && (
         <>
-          <Row gutter={12} className="pos-body">
-            <Col xs={24} lg={15}>
+          <div className="pos-body">
+            {/* 本单栏固定宽度：收银员靠肌肉记忆找输入格/删除键/收款键，
+                宽度必须恒定，不能随屏幕百分比变化。 */}
+            <div className="pos-body__bill">
               <Card size="small" title="本单" className="pos-card">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input
@@ -638,11 +643,6 @@ const PosTerminal: React.FC = () => {
                   </Col>
                 </Row>
 
-                <div className="pos-total">
-                  <span>应收</span>
-                  <span className="pos-total__num">{formatMoney(totalAmount)}</span>
-                </div>
-
                 <div className="pos-label" style={{ marginTop: 8 }}>
                   收款方式
                 </div>
@@ -669,27 +669,6 @@ const PosTerminal: React.FC = () => {
                   />
                 ) : null}
 
-                {payMethod === 'CASH' ? (
-                  <Row gutter={8} style={{ marginTop: 8 }} align="middle">
-                    <Col span={12}>
-                      <div className="pos-label">实收现金</div>
-                      <InputNumber
-                        value={received}
-                        min={0}
-                        precision={2}
-                        style={{ width: '100%' }}
-                        onChange={(v) => setReceived(v == null ? null : Number(v))}
-                      />
-                    </Col>
-                    <Col span={12}>
-                      <div className="pos-label">找零</div>
-                      <div className="pos-amount">
-                        {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
-                      </div>
-                    </Col>
-                  </Row>
-                ) : null}
-
                 {payMethod === 'CREDIT' ? (
                   <Alert
                     style={{ marginTop: 8 }}
@@ -706,17 +685,6 @@ const PosTerminal: React.FC = () => {
                   onChange={(e) => setRemark(e.target.value)}
                 />
 
-                <Button
-                  type="primary"
-                  size="large"
-                  block
-                  style={{ marginTop: 12 }}
-                  loading={submitting}
-                  disabled={!lines.length}
-                  onClick={() => void submit()}
-                >
-                  {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
-                </Button>
               </Card>
 
               <Card size="small" title="今日单据" className="pos-card" style={{ marginTop: 12 }}>
@@ -774,8 +742,8 @@ const PosTerminal: React.FC = () => {
                   ]}
                 />
               </Card>
-            </Col>
-            <Col xs={24} lg={9}>
+            </div>
+            <div className="pos-body__pick">
               <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input
@@ -793,7 +761,7 @@ const PosTerminal: React.FC = () => {
                   </Button>
                 </Space.Compact>
 
-                <div className="pos-results">
+                <div className="pos-results pos-grid">
                   {results.length === 0 ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -801,33 +769,92 @@ const PosTerminal: React.FC = () => {
                     />
                   ) : (
                     results.map((sku) => (
-                      <div
+                      <button
+                        type="button"
                         key={sku.skuId}
                         className={'pos-sku' + (sku.stock <= 0 ? ' pos-sku--out' : '')}
                         onClick={() => addLine(sku)}
                       >
-                        <StyleImageCell skuCode={sku.skuCode ?? undefined} imageMap={imageMap} />
-                        <div className="pos-sku__main">
-                          <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {[briefBySku[sku.skuCode ?? '']?.styleNo ?? sku.styleNo, sku.color, sku.size]
-                              .filter(Boolean)
-                              .join(' / ')}
-                          </Text>
+                        <div className="pos-sku__thumb">
+                          <StyleImageCell skuCode={sku.skuCode ?? undefined} imageMap={imageMap} />
                         </div>
-                        <div className="pos-sku__right">
-                          <div className="pos-sku__price">
+                        <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
+                        <div className="pos-sku__spec">
+                          {[briefBySku[sku.skuCode ?? '']?.styleNo ?? sku.styleNo, sku.color, sku.size]
+                            .filter(Boolean)
+                            .join(' / ')}
+                        </div>
+                        <div className="pos-sku__foot">
+                          <span className="pos-sku__price">
                             {formatMoney(Number(sku.salesPrice ?? sku.tagPrice ?? 0))}
-                          </div>
-                          <Tag color={sku.stock > 0 ? 'green' : 'red'}>库存 {sku.stock}</Tag>
+                          </span>
+                          <Tag color={sku.stock > 0 ? 'green' : 'red'} bordered={false}>
+                            {sku.stock > 0 ? `库存 ${sku.stock}` : '无库存'}
+                          </Tag>
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>
               </Card>
-            </Col>
-          </Row>
+            </div>
+          </div>
+
+          {/* 吸底收款条：专业收银的收款键位置恒定，收银员不用低头找。
+              应收/实收/找零/收款全部集中在这里，表单区只管填单。 */}
+          <div className="pos-paybar">
+            <div className="pos-paybar__due">
+              <span className="pos-paybar__label">应收</span>
+              <span className="pos-paybar__num">{formatMoney(totalAmount)}</span>
+            </div>
+
+            {payMethod === 'CASH' ? (
+              <>
+                <div className="pos-paybar__field">
+                  <span className="pos-paybar__label">实收现金</span>
+                  <InputNumber
+                    value={received}
+                    min={0}
+                    precision={2}
+                    placeholder="点右侧键盘输入"
+                    style={{ width: 130 }}
+                    onChange={(v) => setReceived(v == null ? null : Number(v))}
+                  />
+                  <Button icon={<CalculatorOutlined />} onClick={() => setCashOpen(true)}>
+                    键盘
+                  </Button>
+                </div>
+                <div className="pos-paybar__field">
+                  <span className="pos-paybar__label">找零</span>
+                  <span className="pos-paybar__change">
+                    {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
+                  </span>
+                </div>
+              </>
+            ) : null}
+
+            <Button
+              type="primary"
+              size="large"
+              className="pos-paybar__go"
+              loading={submitting}
+              disabled={!lines.length}
+              onClick={() => void submit()}
+            >
+              {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
+            </Button>
+          </div>
+
+          {/* 现金数字键盘：大按键盲打，避免在触屏小键盘上输错一分 */}
+          <CashNumpad
+            open={cashOpen}
+            due={totalAmount}
+            onCancel={() => setCashOpen(false)}
+            onConfirm={(v) => {
+              setReceived(v);
+              setCashOpen(false);
+            }}
+          />
 
           {/* 待支付：展示二维码 + 倒计时，收银员可随时取消 */}
           <Modal

@@ -311,7 +311,7 @@ describe('收银台 · 商品列（铁律 15）', () => {
   });
 
   it('退货可退量列表必须有「款式图」「款号」列', async () => {
-    render(<PosReturnPanel />);
+    render(<PosReturnPanel onGoCheckout={() => {}} />);
     fireEvent.change(screen.getByPlaceholderText(/输入原销售单号/), {
       target: { value: 'PS20261018001' },
     });
