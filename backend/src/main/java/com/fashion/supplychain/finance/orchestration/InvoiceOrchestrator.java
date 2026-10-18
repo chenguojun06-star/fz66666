@@ -29,6 +29,10 @@ import java.util.Map;
 /**
  * 发票管理编排器
  * 开票、作废、税额自动计算、关联业务单据
+ *
+ * <p><b>D-814 重要说明</b>：本模块是<b>内部开票台账</b>，不是税务发票系统。
+ * 未接入税局/税控盘，{@code invoiceNo} 由本系统生成而非税局下发，
+ * 记录不能作为报销或入账凭证。真实开票在电子发票平台完成后再回填票号对账。
  */
 @Slf4j
 @Service
@@ -184,6 +188,20 @@ public class InvoiceOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * D-814：把发票「标记为已开具」——<b>这不是开具真实发票</b>。
+     *
+     * <p><b>务必知情</b>：本系统<b>不连接税局/税控盘</b>，没有真实开票通道。
+     * 本方法只把台账状态从 DRAFT 改成 ISSUED 并写下日期，
+     * {@code invoiceNo} 是本系统自己生成的，<b>不是税局下发的发票号码</b>，
+     * 因此这张记录<b>不能作为报销或入账凭证</b>。
+     *
+     * <p>真实开票需在电子发票平台/税控盘完成，再把票号回填到本台账用于对账。
+     * 若将来接入真实通道，开具动作应改由通道执行并回写税局号码与版式文件地址，
+     * 而不是继续只改状态。
+     *
+     * <p>前端已同步标注（D-814），避免出现「系统说已开票、实际没开」的误解。
+     */
     public Invoice issue(String id) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();

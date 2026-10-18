@@ -102,7 +102,10 @@ const InvoiceTab: React.FC = () => {
   const handleIssue = async (id: string) => {
     try {
       await invoiceApi.issue(id);
-      message.success('已标记为已开票');
+      // D-814：措辞必须说清「只是台账标记」。原先只写「已标记为已开票」，
+      // 而按钮叫「开票」、统计卡叫「已开票/开票额」，
+      // 组合起来会让人以为发票真开出去了 —— 而系统并没有连税局。
+      message.success('已标记为内部台账「已开票」（未提交税局，不是真实发票）');
       fetchList();
     } catch { message.error('操作失败'); }
   };
@@ -110,7 +113,7 @@ const InvoiceTab: React.FC = () => {
   const handleCancel = async (id: string) => {
     try {
       await invoiceApi.cancel(id);
-      message.success('已作废');
+      message.success('已在内部台账中作废（未向税局提交红冲）');
       fetchList();
     } catch { message.error('操作失败'); }
   };
@@ -125,15 +128,21 @@ const InvoiceTab: React.FC = () => {
     { title: '税额', dataIndex: 'taxAmount', width: 100, render: (v: number) => formatCurrency(v) },
     { title: '价税合计', dataIndex: 'totalAmount', width: 110, render: (v: number) => formatCurrency(v) },
     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => { const s = INVOICE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>; } },
-    { title: '开票日期', dataIndex: 'issueDate', width: 100 },
+    { title: '标记日期', dataIndex: 'issueDate', width: 100 },
     {
       title: '操作', width: 160,
       render: (_: any, r: any) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); setFormOpen(true); }}>编辑</Button>
-          {r.status === 'DRAFT' && <Button type="link" onClick={() => handleIssue(r.id)}>开票</Button>}
+          {r.status === 'DRAFT' && (
+            <Button type="link" onClick={() => handleIssue(r.id)}>标记已开票</Button>
+          )}
           {r.status === 'ISSUED' && (
-            <Popconfirm title="确认作废该发票？" onConfirm={() => handleCancel(r.id)}>
+            <Popconfirm
+              title="在内部台账中作废？"
+              description="只改本系统台账状态，不会向税局提交红冲。"
+              onConfirm={() => handleCancel(r.id)}
+            >
               <Button type="link" danger>作废</Button>
             </Popconfirm>
           )}
@@ -144,15 +153,33 @@ const InvoiceTab: React.FC = () => {
 
   return (
     <>
-      <Alert type="info" showIcon style={{ marginBottom: 16 }}
-        title="发票台账会随业务自动生成，您只需确认开票"
-        description="每笔应收确认后（对账收款、订单结算、账单确认）会自动在这里生成一张「草稿发票」，金额、购方、关联单号、税率全部带好；您核对无误后点「开票」即计入台账。也可以用「新建发票」手工补录历史票。当前管的是业务台账，不直连税控盘——实际开票仍在税盘/电子发票平台操作。"
+      {/* D-814：免责说明必须一眼看见。
+          原先只有卡片说明里一句「不直连税控盘」，而按钮叫「开票」、
+          统计卡叫「已开票额」—— 组合起来会让人以为发票真开出去了。
+          markdown 的 ** 在 antd 文案里会原样显示，这里用真正的强调元素。 */}
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="这里是内部开票台账，不是税务发票系统"
+        description={
+          <span>
+            每笔应收确认后（对账收款、订单结算、账单确认）会自动生成一张「草稿」，
+            金额、购方、关联单号、税率全部带好；核对无误后点「标记已开票」即计入本台账。
+            <br />
+            <Text strong style={{ color: 'var(--color-error)' }}>
+              本系统不连接税局/税控盘：这里的发票号由本系统生成，不是税局下发号码，
+              因此不能作为报销或入账凭证。
+            </Text>{' '}
+            真实开票请在电子发票平台或税控盘操作完成后，把票号回填到这里用于对账。
+          </span>
+        }
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={6}><Card><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
-        <Col xs={24} md={6}><Card><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
-        <Col xs={24} md={6}><Card><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
-        <Col xs={24} md={6}><Card><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="台账已标记" value={stats.issuedCount} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="本月标记额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="累计标记额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
       <Card style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
