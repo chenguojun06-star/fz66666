@@ -46,8 +46,9 @@ const PosReturnPanel: React.FC<{ onGoCheckout: () => void }> = ({ onGoCheckout }
     }
     setLoading(true);
     try {
-      const list = await posApi.returnable(no);
-      setRows(list ?? []);
+      const raw = await posApi.returnable(no);
+      const list = Array.isArray(raw) ? raw : [];
+      setRows(list);
       setSearched(true);
       setQty({});
       const none = (list ?? []).filter((r) => r.returnableQty <= 0).length;

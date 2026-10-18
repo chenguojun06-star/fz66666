@@ -35,7 +35,8 @@ const PosHoldPanel: React.FC<PosHoldPanelProps> = ({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await posApi.holds(showClosed));
+      const list = await posApi.holds(showClosed);
+      setRows(Array.isArray(list) ? list : []);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载挂单失败');
     } finally {

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 /**
  * 收银台（POS 开单）服务。
@@ -222,22 +222,45 @@ export interface PosToday {
   recent: PosRecentSale[];
 }
 
+/** 挂起成功后的回执（注意：api.post 同样返回 {code,data} 信封，调用方必须解包） */
+export interface PosHoldCreated {
+  holdNo: string;
+  itemCount: number;
+}
+
+/**
+ * 收银台 API。
+ *
+ * <p><b>所有方法都在这一层解包 {code,data} 信封</b>，和 ticketApi 一致。
+ * 之前这里直接 return `api.get(...)`，把信封原样丢给调用方，
+ * 结果三个新面板都把 `{code,data}` 当数组塞给 antd Table，
+ * 线上 `dataSource.some is not a function` 整页白屏 ——
+ * 而单测 mock 的是已解包数组，所以测试全绿、线上全炸。
+ *
+ * <p>记住：`api.get` 返回的是 `response.data`，**不解包**。
+ */
 export const posApi = {
   /** 扫码/关键字找货（精确命中排最前） */
-  searchSkus: (keyword: string, limit = 30) =>
-    api.get<PosSku[]>('/pos/skus', { params: { keyword, limit } }),
+  searchSkus: async (keyword: string, limit = 30) =>
+    unwrapApiData<PosSku[]>(
+      await api.get('/pos/skus', { params: { keyword, limit } }),
+      '搜索商品失败',
+    ),
 
   /** 按手机号带出客户与上次成交价 */
-  customer: (phone: string) => api.get<PosCustomer>('/pos/customer', { params: { phone } }),
+  customer: async (phone: string) => unwrapApiData<PosCustomer>(
+      await api.get('/pos/customer', { params: { phone } }),
+      '查询客户失败',
+    ),
 
   /** 开单 */
-  checkout: (body: PosCheckoutBody) => api.post<PosCheckoutResult>('/pos/checkout', body),
+  checkout: async (body: PosCheckoutBody) => unwrapApiData<PosCheckoutResult>(await api.post('/pos/checkout', body), '开单失败'),
 
   /** 今日汇总（交班对账） */
-  today: () => api.get<PosToday>('/pos/today'),
+  today: async () => unwrapApiData<PosToday>(await api.get('/pos/today'), '加载今日汇总失败'),
 
   /** 在线收款渠道可用性（未配置的渠道按钮置灰，避免点了才发现报错） */
-  channels: () => api.get<PosChannelReadiness>('/pos/channels'),
+  channels: async () => unwrapApiData<PosChannelReadiness>(await api.get('/pos/channels'), '渠道状态加载失败'),
 
   /**
    * 查询待支付单状态（轮询）。
@@ -245,47 +268,65 @@ export const posApi = {
    * 服务端会**主动向渠道查询**并就地确认，所以即使支付回调丢了，
    * 这里也能把单子推进到已支付 —— 不能只依赖回调。
    */
-  payState: (saleNo: string) =>
-    api.get<PosPayState>(`/pos/sales/${encodeURIComponent(saleNo)}/pay-state`),
+  payState: async (saleNo: string) =>
+    unwrapApiData<PosPayState>(
+      await api.get(`/pos/sales/${encodeURIComponent(saleNo)}/pay-state`),
+      '查询支付状态失败',
+    ),
 
   /** 取消待支付单（顾客不买了 / 换支付方式）：先关渠道单，再作废本地单据 */
   // ── D-816 退货 / 换货 ──
-  returnable: (saleNo: string) =>
-    api.get<PosReturnableLine[]>(`/pos/sales/${encodeURIComponent(saleNo)}/returnable`),
+  returnable: async (saleNo: string) =>
+    unwrapApiData<PosReturnableLine[]>(
+      await api.get(`/pos/sales/${encodeURIComponent(saleNo)}/returnable`),
+      '查询可退数量失败',
+    ),
 
-  createReturn: (saleNo: string, body: PosReturnBody) =>
-    api.post<PosReturnResult>(`/pos/sales/${encodeURIComponent(saleNo)}/return`, body),
+  createReturn: async (saleNo: string, body: PosReturnBody) =>
+    unwrapApiData<PosReturnResult>(
+      await api.post(`/pos/sales/${encodeURIComponent(saleNo)}/return`, body),
+      '提交退货失败',
+    ),
 
-  confirmRefund: (returnNo: string, note?: string) =>
-    api.post<{ returnNo: string; refundStatus: string; refundedAmount: number }>(
-      `/pos/returns/${encodeURIComponent(returnNo)}/confirm-refund`,
-      { note },
+  confirmRefund: async (returnNo: string, note?: string) =>
+    unwrapApiData<{ returnNo: string; refundStatus: string; refundedAmount: number }>(
+      await api.post(`/pos/returns/${encodeURIComponent(returnNo)}/confirm-refund`, { note }),
+      '确认退款失败',
     ),
 
   // ── D-817 交接班 / 钱箱 ──
-  currentShift: () => api.get<PosShift | null>('/pos/shifts/current'),
+  currentShift: async () => unwrapApiData<PosShift | null>(await api.get('/pos/shifts/current'), '加载班次失败'),
 
-  openShift: (body: { openingCash: number; terminal?: string; remark?: string }) =>
-    api.post<PosShift>('/pos/shifts/open', body),
+  openShift: async (body: { openingCash: number; terminal?: string; remark?: string }) =>
+    unwrapApiData<PosShift>(await api.post('/pos/shifts/open', body), '开班失败'),
 
-  closeShift: (body: { actualCash: number; diffReason?: string; remark?: string }) =>
-    api.post<PosShift>('/pos/shifts/close', body),
+  closeShift: async (body: { actualCash: number; diffReason?: string; remark?: string }) =>
+    unwrapApiData<PosShift>(await api.post('/pos/shifts/close', body), '交班失败'),
 
-  shifts: (limit = 50) => api.get<PosShift[]>('/pos/shifts', { params: { limit } }),
+  shifts: async (limit = 50) => unwrapApiData<PosShift[]>(await api.get('/pos/shifts', { params: { limit } }), '加载班次历史失败'),
 
   // ── D-817 挂单（暂存购物区，不参与财务口径）──
-  holds: (includeClosed = false) => api.get<PosHoldRow[]>('/pos/holds', { params: { includeClosed } }),
+  holds: async (includeClosed = false) => unwrapApiData<PosHoldRow[]>(await api.get('/pos/holds', { params: { includeClosed } }), '加载挂单失败'),
 
-  hold: (body: PosHoldBody) => api.post<{ holdNo: string; itemCount: number }>('/pos/holds', body),
+  hold: async (body: PosHoldBody) => unwrapApiData<PosHoldCreated>(await api.post('/pos/holds', body), '挂单失败'),
 
-  resumeHold: (holdNo: string) =>
-    api.post<PosHoldResume>(`/pos/holds/${encodeURIComponent(holdNo)}/resume`),
+  resumeHold: async (holdNo: string) =>
+    unwrapApiData<PosHoldResume>(
+      await api.post(`/pos/holds/${encodeURIComponent(holdNo)}/resume`),
+      '取回挂单失败',
+    ),
 
-  discardHold: (holdNo: string, reason?: string) =>
-    api.post<{ holdNo: string; status: string }>(`/pos/holds/${encodeURIComponent(holdNo)}/discard`, { reason }),
+  discardHold: async (holdNo: string, reason?: string) =>
+    unwrapApiData<{ holdNo: string; status: string }>(
+      await api.post(`/pos/holds/${encodeURIComponent(holdNo)}/discard`, { reason }),
+      '丢弃挂单失败',
+    ),
 
-  cancelPay: (saleNo: string, reason?: string) =>
-    api.post<null>(`/pos/sales/${encodeURIComponent(saleNo)}/cancel-pay`, { reason }),
+  cancelPay: async (saleNo: string, reason?: string) =>
+    unwrapApiData<null>(
+      await api.post(`/pos/sales/${encodeURIComponent(saleNo)}/cancel-pay`, { reason }),
+      '取消待支付单失败',
+    ),
 };
 
 export default posApi;

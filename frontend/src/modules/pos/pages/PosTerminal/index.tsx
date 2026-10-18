@@ -32,7 +32,6 @@ import {
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import { Segmented } from 'antd';
-import { unwrapApiData } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import posApi from '@/services/pos/posApi';
 import type {
@@ -122,7 +121,7 @@ const PosTerminal: React.FC = () => {
 
   const loadToday = React.useCallback(async () => {
     try {
-      setToday(unwrapApiData<PosToday>(await posApi.today(), '加载今日汇总失败'));
+      setToday(await posApi.today());
     } catch {
       // 交班数据拿不到不该影响开单
     }
@@ -132,7 +131,7 @@ const PosTerminal: React.FC = () => {
     void loadToday();
     void (async () => {
       try {
-        setChannels(unwrapApiData<PosChannelReadiness>(await posApi.channels(), '渠道状态加载失败'));
+        setChannels(await posApi.channels());
       } catch {
         // 拿不到渠道状态就按"都不可用"处理：宁可让收银员用现金，也不能点了报错
         setChannels(null);
@@ -163,7 +162,7 @@ const PosTerminal: React.FC = () => {
     }
     setSearching(true);
     try {
-      const list = unwrapApiData<PosSku[]>(await posApi.searchSkus(q), '搜索失败');
+      const list = await posApi.searchSkus(q);
       setResults(list);
       return list;
     } catch (e) {
@@ -236,7 +235,7 @@ const PosTerminal: React.FC = () => {
       return;
     }
     try {
-      const c = unwrapApiData<PosCustomer>(await posApi.customer(v), '查询客户失败');
+      const c = await posApi.customer(v);
       setCustomer(c);
       if (c?.customerName) {
         setCustomerName((old) => old || c.customerName || '');
@@ -298,8 +297,7 @@ const PosTerminal: React.FC = () => {
     }
     setSubmitting(true);
     try {
-      const res = unwrapApiData<PosCheckoutResult>(
-        await posApi.checkout({
+      const res = (await posApi.checkout({
           items: lines.map((l) => ({ skuId: l.skuId, quantity: l.quantity, unitPrice: l.unitPrice })),
           payMethod,
           discount: discount || 0,
@@ -307,9 +305,7 @@ const PosTerminal: React.FC = () => {
           customerName: customerName.trim() || undefined,
           customerPhone: phone.trim() || undefined,
           remark: remark.trim() || undefined,
-        }),
-        '开单失败',
-      );
+        }));
       if (res?.payStatus === 'PAYING' && res.qrCode) {
         // 在线支付：先不结算，把二维码给顾客扫，等渠道确认（回调/轮询）才出库
         setPayInfo({
@@ -349,10 +345,11 @@ const PosTerminal: React.FC = () => {
     let stopped = false;
     const tick = async () => {
       try {
-        const st = unwrapApiData<{ paid: boolean; payStatus: string; outstockNo?: string | null }>(
-          await posApi.payState(payInfo.saleNo),
-          '查询支付状态失败',
-        );
+        const st = (await posApi.payState(payInfo.saleNo)) as unknown as {
+          paid: boolean;
+          payStatus: string;
+          outstockNo?: string | null;
+        };
         if (stopped) return;
         if (st?.paid) {
           setPayInfo(null);
@@ -407,7 +404,7 @@ const PosTerminal: React.FC = () => {
     if (!payInfo) return;
     setCancelling(true);
     try {
-      unwrapApiData(await posApi.cancelPay(payInfo.saleNo, '收银员取消'), '取消失败');
+      await posApi.cancelPay(payInfo.saleNo, '收银员取消');
       setPayInfo(null);
       message.info('已取消该笔待支付');
       void loadToday();

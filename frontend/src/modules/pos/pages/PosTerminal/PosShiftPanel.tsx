@@ -36,10 +36,10 @@ const PosShiftPanel: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, h] = await Promise.all([posApi.currentShift(), posApi.shifts(30)]);
-      setCur(c ?? null);
-      setHistory(h ?? []);
-      if (c) setActualCash(Number(c.expectedCash ?? 0));
+      const [cRaw, hRaw] = await Promise.all([posApi.currentShift(), posApi.shifts(30)]);
+      setCur(cRaw ?? null);
+      setHistory(Array.isArray(hRaw) ? hRaw : []);
+      if (cRaw) setActualCash(Number(cRaw.expectedCash ?? 0));
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载班次失败');
     } finally {
@@ -68,7 +68,7 @@ const PosShiftPanel: React.FC = () => {
     }
     try {
       const out = await posApi.closeShift({ actualCash, diffReason: diffReason || undefined });
-      const diff = Number(out.diffAmount ?? 0);
+      const diff = Number(out?.diffAmount ?? 0);
       message.success(
         diff === 0
           ? '已交班，钱箱对平'
