@@ -1,4 +1,5 @@
 {
+  "miniprogramBaseLibVersion": "3.3.4",
   "pages": [
     "pages/login/index",
     "pages/home/index",
