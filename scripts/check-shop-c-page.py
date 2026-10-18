@@ -288,6 +288,18 @@ def main():
                     "优先级反了，设了主图的款式会一直用旧轮播"
                 )
 
+    # D-816：主图组只是「补位」，不能整组顶掉回落图。
+    # 线上真故障：商家只传了 1 张主图，原本 5 张轮播图整组消失，顾客顶部只剩 1 张。
+    # 判据：gallery 的分支不能在「imgs 已有内容时」被跳过 ——
+    # 写成 `if (!imgs.length && d.gallery...)` 或 `else if (d.coverGroup...)` 都会丢图。
+    if gallery_fn:
+        gbranch = re.search(r"if\s*\(\s*d\.gallery\s*&&", gbody)
+        if gbranch is None:
+            fail(
+                "galleryImages() 里找不到手填轮播图的补充分支 —— "
+                "只传 1 张主图会让原本的轮播图整组消失（D-816 线上故障）"
+            )
+
     # 纵向详情流只认 blocks，绝不回落 gallery：
     # 两个字段混用会让同一批图在顶部轮播和下方详情流里各出现一次。
     stack_fn = re.search(r"function detailImageStack.*?\n  \}", js, re.S)

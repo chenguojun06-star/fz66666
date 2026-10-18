@@ -21,13 +21,16 @@ import type { ColumnsType } from 'antd/es/table';
 import type { InputRef } from 'antd';
 import {
   DeleteOutlined,
+  PauseCircleOutlined,
   ProfileOutlined,
   ReloadOutlined,
+  RollbackOutlined,
   ScanOutlined,
   ShoppingCartOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
+import { Segmented } from 'antd';
 import { unwrapApiData } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import posApi from '@/services/pos/posApi';
@@ -42,6 +45,8 @@ import type {
 } from '@/services/pos/posApi';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketModal from '@/components/common/TicketModal';
+import PosReturnPanel from './PosReturnPanel';
+import PosHoldPanel from './PosHoldPanel';
 import './index.css';
 
 const { Text } = Typography;
@@ -104,6 +109,12 @@ const PosTerminal: React.FC = () => {
   const [cancelling, setCancelling] = React.useState(false);
   /** 电子小票弹窗（开单成功 / 今日单据查看） */
   const [ticket, setTicket] = React.useState<{ id: number; saleNo?: string } | null>(null);
+  /**
+   * D-817：收银台内的功能分区。
+   * 不拆成独立页面 —— 退货/换货与挂单都发生在结账现场，来回跳页在高峰期就是排队变慢。
+   * 购物车 state 仍在本组件，切 Tab 不会丢（Tabs 不设 destroyOnClose）。
+   */
+  const [tab, setTab] = React.useState<'checkout' | 'return' | 'hold'>('checkout');
 
   const searchRef = React.useRef<InputRef>(null);
 
@@ -518,367 +529,408 @@ const PosTerminal: React.FC = () => {
         </Space>
       </div>
 
-      <Row gutter={12} className="pos-body">
-        <Col xs={24} lg={13}>
-          <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                ref={searchRef}
-                autoFocus
-                allowClear
-                prefix={<ScanOutlined />}
-                placeholder="扫条码 / 输款号、商品编码、款名"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                onPressEnter={onScanEnter}
-              />
-              <Button type="primary" loading={searching} onClick={() => void doSearch(keyword)}>
-                查询
-              </Button>
-            </Space.Compact>
+      {/* D-816/D-817：收银台内三个分区。
+          用分段器做导航 + 条件渲染，而不是把原收银界面塞进 Tabs.children ——
+          那需要给 360 行既有 JSX 再套一层括号，极易失衡；片段包裹不会改变原有结构。
+          购物车 state 在本组件，切分区不丢。 */}
+      <Segmented
+        value={tab}
+        onChange={(v) => setTab(v as 'checkout' | 'return' | 'hold')}
+        options={[
+          { label: '收银', value: 'checkout', icon: <ShoppingCartOutlined /> },
+          { label: '退货 / 换货', value: 'return', icon: <RollbackOutlined /> },
+          { label: '挂单', value: 'hold', icon: <PauseCircleOutlined /> },
+        ]}
+        style={{ marginBottom: 16 }}
+      />
 
-            <div className="pos-results">
-              {results.length === 0 ? (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={searching ? '查询中…' : '输入后回车查询，或直接扫码'}
-                />
-              ) : (
-                results.map((sku) => (
-                  <div
-                    key={sku.skuId}
-                    className={'pos-sku' + (sku.stock <= 0 ? ' pos-sku--out' : '')}
-                    onClick={() => addLine(sku)}
-                  >
-                    <div className="pos-sku__main">
-                      <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {[sku.skuCode, sku.color, sku.size].filter(Boolean).join(' / ')}
-                      </Text>
-                    </div>
-                    <div className="pos-sku__right">
-                      <div className="pos-sku__price">
-                        {formatMoney(Number(sku.salesPrice ?? sku.tagPrice ?? 0))}
-                      </div>
-                      <Tag color={sku.stock > 0 ? 'green' : 'red'}>库存 {sku.stock}</Tag>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={11}>
-          <Card size="small" title="本单" className="pos-card">
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                prefix={<UserOutlined />}
-                placeholder="客户手机号（挂账必填）"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onBlur={() => void loadCustomer(phone)}
-                onPressEnter={() => void loadCustomer(phone)}
-              />
-              <Button onClick={applyLastPrices} disabled={!customer?.lastPrices}>
-                带出历史价
-              </Button>
-            </Space.Compact>
-            {customer?.customerName ? (
-              <div style={{ marginTop: 6 }}>
-                <Tag color="blue">{customer.customerName}</Tag>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  老客户
-                </Text>
-              </div>
-            ) : null}
-            <Input
-              style={{ marginTop: 8 }}
-              placeholder="客户名称（可选）"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
-
-            <Table<CartLine>
-              rowKey="skuId"
-              size="small"
-              style={{ marginTop: 8 }}
-              columns={columns}
-              dataSource={lines}
-              pagination={false}
-              scroll={{ y: 260 }}
-              locale={{ emptyText: '还没有商品' }}
-            />
-
-            <Divider style={{ margin: '10px 0' }} />
-
-            <Row gutter={8}>
-              <Col span={8}>
-                <div className="pos-label">商品金额</div>
-                <div className="pos-amount">{formatMoney(goodsAmount)}</div>
-              </Col>
-              <Col span={8}>
-                <div className="pos-label">整单折扣</div>
-                <InputNumber
-                  value={discount}
-                  min={0}
-                  max={goodsAmount}
-                  precision={2}
-                  style={{ width: '100%' }}
-                  onChange={(v) => setDiscount(Number(v) || 0)}
-                />
-              </Col>
-              <Col span={8}>
-                <div className="pos-label">抹零</div>
-                <InputNumber
-                  value={roundOff}
-                  min={0}
-                  max={goodsAmount}
-                  precision={2}
-                  style={{ width: '100%' }}
-                  onChange={(v) => setRoundOff(Number(v) || 0)}
-                />
-              </Col>
-            </Row>
-
-            <div className="pos-total">
-              <span>应收</span>
-              <span className="pos-total__num">{formatMoney(totalAmount)}</span>
-            </div>
-
-            <div className="pos-label" style={{ marginTop: 8 }}>
-              收款方式
-            </div>
-            <Radio.Group
-              value={payMethod}
-              onChange={(e) => setPayMethod(e.target.value as PosPayMethod)}
-              optionType="button"
-              buttonStyle="solid"
-              options={PAY_OPTIONS.map((o) => ({
-                ...o,
-                // 未配置商户号的在线渠道直接置灰：让收银员一眼看出"这个收不了"，
-                // 而不是点了才弹报错（收款方式配置在「店铺管理 → 收款设置」）
-                disabled:
-                  (o.value === 'WECHAT' && !channels?.WECHAT_PAY) ||
-                  (o.value === 'ALIPAY' && !channels?.ALIPAY),
-              }))}
-            />
-            {payMethod === 'WECHAT' || payMethod === 'ALIPAY' ? (
-              <Alert
-                style={{ marginTop: 8 }}
-                type="info"
-                showIcon
-                message="顾客扫屏幕上的二维码付款，收到款项后自动出库"
-              />
-            ) : null}
-
-            {payMethod === 'CASH' ? (
-              <Row gutter={8} style={{ marginTop: 8 }} align="middle">
-                <Col span={12}>
-                  <div className="pos-label">实收现金</div>
-                  <InputNumber
-                    value={received}
-                    min={0}
-                    precision={2}
-                    style={{ width: '100%' }}
-                    onChange={(v) => setReceived(v == null ? null : Number(v))}
+      {tab === 'checkout' && (
+        <>
+          <Row gutter={12} className="pos-body">
+            <Col xs={24} lg={13}>
+              <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    ref={searchRef}
+                    autoFocus
+                    allowClear
+                    prefix={<ScanOutlined />}
+                    placeholder="扫条码 / 输款号、商品编码、款名"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    onPressEnter={onScanEnter}
                   />
-                </Col>
-                <Col span={12}>
-                  <div className="pos-label">找零</div>
-                  <div className="pos-amount">
-                    {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
+                  <Button type="primary" loading={searching} onClick={() => void doSearch(keyword)}>
+                    查询
+                  </Button>
+                </Space.Compact>
+
+                <div className="pos-results">
+                  {results.length === 0 ? (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description={searching ? '查询中…' : '输入后回车查询，或直接扫码'}
+                    />
+                  ) : (
+                    results.map((sku) => (
+                      <div
+                        key={sku.skuId}
+                        className={'pos-sku' + (sku.stock <= 0 ? ' pos-sku--out' : '')}
+                        onClick={() => addLine(sku)}
+                      >
+                        <div className="pos-sku__main">
+                          <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {[sku.skuCode, sku.color, sku.size].filter(Boolean).join(' / ')}
+                          </Text>
+                        </div>
+                        <div className="pos-sku__right">
+                          <div className="pos-sku__price">
+                            {formatMoney(Number(sku.salesPrice ?? sku.tagPrice ?? 0))}
+                          </div>
+                          <Tag color={sku.stock > 0 ? 'green' : 'red'}>库存 {sku.stock}</Tag>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </Col>
+
+            <Col xs={24} lg={11}>
+              <Card size="small" title="本单" className="pos-card">
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    prefix={<UserOutlined />}
+                    placeholder="客户手机号（挂账必填）"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    onBlur={() => void loadCustomer(phone)}
+                    onPressEnter={() => void loadCustomer(phone)}
+                  />
+                  <Button onClick={applyLastPrices} disabled={!customer?.lastPrices}>
+                    带出历史价
+                  </Button>
+                </Space.Compact>
+                {customer?.customerName ? (
+                  <div style={{ marginTop: 6 }}>
+                    <Tag color="blue">{customer.customerName}</Tag>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      老客户
+                    </Text>
                   </div>
-                </Col>
-              </Row>
-            ) : null}
+                ) : null}
+                <Input
+                  style={{ marginTop: 8 }}
+                  placeholder="客户名称（可选）"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
 
-            {payMethod === 'CREDIT' ? (
-              <Alert
-                style={{ marginTop: 8 }}
-                type="warning"
-                showIcon
-                message="挂账会生成一条应收单，请在「收付款中心」核销"
-              />
-            ) : null}
+                <Table<CartLine>
+                  rowKey="skuId"
+                  size="small"
+                  style={{ marginTop: 8 }}
+                  columns={columns}
+                  dataSource={lines}
+                  pagination={false}
+                  scroll={{ y: 260 }}
+                  locale={{ emptyText: '还没有商品' }}
+                />
 
-            <Input
-              style={{ marginTop: 8 }}
-              placeholder="备注（可选）"
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-            />
+                <Divider style={{ margin: '10px 0' }} />
 
-            <Button
-              type="primary"
-              size="large"
-              block
-              style={{ marginTop: 12 }}
-              loading={submitting}
-              disabled={!lines.length}
-              onClick={() => void submit()}
-            >
-              {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
-            </Button>
-          </Card>
+                <Row gutter={8}>
+                  <Col span={8}>
+                    <div className="pos-label">商品金额</div>
+                    <div className="pos-amount">{formatMoney(goodsAmount)}</div>
+                  </Col>
+                  <Col span={8}>
+                    <div className="pos-label">整单折扣</div>
+                    <InputNumber
+                      value={discount}
+                      min={0}
+                      max={goodsAmount}
+                      precision={2}
+                      style={{ width: '100%' }}
+                      onChange={(v) => setDiscount(Number(v) || 0)}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <div className="pos-label">抹零</div>
+                    <InputNumber
+                      value={roundOff}
+                      min={0}
+                      max={goodsAmount}
+                      precision={2}
+                      style={{ width: '100%' }}
+                      onChange={(v) => setRoundOff(Number(v) || 0)}
+                    />
+                  </Col>
+                </Row>
 
-          <Card size="small" title="今日单据" className="pos-card" style={{ marginTop: 12 }}>
-            <Table
-              rowKey="id"
-              size="small"
-              pagination={false}
-              dataSource={today?.recent ?? []}
-              locale={{ emptyText: '今天还没有单据' }}
-              columns={[
-                { title: '单号', dataIndex: 'saleNo', width: 170 },
-                { title: '客户', dataIndex: 'customerName', render: (v: string) => v || '散客' },
-                { title: '件数', dataIndex: 'itemCount', width: 60 },
-                {
-                  title: '金额',
-                  dataIndex: 'totalAmount',
-                  width: 100,
-                  align: 'right',
-                  render: (v: number) => formatMoney(v),
-                },
-                {
-                  title: '方式',
-                  dataIndex: 'payMethod',
-                  width: 80,
-                  render: (v: string, r) => (
-                    <Tag color={r.payStatus === 'UNPAID' ? 'orange' : 'green'}>
-                      {PAY_OPTIONS.find((o) => o.value === v)?.label ?? v}
-                      {r.payStatus === 'UNPAID' ? '(挂账)' : ''}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: '',
-                  width: 56,
-                  render: (_v: string, r) => (
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<ProfileOutlined />}
-                      onClick={() => setTicket({ id: r.id })}
-                    >
-                      小票
-                    </Button>
-                  ),
-                },
-              ]}
-            />
-          </Card>
-        </Col>
-      </Row>
+                <div className="pos-total">
+                  <span>应收</span>
+                  <span className="pos-total__num">{formatMoney(totalAmount)}</span>
+                </div>
 
-      {/* 待支付：展示二维码 + 倒计时，收银员可随时取消 */}
-      <Modal
-        open={!!payInfo}
-        title="等待顾客付款"
-        footer={null}
-        onCancel={() => void cancelPay()}
-        maskClosable={false}
-        width={380}
-      >
-        {payInfo ? (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 13, color: '#8c8c8c' }}>应收</div>
-            <div className="pos-total__num" style={{ marginBottom: 8 }}>
-              {formatMoney(payInfo.totalAmount)}
-            </div>
-            {payInfo.qrCode ? (
-              <div style={{ display: 'inline-block', padding: 8, background: '#fff', borderRadius: 8 }}>
-                <QRCodeSVG value={payInfo.qrCode} size={220} level="M" />
+                <div className="pos-label" style={{ marginTop: 8 }}>
+                  收款方式
+                </div>
+                <Radio.Group
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value as PosPayMethod)}
+                  optionType="button"
+                  buttonStyle="solid"
+                  options={PAY_OPTIONS.map((o) => ({
+                    ...o,
+                    // 未配置商户号的在线渠道直接置灰：让收银员一眼看出"这个收不了"，
+                    // 而不是点了才弹报错（收款方式配置在「店铺管理 → 收款设置」）
+                    disabled:
+                      (o.value === 'WECHAT' && !channels?.WECHAT_PAY) ||
+                      (o.value === 'ALIPAY' && !channels?.ALIPAY),
+                  }))}
+                />
+                {payMethod === 'WECHAT' || payMethod === 'ALIPAY' ? (
+                  <Alert
+                    style={{ marginTop: 8 }}
+                    type="info"
+                    showIcon
+                    message="顾客扫屏幕上的二维码付款，收到款项后自动出库"
+                  />
+                ) : null}
+
+                {payMethod === 'CASH' ? (
+                  <Row gutter={8} style={{ marginTop: 8 }} align="middle">
+                    <Col span={12}>
+                      <div className="pos-label">实收现金</div>
+                      <InputNumber
+                        value={received}
+                        min={0}
+                        precision={2}
+                        style={{ width: '100%' }}
+                        onChange={(v) => setReceived(v == null ? null : Number(v))}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <div className="pos-label">找零</div>
+                      <div className="pos-amount">
+                        {changeAmount == null ? '—' : formatMoney(Math.max(0, changeAmount))}
+                      </div>
+                    </Col>
+                  </Row>
+                ) : null}
+
+                {payMethod === 'CREDIT' ? (
+                  <Alert
+                    style={{ marginTop: 8 }}
+                    type="warning"
+                    showIcon
+                    message="挂账会生成一条应收单，请在「收付款中心」核销"
+                  />
+                ) : null}
+
+                <Input
+                  style={{ marginTop: 8 }}
+                  placeholder="备注（可选）"
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                />
+
+                <Button
+                  type="primary"
+                  size="large"
+                  block
+                  style={{ marginTop: 12 }}
+                  loading={submitting}
+                  disabled={!lines.length}
+                  onClick={() => void submit()}
+                >
+                  {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
+                </Button>
+              </Card>
+
+              <Card size="small" title="今日单据" className="pos-card" style={{ marginTop: 12 }}>
+                <Table
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  dataSource={today?.recent ?? []}
+                  locale={{ emptyText: '今天还没有单据' }}
+                  columns={[
+                    { title: '单号', dataIndex: 'saleNo', width: 170 },
+                    { title: '客户', dataIndex: 'customerName', render: (v: string) => v || '散客' },
+                    { title: '件数', dataIndex: 'itemCount', width: 60 },
+                    {
+                      title: '金额',
+                      dataIndex: 'totalAmount',
+                      width: 100,
+                      align: 'right',
+                      render: (v: number) => formatMoney(v),
+                    },
+                    {
+                      title: '方式',
+                      dataIndex: 'payMethod',
+                      width: 80,
+                      render: (v: string, r) => (
+                        <Tag color={r.payStatus === 'UNPAID' ? 'orange' : 'green'}>
+                          {PAY_OPTIONS.find((o) => o.value === v)?.label ?? v}
+                          {r.payStatus === 'UNPAID' ? '(挂账)' : ''}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: '',
+                      width: 56,
+                      render: (_v: string, r) => (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<ProfileOutlined />}
+                          onClick={() => setTicket({ id: r.id })}
+                        >
+                          小票
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* 待支付：展示二维码 + 倒计时，收银员可随时取消 */}
+          <Modal
+            open={!!payInfo}
+            title="等待顾客付款"
+            footer={null}
+            onCancel={() => void cancelPay()}
+            maskClosable={false}
+            width={380}
+          >
+            {payInfo ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: '#8c8c8c' }}>应收</div>
+                <div className="pos-total__num" style={{ marginBottom: 8 }}>
+                  {formatMoney(payInfo.totalAmount)}
+                </div>
+                {payInfo.qrCode ? (
+                  <div style={{ display: 'inline-block', padding: 8, background: '#fff', borderRadius: 8 }}>
+                    <QRCodeSVG value={payInfo.qrCode} size={220} level="M" />
+                  </div>
+                ) : (
+                  <Alert type="warning" showIcon message="渠道未返回二维码，请取消后重试" />
+                )}
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary">
+                    {payInfo.payMethod === 'WECHAT' ? '微信' : '支付宝'}扫码付款 ·
+                    剩余 {Math.floor(payLeft / 60)}:{(payLeft % 60).toString().padStart(2, '0')}
+                  </Text>
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    单号 {payInfo.saleNo}
+                  </Text>
+                </div>
+                <Button style={{ marginTop: 12 }} loading={cancelling} onClick={() => void cancelPay()}>
+                  取消这笔
+                </Button>
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    付款成功后会自动出库并计入今日收款，无需再点确认
+                  </Text>
+                </div>
               </div>
-            ) : (
-              <Alert type="warning" showIcon message="渠道未返回二维码，请取消后重试" />
-            )}
-            <div style={{ marginTop: 8 }}>
-              <Text type="secondary">
-                {payInfo.payMethod === 'WECHAT' ? '微信' : '支付宝'}扫码付款 ·
-                剩余 {Math.floor(payLeft / 60)}:{(payLeft % 60).toString().padStart(2, '0')}
-              </Text>
-            </div>
-            <div style={{ marginTop: 4 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                单号 {payInfo.saleNo}
-              </Text>
-            </div>
-            <Button style={{ marginTop: 12 }} loading={cancelling} onClick={() => void cancelPay()}>
-              取消这笔
-            </Button>
-            <div style={{ marginTop: 8 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                付款成功后会自动出库并计入今日收款，无需再点确认
-              </Text>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
+            ) : null}
+          </Modal>
 
-      <Modal
-        open={!!result}
-        title="开单成功"
-        onOk={resetAll}
-        onCancel={resetAll}
-        okText="继续开单"
-        cancelButtonProps={{ style: { display: 'none' } }}
-      >
-        {result ? (
-          <div>
-            <div className="pos-done__row">
-              <span>销售单号</span>
-              <Text copyable>{result.saleNo}</Text>
-            </div>
-            <div className="pos-done__row">
-              <span>商品金额</span>
-              <span>{formatMoney(result.goodsAmount)}</span>
-            </div>
-            {Number(result.discountAmount) > 0 ? (
-              <div className="pos-done__row">
-                <span>折扣</span>
-                <span>-{formatMoney(result.discountAmount)}</span>
+          <Modal
+            open={!!result}
+            title="开单成功"
+            onOk={resetAll}
+            onCancel={resetAll}
+            okText="继续开单"
+            cancelButtonProps={{ style: { display: 'none' } }}
+          >
+            {result ? (
+              <div>
+                <div className="pos-done__row">
+                  <span>销售单号</span>
+                  <Text copyable>{result.saleNo}</Text>
+                </div>
+                <div className="pos-done__row">
+                  <span>商品金额</span>
+                  <span>{formatMoney(result.goodsAmount)}</span>
+                </div>
+                {Number(result.discountAmount) > 0 ? (
+                  <div className="pos-done__row">
+                    <span>折扣</span>
+                    <span>-{formatMoney(result.discountAmount)}</span>
+                  </div>
+                ) : null}
+                {Number(result.roundOffAmount) > 0 ? (
+                  <div className="pos-done__row">
+                    <span>抹零</span>
+                    <span>-{formatMoney(result.roundOffAmount)}</span>
+                  </div>
+                ) : null}
+                <div className="pos-done__row pos-done__row--total">
+                  <span>应收</span>
+                  <span>{formatMoney(result.totalAmount)}</span>
+                </div>
+                {changeAmount != null && changeAmount >= 0 ? (
+                  <div className="pos-done__row">
+                    <span>找零</span>
+                    <span>{formatMoney(changeAmount)}</span>
+                  </div>
+                ) : null}
+                {result.receivableId ? (
+                  <Alert
+                    style={{ marginTop: 8 }}
+                    type="warning"
+                    showIcon
+                    message="已生成应收单，请在「收付款中心」核销"
+                  />
+                ) : null}
+                {result.saleId ? (
+                  <Button
+                    block
+                    style={{ marginTop: 8 }}
+                    icon={<ProfileOutlined />}
+                    onClick={() => setTicket({ id: Number(result.saleId), saleNo: result.saleNo })}
+                  >
+                    查看电子小票（扫码签收）
+                  </Button>
+                ) : null}
               </div>
             ) : null}
-            {Number(result.roundOffAmount) > 0 ? (
-              <div className="pos-done__row">
-                <span>抹零</span>
-                <span>-{formatMoney(result.roundOffAmount)}</span>
-              </div>
-            ) : null}
-            <div className="pos-done__row pos-done__row--total">
-              <span>应收</span>
-              <span>{formatMoney(result.totalAmount)}</span>
-            </div>
-            {changeAmount != null && changeAmount >= 0 ? (
-              <div className="pos-done__row">
-                <span>找零</span>
-                <span>{formatMoney(changeAmount)}</span>
-              </div>
-            ) : null}
-            {result.receivableId ? (
-              <Alert
-                style={{ marginTop: 8 }}
-                type="warning"
-                showIcon
-                message="已生成应收单，请在「收付款中心」核销"
-              />
-            ) : null}
-            {result.saleId ? (
-              <Button
-                block
-                style={{ marginTop: 8 }}
-                icon={<ProfileOutlined />}
-                onClick={() => setTicket({ id: Number(result.saleId), saleNo: result.saleNo })}
-              >
-                查看电子小票（扫码签收）
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </Modal>
+          </Modal>
 
-      {/* 电子小票：开单成功 / 今日单据均可打开 */}
+          {/* 电子小票：开单成功 / 今日单据均可打开 */}
+        </>
+      )}
+
+      {tab === 'return' && (
+        <PosReturnPanel onGoCheckout={() => setTab('checkout')} />
+      )}
+
+      {tab === 'hold' && (
+        <PosHoldPanel
+          cartLines={lines}
+          customerName={customerName || null}
+          customerPhone={phone || null}
+          payMethod={payMethod}
+          onResumed={({ lines: restored, customerName: cn, customerPhone: cp, payMethod: pm }) => {
+            setLines(restored as typeof lines);
+            if (cn) setCustomerName(cn);
+            if (cp) setPhone(cp);
+            if (pm) setPayMethod(pm as PosPayMethod);
+            setTab('checkout');
+            message.success('已取回到收银台，请继续收款');
+          }}
+        />
+      )}
+
       <TicketModal
         open={!!ticket}
         onClose={() => setTicket(null)}

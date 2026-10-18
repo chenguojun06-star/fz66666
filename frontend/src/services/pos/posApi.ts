@@ -73,6 +73,72 @@ export interface PosCheckoutResult {
   outstockNo?: string | null;
 }
 
+/** D-816：可退量行 */
+export interface PosReturnableLine {
+  saleItemId: number;
+  skuId: number;
+  skuCode: string;
+  styleNo: string;
+  styleName: string;
+  color: string;
+  size: string;
+  unitPrice: number;
+  soldQty: number;
+  returnedQty: number;
+  returnableQty: number;
+}
+
+export type PosReturnType = 'REFUND' | 'RETURN' | 'EXCHANGE';
+
+export interface PosReturnBody {
+  lines: Array<{ saleItemId: number; quantity: number }>;
+  returnType: PosReturnType;
+  reason?: string;
+}
+
+export interface PosReturnResult {
+  returnNo: string;
+  totalAmount: number;
+  itemCount: number;
+  refundStatus: string;
+  refundStatusHint: string;
+  inboundNos: string[];
+}
+
+/** D-817：挂单行 */
+export interface PosHoldRow {
+  holdNo: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  itemCount: number;
+  goodsAmount: number;
+  discountAmount: number;
+  payMethod: string | null;
+  remark: string | null;
+  status: string;
+  creatorName: string | null;
+  createTime: string;
+}
+
+export interface PosHoldBody {
+  lines: unknown[];
+  customerId?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  payMethod?: string | null;
+  remark?: string | null;
+}
+
+export interface PosHoldResume {
+  holdNo: string;
+  lines: unknown[];
+  customerId: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  payMethod: string | null;
+  remark: string | null;
+}
+
 export interface PosTodaySummary {
   saleCount?: number;
   itemCount?: number;
@@ -159,6 +225,30 @@ export const posApi = {
     api.get<PosPayState>(`/pos/sales/${encodeURIComponent(saleNo)}/pay-state`),
 
   /** 取消待支付单（顾客不买了 / 换支付方式）：先关渠道单，再作废本地单据 */
+  // ── D-816 退货 / 换货 ──
+  returnable: (saleNo: string) =>
+    api.get<PosReturnableLine[]>(`/pos/sales/${encodeURIComponent(saleNo)}/returnable`),
+
+  createReturn: (saleNo: string, body: PosReturnBody) =>
+    api.post<PosReturnResult>(`/pos/sales/${encodeURIComponent(saleNo)}/return`, body),
+
+  confirmRefund: (returnNo: string, note?: string) =>
+    api.post<{ returnNo: string; refundStatus: string; refundedAmount: number }>(
+      `/pos/returns/${encodeURIComponent(returnNo)}/confirm-refund`,
+      { note },
+    ),
+
+  // ── D-817 挂单（暂存购物区，不参与财务口径）──
+  holds: (includeClosed = false) => api.get<PosHoldRow[]>('/pos/holds', { params: { includeClosed } }),
+
+  hold: (body: PosHoldBody) => api.post<{ holdNo: string; itemCount: number }>('/pos/holds', body),
+
+  resumeHold: (holdNo: string) =>
+    api.post<PosHoldResume>(`/pos/holds/${encodeURIComponent(holdNo)}/resume`),
+
+  discardHold: (holdNo: string, reason?: string) =>
+    api.post<{ holdNo: string; status: string }>(`/pos/holds/${encodeURIComponent(holdNo)}/discard`, { reason }),
+
   cancelPay: (saleNo: string, reason?: string) =>
     api.post<null>(`/pos/sales/${encodeURIComponent(saleNo)}/cancel-pay`, { reason }),
 };

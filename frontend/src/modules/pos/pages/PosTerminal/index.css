@@ -121,3 +121,14 @@
   font-weight: 600;
   font-size: 15px;
 }
+
+/* D-816/D-817：收银台三个分区的内容区 */
+.pos-return,
+.pos-hold {
+  background: var(--color-bg-container);
+  border-radius: 8px;
+}
+.pos-return .ant-table-wrapper,
+.pos-hold .ant-table-wrapper {
+  margin-bottom: 16px;
+}

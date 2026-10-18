@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.payment.orchestration.PaymentConfigOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosSaleOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosReturnOrchestrator;
+import com.fashion.supplychain.pos.orchestration.PosHoldOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,13 +36,16 @@ public class PosController {
     private final PaymentConfigOrchestrator paymentConfigOrchestrator;
 
     private final PosReturnOrchestrator posReturnOrchestrator;
+    private final PosHoldOrchestrator posHoldOrchestrator;
 
     public PosController(PosSaleOrchestrator posSaleOrchestrator,
                          PaymentConfigOrchestrator paymentConfigOrchestrator,
-                         PosReturnOrchestrator posReturnOrchestrator) {
+                         PosReturnOrchestrator posReturnOrchestrator,
+                         PosHoldOrchestrator posHoldOrchestrator) {
         this.posSaleOrchestrator = posSaleOrchestrator;
         this.paymentConfigOrchestrator = paymentConfigOrchestrator;
         this.posReturnOrchestrator = posReturnOrchestrator;
+        this.posHoldOrchestrator = posHoldOrchestrator;
     }
 
     /**
@@ -118,6 +122,50 @@ public class PosController {
             return Result.fail(400, e.getMessage());
         } catch (IllegalStateException e) {
             // 例如"发起支付失败"：单据已自动取消，收银员可以重试
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-817：挂起当前购物车（顾客临时离开） */
+    @PostMapping("/holds")
+    public Result<?> hold(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(posHoldOrchestrator.hold(body));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-817：挂单列表 */
+    @GetMapping("/holds")
+    public Result<?> holds(@RequestParam(defaultValue = "false") boolean includeClosed) {
+        return Result.success(posHoldOrchestrator.list(includeClosed));
+    }
+
+    /** D-817：取回挂单（原子置位，避免两人取到同一单） */
+    @PostMapping("/holds/{holdNo}/resume")
+    public Result<?> resumeHold(@PathVariable String holdNo) {
+        try {
+            return Result.success(posHoldOrchestrator.resume(holdNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-817：丢弃挂单（顾客放弃） */
+    @PostMapping("/holds/{holdNo}/discard")
+    public Result<?> discardHold(@PathVariable String holdNo,
+                                 @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "顾客放弃"));
+            return Result.success(posHoldOrchestrator.discard(holdNo, reason));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
             return Result.fail(409, e.getMessage());
         }
     }

@@ -824,21 +824,29 @@
    */
   function galleryImages(d) {
     var imgs = [];
-    // D-800：主图组（最多 5 张，运营上传）—— 第 1 张即主图。
-    // 历史数据没有 coverGroup 时自动跳过，行为与改动前一致。
+    // D-816 修复：**主图组是「补位」不是「顶掉」**。
+    //
+    // 此前写成 if(coverGroup){只放主图组} else if(gallery){放回落图}，
+    // 结果商家只上传了 1 张主图，原本 5 张的轮播图就**整组消失** ——
+    // 顾客看到顶部只有 1 张图。设主图组本意是「多传几张更好」，
+    // 绝不该让已有的图消失。
+    //
+    // 现在：主图组排前面 → 回落图去重补足 → 仍为空才回落「主图 + 颜色图」。
+    // D-782 契约（手填图优先于自动回落）依然成立。
     if (d.coverGroup && d.coverGroup.length) {
-      for (var cg = 0; cg < d.coverGroup.length; cg++) {
-        if (d.coverGroup[cg] && imgs.indexOf(d.coverGroup[cg]) < 0) imgs.push(d.coverGroup[cg]);
+      for (var i = 0; i < d.coverGroup.length; i++) {
+        if (d.coverGroup[i] && imgs.indexOf(d.coverGroup[i]) < 0) imgs.push(d.coverGroup[i]);
       }
-    } else if (d.gallery && d.gallery.length) {
-      // D-782 契约：商家手填的图必须优先于「主图+颜色图」自动回落，
-      // 否则商家调了顺序在顾客端看不出任何变化。D-805 一度把这一支删掉，
-      // 那是把「顶部轮播」和「纵向详情流」当成同一个字段用两个意思 ——
-      // 详情流已改由 blocks 承担（D-808），这里恢复原契约。
-      for (var g2 = 0; g2 < d.gallery.length; g2++) {
-        if (d.gallery[g2] && imgs.indexOf(d.gallery[g2]) < 0) imgs.push(d.gallery[g2]);
+    }
+    // D-782 契约：手填的轮播图必须优先于「主图+颜色图」自动回落，
+    // 否则商家调了顺序在顾客端看不出任何变化。
+    // D-816：这里从「与主图组二选一」改成「去重补足」——
+    // 只传 1 张主图不应让原本 5 张轮播图整组消失。
+    if (d.gallery && d.gallery.length) {
+      for (var j = 0; j < d.gallery.length; j++) {
+        if (d.gallery[j] && imgs.indexOf(d.gallery[j]) < 0) imgs.push(d.gallery[j]);
       }
-    } else {
+    } else if (!imgs.length) {
       if (d.cover) imgs.push(d.cover);
       var ci = d.colorImages || {};
       for (var k in ci) { if (ci[k] && ci[k] !== d.cover) imgs.push(ci[k]); }
