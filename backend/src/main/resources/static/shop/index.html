@@ -138,6 +138,8 @@
   .d-price .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
   .d-price .sub{font-size:12px;color:var(--tb-sub);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;}
   .d-price .sub .warn{color:var(--tb-red);}
+  /* D-811：真实成交。灰色次要信息，不与价格抢注意力，也不做成营销口吻 */
+  .d-price .sub .d-sold{color:var(--tb-sub);}
 
   .d-title{background:#fff;padding:0 14px 14px;border-top:0;border-bottom:0;}
   .d-title h2{font-size:16.5px;font-weight:600;line-height:1.5;color:var(--tb-text);}
@@ -883,6 +885,65 @@
   }
 
   /**
+   * D-812：解析结构化尺码表 {cols:[...], rows:[[...]]}。
+   * 解析失败或结构不对时返回 null —— 调用方据此回退到历史 HTML 渲染。
+   */
+  function parseSizeTable(s) {
+    if (s == null) return null;
+    var t = String(s).trim();
+    if (t.charAt(0) !== '{') return null;   // 旧数据是 HTML，不碰
+    try {
+      var o = JSON.parse(t);
+      if (!o || !Array.isArray(o.cols) || !Array.isArray(o.rows)) return null;
+      if (o.cols.length < 2) return null;   // 至少「尺码 + 一项量体」
+      var cols = [], i;
+      for (i = 0; i < o.cols.length; i++) {
+        var cn = String(o.cols[i] == null ? '' : o.cols[i]).trim();
+        if (!cn) return null;
+        cols.push(cn);
+      }
+      var rows = [];
+      for (i = 0; i < o.rows.length; i++) {
+        var r = o.rows[i];
+        if (!Array.isArray(r)) return null;
+        var cells = [];
+        for (var j = 0; j < cols.length; j++) {
+          var v = r[j];
+          cells.push(v == null ? '' : String(v).trim());
+        }
+        // 整行全空 = 运营留了空行，不渲染出来占版面
+        if (cells.join('')) rows.push(cells);
+      }
+      if (!rows.length) return null;
+      return { cols: cols, rows: rows };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * D-812：尺码表渲染。表头深底白字、行浅色 —— 与主流电商尺码表观感一致，
+   * 横向可滚动，列多时不挤压变形。
+   */
+  function sizeTableHtml(t) {
+    var h = '<div class="d-sec"><div class="lbl">尺码表'
+      + '<span class="hint">商家录入</span></div><div class="size-tbl-wrap"><table class="size-tbl"><thead><tr>';
+    for (var i = 0; i < t.cols.length; i++) {
+      h += '<th>' + esc(t.cols[i]) + '</th>';
+    }
+    h += '</tr></thead><tbody>';
+    for (var r = 0; r < t.rows.length; r++) {
+      h += '<tr>';
+      for (var c = 0; c < t.cols.length; c++) {
+        var cell = t.rows[r][c];
+        h += cell ? '<td>' + esc(cell) + '</td>' : '<td class="na">—</td>';
+      }
+      h += '</tr>';
+    }
+    return h + '</tbody></table></div></div>';
+  }
+
+  /**
    * D-777：真正的图片轮播。
    * 此前把图片收进数组却只渲染 imgs[0]，多图等于没做；且指示点/序号都缺，
    * 顾客看不出还有别的图。现按淘宝/1688 惯例给出指示点 + 第 N/M 张 + 左右切换 + 触摸滑动。
@@ -1621,7 +1682,16 @@
       }
       return h + '</tbody></table></div></div>';
     }
-    // 商家自定义的富文本尺码表
+    // D-812：商家手工填的尺码表。
+    //
+    // 此前一律按 HTML 走 richHtml，而 richHtml 的白名单里**没有 table 标签** ——
+    // 商家真填一张表格，顾客端看到的是整段被转义的 <table>… 字面文本。
+    // （结构真相源只能是结构化数据，不能靠放宽 HTML 白名单来兜。）
+    // 现在：结构化 JSON → 渲染真表格；旧 HTML → 保持原样走 richHtml。
+    var structured = parseSizeTable(c);
+    if (structured) {
+      return sizeTableHtml(structured);
+    }
     return '<div class="d-sec"><div class="lbl">尺寸表</div>'
       + '<div class="d-desc rich">' + richHtml(c) + '</div></div>';
   }
@@ -1822,6 +1892,11 @@ gallery: function (d) {
           var stock = totalStock > 0
             ? '<span>现货 ' + totalStock + ' 件</span>'
             : '<span class="warn">暂时缺货</span>';
+          // D-811：真实成交件数。**没有就不显示** ——
+          // 「暂无成交」与「已售 0 件」是两回事，把缺失兜底成 0 是在报假数据。
+          if (d.soldQty > 0) {
+            stock += '<span class="d-sold">已售 ' + d.soldQty + ' 件</span>';
+          }
           return '<div class="d-price"><div class="row">' + priceHtml(minPrice, 'lg') + '</div>'
             + '<div class="sub">' + stock
             + '<span>' + esc(shipTag()) + '</span>'

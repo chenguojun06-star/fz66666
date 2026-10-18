@@ -30,6 +30,8 @@ const emptyCtx = (): ModuleContentCtx => ({
   colorImages: {},
   setColorImages: vi.fn(),
   styleName: '测试款',
+  // D-812：尺码表行名来自真实 SKU 尺码
+  sizes: ['S', 'M', 'L'],
   styleNo: 'FZ001',
 });
 
@@ -62,13 +64,16 @@ describe('详情页模块内容编辑区（D-785）', () => {
     expect(container.querySelectorAll('input[type="file"]').length).toBeGreaterThan(0);
   });
 
-  it('尺寸表要有输入框：此前读了存了却没有任何入口，永远填不上', () => {
+  it('尺码表要有录入入口：此前读了存了却填不上；D-812 改成结构化表格', () => {
     renderModule('detail');
-    expect(screen.getByText('尺寸表')).toBeTruthy();
-    // 「留空即自动生成」是 placeholder 提示，不是正文
-    const ta = screen.getByPlaceholderText(/留空即自动生成，无需手填/) as HTMLTextAreaElement;
-    expect(ta).toBeTruthy();
-    expect(screen.getByText(/默认按 SKU 的颜色 × 尺码矩阵/)).toBeTruthy();
+    expect(screen.getByText(/尺码表（手工录入）/)).toBeTruthy();
+    // 结构化录入：量体项可点选添加
+    expect(screen.getByRole('button', { name: /胸围/ })).toBeTruthy();
+    // 尺码名来自款式真实 SKU，运营不用重打（ctx.sizes 给了 S/M/L → 三行）
+    expect(screen.getAllByPlaceholderText('如 M')).toHaveLength(3);
+    // 量体数字单元格
+    expect(screen.getAllByPlaceholderText('cm').length).toBeGreaterThan(0);
+    expect(screen.getByText(/全部留空则不覆盖/)).toBeTruthy();
   });
 
   it('款式详情与商品说明都在「详情介绍」模块里', () => {

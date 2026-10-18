@@ -44,6 +44,8 @@ const ctx = (): ModuleContentCtx => ({
   colorImages: {},
   setColorImages: vi.fn(),
   styleName: '测试款',
+  // D-812：尺码表行名来自真实 SKU 尺码
+  sizes: ['S', 'M', 'L'],
   styleNo: 'FZ001',
 });
 

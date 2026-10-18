@@ -5,6 +5,7 @@ import {
 } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import DetailCanvasEditor from './DetailCanvasEditor';
+import SizeChartEditor from './SizeChartEditor';
 import api from '@/utils/api';
 import { looksLikeProductionContent, PRODUCTION_CONTENT_HINT } from '../listingCompliance';
 import type { DetailBlock, ListingContent } from '../types';
@@ -45,6 +46,8 @@ export interface ModuleContentCtx {
   colors: string[];
   colorImages: Record<string, string>;
   setColorImages: (v: Record<string, string>) => void;
+  /** D-812：款式真实 SKU 的尺码列表 —— 尺码表行名从这里带出，运营只填量体数字 */
+  sizes: string[];
   /* 只读回显 */
   styleName: string;
   styleNo: string;
@@ -341,17 +344,15 @@ const DetailContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   const { content, setContent, desc, setDesc, remark, setRemark } = ctx;
   return (
     <div className="shop-edit__block">
-      <div className="shop-edit__field-label">尺寸表</div>
-      <TextArea
-        value={content.sizeChart ?? ''}
-        onChange={(e) => setContent({ ...content, sizeChart: e.target.value || null })}
-        placeholder={'留空即自动生成，无需手填。\n想手工覆盖时按「行」填：\n衣长|59|60|61\n胸围|96|100|104\n肩宽|38|39|40'}
-        maxLength={4000}
-        autoSize={{ minRows: 3, maxRows: 10 }}
+      <div className="shop-edit__field-label">尺码表（手工录入）</div>
+      <SizeChartEditor
+        value={content.sizeChart ?? null}
+        sizes={ctx.sizes}
+        onChange={(v) => setContent({ ...content, sizeChart: v })}
       />
       <Text type="secondary" className="shop-listing__hint">
-        默认按 SKU 的颜色 × 尺码矩阵<b>自动生成</b>（运营零录入）。
-        只有自动生成的表不对时，才在这里手工覆盖 —— 优先级：这里 &gt; 款式资料里的尺码 &gt; 自动生成。
+        尺码名已按款式真实 SKU 带出，只需填量体数字。全部留空则不覆盖，
+        顾客端按颜色 × 尺码矩阵<b>自动生成</b>。
       </Text>
 
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>款式详情（图文介绍）</div>

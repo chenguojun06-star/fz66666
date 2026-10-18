@@ -267,6 +267,8 @@ const ListingEditDrawer: React.FC<Props> = ({
     remark,
     setRemark,
     colors,
+    // D-812：尺码表行名直接取自真实 SKU，运营不用重打尺码名
+    sizes: Array.from(new Set(skus.map((s) => s.size).filter(Boolean))),
     colorImages,
     setColorImages,
     styleName: row?.styleName || '',

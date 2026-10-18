@@ -20,6 +20,8 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.helper.StyleCoverGroupHelper;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.ticket.TicketTypes;
+import com.fashion.supplychain.ticket.orchestration.TicketOrchestrator;
 import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +72,10 @@ public class ShopOrderOrchestrator {
     @Autowired
     private ShopListingContentOrchestrator shopListingContentOrchestrator;
 
+    /** D-811：真实成交统计 */
+    @Autowired
+    private ShopSalesCounter shopSalesCounter;
+
     /** 公开接口无上下文：以「shop 身份 + 目标租户」执行既有编排器 */
     @Autowired
     private ShopTenantContextRunner tenantContextRunner;
@@ -101,6 +107,10 @@ public class ShopOrderOrchestrator {
 
     @Autowired
     private ReceivableOrchestrator receivableOrchestrator;
+
+    /** 电子小票：店铺订单出票（D-809） */
+    @Autowired
+    private TicketOrchestrator ticketOrchestrator;
 
     /** slug → 店铺配置（打烊时浏览可见但下单被拒） */
     public ShopConfig resolveBySlug(String slug) {
@@ -255,6 +265,27 @@ public class ShopOrderOrchestrator {
      * （商品不存在/已下架会提前抛异常，不该被计入）。
      * 无论是否登录都记一次按天计数（看板用）；登录顾客另记一份个人历史（推荐用）。
      */
+    /**
+     * D-811：取本款式的真实成交件数。
+     *
+     * <p><b>为什么每请求都聚合</b>：店铺订单量目前只有 2 单，
+     * 为这个量级引入缓存只会带来「改了订单数还不同步」的新问题。
+     * 等量级上来（上千单）再换预聚合表 + 定时刷新，届时单独立项。
+     */
+    private Integer realSoldQty(com.fashion.supplychain.style.entity.StyleInfo style) {
+        try {
+            String no = style.getStyleNo();
+            if (!StringUtils.hasText(no)) {
+                return null;
+            }
+            return shopSalesCounter.soldQtyByStyleNo().get(no.trim());
+        } catch (Exception e) {
+            // 销量取不到绝不能拖垮详情页：记 error 让问题可查，页面照常返回
+            log.error("[真实销量] 统计失败 styleId={}: {}", style.getId(), e.getMessage());
+            return null;
+        }
+    }
+
     public Map<String, Object> productDetail(String slug, Long styleId, String consumerId) {
         ShopConfig config = resolveBySlug(slug);
         if (config == null) {
@@ -293,6 +324,13 @@ public class ShopOrderOrchestrator {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("styleId", style.getId());
         data.put("styleNo", style.getStyleNo());
+        // D-811：真实成交件数（已发货/待发货，取消不计）。
+        // **没有销量就不下发这个键** —— 「暂无成交」和「已售 0 件」在业务上
+        // 是两回事，前端要区分显示，不能把缺失兜底成 0。
+        Integer soldQty = realSoldQty(style);
+        if (soldQty != null && soldQty > 0) {
+            data.put("soldQty", soldQty);
+        }
         data.put("styleName", style.getStyleName());
         data.put("cover", style.getCover());
         // D-800：主图组（最多 5 张）—— 顾客端详情页据此渲染轮播，
@@ -630,6 +668,14 @@ public class ShopOrderOrchestrator {
         patch2.setReceivableId(saved.getId());
         shopOrderMapper.updateById(patch2);
         order.setReceivableId(saved.getId());
+
+        // 电子小票：下单即出票（幂等）。失败只记日志，绝不阻断下单主交易
+        try {
+            ticketOrchestrator.ensureTicket(tenantId, TicketTypes.SHOP_ORDER,
+                    order.getId(), order.getOrderNo());
+        } catch (Exception ex) {
+            log.warn("[ShopOrder] 电子小票生成失败(不阻塞主流程) orderNo={}", order.getOrderNo(), ex);
+        }
 
         log.info("[ShopOrder] 店铺下单成功 orderNo={} tenant={} 金额={} 明细={}款 出库={}单 应收={}",
                 order.getOrderNo(), tenantId, total, orderItems.size(), outstockNos.size(), saved.getReceivableNo());
