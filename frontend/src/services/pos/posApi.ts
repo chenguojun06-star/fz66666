@@ -132,6 +132,10 @@ export interface PosReturnResult {
 /** D-817：挂单行 */
 export interface PosHoldRow {
   holdNo: string;
+  /** 快照里第一件商品的编码（款式图/款号列用；权威款号由 /style/sku/brief 解析） */
+  previewSkuCode?: string | null;
+  /** 快照里第一件商品的品名（仅快照片段，解析不到款号时兜底显示） */
+  previewStyleName?: string | null;
   customerName: string | null;
   customerPhone: string | null;
   itemCount: number;
@@ -180,6 +184,8 @@ export interface PosPayMethodRow {
 export interface PosRecentSale {
   id: number;
   saleNo: string;
+  /** 该单第一件商品的编码（后端带出，用于款式图/款号列；权威款号由 /style/sku/brief 解析） */
+  skuCode?: string | null;
   customerName?: string | null;
   itemCount: number;
   totalAmount: number;

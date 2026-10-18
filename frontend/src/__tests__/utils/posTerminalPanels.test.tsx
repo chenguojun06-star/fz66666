@@ -259,3 +259,65 @@ describe('收银台 · 交接班/钱箱分区（D-817）', () => {
     expect(screen.getByText(/短款 20.00/)).toBeTruthy();
   });
 });
+
+
+/**
+ * 铁律 15：收银台每一张商品相关列表都必须有「款式图 + 款号」列。
+ *
+ * <p>只有一串 skuCode / 单号，运营根本无法确认是不是那件货 ——
+ * 退错款、挂错单都是这么发生的。
+ */
+describe('收银台 · 商品列（铁律 15）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApi.holds.mockResolvedValue([
+      {
+        holdNo: 'HLD001',
+        customerName: '王女士',
+        customerPhone: '13800000000',
+        itemCount: 2,
+        goodsAmount: 199,
+        discountAmount: 0,
+        payMethod: 'CASH',
+        remark: null,
+        status: 'HELD',
+        creatorName: '收银员小李',
+        createTime: '2026-10-18T09:00:00',
+        previewSkuCode: 'BR24XQ0098E草绿色L(170/84A)',
+      },
+    ]);
+    mockApi.returnable.mockResolvedValue([
+      {
+        saleItemId: 1,
+        skuId: 9,
+        skuCode: 'BR24XQ0098E草绿色L(170/84A)',
+        styleNo: 'BR24XQ0098E',
+        styleName: '碎花连衣裙',
+        color: '草绿色',
+        size: 'L',
+        unitPrice: 99.5,
+        soldQty: 2,
+        returnedQty: 0,
+        returnableQty: 2,
+      },
+    ]);
+  });
+
+  it('挂单列表必须有「款式图」「款号」列', async () => {
+    render(<PosHoldPanel cartLines={[]} customerName="" customerPhone="" payMethod="CASH" onResumed={() => {}} />);
+    await waitFor(() => expect(screen.getByText('挂单号')).toBeTruthy());
+    expect(screen.getByText('款式图')).toBeTruthy();
+    expect(screen.getByText('款号')).toBeTruthy();
+  });
+
+  it('退货可退量列表必须有「款式图」「款号」列', async () => {
+    render(<PosReturnPanel />);
+    fireEvent.change(screen.getByPlaceholderText(/输入原销售单号/), {
+      target: { value: 'PS20261018001' },
+    });
+    fireEvent.click(screen.getByText('查可退商品'));
+    await waitFor(() => expect(screen.getByText('可退')).toBeTruthy());
+    expect(screen.getByText('款式图')).toBeTruthy();
+    expect(screen.getByText('款号')).toBeTruthy();
+  });
+});

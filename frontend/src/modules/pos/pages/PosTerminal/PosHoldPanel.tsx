@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Popconfirm, Space, Table, Tag, Typography, message } from 'antd';
 import { DeleteOutlined, ReloadOutlined, UndoOutlined } from '@ant-design/icons';
 import { posApi, type PosHoldRow } from '@/services/pos/posApi';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import useStyleCoverImages from '@/hooks/useStyleCoverImages';
 
 const { Text } = Typography;
 
@@ -31,6 +33,12 @@ const PosHoldPanel: React.FC<PosHoldPanelProps> = ({
   const [rows, setRows] = useState<PosHoldRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
+
+  /* 款式图 / 款号（铁律 15） */
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
+  useEffect(() => {
+    void fetchBySkuCodes(rows.map((r) => r.previewSkuCode));
+  }, [rows, fetchBySkuCodes]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +137,9 @@ const PosHoldPanel: React.FC<PosHoldPanelProps> = ({
         pagination={{ pageSize: 10, hideOnSinglePage: true }}
         dataSource={rows}
         columns={[
+          // 款式图 + 款号（铁律 15）：挂单可能挂半天，取回时必须一眼认出来
+          styleImageColumn<PosHoldRow>({ imageMap, skuCode: (r) => r.previewSkuCode }),
+          styleNoColumn<PosHoldRow>({ briefBySku, skuCode: (r) => r.previewSkuCode, width: 140 }),
           { title: '挂单号', dataIndex: 'holdNo', width: 180 },
           {
             title: '客户',

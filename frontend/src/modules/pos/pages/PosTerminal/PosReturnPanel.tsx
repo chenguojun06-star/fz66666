@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -13,6 +13,8 @@ import {
 } from 'antd';
 import { ReloadOutlined, RollbackOutlined, SwapOutlined } from '@ant-design/icons';
 import { posApi, type PosReturnType, type PosReturnableLine } from '@/services/pos/posApi';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import useStyleCoverImages from '@/hooks/useStyleCoverImages';
 
 const { Text } = Typography;
 
@@ -37,6 +39,12 @@ const PosReturnPanel: React.FC<{ onGoCheckout: () => void }> = ({ onGoCheckout }
   const [type, setType] = useState<PosReturnType>('RETURN');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  /* 款式图 / 款号（铁律 15） */
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
+  useEffect(() => {
+    void fetchBySkuCodes(rows.map((r) => r.skuCode));
+  }, [rows, fetchBySkuCodes]);
 
   const load = useCallback(async () => {
     const no = saleNo.trim();
@@ -138,7 +146,10 @@ const PosReturnPanel: React.FC<{ onGoCheckout: () => void }> = ({ onGoCheckout }
             style={{ marginBottom: 16 }}
             dataSource={rows}
             columns={[
-              { title: '商品', dataIndex: 'styleName', render: (v: string, r) => `${v}（${r.color ?? ''} ${r.size ?? ''}）` },
+              // 款式图 + 款号（铁律 15）：退错款是高频事故，光看编码看不出来
+              styleImageColumn<PosReturnableLine>({ imageMap, skuCode: (r) => r.skuCode }),
+              styleNoColumn<PosReturnableLine>({ briefBySku, skuCode: (r) => r.skuCode, width: 150 }),
+              { title: '品名', dataIndex: 'styleName', render: (v: string, r) => `${v}（${r.color ?? ''} ${r.size ?? ''}）` },
               { title: '单价', dataIndex: 'unitPrice', width: 90, render: (v: number) => `¥${Number(v ?? 0).toFixed(2)}` },
               { title: '已售', dataIndex: 'soldQty', width: 70 },
               { title: '已退', dataIndex: 'returnedQty', width: 70 },

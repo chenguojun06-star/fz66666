@@ -36,6 +36,7 @@ import { formatMoney } from '@/utils/format';
 import posApi from '@/services/pos/posApi';
 import type {
   PosChannelReadiness,
+  PosRecentSale,
   PosCheckoutResult,
   PosCustomer,
   PosPayInfo,
@@ -45,6 +46,9 @@ import type {
 } from '@/services/pos/posApi';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketModal from '@/components/common/TicketModal';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import StyleImageCell from '@/components/common/StyleImageCell';
+import useStyleCoverImages from '@/hooks/useStyleCoverImages';
 import PosReturnPanel from './PosReturnPanel';
 import PosHoldPanel from './PosHoldPanel';
 import PosShiftPanel from './PosShiftPanel';
@@ -415,20 +419,35 @@ const PosTerminal: React.FC = () => {
     }
   }, [payInfo, loadToday]);
 
+  /* ── 款式图 / 款号（铁律 15）── */
+
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
+
+  // 购物车：本单里的每一件都要看得见是什么货
+  React.useEffect(() => {
+    void fetchBySkuCodes(lines.map((l) => l.skuCode));
+  }, [lines, fetchBySkuCodes]);
+
+  // 选货结果
+  React.useEffect(() => {
+    void fetchBySkuCodes(results.map((r) => r.skuCode));
+  }, [results, fetchBySkuCodes]);
+
+  // 今日单据：后端已带出首件商品 skuCode
+  React.useEffect(() => {
+    void fetchBySkuCodes((today?.recent ?? []).map((r) => r.skuCode));
+  }, [today, fetchBySkuCodes]);
+
   /* ── 表格 ── */
 
   const columns: ColumnsType<CartLine> = [
+    // 款式图 + 款号（铁律 15）：款号由后端 /style/sku/brief 权威解析，前端不猜
+    styleImageColumn<CartLine>({ imageMap, skuCode: (r) => r.skuCode }),
+    styleNoColumn<CartLine>({ briefBySku, skuCode: (r) => r.skuCode, width: 170 }),
     {
-      title: '商品',
+      title: '品名',
       dataIndex: 'styleName',
-      render: (_v, r) => (
-        <div>
-          <div>{r.styleName || r.styleNo || r.skuCode || '—'}</div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {[r.styleNo, r.color, r.size].filter(Boolean).join(' / ')}
-          </Text>
-        </div>
-      ),
+      render: (_v, r) => r.styleName || '—',
     },
     {
       title: '单价',
@@ -547,57 +566,7 @@ const PosTerminal: React.FC = () => {
       {tab === 'checkout' && (
         <>
           <Row gutter={12} className="pos-body">
-            <Col xs={24} lg={13}>
-              <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input
-                    ref={searchRef}
-                    autoFocus
-                    allowClear
-                    prefix={<ScanOutlined />}
-                    placeholder="扫条码 / 输款号、商品编码、款名"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    onPressEnter={onScanEnter}
-                  />
-                  <Button type="primary" loading={searching} onClick={() => void doSearch(keyword)}>
-                    查询
-                  </Button>
-                </Space.Compact>
-
-                <div className="pos-results">
-                  {results.length === 0 ? (
-                    <Empty
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description={searching ? '查询中…' : '输入后回车查询，或直接扫码'}
-                    />
-                  ) : (
-                    results.map((sku) => (
-                      <div
-                        key={sku.skuId}
-                        className={'pos-sku' + (sku.stock <= 0 ? ' pos-sku--out' : '')}
-                        onClick={() => addLine(sku)}
-                      >
-                        <div className="pos-sku__main">
-                          <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {[sku.skuCode, sku.color, sku.size].filter(Boolean).join(' / ')}
-                          </Text>
-                        </div>
-                        <div className="pos-sku__right">
-                          <div className="pos-sku__price">
-                            {formatMoney(Number(sku.salesPrice ?? sku.tagPrice ?? 0))}
-                          </div>
-                          <Tag color={sku.stock > 0 ? 'green' : 'red'}>库存 {sku.stock}</Tag>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} lg={11}>
+            <Col xs={24} lg={15}>
               <Card size="small" title="本单" className="pos-card">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input
@@ -758,6 +727,15 @@ const PosTerminal: React.FC = () => {
                   dataSource={today?.recent ?? []}
                   locale={{ emptyText: '今天还没有单据' }}
                   columns={[
+                    styleImageColumn<PosRecentSale>({
+                      imageMap,
+                      skuCode: (r) => r.skuCode,
+                    }),
+                    styleNoColumn<PosRecentSale>({
+                      briefBySku,
+                      skuCode: (r) => r.skuCode,
+                      width: 140,
+                    }),
                     { title: '单号', dataIndex: 'saleNo', width: 170 },
                     { title: '客户', dataIndex: 'customerName', render: (v: string) => v || '散客' },
                     { title: '件数', dataIndex: 'itemCount', width: 60 },
@@ -795,6 +773,58 @@ const PosTerminal: React.FC = () => {
                     },
                   ]}
                 />
+              </Card>
+            </Col>
+            <Col xs={24} lg={9}>
+              <Card size="small" title="选货（扫码枪回车即加一件）" className="pos-card">
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    ref={searchRef}
+                    autoFocus
+                    allowClear
+                    prefix={<ScanOutlined />}
+                    placeholder="扫条码 / 输款号、商品编码、款名"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    onPressEnter={onScanEnter}
+                  />
+                  <Button type="primary" loading={searching} onClick={() => void doSearch(keyword)}>
+                    查询
+                  </Button>
+                </Space.Compact>
+
+                <div className="pos-results">
+                  {results.length === 0 ? (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description={searching ? '查询中…' : '输入后回车查询，或直接扫码'}
+                    />
+                  ) : (
+                    results.map((sku) => (
+                      <div
+                        key={sku.skuId}
+                        className={'pos-sku' + (sku.stock <= 0 ? ' pos-sku--out' : '')}
+                        onClick={() => addLine(sku)}
+                      >
+                        <StyleImageCell skuCode={sku.skuCode ?? undefined} imageMap={imageMap} />
+                        <div className="pos-sku__main">
+                          <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {[briefBySku[sku.skuCode ?? '']?.styleNo ?? sku.styleNo, sku.color, sku.size]
+                              .filter(Boolean)
+                              .join(' / ')}
+                          </Text>
+                        </div>
+                        <div className="pos-sku__right">
+                          <div className="pos-sku__price">
+                            {formatMoney(Number(sku.salesPrice ?? sku.tagPrice ?? 0))}
+                          </div>
+                          <Tag color={sku.stock > 0 ? 'green' : 'red'}>库存 {sku.stock}</Tag>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </Card>
             </Col>
           </Row>

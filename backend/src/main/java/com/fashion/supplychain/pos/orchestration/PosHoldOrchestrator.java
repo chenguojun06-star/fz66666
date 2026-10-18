@@ -123,6 +123,12 @@ public class PosHoldOrchestrator {
             m.put("status", h.getStatus());
             m.put("creatorName", h.getCreatorName());
             m.put("createTime", h.getCreateTime());
+            // 挂单列表也要有款式图/款号（铁律 15）：从快照里取第一件商品，
+            // 由前端走后端权威接口解析款号与图 —— 这里不做字符串切分。
+            Map<String, Object> preview = firstCartLine(h.getCartJson());
+            m.put("previewSkuCode", text(preview, "skuCode"));
+            m.put("previewStyleNo", text(preview, "styleNo"));
+            m.put("previewStyleName", text(preview, "styleName"));
             out.add(m);
         }
         return out;
@@ -206,6 +212,33 @@ public class PosHoldOrchestrator {
     }
 
     // ───────────────────────── 内部方法 ─────────────────────────
+
+    /**
+     * 取挂单快照里第一件商品的 skuCode / styleNo（用于列表展示款式图与款号）。
+     *
+     * <p>快照坏了就返回 null：列表少一列图，但绝不能因此整页打不开。
+     *
+     * <p>款号只是**快照片段**，权威款号仍以前端走后端 {@code /style/sku/brief}
+     * 解析的结果为准 —— 快照可能很久以前生成，不能直接当真值。
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> firstCartLine(String cartJson) {
+        List<Map<String, Object>> cart = fromJson(cartJson);
+        for (Map<String, Object> line : cart) {
+            if (line == null) continue;
+            Object code = line.get("skuCode");
+            if (code != null && !String.valueOf(code).isBlank()) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    private static String text(Map<String, Object> line, String key) {
+        if (line == null) return null;
+        Object v = line.get(key);
+        return v == null ? null : String.valueOf(v).trim();
+    }
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
             new com.fasterxml.jackson.databind.ObjectMapper();

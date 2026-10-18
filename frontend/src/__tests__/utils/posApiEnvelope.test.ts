@@ -31,7 +31,7 @@ vi.mock('@/utils/api', () => ({
       'code' in result &&
       Number((result as { code: unknown }).code) === 200
     ) {
-      return (result as { data: T }).data;
+      return (result as unknown as { data: T }).data;
     }
     throw new Error(fallback);
   },
@@ -66,7 +66,7 @@ describe('posApi 信封解包（D-817 线上白屏回归）', () => {
 
   it('开单结果能读到 saleNo（读不到就不知道单号，出问题无从追）', async () => {
     mockHttp.post.mockResolvedValue({ code: 200, data: { saleNo: 'PS20261018001' } });
-    await expect(posApi.checkout({ items: [] })).resolves.toMatchObject({
+    await expect(posApi.checkout({ items: [], payMethod: 'CASH' })).resolves.toMatchObject({
       saleNo: 'PS20261018001',
     });
   });

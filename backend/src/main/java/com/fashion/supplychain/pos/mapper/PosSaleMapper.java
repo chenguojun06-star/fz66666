@@ -64,14 +64,26 @@ public interface PosSaleMapper extends BaseMapper<PosSale> {
     List<Map<String, Object>> customerRecentPrices(@Param("tenantId") Long tenantId,
                                                    @Param("phone") String phone);
 
-    /** 今日最近单据（收银台右侧「今日单据」用） */
-    @Select("SELECT id AS id, sale_no AS saleNo, customer_name AS customerName, "
-            + "       item_count AS itemCount, total_amount AS totalAmount, "
-            + "       pay_method AS payMethod, pay_status AS payStatus, "
-            + "       create_time AS createTime "
-            + "FROM t_pos_sale "
-            + "WHERE tenant_id = #{tenantId} AND status = 'NORMAL' AND DATE(create_time) = CURDATE() "
-            + "ORDER BY create_time DESC LIMIT #{limit}")
+    /**
+     * 今日最近单据（收银台左侧「今日单据」用）。
+     *
+     * <p>额外带出 {@code skuCode}：**取该单第一件商品的编码**。
+     * 没有它，收银员只能看到一串单号，看不出卖的是什么货
+     * （与铁律 15 同理：只有单号的列表等于没有商品信息）。
+     * 款号与款式图由前端拿这个 skuCode 走后端 {@code /style/sku/brief} 权威解析，
+     * 这里**不做任何字符串切分**。
+     */
+    @Select("SELECT s.id AS id, s.sale_no AS saleNo, s.customer_name AS customerName, "
+            + "       s.item_count AS itemCount, s.total_amount AS totalAmount, "
+            + "       s.pay_method AS payMethod, s.pay_status AS payStatus, "
+            + "       s.create_time AS createTime, "
+            + "       (SELECT i.sku_code FROM t_pos_sale_item i "
+            + "         WHERE i.sale_id = s.id AND i.sku_code IS NOT NULL "
+            + "         ORDER BY i.id LIMIT 1) AS skuCode "
+            + "FROM t_pos_sale s "
+            + "WHERE s.tenant_id = #{tenantId} AND s.status = 'NORMAL' "
+            + "  AND DATE(s.create_time) = CURDATE() "
+            + "ORDER BY s.create_time DESC LIMIT #{limit}")
     List<Map<String, Object>> todayRecent(@Param("tenantId") Long tenantId,
                                           @Param("limit") int limit);
 }
