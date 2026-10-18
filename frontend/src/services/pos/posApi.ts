@@ -32,7 +32,7 @@ export interface PosCustomer {
   lastPrices?: Record<string, number>;
 }
 
-export type PosPayMethod = 'CASH' | 'WECHAT' | 'ALIPAY' | 'CARD' | 'CREDIT';
+export type PosPayMethod = 'CASH' | 'WECHAT' | 'ALIPAY' | 'CARD' | 'CREDIT' | 'MEMBER_BALANCE';
 
 export interface PosCheckoutItem {
   skuId: number;
@@ -49,6 +49,8 @@ export interface PosCheckoutBody {
   customerName?: string;
   customerPhone?: string;
   remark?: string;
+  /** 会员ID（决定会员折扣；payMethod=MEMBER_BALANCE 时必填） */
+  memberId?: string;
   /** 挂账授权人账号（payMethod=CREDIT 时必填，后端会校验密码与授权资格） */
   creditApprover?: string;
   /** 挂账授权密码（只在这一次请求里传输，不做任何缓存） */
@@ -75,6 +77,35 @@ export interface PosCheckoutResult {
   itemCount: number;
   receivableId?: string | null;
   outstockNo?: string | null;
+}
+
+/** D-817 会员 */
+export interface PosMember {
+  id: string;
+  memberNo: string;
+  phone: string;
+  name: string | null;
+  levelCode: string;
+  /** 折扣率：1 不打折，0.9 九折 */
+  discountRate: number;
+  balance: number;
+  totalRecharge: number;
+  totalSpend: number;
+  points: number;
+  status: string;
+  remark: string | null;
+  createTime: string;
+}
+
+export interface PosMemberTx {
+  type: 'RECHARGE' | 'CONSUME' | 'REFUND' | 'ADJUST' | string;
+  amount: number;
+  balanceAfter: number;
+  saleNo: string | null;
+  bizNo: string | null;
+  operatorName: string | null;
+  remark: string | null;
+  createTime: string;
 }
 
 /** D-817：交接班 / 钱箱 */
@@ -317,6 +348,22 @@ export const posApi = {
       await api.post(`/pos/returns/${encodeURIComponent(returnNo)}/confirm-refund`, { note }),
       '确认退款失败',
     ),
+
+
+  // ── D-817 会员 ──
+  memberByPhone: (phone: string) =>
+    api.get<PosMember | null>(`/pos/members/by-phone`, { params: { phone } }),
+
+  enrollMember: (body: { phone: string; name?: string; discountRate?: number; remark?: string }) =>
+    api.post<PosMember>('/pos/members', body),
+
+  rechargeMember: (body: { memberId: string; amount: number; remark?: string }) =>
+    api.post<PosMember>('/pos/members/recharge', body),
+
+  memberTransactions: (memberId: string, limit = 50) =>
+    api.get<PosMemberTx[]>(`/pos/members/${encodeURIComponent(memberId)}/transactions`, {
+      params: { limit },
+    }),
 
   // ── D-817 交接班 / 钱箱 ──
   currentShift: async () => unwrapApiData<PosShift | null>(await api.get('/pos/shifts/current'), '加载班次失败'),

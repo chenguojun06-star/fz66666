@@ -6,6 +6,7 @@ import com.fashion.supplychain.pos.orchestration.PosSaleOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosReturnOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosHoldOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosShiftOrchestrator;
+import com.fashion.supplychain.pos.orchestration.MemberOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,17 +40,20 @@ public class PosController {
     private final PosReturnOrchestrator posReturnOrchestrator;
     private final PosHoldOrchestrator posHoldOrchestrator;
     private final PosShiftOrchestrator posShiftOrchestrator;
+    private final MemberOrchestrator memberOrchestrator;
 
     public PosController(PosSaleOrchestrator posSaleOrchestrator,
                          PaymentConfigOrchestrator paymentConfigOrchestrator,
                          PosReturnOrchestrator posReturnOrchestrator,
                          PosHoldOrchestrator posHoldOrchestrator,
-                         PosShiftOrchestrator posShiftOrchestrator) {
+                         PosShiftOrchestrator posShiftOrchestrator,
+                         MemberOrchestrator memberOrchestrator) {
         this.posSaleOrchestrator = posSaleOrchestrator;
         this.paymentConfigOrchestrator = paymentConfigOrchestrator;
         this.posReturnOrchestrator = posReturnOrchestrator;
         this.posHoldOrchestrator = posHoldOrchestrator;
         this.posShiftOrchestrator = posShiftOrchestrator;
+        this.memberOrchestrator = memberOrchestrator;
     }
 
     /**
@@ -128,6 +132,50 @@ public class PosController {
             // 例如"发起支付失败"：单据已自动取消，收银员可以重试
             return Result.fail(409, e.getMessage());
         }
+    }
+
+    // ── D-817 会员 ──
+
+    /** 按手机号识别会员（收银台输手机号即认人） */
+    @GetMapping("/members/by-phone")
+    public Result<?> memberByPhone(@RequestParam String phone) {
+        return Result.success(memberOrchestrator.byPhone(phone));
+    }
+
+    /** 会员建档（手机号已存在则返回原会员，不报错） */
+    @PostMapping("/members")
+    public Result<?> enrollMember(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(memberOrchestrator.enroll(
+                    str(body == null ? null : body.get("phone")),
+                    str(body == null ? null : body.get("name")),
+                    dec(body == null ? null : body.get("discountRate")),
+                    str(body == null ? null : body.get("remark"))));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /** 储值充值 */
+    @PostMapping("/members/recharge")
+    public Result<?> recharge(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(memberOrchestrator.recharge(
+                    str(body == null ? null : body.get("memberId")),
+                    dec(body == null ? null : body.get("amount")),
+                    str(body == null ? null : body.get("remark"))));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** 会员流水（消费记录） */
+    @GetMapping("/members/{memberId}/transactions")
+    public Result<?> memberTransactions(@PathVariable String memberId,
+                                       @RequestParam(defaultValue = "50") int limit) {
+        return Result.success(memberOrchestrator.transactions(memberId, limit));
     }
 
     /** D-817：开班（登记钱箱备用金） */

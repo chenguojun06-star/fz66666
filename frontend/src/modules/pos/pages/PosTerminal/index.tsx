@@ -41,6 +41,7 @@ import type {
   PosCheckoutResult,
   PosCustomer,
   PosPayInfo,
+  PosMember,
   PosPayMethod,
   PosSku,
   PosToday,
@@ -77,6 +78,7 @@ const PAY_OPTIONS: Array<{ value: PosPayMethod; label: string }> = [
   { value: 'WECHAT', label: '微信' },
   { value: 'ALIPAY', label: '支付宝' },
   { value: 'CARD', label: '刷卡' },
+  { value: 'MEMBER_BALANCE', label: '会员余额' },
   { value: 'CREDIT', label: '挂账' },
 ];
 
@@ -103,6 +105,11 @@ const PosTerminal: React.FC = () => {
   const [roundOff, setRoundOff] = React.useState<number>(0);
   const [payMethod, setPayMethod] = React.useState<PosPayMethod>('CASH');
   const [cashOpen, setCashOpen] = React.useState(false);
+  // 会员：输手机号即认人。折扣与余额都要在收银台当场可见，
+  // 不然收银员按原价收了钱，回头才发现这单本该打折。
+  const [member, setMember] = React.useState<PosMember | null>(null);
+  const [memberOpen, setMemberOpen] = React.useState(false);
+  const [rechargeAmount, setRechargeAmount] = React.useState(0);
   // 挂账授权（防资损）：不到账也能出单的唯一方式，必须有人签字
   const [creditAuthOpen, setCreditAuthOpen] = React.useState(false);
   const [creditAuth, setCreditAuth] = React.useState<{ user: string; pwd: string }>({
@@ -256,6 +263,13 @@ const PosTerminal: React.FC = () => {
     } catch {
       setCustomer(null);
     }
+    // 会员识别与客户查询分开试：会员接口挂了不该影响按散客收银
+    try {
+      const m = await posApi.memberByPhone(v);
+      setMember(m ?? null);
+    } catch {
+      setMember(null);
+    }
   }, []);
 
   /** 带出该客户上次成交价（批发档口报价基准） */
@@ -326,6 +340,7 @@ const PosTerminal: React.FC = () => {
                 creditApproverPassword: creditAuth.pwd,
               }
             : {}),
+          memberId: member?.id,
           discount: discount || 0,
           roundOff: roundOff || 0,
           customerName: customerName.trim() || undefined,
@@ -595,7 +610,7 @@ const PosTerminal: React.FC = () => {
                 <Space.Compact style={{ width: '100%' }}>
                   <Input
                     prefix={<UserOutlined />}
-                    placeholder="客户手机号（挂账必填）"
+                    placeholder="客户手机号（会员识别 / 挂账必填）"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     onBlur={() => void loadCustomer(phone)}
@@ -661,6 +676,35 @@ const PosTerminal: React.FC = () => {
                     />
                   </Col>
                 </Row>
+
+                {member ? (
+                  <div className="pos-member">
+                    <Space size={8} wrap>
+                      <Tag color="gold">{member.name || member.phone}</Tag>
+                      <Text type="secondary">{member.memberNo}</Text>
+                      {Number(member.discountRate) < 1 ? (
+                        <Tag color="blue">
+                          会员价 {Number(member.discountRate) * 10} 折
+                        </Tag>
+                      ) : null}
+                      <Tag color={Number(member.balance) > 0 ? 'green' : 'default'}>
+                        余额 {formatMoney(member.balance)}
+                      </Tag>
+                      <Button size="small" onClick={() => setMemberOpen(true)}>
+                        充值
+                      </Button>
+                      <Button size="small" type="text" onClick={() => setMember(null)}>
+                        取消关联
+                      </Button>
+                    </Space>
+                  </div>
+                ) : (
+                  <div className="pos-member">
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      输入客户手机号自动识别会员（享会员价与储值余额）
+                    </Text>
+                  </div>
+                )}
 
                 <div className="pos-label" style={{ marginTop: 8 }}>
                   收款方式
@@ -902,6 +946,57 @@ const PosTerminal: React.FC = () => {
               {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
             </Button>
           </div>
+
+          {/* 会员充值 */}
+          <Modal
+            open={memberOpen}
+            title={`会员充值 · ${member?.name || member?.phone || ''}`}
+            okText="确认充值"
+            cancelText="取消"
+            onCancel={() => setMemberOpen(false)}
+            onOk={async () => {
+              if (!member || !rechargeAmount) {
+                message.warning('请填写充值金额');
+                return;
+              }
+              try {
+                const m = await posApi.rechargeMember({
+                  memberId: member.id,
+                  amount: rechargeAmount,
+                });
+                setMember(m);
+                setRechargeAmount(0);
+                setMemberOpen(false);
+                message.success(`充值成功，当前余额 ${formatMoney(m.balance)}`);
+              } catch (e: unknown) {
+                message.error(e instanceof Error ? e.message : '充值失败');
+              }
+            }}
+            width={400}
+          >
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary">当前余额</Text>
+              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--color-primary)' }}>
+                {formatMoney(member?.balance ?? 0)}
+              </div>
+            </div>
+            <InputNumber
+              min={1}
+              precision={2}
+              prefix="¥"
+              style={{ width: '100%' }}
+              value={rechargeAmount || undefined}
+              placeholder="充值金额"
+              onChange={(v) => setRechargeAmount(Number(v) || 0)}
+            />
+            <Space wrap style={{ marginTop: 12 }}>
+              {[100, 500, 1000, 2000].map((v) => (
+                <Button key={v} size="small" onClick={() => setRechargeAmount(v)}>
+                  {v}
+                </Button>
+              ))}
+            </Space>
+          </Modal>
 
           {/* 挂账授权：不到账就能出单，必须有人签字，否则资损口子敞开 */}
           <Modal

@@ -63,10 +63,11 @@ public class PosSaleOrchestrator {
 
     /** 收款方式白名单：前四种是登记式，后两种走真实支付通道 */
     private static final Set<String> PAY_METHODS = new LinkedHashSet<>(
-            List.of("CASH", "WECHAT", "ALIPAY", "CARD", "CREDIT"));
+            List.of("CASH", "WECHAT", "ALIPAY", "CARD", "CREDIT", "MEMBER_BALANCE"));
     /** 走真实支付通道的收款方式 */
     private static final Set<String> PAY_ONLINE = Set.of("WECHAT", "ALIPAY");
     private static final String PAY_CREDIT = "CREDIT";
+    private static final String PAY_MEMBER_BALANCE = "MEMBER_BALANCE";
     private static final int MAX_QTY = 9999;
     private static final int MAX_LINES = 200;
     private static final int MAX_SEARCH = 60;
@@ -80,6 +81,7 @@ public class PosSaleOrchestrator {
     private final PaymentOrchestrator paymentOrchestrator;
     private final com.fashion.supplychain.system.mapper.UserMapper userMapper;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final MemberOrchestrator memberOrchestrator;
 
     /* ── 选货 ─────────────────────────────────────────────────────────────── */
 
@@ -226,6 +228,27 @@ public class PosSaleOrchestrator {
         if (!PAY_METHODS.contains(payMethod)) {
             throw new IllegalArgumentException("不支持的收款方式：" + payMethod);
         }
+        // 会员：先认会员，才能算会员价。认不出会员就直接拒付余额，
+        // 否则「拿别人的会员余额付自己的单」是可行的 —— 余额是钱，不能这么漏。
+        String memberId = str(body.get("memberId"));
+        BigDecimal discountRate = null;
+        if (StringUtils.hasText(memberId)) {
+            Map<String, Object> member = memberOrchestrator.byMemberId(memberId);
+            if (member == null) {
+                throw new IllegalArgumentException("会员不存在，请重新识别");
+            }
+            discountRate = toAmount(member.get("discountRate"));
+            if (discountRate == null || discountRate.compareTo(BigDecimal.ZERO) <= 0
+                    || discountRate.compareTo(BigDecimal.ONE) > 0) {
+                // 折扣率异常时不打折而不是乱打：宁可少收，也不能算出负数或倒贴
+                log.warn("[POS] 会员 {} 折扣率异常，按不打折处理", memberId);
+                discountRate = BigDecimal.ONE;
+            }
+        }
+        if (PAY_MEMBER_BALANCE.equals(payMethod) && !StringUtils.hasText(memberId)) {
+            throw new IllegalArgumentException("余额支付必须先识别会员");
+        }
+
         String customerName = str(body.get("customerName"));
         String customerPhone = str(body.get("customerPhone"));
         if (PAY_CREDIT.equals(payMethod) && !StringUtils.hasText(customerPhone)) {
@@ -267,6 +290,12 @@ public class PosSaleOrchestrator {
             if (unitPrice == null) {
                 unitPrice = sku.getSalesPrice() != null ? sku.getSalesPrice()
                         : (sku.getTagPrice() != null ? sku.getTagPrice() : BigDecimal.ZERO);
+            }
+            if (discountRate != null && discountRate.compareTo(BigDecimal.ONE) < 0
+                    && !Boolean.TRUE.equals(raw.get("priceLocked"))) {
+                // 会员价只作用于**前端未锁定的单价**：收银员手工改过的价不再二次打折，
+                // 否则会出现"改完价又被打折"，收银员永远算不清这单多少钱。
+                unitPrice = unitPrice.multiply(discountRate).setScale(2, RoundingMode.HALF_UP);
             }
             if (unitPrice.signum() < 0) {
                 throw new IllegalArgumentException("成交单价不能为负");
@@ -353,6 +382,18 @@ public class PosSaleOrchestrator {
         resp.put("payMethod", payMethod);
         resp.put("itemCount", itemCount);
         resp.put("saleId", sale.getId());
+        resp.put("memberId", memberId);
+
+        // 5z. 会员余额：先扣款成功才结算出库。
+        // 顺序不能反 —— 先出库再扣，一旦扣款失败就是"货已走、钱没扣"的纯资损。
+        if (PAY_MEMBER_BALANCE.equals(payMethod)) {
+            memberOrchestrator.consumeBalance(memberId, total, sale.getSaleNo());
+            Map<String, Object> settled = writeService.settle(sale.getId(), "PAID", null);
+            resp.putAll(settled);
+            resp.put("saleNo", sale.getSaleNo());
+            resp.put("totalAmount", total);
+            return resp;
+        }
 
         // 5a. 现金/刷卡：当场收款 → 立即结算（出库）
         if ("CASH".equals(payMethod) || "CARD".equals(payMethod)) {

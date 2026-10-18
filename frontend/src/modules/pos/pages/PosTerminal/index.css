@@ -335,3 +335,12 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* 会员信息条 */
+.pos-member {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fffaf0;
+  border: 1px solid #ffe7ba;
+  border-radius: 8px;
+}
