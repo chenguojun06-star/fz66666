@@ -207,6 +207,15 @@ def column_exists_for_table(table: str, column: str, flyway_tables: Dict[str, Se
 # ──────────────────────────────────────────────
 # 4. 从 git diff 提取本次新增的字段
 # ──────────────────────────────────────────────
+def _table_name_of_file(path: str) -> Optional[str]:
+    """从磁盘上的实体文件读取 @TableName（失败返回 None，不抛）。"""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return extract_table_name(fh.read())
+    except OSError:
+        return None
+
+
 def get_added_fields(since_sha: Optional[str] = None) -> List[Tuple[str, str, str]]:
     """
     返回 [(entity_file, table_name, column_name), ...] —— 本次 diff 里新增的真实 DB 字段。
@@ -240,7 +249,11 @@ def get_added_fields(since_sha: Optional[str] = None) -> List[Tuple[str, str, st
     for line in diff_text.splitlines():
         if line.startswith("+++ b/"):
             current_file = line[6:]
-            current_table = None
+            # 表名从**文件当前内容**里取，而不是从 diff 里找 @TableName。
+            # 改已有 Entity 时 @TableName 在文件顶部、根本不在本次 diff 里，
+            # 只看 diff 会让 current_table 永远是 None → 新增字段一个都检不出来。
+            # （实测：给 StyleInfo 加 coverGroup 时这个守卫是绿的，实际没检到。）
+            current_table = _table_name_of_file(current_file)
             pending_annotation = False
             pending_virtual = False
             continue
@@ -250,7 +263,8 @@ def get_added_fields(since_sha: Optional[str] = None) -> List[Tuple[str, str, st
         added_line = line[1:]
         stripped = added_line.strip()
 
-        if "@TableName" in added_line:
+        # 新建 Entity 时 @TableName 在 diff 里，仍按 diff 取（没有文件可读时兜底）
+        if current_table is None and "@TableName" in added_line:
             m = re.search(r'@TableName\s*\(\s*["\']([a-z][a-z0-9_]*)["\']', added_line, re.IGNORECASE)
             if m:
                 current_table = m.group(1).lower()
