@@ -55,6 +55,9 @@ import PosReturnPanel from './PosReturnPanel';
 import PosHoldPanel from './PosHoldPanel';
 import PosShiftPanel from './PosShiftPanel';
 import CashNumpad from './CashNumpad';
+import TicketPrint from './TicketPrint';
+import ticketApi, { type TicketData } from '@/services/ticket/ticketApi';
+import './ticket-print.css';
 import './index.css';
 
 const { Text } = Typography;
@@ -110,6 +113,8 @@ const PosTerminal: React.FC = () => {
   const [member, setMember] = React.useState<PosMember | null>(null);
   const [memberOpen, setMemberOpen] = React.useState(false);
   const [rechargeAmount, setRechargeAmount] = React.useState(0);
+  // 小票打印：开单完成就该打，顾客当场会要；没打成的保留「补打」入口
+  const [printTicket, setPrintTicket] = React.useState<TicketData | null>(null);
   // 挂账授权（防资损）：不到账也能出单的唯一方式，必须有人签字
   const [creditAuthOpen, setCreditAuthOpen] = React.useState(false);
   const [creditAuth, setCreditAuth] = React.useState<{ user: string; pwd: string }>({
@@ -313,6 +318,20 @@ const PosTerminal: React.FC = () => {
     searchRef.current?.focus();
   }, []);
 
+  /** 拉小票并打开打印窗；拉不到不阻断开单（小票可以事后补打） */
+  const openPrint = React.useCallback(async (
+    saleId?: string | number | null,
+    saleNo?: string | null,
+  ) => {
+    if (!saleId && !saleNo) return;
+    try {
+      const t = await ticketApi.getByBiz('POS_SALE', String(saleId ?? ''), saleNo ?? undefined);
+      setPrintTicket(t);
+    } catch (e) {
+      message.warning(`小票加载失败，可稍后补打：${e instanceof Error ? e.message : '未知原因'}`);
+    }
+  }, []);
+
   const submit = React.useCallback(async () => {
     if (!lines.length) {
       message.warning('请先添加商品');
@@ -361,6 +380,8 @@ const PosTerminal: React.FC = () => {
       }
       setResult(res);
       setLines([]);
+      // 当场出小票：专业收银打完小票这一单才算结束，顾客会当场要
+      void openPrint(res.saleId, res.saleNo);
       setDiscount(0);
       setRoundOff(0);
       setReceived(null);
@@ -835,9 +856,9 @@ const PosTerminal: React.FC = () => {
                           type="link"
                           size="small"
                           icon={<ProfileOutlined />}
-                          onClick={() => setTicket({ id: r.id })}
+                          onClick={() => void openPrint(r.id, r.saleNo)}
                         >
-                          小票
+                          打印
                         </Button>
                       ),
                     },
@@ -946,6 +967,12 @@ const PosTerminal: React.FC = () => {
               {payMethod === 'CREDIT' ? '挂账开单' : `收款 ${formatMoney(totalAmount)}`}
             </Button>
           </div>
+
+          <TicketPrint
+            open={!!printTicket}
+            ticket={printTicket}
+            onClose={() => setPrintTicket(null)}
+          />
 
           {/* 会员充值 */}
           <Modal
