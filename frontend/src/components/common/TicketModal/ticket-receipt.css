@@ -1,0 +1,142 @@
+/* 电子小票弹窗样式：收据纸质感 + 打印支持 */
+
+.ticket-receipt {
+  background: var(--bg-container, #fff);
+  padding: 16px 18px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.ticket-receipt__head {
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border-color-base, #d9d9d9);
+}
+
+.ticket-receipt__no {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-color, rgba(0, 0, 0, 0.88));
+}
+
+.ticket-receipt__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  justify-content: center;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.65));
+}
+
+.ticket-receipt__section {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border-color-base, #d9d9d9);
+}
+
+.ticket-receipt__item {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.ticket-receipt__img {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--fill-quaternary, #f5f5f5);
+  flex-shrink: 0;
+}
+
+.ticket-receipt__item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-receipt__item-name {
+  font-weight: 500;
+  color: var(--text-color, rgba(0, 0, 0, 0.88));
+}
+
+.ticket-receipt__item-sub {
+  font-size: 12px;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.65));
+  margin-top: 2px;
+}
+
+.ticket-receipt__item-amt {
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.ticket-receipt__matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.ticket-receipt__matrix th,
+.ticket-receipt__matrix td {
+  border: 1px solid var(--border-color-base, #d9d9d9);
+  padding: 3px 8px;
+  text-align: center;
+}
+
+.ticket-receipt__matrix th {
+  background: var(--fill-quaternary, #fafafa);
+  font-weight: 500;
+}
+
+.ticket-receipt__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 2px 0;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.65));
+}
+
+.ticket-receipt__row strong {
+  color: var(--text-color, rgba(0, 0, 0, 0.88));
+}
+
+.ticket-receipt__qr {
+  text-align: center;
+  padding-top: 12px;
+  border-bottom: none;
+}
+
+.ticket-receipt__qr-tip {
+  font-size: 12px;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.65));
+  margin-top: 6px;
+}
+
+.ticket-receipt__policy {
+  font-size: 12px;
+  color: var(--text-color-tertiary, rgba(0, 0, 0, 0.45));
+  text-align: center;
+  padding-top: 10px;
+  line-height: 1.7;
+}
+
+/* 打印：只打小票内容区 */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .ticket-receipt,
+  .ticket-receipt * {
+    visibility: visible;
+  }
+  .ticket-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+}

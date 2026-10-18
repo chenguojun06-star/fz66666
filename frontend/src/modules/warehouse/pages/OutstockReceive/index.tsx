@@ -7,6 +7,7 @@ import StandardPagination from '@/components/common/StandardPagination';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import TicketModal from '@/components/common/TicketModal';
 import { styleImageColumn } from '@/components/common/styleImageColumns';
 import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { useTablePagination } from '@/hooks';
@@ -20,6 +21,8 @@ const OutstockReceive: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [keyword, setKeyword] = useState('');
+  /** 电子小票（仅销售出库 shipment 有小票，与后端挂接口径一致） */
+  const [ticketView, setTicketView] = useState<ProductOutstock | null>(null);
   const { pagination, onChange, setTotal: setPagTotal } = useTablePagination(20);
   const currentPage = pagination.current;
   const currentPageSize = pagination.pageSize;
@@ -100,6 +103,14 @@ const OutstockReceive: React.FC = () => {
       title: '操作', key: 'actions', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: ProductOutstock) => {
         const actions: RowAction[] = [];
+        // 电子小票只挂销售出库（shipment）：POS/店铺自提出库的小票在收银台/店铺订单里
+        if (record.outstockType === 'shipment') {
+          actions.push({
+            key: 'ticket',
+            label: '查看小票',
+            onClick: () => setTicketView(record),
+          });
+        }
         if (record.receiveStatus !== 'received') {
           actions.push({
             key: 'receive',
@@ -138,6 +149,15 @@ const OutstockReceive: React.FC = () => {
           onChange={onChange}
         />
       </Card>
+
+      {/* 电子小票：批发出库（shipment）扫码签收 */}
+      <TicketModal
+        open={!!ticketView}
+        onClose={() => setTicketView(null)}
+        sourceBizType="OUTSTOCK"
+        sourceBizId={ticketView?.id ?? 0}
+        sourceBizNo={ticketView?.outstockNo}
+      />
     </>
   );
 };

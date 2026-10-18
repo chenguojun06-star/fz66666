@@ -339,6 +339,7 @@ public class PosSaleOrchestrator {
         resp.put("totalAmount", total);
         resp.put("payMethod", payMethod);
         resp.put("itemCount", itemCount);
+        resp.put("saleId", sale.getId());
 
         // 5a. 现金/刷卡：当场收款 → 立即结算（出库）
         if ("CASH".equals(payMethod) || "CARD".equals(payMethod)) {

@@ -80,7 +80,9 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: '删除这张图片' })[0]);
-    fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }));
+    // Popconfirm 有入场动画，全量跑时机器负载高，默认 1s 等待会偶发超时 ——
+    // 这类 flaky 必须治（重跑蒙混等于把门控交给运气），不是加 sleep。
+    fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }, { timeout: 8000 }));
     expect(onChange).toHaveBeenLastCalledWith([
       { type: 'text', content: '卖点：透气' },
       { type: 'image', url: 'b.jpg' },
@@ -88,7 +90,7 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
 
     onChange.mockClear();
     fireEvent.click(screen.getByRole('button', { name: '删除这段文字' }));
-    fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }, { timeout: 8000 }));
     expect(onChange).toHaveBeenLastCalledWith([
       { type: 'image', url: 'a.jpg' },
       { type: 'image', url: 'b.jpg' },

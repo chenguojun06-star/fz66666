@@ -28,6 +28,18 @@
     "preview": "vite preview",
     "prepare": "husky"
   },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",
     "@ant-design/icons": "^6.1.0",
@@ -44,6 +56,7 @@
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
     "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
     "jsbarcode": "^3.12.3",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",

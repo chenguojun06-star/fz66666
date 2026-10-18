@@ -7,6 +7,7 @@ import {
   FileExcelOutlined,
   PrinterOutlined,
   LinkOutlined,
+  ProfileOutlined,
   ReloadOutlined,
   ShopOutlined,
   ShoppingOutlined,
@@ -14,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
+import TicketModal from '@/components/common/TicketModal';
 import PaymentSettingsTab from './components/PaymentSettingsTab';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
@@ -102,6 +104,8 @@ const ShopManage: React.FC = () => {
   const [stats, setStats] = useState<ShopOrderStats | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
+  /** 电子小票（订单详情抽屉里打开） */
+  const [ticketView, setTicketView] = useState<{ id: string; no?: string } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailData, setDetailData] = useState<ShopOrderDetail | null>(null);
   const [cancelTarget, setCancelTarget] = useState<ShopOrder | null>(null);
@@ -1505,6 +1509,13 @@ const ShopManage: React.FC = () => {
               <Descriptions.Item label="地址">{detailData.order.address}</Descriptions.Item>
             </Descriptions>
 
+            <Button
+              icon={<ProfileOutlined />}
+              onClick={() => setTicketView({ id: detailData.order.id, no: detailData.order.orderNo })}
+            >
+              查看电子小票（扫码签收）
+            </Button>
+
             <div>
               <div style={{ marginBottom: 8, fontWeight: 600 }}>商品明细</div>
               <Table<ShopOrderItem>
@@ -1574,6 +1585,15 @@ const ShopManage: React.FC = () => {
           <Empty description="未取到订单详情" />
         )}
       </Drawer>
+
+      {/* 电子小票：从订单详情抽屉打开 */}
+      <TicketModal
+        open={!!ticketView}
+        onClose={() => setTicketView(null)}
+        sourceBizType="SHOP_ORDER"
+        sourceBizId={ticketView?.id ?? ''}
+        sourceBizNo={ticketView?.no}
+      />
     </div>
   );
 };

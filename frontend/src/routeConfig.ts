@@ -32,6 +32,7 @@ import {
   ProfileOutlined,
   ClockCircleOutlined,
   FieldTimeOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -42,6 +43,8 @@ export const paths = {
   dashboard: '/dashboard',
   /** 收银台（POS 开单）：一屏完成选货 → 改价 → 收款 */
   pos: '/pos',
+  /** 电子小票：POS/店铺订单/批发出库统一小票台账 */
+  ticketList: '/pos/tickets',
 
   styleInfoList: '/style-info',
   styleInfoNew: '/style-info/new',
@@ -407,6 +410,10 @@ const pageMetaMap: Record<string, PageMeta> = {
   },
   '/ecommerce/order': { label: '电商订单' },
 
+  // ── 收银台 / 电子小票 ──
+  [paths.pos]: { label: '收银台' },
+  [paths.ticketList]: { label: '电子小票' },
+
   // ── 智能中心 ──
   '/intelligence': {
     label: '智能中心',
@@ -447,6 +454,8 @@ export const permissionCodes = {
   dashboard: 'MENU_DASHBOARD',
   // 收银台独立权限码（动库存与应收，默认只给管理员，由「角色权限」按需分配）
   pos: 'MENU_POS',
+  // 电子小票是收银/销售链路的呈现层，跟着收银台权限走（复用 MENU_POS，无需新增 DB 权限迁移）
+  ticketList: 'MENU_POS',
   styleInfo: 'MENU_STYLE_INFO',
   orderManagement: 'MENU_ORDER_MANAGEMENT',
   dataCenter: 'MENU_DATA_CENTER',
@@ -631,6 +640,8 @@ export const menuConfig: MenuSection[] = [
       // 权限码仍是独立的 MENU_POS —— 它动库存与应收，不该因为"在电商组里"
       // 就跟着 MENU_ECOMMERCE 一起放开（那等于悄悄扩大了授权范围）。
       { label: '收银台', path: paths.pos, icon: React.createElement(DollarOutlined) },
+      // 电子小票（电子开票）：收银/店铺订单/批发出库统一小票台账 + 扫码签收跟踪
+      { label: '电子小票', path: paths.ticketList, icon: React.createElement(FileDoneOutlined) },
     ],
   },
   {

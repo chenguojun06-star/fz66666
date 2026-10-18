@@ -7,6 +7,8 @@ import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosSaleItem;
 import com.fashion.supplychain.pos.mapper.PosSaleItemMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.ticket.TicketTypes;
+import com.fashion.supplychain.ticket.orchestration.TicketOrchestrator;
 import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
 import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,7 @@ public class PosSaleWriteService {
     private final PosSaleItemMapper saleItemMapper;
     private final FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
     private final ReceivableOrchestrator receivableOrchestrator;
+    private final TicketOrchestrator ticketOrchestrator;
 
     /**
      * 落销售单 + 明细（**不出库**）。
@@ -134,6 +137,14 @@ public class PosSaleWriteService {
                     + (outstockNos.size() > 1 ? " 等" + outstockNos.size() + "单" : ""));
         }
         saleMapper.updateById(patch);
+
+        // 电子小票：结算即出票（幂等）。失败只记日志，绝不阻断开单/出库主交易
+        try {
+            ticketOrchestrator.ensureTicket(sale.getTenantId(), TicketTypes.POS_SALE,
+                    String.valueOf(saleId), sale.getSaleNo());
+        } catch (Exception ex) {
+            log.warn("[POS] 电子小票生成失败(不阻塞主流程) saleNo={}", sale.getSaleNo(), ex);
+        }
 
         log.info("[POS] 结算完成 saleNo={} 方式={} 状态={} 金额={} 出库={}单 应收={}",
                 sale.getSaleNo(), sale.getPayMethod(), payStatus, sale.getTotalAmount(),

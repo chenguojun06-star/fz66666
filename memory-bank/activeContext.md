@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-09（✅ D-777 采购单"一堆物料"/款号缺失：详情页 purchaseNo 精确查询 + 后端 LIKE 转义 + 购物车回填款式快照 + 云端 2 条回填；已推送 4d620efab）
+> 最后更新：2026-10-16（✅ D-808 收银台投产核实 + 全站「今日统计」时区修复：.env.backend 追加 sessionVariables=time_zone='+08:00' 已上线验证；并澄清线上版本实为最新，此前「前端落后 7 提交」系误判——D-805/806/807 全在 backend static/shop/index.html）
+> 上一版：2026-10-09（✅ D-777 采购单"一堆物料"/款号缺失：详情页 purchaseNo 精确查询 + 后端 LIKE 转义 + 购物车回填款式快照 + 云端 2 条回填；已推送 4d620efab）
 > 上一版：2026-10-09（✅ D-776 外部账号与内部账号体系隔离核实+收口：供应商账号物理隔离确认、user/list 等默认排除外发工厂账号、组织架构 2 接口补过滤、写入侧防御；tsc/mvn/eslint 全绿，已推送 2589a828e）
 > 上一版：2026-10-09（✅ D-775 日产能 500 哨兵根治：NULL=未配置（V202710090005）+ 3 处哨兵移除 + clearDailyCapacity 标志 + 本厂回填 115；tsc/mvn 全绿，未提交；D-774 已推送 184fe5d62）
 > 上一版：2026-10-09（✅ D-774 D-772 三个遗留数据问题核实+最优解：自愈巡检防清零进度 / t_factory 不插行定案 / 品质分改真实扫码合格率；mvn compile 0 错误，已推送 184fe5d62）
@@ -10,6 +11,19 @@
 > 上一版：2026-10-07（✅ D-766/D-767 店铺界面返工：桌面端巨幅修复 + 上架入口可懂 + 1×1 封面兜底；均已上线）
 > 再上一版：2026-10-07（✅ D-765 店铺界面按淘宝风格重做（门面 H5 + 管理页）；D-764 修线上 500/404）
 > 更早：2026-10-06（✅ D-755 小云直查被上下文劫持 + D-756 物料仓库「面料属性」补齐落地）
+
+## ✅ D-808 收银台投产核实 + 全站「今日统计」时区修复（2026-10-16，已上线）
+
+**核实（生产库 + 服务器实测）**：
+- 线上版本实为最新 bb8f5b04：backend 14:09 已重建 healthy。此前 BUILD_COMMIT=37d9194e「前端落后 7 提交」系误判——D-805/806/807 改的全是 `backend/src/main/resources/static/shop/index.html`（C端店铺由 backend 服务），frontend/admin 无变更不重建属正常
+- 收银台投产状态：`t_pos_sale` 0 行；`t_payment_config` 空（微信/支付宝商户号未配）；`MENU_POS` 仅授权 full_admin（店员看不到入口）；C端店铺可用（租户2 上架 11 款、2 单已发货走通应收/出库、1 注册顾客）
+- 真实生效 JDBC URL 在**服务器 `deploy/lighthouse/.env.backend` L4**（repo 根的 .env.backend 不存在；yml 默认值仅本地兜底）；`serverTimezone=Asia/Shanghai` 只管驱动转换，管不了 MySQL 会话 `CURDATE()`（global tz=UTC 实测 `NOW()`=09:39 vs 北京 17:39）
+
+**修复**：.env.backend L4 追加 `&sessionVariables=time_zone='%2B08:00'` → `docker compose up -d --force-recreate backend`（env_file 不热更，AP-FW-02）；[deploy/lighthouse/README.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/deploy/lighthouse/README.md) L59 同步（防控制台「整份复制」回退）。**连接级修复，PosSaleMapper 3 处 + 全站同类 CURDATE 10 处（shop 今日统计/今日扫码/今日入库）一并解决**。
+
+**验证**：printenv 新 URL 生效；health UP；general_log 实证——新连接池连接的初始化语句 event_time 记为 18:18（北京时间），root 会话同刻记 10:17（UTC），general_log 表按执行线程自身会话时区记时间戳 → 应用连接会话时区确为 +08:00。探针已清理（general_log OFF / log_output=FILE / TRUNCATE）。
+
+**遗留**：POS 班次/退款/小票/组合支付未做（推进顺序见 optimization-log-2026-10-15-pos-review.md）；db-query-mcp 指向本地 3308 未起库 + 对正常 SELECT 误报「SELECT...INTO」待修；README 记忆库改动未提交。
 
 ## ✅ D-777 采购单"一堆物料"与款号缺失修复（2026-10-09，已推送 4d620efab）
 
@@ -852,6 +866,16 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-10-17 电子小票（电子开票）系统全链路贯通（D-809）
+
+- [x] **方案**：`.trae/documents/electronic-ticket-system.md`（参照竞品衣科ecool；电子小票=单据统一电子呈现层+扫码签收凭证，非税务发票）
+- [x] **后端**：`V202710150002__create_sales_ticket.sql` 建 `t_sales_ticket`（uk: tenant+来源单据；sign_token CHAR(43)）；`pos/entity/SalesTicket` + `pos/mapper/SalesTicketMapper`；`ticket` 包（TicketTypes/TicketData/TicketItemData/TicketService/TicketAssembler/TicketOrchestrator/TicketPublicController/TicketController）；公开接口 `GET /api/public/ticket/{token}` + `POST /{token}/sign`；登录态 `GET /api/ticket`（getByBiz 惰性补建）+ `/api/ticket/page`
+- [x] **三处挂接**（均 try-catch 吞异常不阻断主交易）：`PosSaleWriteService.settle` → POS_SALE；`ShopOrderOrchestrator` → SHOP_ORDER；`OutstockReceivableHelper.createForShipment` → OUTSTOCK（仅 shipment，free_outbound 不出避免与 POS/店铺小票重复）；`SecurityConstants` 白名单加 `/ticket/**`；POS checkout resp 加 saleId
+- [x] **前端**：`services/ticket/ticketApi.ts`；公共组件 `components/common/TicketModal`（Receipt 展示+打印 window.print+html2canvas 下载 useCORS+qrcode.react 二维码）；POS 开单成功弹窗+今日单据加「小票」入口；ShopManage 订单详情加「查看电子小票」；OutstockReceive 行操作加「查看小票」（仅 outstockType=shipment）；新页面 `modules/pos/pages/TicketList`（/pos/tickets，复用 MENU_POS 权限码）+ 路由/菜单/pageMetaMap 注册
+- [x] **H5**：`backend/src/main/resources/static/ticket/index.html` 移动端单文件（?t=token 免登录；批次=小票号尾3位/客户/店员/日期四列、款式图+颜色×码数矩阵、销售统计、支付明细、开单时间、联系电话、退换文案、本单二维码、「确认收货」POST sign、html2canvas 下载图片+CDN失败降级提示）
+- [x] 验证：`mvn compile` 通过；`npx tsc --noEmit` 0 错误（本会话 MCP 全部未挂载，按 P0 #23 降级原生命令）
+- [ ] 端到端冒烟（本地 MySQL Docker 未启动，待环境恢复后：POS开单→小票生成→H5读取→sign→幂等）
 
 ### 2026-10-06 面料料卷「多卷 · 逐卷米数」录入修复（未提交）
 

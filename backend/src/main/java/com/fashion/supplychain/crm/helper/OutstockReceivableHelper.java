@@ -9,6 +9,8 @@ import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.ticket.TicketTypes;
+import com.fashion.supplychain.ticket.orchestration.TicketOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,6 +66,10 @@ public class OutstockReceivableHelper {
 
     @Autowired
     private ReceivableOrchestrator receivableOrchestrator;
+
+    /** 电子小票：批发销售出货出票（D-809） */
+    @Autowired
+    private TicketOrchestrator ticketOrchestrator;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -139,6 +145,15 @@ public class OutstockReceivableHelper {
         Receivable saved = receivableOrchestrator.create(r);
         log.info("[出货应收] 自动生成应收: receivableNo={}, outstockNo={}, amount={}",
                 saved == null ? null : saved.getReceivableNo(), outstock.getOutstockNo(), amount);
+
+        // 电子小票：销售出货即出票（幂等）。失败只记日志，绝不影响应收/出库主流程
+        try {
+            ticketOrchestrator.ensureTicket(
+                    outstock.getTenantId() != null ? outstock.getTenantId() : UserContext.tenantId(),
+                    TicketTypes.OUTSTOCK, outstock.getId(), outstock.getOutstockNo());
+        } catch (Exception ex) {
+            log.warn("[出货应收] 电子小票生成失败(不阻塞主流程) outstockNo={}", outstock.getOutstockNo(), ex);
+        }
     }
 
     /** 按订单 id 优先、其次订单号，在租户内取关联生产订单。 */

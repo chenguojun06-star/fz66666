@@ -21,6 +21,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { InputRef } from 'antd';
 import {
   DeleteOutlined,
+  ProfileOutlined,
   ReloadOutlined,
   ScanOutlined,
   ShoppingCartOutlined,
@@ -40,6 +41,7 @@ import type {
   PosToday,
 } from '@/services/pos/posApi';
 import { QRCodeSVG } from 'qrcode.react';
+import TicketModal from '@/components/common/TicketModal';
 import './index.css';
 
 const { Text } = Typography;
@@ -100,6 +102,8 @@ const PosTerminal: React.FC = () => {
   /** 二维码剩余有效秒数 */
   const [payLeft, setPayLeft] = React.useState(0);
   const [cancelling, setCancelling] = React.useState(false);
+  /** 电子小票弹窗（开单成功 / 今日单据查看） */
+  const [ticket, setTicket] = React.useState<{ id: number; saleNo?: string } | null>(null);
 
   const searchRef = React.useRef<InputRef>(null);
 
@@ -747,6 +751,20 @@ const PosTerminal: React.FC = () => {
                     </Tag>
                   ),
                 },
+                {
+                  title: '',
+                  width: 56,
+                  render: (_v: string, r) => (
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<ProfileOutlined />}
+                      onClick={() => setTicket({ id: r.id })}
+                    >
+                      小票
+                    </Button>
+                  ),
+                },
               ]}
             />
           </Card>
@@ -846,9 +864,28 @@ const PosTerminal: React.FC = () => {
                 message="已生成应收单，请在「收付款中心」核销"
               />
             ) : null}
+            {result.saleId ? (
+              <Button
+                block
+                style={{ marginTop: 8 }}
+                icon={<ProfileOutlined />}
+                onClick={() => setTicket({ id: Number(result.saleId), saleNo: result.saleNo })}
+              >
+                查看电子小票（扫码签收）
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </Modal>
+
+      {/* 电子小票：开单成功 / 今日单据均可打开 */}
+      <TicketModal
+        open={!!ticket}
+        onClose={() => setTicket(null)}
+        sourceBizType="POS_SALE"
+        sourceBizId={ticket?.id ?? 0}
+        sourceBizNo={ticket?.saleNo}
+      />
     </div>
   );
 };

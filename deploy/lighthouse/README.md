@@ -56,7 +56,7 @@ bash bootstrap-server.sh
 
 ```
 # 改这行：数据库指向本机容器（保留末尾的时区参数）
-SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&sessionVariables=time_zone='%2B08:00'
 
 # 清空这行：服务器上的 Redis 不设密码（等号后面留空）
 SPRING_REDIS_PASSWORD=

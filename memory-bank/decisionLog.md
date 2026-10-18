@@ -3816,3 +3816,20 @@ chip 可见人群对齐，否则"看得到点不进"。
 **教训**：① 路由占位符 `'_'` 这类非业务值绝不能进 SQL LIKE；② 同一业务对象的多条写入路径（BOM 生成 vs 购物车生成）字段口径必须一致，新增路径要对照参照实现（`buildPurchaseFromBom`）逐字段核对。
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/decisionLog-202608.md
+
+## D-809：电子小票（电子开票）系统全链路贯通（2026-10-17）
+
+**上下文**：D-808 收银台核实后的第二步。用户参照竞品衣科ecool要求建电子开票系统，贯通 POS收银/C端店铺订单/批发出库 ⇄ 出入库 ⇄ 应收收款。方案：`.trae/documents/electronic-ticket-system.md`。
+
+**决策**：电子小票 = **单据统一电子呈现层 + 扫码签收凭证**（非税务电子发票，税务对接独立立项）。一张销售单据对应一张小票（幂等 `uk(tenant_id, source_biz_type, source_biz_id)`），数据实时聚合不复制。
+
+**关键设计**：
+1. 三来源幂等挂接：POS_SALE（PosSaleWriteService.settle）/ SHOP_ORDER（ShopOrderOrchestrator）/ OUTSTOCK（OutstockReceivableHelper.createForShipment，**仅 shipment 类型**——free_outbound 由 POS/店铺各自小票承载，避免双票）；全部 try-catch 吞异常，小票故障不阻断开单主交易
+2. 免登录 H5：43 字符 Base64url HMAC-SHA256 sign_token，`GET/POST /api/public/ticket/{token}[/sign]`，租户隔离从 ticket 行取 tenantId 注入聚合查询（公开接口无登录态的关键防线）
+3. 明细实体均无图字段 → 款式图按 skuId 批量查 `t_product_sku.sku_color_image`，缺失回退款式封面；**ProductSku.styleId 与 StyleInfo.id 是 Long 不是 String**（本次踩坑：初版用 String 编译失败）
+4. getByBiz 惰性补建兼容历史单据（POS 今日单据/店铺订单详情点开即有票）
+5. 前端权限码复用 MENU_POS（不新增 DB 权限迁移）；前端 OutstockReceive 只对 outstockType=shipment 显示入口（与后端挂接口径一致）
+
+**验证**：mvn compile 0 错误、tsc --noEmit 0 错误（本会话自研 MCP 全部未挂载，P0 #23 降级原生命令）。端到端冒烟待本地 MySQL Docker 恢复后执行。
+
+**教训**：① 跨实体关联字段类型先看目标实体定义再写代码（Long/String 混用是高频坑）；② 公开接口的租户隔离不能依赖登录态，必须从数据行取 tenantId 向下注入。

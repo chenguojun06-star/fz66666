@@ -2,6 +2,7 @@
 
 > 日期：2026-10-15
 > 状态：**评审完成，待决策**（未改动任何 POS 代码）
+> ✅ 2026-10-16 更新：第一步「时区 bug」已落地并线上验证（D-808）——.env.backend 追加 `sessionVariables=time_zone='%2B08:00'` + force-recreate backend，general_log 实证应用连接会话时区 +08:00，同类 CURDATE 10 处连接级一并修复。另核实：`t_payment_config` 空（微信/支付宝商户号未配）、`MENU_POS` 仅 full_admin——第二步动工前需先分配菜单权限。
 > 触发：用户问「收银台是不是做得不专业，对比专业收银台系统看有没有优化」
 
 ---

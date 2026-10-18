@@ -2,9 +2,18 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-09（D-777 采购单"一堆物料"/款号缺失修复，已推送 4d620efab；D-776 已推送 2589a828e；D-775/774/773/772 代码完成未提交）
+> 最后更新：2026-10-16（D-808 收银台投产核实 + 时区修复已上线；10-10~10-16 的 D-778~D-807 见 git log 与 optimization-log-2026-10-14/15，三份主文件此前停在 D-777 的缺口由本次会话补记起点）
 
 ## 已完成
+
+### 2026-10-16 D-808 收银台投产核实 + 全站「今日统计」时区修复（已上线）
+
+- [x] 核实线上版本实为最新 bb8f5b04（D-805/806/807 均为 backend static/shop/index.html，"前端落后"系误判）
+- [x] 生产库核实：t_pos_sale 0 行 / t_payment_config 空 / MENU_POS 仅 full_admin / C端店铺 2 单已发货可用
+- [x] 修复：服务器 .env.backend 追加 sessionVariables=time_zone='%2B08:00' + force-recreate backend（连接级，同类 CURDATE 10 处一并修复）
+- [x] 验证：printenv 生效 + health UP + general_log 实证新连接会话时区 +08:00；探针已清理
+- [x] deploy/lighthouse/README.md L59 同步新 URL；记忆库 activeContext/progress 补记 D-808
+- [ ] 遗留：POS 班次/退款/小票未做；db-query-mcp 本地 3308 未起 + SELECT...INTO 误报待修；README/记忆库改动未提交
 
 ### 2026-10-09 D-777 采购单"一堆物料"与款号缺失修复（已推送 4d620efab）
 

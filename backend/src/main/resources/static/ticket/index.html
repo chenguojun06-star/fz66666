@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='%23fff' font-family='PingFang SC,Microsoft YaHei,sans-serif'%3E%E7%A5%A8%3C/text%3E%3C/svg%3E">
+<title>电子小票</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root{
+    --tk-bg:#f2f3f7;
+    --tk-card:#fff;
+    --tk-text:#1a1a1a;
+    --tk-sub:#8a8f99;
+    --tk-line:#eceef2;
+    --tk-brand:#0f172a;
+    --tk-green:#0ca678;
+    --tk-orange:#e8590c;
+    --tk-radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--tk-bg);color:var(--tk-text);-webkit-font-smoothing:antialiased;min-height:100vh;}
+  img{display:block;}
+  button{font-family:inherit;cursor:pointer;border:none;}
+
+  .tk-wrap{max-width:430px;margin:0 auto;padding:12px 12px calc(24px + env(safe-area-inset-bottom));}
+
+  /* 状态横幅 */
+  .tk-banner{border-radius:var(--tk-radius);padding:10px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .tk-banner.ok{background:#e6fcf5;color:var(--tk-green);}
+  .tk-banner.wait{background:#fff4e6;color:var(--tk-orange);}
+
+  /* 小票纸 */
+  .tk-paper{background:var(--tk-card);border-radius:var(--tk-radius);padding:16px 14px;box-shadow:0 1px 6px rgba(15,23,42,.06);}
+  .tk-head{text-align:center;padding-bottom:12px;border-bottom:1px dashed var(--tk-line);}
+  .tk-head h1{font-size:17px;font-weight:600;}
+  .tk-head .no{font-size:12px;color:var(--tk-sub);margin-top:4px;}
+
+  /* 批次/客户/店员/日期 四列 */
+  .tk-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px 0;border-bottom:1px dashed var(--tk-line);text-align:center;}
+  .tk-meta .k{font-size:11px;color:var(--tk-sub);}
+  .tk-meta .v{font-size:13px;font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .tk-section{padding:12px 0;border-bottom:1px dashed var(--tk-line);}
+  .tk-section:last-of-type{border-bottom:none;}
+
+  /* 款式卡 */
+  .tk-item{display:flex;gap:10px;padding:6px 0;}
+  .tk-item .ph{width:64px;height:64px;border-radius:8px;background:var(--tk-bg);flex:none;overflow:hidden;}
+  .tk-item .ph img{width:100%;height:100%;object-fit:cover;}
+  .tk-item .main{flex:1;min-width:0;}
+  .tk-item .no1{font-size:14px;font-weight:600;}
+  .tk-item .no2{font-size:12px;color:var(--tk-sub);margin-top:2px;}
+  .tk-item .no3{font-size:12px;color:var(--tk-sub);margin-top:2px;}
+  .tk-item .amt{flex:none;font-weight:600;font-size:14px;}
+
+  /* 颜色×码数矩阵 */
+  .tk-matrix{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px;}
+  .tk-matrix th,.tk-matrix td{border:1px solid var(--tk-line);padding:3px 6px;text-align:center;}
+  .tk-matrix th{background:#f8f9fb;font-weight:500;color:var(--tk-sub);}
+
+  /* 汇总行 */
+  .tk-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#3d434d;padding:3px 0;}
+  .tk-row b{color:var(--tk-text);}
+  .tk-row .big{font-size:15px;}
+
+  /* 二维码 */
+  .tk-qr{text-align:center;}
+  .tk-qr canvas{margin:6px auto 0;}
+  .tk-qr .tip{font-size:11.5px;color:var(--tk-sub);margin-top:6px;}
+
+  .tk-policy{font-size:11.5px;color:#9aa0ab;line-height:1.7;text-align:center;}
+
+  /* 底部按钮 */
+  .tk-actions{display:flex;gap:10px;margin-top:12px;}
+  .tk-btn{flex:1;height:44px;border-radius:22px;font-size:15px;font-weight:600;}
+  .tk-btn.ghost{background:#fff;color:var(--tk-text);border:1px solid var(--tk-line);}
+  .tk-btn.primary{background:var(--tk-brand);color:#fff;}
+  .tk-btn:disabled{opacity:.5;cursor:default;}
+  .tk-btn.ok{background:#e6fcf5;color:var(--tk-green);border:none;}
+
+  .tk-foot{text-align:center;font-size:11px;color:#b3b8c2;margin-top:14px;}
+
+  /* 加载/错误态 */
+  .tk-state{padding:80px 20px;text-align:center;color:var(--tk-sub);font-size:14px;}
+  .tk-state .emoji{font-size:40px;display:block;margin-bottom:10px;}
+
+  /* toast */
+  .tk-toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99;display:none;max-width:80vw;text-align:center;}
+</style>
+</head>
+<body>
+<div class="tk-wrap" id="app">
+  <div class="tk-state" id="state"><span class="emoji">🧾</span>正在加载小票…</div>
+</div>
+<div class="tk-toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var PAY_LABEL = {CASH:'现金', WECHAT:'微信', ALIPAY:'支付宝', CARD:'刷卡', CREDIT:'挂账'};
+  var SOURCE_LABEL = {POS_SALE:'收银台', SHOP_ORDER:'店铺订单', OUTSTOCK:'批发出库'};
+  var RETURN_POLICY = '提醒：收到货后请第一时间检查，如有质量问题请第一时间联系我们，超过7天一概不退不换。本店货品15天内可调码，不调色不调款，逾期不受理，谢谢！';
+
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var data = null;
+  var signing = false;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function money(n){ return '¥' + Number(n || 0).toFixed(2).replace(/\.00$/, ''); }
+  function dt(s){ return s ? String(s).replace('T', ' ').slice(0, 16) : '-'; }
+  function toast(msg, ms){
+    var el = $('toast'); el.textContent = msg; el.style.display = 'block';
+    clearTimeout(el._t); el._t = setTimeout(function(){ el.style.display = 'none'; }, ms || 2200);
+  }
+
+  /* 批次号：小票号尾 3 位（竞品口径） */
+  function batchNo(ticketNo){ return String(ticketNo || '').slice(-3); }
+
+  function api(path, opts){
+    return fetch('/api/public/ticket/' + encodeURIComponent(token) + path, opts)
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res && res.code === 200) return res.data;
+        throw new Error((res && res.message) || '请求失败');
+      });
+  }
+
+  function render(){
+    if (!data) return;
+    var items = data.items || [];
+    var matrix = data.matrix || [];
+    var signed = data.status === 'SIGNED';
+
+    var banner = signed
+      ? '<div class="tk-banner ok">✓ 已签收' + (data.signedBy ? ' · ' + esc(data.signedBy) : '') +
+        (data.signedTime ? ' · ' + dt(data.signedTime) : '') + '</div>'
+      : '<div class="tk-banner wait">… 待签收：收到货后请点击下方「确认收货」</div>';
+
+    var itemsHtml = items.map(function(it, i){
+      return '<div class="tk-item">' +
+        '<div class="ph">' + (it.imageUrl ? '<img src="' + esc(it.imageUrl) + '" crossorigin="anonymous" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="main">' +
+          '<div class="no1">' + esc(it.styleNo || it.skuCode || '—') + '</div>' +
+          '<div class="no2">' + esc(it.styleName || '') + '</div>' +
+          '<div class="no3">' + esc(money(it.unitPrice)) + ' × ' + (it.quantity || 0) + '件' +
+            (it.color ? ' · ' + esc(it.color) : '') + (it.size ? ' · ' + esc(it.size) : '') + '</div>' +
+        '</div>' +
+        '<div class="amt">' + esc(money(it.amount)) + '</div>' +
+      '</div>';
+    }).join('');
+
+    /* 颜色×码数矩阵 */
+    var matrixHtml = '';
+    if (matrix.length) {
+      var sizes = Object.keys(matrix[0].sizes || {});
+      if (sizes.length) {
+        matrixHtml = '<table class="tk-matrix"><thead><tr><th>颜色\\码数</th>' +
+          sizes.map(function(s){ return '<th>' + esc(s) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          matrix.map(function(row){
+            return '<tr><td>' + esc(row.color) + '</td>' +
+              sizes.map(function(s){ return '<td>' + (row.sizes[s] || '-') + '</td>'; }).join('') + '</tr>';
+          }).join('') + '</tbody></table>';
+      }
+    }
+
+    /* 支付明细 */
+    var payHtml = '';
+    if (data.payMethod) {
+      var label = PAY_LABEL[data.payMethod] || data.payMethod;
+      if (data.payStatus === 'UNPAID') {
+        payHtml += '<div class="tk-row"><span>' + esc(label) + '（挂账）</span><span>' +
+          (data.receivableAmount ? '已收 ' + esc(money(data.receivableReceived)) + ' / ' + esc(money(data.receivableAmount)) : esc(money(data.totalAmount))) + '</span></div>';
+      } else {
+        payHtml += '<div class="tk-row"><span>' + esc(label) + '支付</span><span>' + esc(money(data.totalAmount)) + '</span></div>';
+      }
+    }
+
+    var h5Url = location.origin + '/ticket/index.html?t=' + encodeURIComponent(token);
+
+    $('app').innerHTML =
+      '<div id="paper">' +
+        banner +
+        '<div class="tk-paper">' +
+          '<div class="tk-head"><h1>电子小票</h1><div class="no">' + esc(data.ticketNo) + ' · ' + esc(SOURCE_LABEL[data.sourceBizType] || data.sourceBizType) + ' ' + esc(data.sourceBizNo) + '</div></div>' +
+          '<div class="tk-meta">' +
+            '<div><div class="k">批次</div><div class="v">' + esc(batchNo(data.ticketNo)) + '</div></div>' +
+            '<div><div class="k">客户</div><div class="v">' + esc(data.customerName || '散客') + '</div></div>' +
+            '<div><div class="k">店员</div><div class="v">' + esc(data.serverName || '-') + '</div></div>' +
+            '<div><div class="k">日期</div><div class="v">' + esc(dt(data.createTime).slice(0, 10)) + '</div></div>' +
+          '</div>' +
+          '<div class="tk-section">' + itemsHtml + matrixHtml + '</div>' +
+          '<div class="tk-section">' +
+            '<div class="tk-row"><span>销售：' + (data.itemCount || 0) + ' 件' +
+              (Number(data.discountAmount) > 0 ? '　折扣 -' + esc(money(data.discountAmount)) : '') + '</span>' +
+              '<span class="big">总额：<b>' + esc(money(data.totalAmount)) + '</b></span></div>' +
+            (Number(data.shippingFee) > 0 ? '<div class="tk-row"><span>运费</span><span>' + esc(money(data.shippingFee)) + '</span></div>' : '') +
+            payHtml +
+          '</div>' +
+          '<div class="tk-section">' +
+            '<div class="tk-row"><span>开单时间</span><span>' + esc(dt(data.createTime)) + '</span></div>' +
+            (data.customerPhone ? '<div class="tk-row"><span>联系电话</span><span>' + esc(data.customerPhone) + '</span></div>' : '') +
+          '</div>' +
+          '<div class="tk-section tk-qr"><canvas id="qr"></canvas>' +
+            '<div class="tip">本单二维码 · 再扫码回到这张小票</div></div>' +
+          '<div class="tk-section tk-policy">' + esc(RETURN_POLICY) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tk-actions">' +
+        (signed
+          ? '<button class="tk-btn ok" disabled>已签收</button>'
+          : '<button class="tk-btn primary" id="signBtn">确认收货</button>') +
+        '<button class="tk-btn ghost" id="dlBtn">下载图片</button>' +
+      '</div>' +
+      '<div class="tk-foot">小云 · 电子小票</div>';
+
+    /* 本单二维码（同页 URL） */
+    if (window.QRCode && window.QRCode.toCanvas) {
+      QRCode.toCanvas($('qr'), h5Url, { width: 110, margin: 0 }, function(){ /* 静默 */ });
+    }
+
+    if (!signed) {
+      $('signBtn').onclick = doSign;
+    }
+    $('dlBtn').onclick = download;
+  }
+
+  /* 确认收货：POST sign（可填姓名；重复点击后端幂等） */
+  function doSign(){
+    if (signing) return;
+    var name = window.prompt('请输入您的姓名（确认收货人，可留空）', data.customerName || '') ;
+    if (name === null) return; /* 用户取消 */
+    signing = true;
+    var btn = $('signBtn'); if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+    api('/sign', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ signedBy: (name || '').trim() || null })
+    }).then(function(){
+      toast('签收成功，感谢确认！');
+      return load();
+    }).catch(function(e){
+      toast(e.message || '签收失败');
+      signing = false;
+      if (btn) { btn.disabled = false; btn.textContent = '确认收货'; }
+    });
+  }
+
+  /* 下载小票图：html2canvas；CDN 挂了降级提示长按截图 */
+  function download(){
+    var paper = document.getElementById('paper');
+    if (!paper) return;
+    if (!window.html2canvas) { toast('图片组件未加载，请长按屏幕截图保存'); return; }
+    toast('正在生成图片…', 8000);
+    window.html2canvas(paper, { useCORS: true, backgroundColor: '#f2f3f7', scale: 2 })
+      .then(function(canvas){
+        var a = document.createElement('a');
+        a.download = '电子小票-' + (data && data.ticketNo ? data.ticketNo : token.slice(0, 8)) + '.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        $('toast').style.display = 'none';
+      })
+      .catch(function(){ toast('生成失败，请长按屏幕截图保存'); });
+  }
+
+  function load(){
+    return api('').then(function(d){
+      data = d;
+      render();
+    }).catch(function(e){
+      $('app').innerHTML = '<div class="tk-state"><span class="emoji">🔍</span>' +
+        esc(e.message || '小票不存在或已作废') +
+        '<div style="margin-top:10px;font-size:12px;">请联系商家核对二维码</div></div>';
+    });
+  }
+
+  if (!token) {
+    $('app').innerHTML = '<div class="tk-state"><span class="emoji">🔗</span>缺少小票参数<br><div style="margin-top:10px;font-size:12px;">请通过扫码打开本页</div></div>';
+  } else {
+    load();
+  }
+})();
+</script>
+</body>
+</html>

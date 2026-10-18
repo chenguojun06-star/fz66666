@@ -53,6 +53,8 @@ export interface PosCheckoutBody {
 
 export interface PosCheckoutResult {
   saleNo: string;
+  /** 销售单ID（用于打开电子小票；在线支付轮询路径可能缺失） */
+  saleId?: number | null;
   /** 在线支付时的二维码内容（PAYING 时才有） */
   qrCode?: string | null;
   expireSeconds?: number;

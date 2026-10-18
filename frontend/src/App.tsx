@@ -30,6 +30,8 @@ import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopO
 // 但页面代码留在 modules/pos —— 它动的是库存与应收，与店铺运营不是一个域，
 // 混进 ecommerce 目录只会让依赖关系变糊。权限码也独立（MENU_POS）。
 const PosTerminal = React.lazy(() => import('./modules/pos/pages/PosTerminal'));
+// 电子小票台账：POS/店铺订单/批发出库统一小票（与收银台同域同权限码 MENU_POS）
+const TicketList = React.lazy(() => import('./modules/pos/pages/TicketList'));
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
 
@@ -200,6 +202,16 @@ const AppRoutes: React.FC = () => {
               <RouteErrorBoundary pageName="收银台">
                 <Suspense fallback={routeFallback}>
                   <PosTerminal />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={paths.ticketList}
+            element={
+              <RouteErrorBoundary pageName="电子小票">
+                <Suspense fallback={routeFallback}>
+                  <TicketList />
                 </Suspense>
               </RouteErrorBoundary>
             }
