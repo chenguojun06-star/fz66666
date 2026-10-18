@@ -1,7 +1,6 @@
 package com.fashion.supplychain.shop.orchestration;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.entity.ShopOrderItem;
 import com.fashion.supplychain.shop.mapper.ShopOrderItemMapper;
@@ -50,13 +49,22 @@ public class ShopSalesCounter {
     /**
      * 按款号统计真实成交件数。
      *
+     * @param tenantId 显式传租户 —— **不能依赖 UserContext**：顾客端是免登录请求，
+     *                 那里 UserContext 是空的（D-785 同款陷阱，线上实测踩过：
+     *                 单测全绿、线上销量恒为空）
      * @return 款号 → 成交件数；无数据时返回空 Map（<b>不返回 0 兜底</b>：
      *         「没销量」和「销量 0」在业务上是两回事，前端要显示「暂无成交」）
      */
-    public Map<String, Integer> soldQtyByStyleNo() {
+    public Map<String, Integer> soldQtyByStyleNo(Long tenantId) {
+        if (tenantId == null) {
+            // 公开请求没有登录态，UserContext.tenantId() 是空的（D-785 同款陷阱）。
+            // 租户不明时直接返回空：宁可「暂无成交」，也不能把销量算到别的租户头上。
+            log.warn("[真实销量] 缺少 tenantId，跳过统计");
+            return Map.of();
+        }
         List<ShopOrder> orders = orderMapper.selectList(
                 Wrappers.<ShopOrder>lambdaQuery()
-                        .eq(ShopOrder::getTenantId, UserContext.tenantId())
+                        .eq(ShopOrder::getTenantId, tenantId)
                         .in(ShopOrder::getStatus, List.of("PENDING_SHIP", "SHIPPED"))
                         .select(ShopOrder::getId));
         if (orders == null || orders.isEmpty()) {
@@ -73,6 +81,7 @@ public class ShopSalesCounter {
         List<ShopOrderItem> items = itemMapper.selectList(
                 Wrappers.<ShopOrderItem>lambdaQuery()
                         .in(ShopOrderItem::getOrderId, orderIds)
+                        .eq(ShopOrderItem::getTenantId, tenantId)
                         .select(ShopOrderItem::getStyleNo, ShopOrderItem::getQuantity));
         if (items == null || items.isEmpty()) {
             return Map.of();

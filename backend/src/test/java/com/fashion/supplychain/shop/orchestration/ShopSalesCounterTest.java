@@ -95,7 +95,7 @@ class ShopSalesCounterTest {
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
         when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2)));
 
-        assertEquals(Map.of("AAA", 2), counter.soldQtyByStyleNo());
+        assertEquals(Map.of("AAA", 2), counter.soldQtyByStyleNo(2L));
     }
 
     @Test
@@ -107,7 +107,7 @@ class ShopSalesCounterTest {
                 item("O1", "AAA", 3),
                 item("O2", "BBB", 2)));
 
-        Map<String, Integer> out = counter.soldQtyByStyleNo();
+        Map<String, Integer> out = counter.soldQtyByStyleNo(2L);
 
         assertEquals(4, out.get("AAA"));
         assertEquals(2, out.get("BBB"));
@@ -125,7 +125,7 @@ class ShopSalesCounterTest {
                 item("O1", "AAA", null),
                 item("O1", " AAA ", 1)));
 
-        Map<String, Integer> out = counter.soldQtyByStyleNo();
+        Map<String, Integer> out = counter.soldQtyByStyleNo(2L);
 
         assertEquals(Map.of("AAA", 1), out, "款号两端空格要归一，否则查销量永远查不到");
     }
@@ -133,7 +133,7 @@ class ShopSalesCounterTest {
     @Test
     @DisplayName("没有订单时返回空 Map —— 不是「销量 0」（两者在业务上不同）")
     void noOrdersMeansNoEntry() {
-        assertTrue(counter.soldQtyByStyleNo().isEmpty());
+        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
     }
 
     @Test
@@ -142,7 +142,7 @@ class ShopSalesCounterTest {
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
         when(itemMapper.selectList(any())).thenReturn(List.of());
 
-        assertTrue(counter.soldQtyByStyleNo().isEmpty());
+        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
     }
 
     @Test
@@ -151,6 +151,36 @@ class ShopSalesCounterTest {
         when(orderMapper.selectList(any())).thenReturn(List.of(order(null, "SHIPPED")));
         when(itemMapper.selectList(ArgumentMatchers.any())).thenReturn(List.of(item("O1", "AAA", 3)));
 
-        assertTrue(counter.soldQtyByStyleNo().isEmpty());
+        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
+    }
+
+    @Test
+    @DisplayName("tenantId 为空时返回空：顾客端免登录请求没有 UserContext")
+    void nullTenantYieldsNoSales() {
+        when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
+        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 3)));
+
+        // D-811 线上实测踩过：单测里手动设了 UserContext 所以全绿，
+        // 线上顾客端是免登录请求、UserContext 为空 → 销量恒为 0。
+        // 这里显式锁住「租户不明就不统计」，防止有人又改回读 UserContext。
+        assertTrue(counter.soldQtyByStyleNo(null).isEmpty());
+        // 连查询都不该发出去 —— 拿不到租户还去查，等于全表扫描
+        org.mockito.Mockito.verify(orderMapper, org.mockito.Mockito.never())
+                .selectList(any());
+    }
+
+    @Test
+    @DisplayName("不依赖 UserContext：即使调用方上下文是别的租户，也按传入租户查")
+    void usesExplicitTenantNotContext() {
+        // UserContext 里放的是租户 99，而调用方传的是 2
+        UserContext ctx = new UserContext();
+        ctx.setTenantId(99L);
+        ctx.setUserId("u-other");
+        UserContext.set(ctx);
+
+        when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
+        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2)));
+
+        assertEquals(Map.of("AAA", 2), counter.soldQtyByStyleNo(2L));
     }
 }

@@ -272,13 +272,13 @@ public class ShopOrderOrchestrator {
      * 为这个量级引入缓存只会带来「改了订单数还不同步」的新问题。
      * 等量级上来（上千单）再换预聚合表 + 定时刷新，届时单独立项。
      */
-    private Integer realSoldQty(com.fashion.supplychain.style.entity.StyleInfo style) {
+    private Integer realSoldQty(com.fashion.supplychain.style.entity.StyleInfo style, Long tenantId) {
         try {
             String no = style.getStyleNo();
             if (!StringUtils.hasText(no)) {
                 return null;
             }
-            return shopSalesCounter.soldQtyByStyleNo().get(no.trim());
+            return shopSalesCounter.soldQtyByStyleNo(tenantId).get(no.trim());
         } catch (Exception e) {
             // 销量取不到绝不能拖垮详情页：记 error 让问题可查，页面照常返回
             log.error("[真实销量] 统计失败 styleId={}: {}", style.getId(), e.getMessage());
@@ -327,7 +327,7 @@ public class ShopOrderOrchestrator {
         // D-811：真实成交件数（已发货/待发货，取消不计）。
         // **没有销量就不下发这个键** —— 「暂无成交」和「已售 0 件」在业务上
         // 是两回事，前端要区分显示，不能把缺失兜底成 0。
-        Integer soldQty = realSoldQty(style);
+        Integer soldQty = realSoldQty(style, config.getTenantId());
         if (soldQty != null && soldQty > 0) {
             data.put("soldQty", soldQty);
         }
