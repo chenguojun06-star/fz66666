@@ -69,8 +69,18 @@ const StepRow: React.FC<{
       <span style={{ fontSize: 13, color: step.done ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>
         {step.label}
       </span>
-      {step.done && step.action && (
-        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{step.action}</span>
+      {/* D-813：action 之前**只在已完成时渲染**，于是「详情页现在没有图」
+          这类最该被看见的诊断，对未完成项根本不显示 —— 清单变成了摆设。
+          现在两种状态都显示：未完成用警示色，已完成用灰色。 */}
+      {step.action && (
+        <span
+          style={{
+            fontSize: 12,
+            color: step.done ? 'var(--color-text-tertiary)' : 'var(--color-warning, #faad14)',
+          }}
+        >
+          {step.action}
+        </span>
       )}
       {/* 主按钮只给当前这一步 —— 避免多个主色按钮并列 */}
       {isActive && !step.done && step.anchor && onJump && (
@@ -101,8 +111,17 @@ const ListingSetupChecklist: React.FC<ListingSetupChecklistProps> = ({
             {listed ? '已上架，顾客可正常看到并下单' : '上架准备已完成，可以上架了'}
           </strong>
         </div>
+        {/* D-813：必做项全完成时走这个分支，此前这里只列了建议项的**名字**，
+            诊断信息整段丢失 —— 商家看到「1 项建议：详情长图」，
+            却不知道详情页现在一张图都没有。诊断必须跟着走到这里。 */}
         <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-          {optional.length} 项建议：{optional.map((s) => s.label).join('、')}
+          {optional.length} 项建议：
+          {optional.map((s) => (
+            <span key={s.key} style={{ marginRight: 12 }}>
+              {s.label}
+              {s.action ? <span style={{ color: 'var(--color-text-quaternary)' }}>（{s.action}）</span> : null}
+            </span>
+          ))}
         </div>
       </div>
     );
@@ -147,10 +166,18 @@ const ListingSetupChecklist: React.FC<ListingSetupChecklistProps> = ({
               <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{step.label}</span>
               {step.done ? (
                 <CheckCircleFilled style={{ fontSize: 12, color: 'var(--color-success)' }} />
-              ) : (
-                step.action && (
-                  <span style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }}>{step.action}</span>
-                )
+              ) : null}
+              {/* D-813：与必做项统一 —— 两种状态都显示 action。
+                  原先只在未完成时显示，于是「15 块」这类完成情况永远看不见。 */}
+              {step.action && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: step.done ? 'var(--color-text-tertiary)' : 'var(--color-text-quaternary)',
+                  }}
+                >
+                  {step.action}
+                </span>
               )}
             </div>
           ))}

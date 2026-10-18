@@ -210,10 +210,34 @@ const ListingEditDrawer: React.FC<Props> = ({
     [row?.styleNo, row?.styleName, cover, skus, totalStock],
   );
 
+  /**
+   * D-813：清单项必须检查**顾客端真实能看到的内容**。
+   *
+   * <p>此前「详情描述」检查的是款式描述文本 desc，而顾客端详情页渲染的是
+   * content.blocks（详情长图内容块）。两者毫无关系 ——
+   * 结果是「详情页一张图都没有」的款式，只要填了描述文本，
+   * 清单就显示「详情描述 ✓」。这是 D-781 同款问题：**提示是假的**。
+   * 线上 11 个已上架款里有 9 个详情页接近空白，正是这么来的。
+   */
+  const detailBlockCount = (content.blocks ?? []).length;
+  const coverGroupCount = (row?.coverGroup ?? []).length;
+
   const setupSteps = useMemo(() => {
     const pricedCount = skus.filter((s) => s.salesPrice != null && Number(s.salesPrice) > 0).length;
     return [
-      { key: 'cover', label: '主图已上传', done: !!cover, anchor: 'cover', action: '待上传' },
+      {
+        key: 'cover',
+        label: '主图已上传',
+        // D-813：设了 5 张主图组才算达标 —— 只有 1 张时顶部轮播会显得很空，
+        // 而主图组是淘宝/拼多多提升点击率的第一要素
+        done: coverGroupCount >= 5 || !!cover,
+        anchor: 'cover',
+        action: coverGroupCount >= 5
+          ? `${coverGroupCount} 张主图`
+          : cover
+            ? `只有 1 张主图，建议补到 5 张`
+            : '待上传',
+      },
       {
         key: 'price', label: '售价已设置',
         done: pricedCount > 0,
@@ -232,7 +256,7 @@ const ListingEditDrawer: React.FC<Props> = ({
         action: '标题是顾客搜索的入口',
       },
     ];
-  }, [cover, skus, totalStock, row?.styleName, setupIssues]);
+  }, [cover, coverGroupCount, skus, totalStock, row?.styleName, setupIssues]);
 
   const setupOptional = useMemo(() => [
     {
@@ -240,9 +264,22 @@ const ListingEditDrawer: React.FC<Props> = ({
       done: colors.length > 0 && coloredCount >= colors.length,
       action: colors.length === 0 ? '未配置颜色' : `${coloredCount}/${colors.length}`,
     },
-    { key: 'detail', label: '详情描述', done: !!(desc || '').trim(), action: '提升转化率' },
+    {
+      key: 'detail',
+      label: '详情长图（图+文）',
+      // 检查顾客端真正渲染的详情块，不是款式描述文本
+      done: detailBlockCount > 0,
+      action: detailBlockCount > 0 ? `${detailBlockCount} 块` : '详情页现在没有图',
+    },
+    {
+      key: 'sizechart',
+      label: '手工尺码表（腰围/臀围/裤长）',
+      // 自动矩阵表只是「尺码×颜色→价格」，不是量体表；没配要说清楚，不能显示成已配
+      done: !!(content.sizeChart ?? '').trim(),
+      action: (content.sizeChart ?? '').trim() ? '已录入' : '当前是 SKU 矩阵表，不是量体数据',
+    },
     { key: 'fabric', label: '面料成分', done: !!(fabric || '').trim(), action: '降低退货率' },
-  ], [colors.length, coloredCount, desc, fabric]);
+  ], [colors.length, coloredCount, detailBlockCount, content.sizeChart, fabric]);
 
   const categorySelectOptions = useMemo(() => {
     const opts = catOptions.map((o) => ({ value: o.category, label: o.name }));
