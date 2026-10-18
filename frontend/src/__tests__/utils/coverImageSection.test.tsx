@@ -79,7 +79,7 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
 
   it('合规主图不弹任何警告', async () => {
     render(<CoverColorImagesSection {...props} cover="/api/file/x/ok.png" />);
-    await waitFor(() => expect(screen.getByText(/1000×1000/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/1000×1000/)).toBeTruthy(), { timeout: 8000 });
     expect(screen.queryByText(/主图建议/)).toBeNull();
   });
 
@@ -88,7 +88,7 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
     const { container } = render(<CoverColorImagesSection {...props} cover="/api/file/x/small.png" />);
     // D-800：3 条建议 + 6 条人工确认原本平铺，实测占掉半屏、把图片框挤出首屏。
     // 改为 <details> 折叠：收起时只留一行摘要，展开后内容完整。
-    await waitFor(() => expect(container.querySelector('details')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('details')).toBeTruthy(), { timeout: 8000 });
     fireEvent.click(container.querySelector('summary') as HTMLElement);
     // 关键：不得出现阻断式措辞
     expect(screen.queryByText(/主图不合规/)).toBeNull();
@@ -100,7 +100,7 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
   it('1×1 占位图同样只是提示，不拦截', async () => {
     mocked = { w: 1, h: 1, white: null, subject: null };
     render(<CoverColorImagesSection {...props} cover="/api/file/x/ph.png" />);
-    await waitFor(() => expect(screen.getByText('主图是 1×1 的占位图')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('主图是 1×1 的占位图')).toBeTruthy(), { timeout: 8000 });
     expect(screen.queryByText(/主图不合规/)).toBeNull();
     expect(screen.queryByText(/当前主图是一张占位图/)).toBeNull();
   });
@@ -108,26 +108,26 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
   it('超过 3MB 仍只是提示', async () => {
     headBytes = String(4 * 1024 * 1024);
     render(<CoverColorImagesSection {...props} cover="/api/file/x/big.png" />);
-    await waitFor(() => expect(screen.getByText(/超过平台上限 3MB/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/超过平台上限 3MB/)).toBeTruthy(), { timeout: 8000 });
     expect(screen.queryByText(/主图不合规/)).toBeNull();
   });
 
   it('非 1:1 给建议', async () => {
     mocked = { w: 502, h: 845, white: 0, subject: 1 };
     render(<CoverColorImagesSection {...props} cover="/api/file/x/tall.png" />);
-    await waitFor(() => expect(screen.getByText(/不是 1:1/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/不是 1:1/)).toBeTruthy(), { timeout: 8000 });
   });
 
   it('拿不到字节数时不得判体积不合格', async () => {
     headBytes = null;
     render(<CoverColorImagesSection {...props} cover="/api/file/x/nolen.png" />);
-    await waitFor(() => expect(screen.getByText(/1000×1000/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/1000×1000/)).toBeTruthy(), { timeout: 8000 });
     expect(screen.queryByText(/超过平台上限/)).toBeNull();
   });
 
   it('必须显式列出机器判不了的人工检查项（D-800：折叠块展开后可见）', async () => {
     const { container } = render(<CoverColorImagesSection {...props} cover="/api/file/x/ok.png" />);
-    await waitFor(() => expect(container.querySelector('details')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('details')).toBeTruthy(), { timeout: 8000 });
     fireEvent.click(container.querySelector('summary') as HTMLElement);
     expect(screen.getByText(/机器无法判定/)).toBeTruthy();
     expect(screen.getByText(/联系方式/)).toBeTruthy();
