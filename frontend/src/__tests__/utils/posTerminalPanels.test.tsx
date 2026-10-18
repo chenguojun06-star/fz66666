@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PosHoldPanel from '../../modules/pos/pages/PosTerminal/PosHoldPanel';
 import PosReturnPanel from '../../modules/pos/pages/PosTerminal/PosReturnPanel';
+import PosShiftPanel from '../../modules/pos/pages/PosTerminal/PosShiftPanel';
 
 /**
  * D-816 / D-817：收银台新增两个分区（退货·换货 / 挂单）的关键交互。
@@ -12,6 +13,10 @@ import PosReturnPanel from '../../modules/pos/pages/PosTerminal/PosReturnPanel';
  */
 // vi.mock 会被提升到文件顶部，直接引用顶层变量会「before initialization」
 const mockApi = vi.hoisted(() => ({
+  currentShift: vi.fn(),
+  shifts: vi.fn(),
+  openShift: vi.fn(),
+  closeShift: vi.fn(),
   holds: vi.fn(),
   hold: vi.fn(),
   resumeHold: vi.fn(),
@@ -165,5 +170,92 @@ describe('收银台 · 退货换货分区（D-816）', () => {
 
     fireEvent.click(screen.getByText('去收银 Tab 收新货'));
     expect(onGoCheckout).toHaveBeenCalled();
+  });
+});
+
+describe('收银台 · 交接班/钱箱分区（D-817）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApi.shifts.mockResolvedValue([]);
+  });
+
+  it('必须写明钱箱只算现金 —— 否则收银员对着对不平的数字会放弃用这个功能', async () => {
+    mockApi.currentShift.mockResolvedValue(null);
+    render(<PosShiftPanel />);
+
+    await waitFor(() => expect(screen.getByText('钱箱只统计现金')).toBeTruthy());
+    expect(screen.getByText(/微信 \/ 支付宝是线上到商户账户、刷卡走 POS 对账单/)).toBeTruthy();
+  });
+
+  it('未开班时提示开班，并要求登记备用金', async () => {
+    mockApi.currentShift.mockResolvedValue(null);
+    render(<PosShiftPanel />);
+
+    await waitFor(() => expect(screen.getByText('你当前没有开着的班次')).toBeTruthy());
+    expect(screen.getByText('钱箱备用金：')).toBeTruthy();
+    expect(screen.getByText('开班')).toBeTruthy();
+  });
+
+  it('上班中：分币种列出本班统计，应有钱箱单列醒目', async () => {
+    mockApi.currentShift.mockResolvedValue({
+      shiftNo: 'SHF001',
+      cashierName: '收银员小李',
+      terminal: '前台收银台',
+      status: 'OPEN',
+      openingCash: 200,
+      saleCount: 3,
+      cashSaleAmount: 100,
+      onlineSaleAmount: 500,
+      cardSaleAmount: 400,
+      creditAmount: 300,
+      refundCashAmount: 30,
+      expectedCash: 270,
+      actualCash: null,
+      diffAmount: null,
+      diffReason: null,
+      openedAt: '2026-10-18T09:00:00',
+      closedAt: null,
+      cashOnlyHint: '',
+    });
+    render(<PosShiftPanel />);
+
+    await waitFor(() => expect(screen.getByText(/班次 SHF001/)).toBeTruthy());
+    // 备用金 200 + 现金 100 − 现金退款 30 = 270
+    expect(screen.getAllByText('¥270.00').length).toBeGreaterThan(0);
+    // 微信/刷卡/挂账分列，不并进钱箱
+    expect(screen.getAllByText('¥500.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('¥400.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('¥300.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('交班')).toBeTruthy();
+  });
+
+  it('已交班的班次显示差异（长款/短款）', async () => {
+    mockApi.currentShift.mockResolvedValue(null);
+    mockApi.shifts.mockResolvedValue([
+      {
+        shiftNo: 'SHF002',
+        cashierName: '收银员小李',
+        terminal: null,
+        status: 'CLOSED',
+        openingCash: 200,
+        saleCount: 5,
+        cashSaleAmount: 800,
+        onlineSaleAmount: 0,
+        cardSaleAmount: 0,
+        creditAmount: 0,
+        refundCashAmount: 0,
+        expectedCash: 1000,
+        actualCash: 980,
+        diffAmount: -20,
+        diffReason: '找零给错',
+        openedAt: '2026-10-18T09:00:00',
+        closedAt: '2026-10-18T18:00:00',
+        cashOnlyHint: '',
+      },
+    ]);
+    render(<PosShiftPanel />);
+
+    await waitFor(() => expect(screen.getByText('SHF002')).toBeTruthy());
+    expect(screen.getByText(/短款 20.00/)).toBeTruthy();
   });
 });

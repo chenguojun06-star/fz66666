@@ -73,6 +73,30 @@ export interface PosCheckoutResult {
   outstockNo?: string | null;
 }
 
+/** D-817：交接班 / 钱箱 */
+export interface PosShift {
+  shiftNo: string;
+  cashierName: string;
+  terminal: string | null;
+  status: string;
+  openingCash: number;
+  saleCount: number;
+  cashSaleAmount: number;
+  onlineSaleAmount: number;
+  cardSaleAmount: number;
+  creditAmount: number;
+  refundCashAmount: number;
+  /** 应有钱箱 = 备用金 + 现金收款 − 现金退款 */
+  expectedCash: number;
+  actualCash: number | null;
+  /** 差异 = 实点 − 应有（长款正 / 短款负） */
+  diffAmount: number | null;
+  diffReason: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  cashOnlyHint: string;
+}
+
 /** D-816：可退量行 */
 export interface PosReturnableLine {
   saleItemId: number;
@@ -237,6 +261,17 @@ export const posApi = {
       `/pos/returns/${encodeURIComponent(returnNo)}/confirm-refund`,
       { note },
     ),
+
+  // ── D-817 交接班 / 钱箱 ──
+  currentShift: () => api.get<PosShift | null>('/pos/shifts/current'),
+
+  openShift: (body: { openingCash: number; terminal?: string; remark?: string }) =>
+    api.post<PosShift>('/pos/shifts/open', body),
+
+  closeShift: (body: { actualCash: number; diffReason?: string; remark?: string }) =>
+    api.post<PosShift>('/pos/shifts/close', body),
+
+  shifts: (limit = 50) => api.get<PosShift[]>('/pos/shifts', { params: { limit } }),
 
   // ── D-817 挂单（暂存购物区，不参与财务口径）──
   holds: (includeClosed = false) => api.get<PosHoldRow[]>('/pos/holds', { params: { includeClosed } }),

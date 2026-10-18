@@ -5,6 +5,7 @@ import com.fashion.supplychain.integration.payment.orchestration.PaymentConfigOr
 import com.fashion.supplychain.pos.orchestration.PosSaleOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosReturnOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosHoldOrchestrator;
+import com.fashion.supplychain.pos.orchestration.PosShiftOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,15 +38,18 @@ public class PosController {
 
     private final PosReturnOrchestrator posReturnOrchestrator;
     private final PosHoldOrchestrator posHoldOrchestrator;
+    private final PosShiftOrchestrator posShiftOrchestrator;
 
     public PosController(PosSaleOrchestrator posSaleOrchestrator,
                          PaymentConfigOrchestrator paymentConfigOrchestrator,
                          PosReturnOrchestrator posReturnOrchestrator,
-                         PosHoldOrchestrator posHoldOrchestrator) {
+                         PosHoldOrchestrator posHoldOrchestrator,
+                         PosShiftOrchestrator posShiftOrchestrator) {
         this.posSaleOrchestrator = posSaleOrchestrator;
         this.paymentConfigOrchestrator = paymentConfigOrchestrator;
         this.posReturnOrchestrator = posReturnOrchestrator;
         this.posHoldOrchestrator = posHoldOrchestrator;
+        this.posShiftOrchestrator = posShiftOrchestrator;
     }
 
     /**
@@ -124,6 +128,62 @@ public class PosController {
             // 例如"发起支付失败"：单据已自动取消，收银员可以重试
             return Result.fail(409, e.getMessage());
         }
+    }
+
+    /** D-817：开班（登记钱箱备用金） */
+    @PostMapping("/shifts/open")
+    public Result<?> openShift(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(posShiftOrchestrator.openShift(
+                    dec(body == null ? null : body.get("openingCash")),
+                    str(body == null ? null : body.get("terminal")),
+                    str(body == null ? null : body.get("remark"))));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-817：当前班次（含实时统计）；未开班返回 null */
+    @GetMapping("/shifts/current")
+    public Result<?> currentShift() {
+        return Result.success(posShiftOrchestrator.currentShift());
+    }
+
+    /** D-817：交班（登记实点现金与差异） */
+    @PostMapping("/shifts/close")
+    public Result<?> closeShift(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(posShiftOrchestrator.closeShift(
+                    dec(body == null ? null : body.get("actualCash")),
+                    str(body == null ? null : body.get("diffReason")),
+                    str(body == null ? null : body.get("remark"))));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-817：班次历史 */
+    @GetMapping("/shifts")
+    public Result<?> shifts(@RequestParam(defaultValue = "50") int limit) {
+        return Result.success(posShiftOrchestrator.listShifts(limit));
+    }
+
+    private static java.math.BigDecimal dec(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return new java.math.BigDecimal(n.toString());
+        try {
+            return new java.math.BigDecimal(String.valueOf(o).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String str(Object o) {
+        return o == null ? null : String.valueOf(o);
     }
 
     /** D-817：挂起当前购物车（顾客临时离开） */

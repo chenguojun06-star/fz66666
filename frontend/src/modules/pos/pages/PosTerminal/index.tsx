@@ -27,6 +27,7 @@ import {
   RollbackOutlined,
   ScanOutlined,
   ShoppingCartOutlined,
+  FieldTimeOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
@@ -47,6 +48,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import TicketModal from '@/components/common/TicketModal';
 import PosReturnPanel from './PosReturnPanel';
 import PosHoldPanel from './PosHoldPanel';
+import PosShiftPanel from './PosShiftPanel';
 import './index.css';
 
 const { Text } = Typography;
@@ -114,7 +116,7 @@ const PosTerminal: React.FC = () => {
    * 不拆成独立页面 —— 退货/换货与挂单都发生在结账现场，来回跳页在高峰期就是排队变慢。
    * 购物车 state 仍在本组件，切 Tab 不会丢（Tabs 不设 destroyOnClose）。
    */
-  const [tab, setTab] = React.useState<'checkout' | 'return' | 'hold'>('checkout');
+  const [tab, setTab] = React.useState<'checkout' | 'return' | 'hold' | 'shift'>('checkout');
 
   const searchRef = React.useRef<InputRef>(null);
 
@@ -535,11 +537,12 @@ const PosTerminal: React.FC = () => {
           购物车 state 在本组件，切分区不丢。 */}
       <Segmented
         value={tab}
-        onChange={(v) => setTab(v as 'checkout' | 'return' | 'hold')}
+        onChange={(v) => setTab(v as 'checkout' | 'return' | 'hold' | 'shift')}
         options={[
           { label: '收银', value: 'checkout', icon: <ShoppingCartOutlined /> },
           { label: '退货 / 换货', value: 'return', icon: <RollbackOutlined /> },
           { label: '挂单', value: 'hold', icon: <PauseCircleOutlined /> },
+          { label: '交接班', value: 'shift', icon: <FieldTimeOutlined /> },
         ]}
         style={{ marginBottom: 16 }}
       />
@@ -913,6 +916,8 @@ const PosTerminal: React.FC = () => {
       {tab === 'return' && (
         <PosReturnPanel onGoCheckout={() => setTab('checkout')} />
       )}
+
+      {tab === 'shift' && <PosShiftPanel />}
 
       {tab === 'hold' && (
         <PosHoldPanel
