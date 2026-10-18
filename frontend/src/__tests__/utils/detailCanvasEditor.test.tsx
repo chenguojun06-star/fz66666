@@ -75,6 +75,9 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     expect(screen.getAllByRole('button', { name: '查看大图' })).toHaveLength(2);
   });
 
+  // 这个用例会渲染 ResizableModal 92vw 大弹窗 + 两次 antd Popconfirm，
+  // 全量并行跑时本机负载高，单跑 ~1s、全量可能 >5s，撞上 vitest 默认上限。
+  // 显式放宽的是**测试时限**，不是断言，也不是靠 sleep 掩盖。
   it('删除图片块与删除文字块，回调结果都要剔除该项', async () => {
     const onChange = vi.fn();
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
@@ -95,7 +98,7 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
       { type: 'image', url: 'a.jpg' },
       { type: 'image', url: 'b.jpg' },
     ]);
-  });
+   }, 20000);
 
   it('「添加文字段落」在末尾追加空文字块，商家可随后编辑', () => {
     const onChange = vi.fn();

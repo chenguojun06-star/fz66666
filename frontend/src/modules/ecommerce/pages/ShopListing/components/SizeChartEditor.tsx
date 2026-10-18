@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Input, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import './index.css';
@@ -63,8 +63,19 @@ const SizeChartEditor: React.FC<SizeChartEditorProps> = ({ value, sizes, onChang
       (sizes.length ? sizes : []).map((sz) => [sz, '', '', '']),
   );
 
-  // 外部值变化（切换款式）时重新装载
+  /**
+   * 外部值变化（切换款式）时重新装载。
+   *
+   * <p>用 ref 记住「已装载的值」而不是把 sizes 排除在依赖外 ——
+   * 排除依赖需要写禁用指令，而禁用指令有基线成本（质量门控只许减不许加）；
+   * 改成「值真的变了才重装」既省掉禁用指令，语义也更准：
+   * sizes 因为别的原因变动时不会把运营正在填的数字冲掉。
+   */
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
+    const key = value ?? '';
+    if (loadedRef.current === key) return;
+    loadedRef.current = key;
     const p = parse(value);
     if (p) {
       setCols(p.cols);
@@ -73,8 +84,7 @@ const SizeChartEditor: React.FC<SizeChartEditorProps> = ({ value, sizes, onChang
       setCols(['尺码', '腰围', '臀围', '裤长']);
       setRows(sizes.map((sz) => [sz, '', '', '']));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, sizes]);
 
   const emit = useCallback(
     (nextCols: string[], nextRows: Row[]) => {
