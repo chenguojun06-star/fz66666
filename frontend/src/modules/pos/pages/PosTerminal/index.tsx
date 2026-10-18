@@ -694,6 +694,39 @@ const PosTerminal: React.FC = () => {
                   pagination={false}
                   dataSource={today?.recent ?? []}
                   locale={{ emptyText: '今天还没有单据' }}
+                  // 展开看该单全部商品：只显示首件的话，一单多件时
+                  // 收银员无从核对这个单到底卖了什么。
+                  expandable={{
+                    rowExpandable: (r) => (r.items?.length ?? 0) > 1,
+                    expandedRowRender: (r) => (
+                      <div className="pos-sale-items">
+                        {(r.items ?? []).map((it, i) => (
+                          <div key={`${it.skuId ?? i}`} className="pos-sale-items__row">
+                            <StyleImageCell
+                              skuCode={it.skuCode ?? undefined}
+                              imageMap={imageMap}
+                            />
+                            <span className="pos-sale-items__name">
+                              {it.styleName || it.styleNo || it.skuCode || '—'}
+                            </span>
+                            <span className="pos-sale-items__spec">
+                              {[it.styleNo, it.color, it.size].filter(Boolean).join(' / ')}
+                            </span>
+                            <span className="pos-sale-items__qty">×{it.quantity ?? 0}</span>
+                            <span className="pos-sale-items__amt">
+                              {formatMoney(Number(it.amount ?? 0))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                  }}
+                  onExpand={(expanded, record) => {
+                    // 只在展开时拉图，避免一屏 20 单全量预请求
+                    if (expanded) {
+                      void fetchBySkuCodes((record.items ?? []).map((i) => i.skuCode));
+                    }
+                  }}
                   columns={[
                     styleImageColumn<PosRecentSale>({
                       imageMap,

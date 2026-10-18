@@ -93,8 +93,16 @@ describe('主图区：合规只提示、不限制（D-778-b）', () => {
     // 关键：不得出现阻断式措辞
     expect(screen.queryByText(/主图不合规/)).toBeNull();
     expect(screen.queryByText(/会影响上架/)).toBeNull();
-    // 必须明示「不影响上传」
-    expect(screen.getByText(/不影响上传/)).toBeTruthy();
+    // 必须明示「不影响上传」。
+    //
+    // 这里**必须用 findByText 而不是 getByText**：
+    // `<details>` 只依赖 cover 是否有值就渲染，完全不等图片探测；
+    // 而「N 项建议」要等 Image.onload → canvas → fetch HEAD 跑完才有值。
+    // 所以上一行 waitFor(details) 是 0 耗时的，getByText 会在探测完成前就跑，
+    // 于是并行测试一抢 CPU 就随机失败。
+    // 之前把它误判成"超时不够"、把 timeout 从 2s 放到 8s —— 那个改动纯属无效，
+    // 因为瓶颈从来不是超时。
+    await screen.findByText(/不影响上传/);
   });
 
   it('1×1 占位图同样只是提示，不拦截', async () => {

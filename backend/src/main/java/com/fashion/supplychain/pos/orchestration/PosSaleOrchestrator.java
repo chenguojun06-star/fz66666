@@ -467,7 +467,57 @@ public class PosSaleOrchestrator {
         Map<String, Object> summary = saleMapper.todaySummary(tenantId);
         out.put("summary", summary == null ? Map.of() : summary);
         out.put("byPayMethod", saleMapper.todayByPayMethod(tenantId));
-        out.put("recent", saleMapper.todayRecent(tenantId, 20));
+
+        List<Map<String, Object>> recent = saleMapper.todayRecent(tenantId, 20);
+        // 每单带上明细行：只给首件 skuCode 的话，一单多件时收银员
+        // 展开也看不到剩下的货，出了问题无法核对这个单到底卖了什么。
+        if (recent != null && !recent.isEmpty()) {
+            List<String> saleIds = new ArrayList<>();
+            for (Map<String, Object> r : recent) {
+                Object id = r.get("id");
+                if (id != null) {
+                    saleIds.add(String.valueOf(id));
+                }
+            }
+            Map<String, List<Map<String, Object>>> itemsBySale =
+                    saleItemsGroupedBySale(saleIds);
+            for (Map<String, Object> r : recent) {
+                List<Map<String, Object>> items =
+                        itemsBySale.get(String.valueOf(r.get("id")));
+                r.put("items", items == null ? List.of() : items);
+            }
+        }
+        out.put("recent", recent == null ? List.of() : recent);
+        return out;
+    }
+
+    /**
+     * 批量取今日这些单的商品明细，按 saleId 分组。
+     *
+     * <p>一次性 IN 查询而不是逐单查（N+1）：今日 20 单就是 20 次查询，
+     * 收银台每次开单都要刷一次，纯属自己给自己加延迟。
+     */
+    private Map<String, List<Map<String, Object>>> saleItemsGroupedBySale(List<String> saleIds) {
+        Map<String, List<Map<String, Object>>> out = new LinkedHashMap<>();
+        if (saleIds.isEmpty()) {
+            return out;
+        }
+        LambdaQueryWrapper<PosSaleItem> qw = new LambdaQueryWrapper<PosSaleItem>()
+                .in(PosSaleItem::getSaleId, saleIds);
+        List<PosSaleItem> items = saleItemMapper.selectList(qw);
+        for (PosSaleItem it : items) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("skuId", it.getSkuId());
+            m.put("skuCode", it.getSkuCode());
+            m.put("styleNo", it.getStyleNo());
+            m.put("styleName", it.getStyleName());
+            m.put("color", it.getColor());
+            m.put("size", it.getSize());
+            m.put("unitPrice", it.getUnitPrice());
+            m.put("quantity", it.getQuantity());
+            m.put("amount", it.getAmount());
+            out.computeIfAbsent(String.valueOf(it.getSaleId()), k -> new ArrayList<>()).add(m);
+        }
         return out;
     }
 

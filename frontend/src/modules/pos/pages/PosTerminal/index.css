@@ -298,3 +298,40 @@
   font-size: 20px;
   color: var(--color-text-muted, #8c8c8c);
 }
+
+/* 今日单据展开：该单全部商品 */
+.pos-sale-items {
+  padding: 4px 0 4px 8px;
+}
+
+.pos-sale-items__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.pos-sale-items__name {
+  min-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-sale-items__spec {
+  color: #8c8c8c;
+  font-size: 12px;
+  min-width: 140px;
+}
+
+.pos-sale-items__qty {
+  color: #8c8c8c;
+  min-width: 40px;
+}
+
+.pos-sale-items__amt {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

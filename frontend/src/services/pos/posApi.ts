@@ -181,9 +181,23 @@ export interface PosPayMethodRow {
   amount: number;
 }
 
+export interface PosRecentSaleItem {
+  skuId?: number | null;
+  skuCode?: string | null;
+  styleNo?: string | null;
+  styleName?: string | null;
+  color?: string | null;
+  size?: string | null;
+  unitPrice?: number | null;
+  quantity?: number | null;
+  amount?: number | null;
+}
+
 export interface PosRecentSale {
   id: number;
   saleNo: string;
+  /** 该单全部商品明细（展开行用；一单多件时只看首件无法核对） */
+  items?: PosRecentSaleItem[];
   /** 该单第一件商品的编码（后端带出，用于款式图/款号列；权威款号由 /style/sku/brief 解析） */
   skuCode?: string | null;
   customerName?: string | null;
