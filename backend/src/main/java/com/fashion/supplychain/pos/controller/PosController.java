@@ -3,6 +3,7 @@ package com.fashion.supplychain.pos.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.payment.orchestration.PaymentConfigOrchestrator;
 import com.fashion.supplychain.pos.orchestration.PosSaleOrchestrator;
+import com.fashion.supplychain.pos.orchestration.PosReturnOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,10 +34,14 @@ public class PosController {
 
     private final PaymentConfigOrchestrator paymentConfigOrchestrator;
 
+    private final PosReturnOrchestrator posReturnOrchestrator;
+
     public PosController(PosSaleOrchestrator posSaleOrchestrator,
-                         PaymentConfigOrchestrator paymentConfigOrchestrator) {
+                         PaymentConfigOrchestrator paymentConfigOrchestrator,
+                         PosReturnOrchestrator posReturnOrchestrator) {
         this.posSaleOrchestrator = posSaleOrchestrator;
         this.paymentConfigOrchestrator = paymentConfigOrchestrator;
+        this.posReturnOrchestrator = posReturnOrchestrator;
     }
 
     /**
@@ -112,6 +118,48 @@ public class PosController {
             return Result.fail(400, e.getMessage());
         } catch (IllegalStateException e) {
             // 例如"发起支付失败"：单据已自动取消，收银员可以重试
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-816：可退量查询（收银界面要先看到「还能退几件」才可能操作） */
+    @GetMapping("/sales/{saleNo}/returnable")
+    public Result<?> returnable(@PathVariable String saleNo) {
+        try {
+            return Result.success(posReturnOrchestrator.returnableItems(saleNo));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-816：创建退货/换货单（退款为待人工确认，系统不自动标记已退） */
+    @PostMapping("/sales/{saleNo}/return")
+    public Result<?> createReturn(@PathVariable String saleNo, @RequestBody Map<String, Object> body) {
+        try {
+            Object lines = body == null ? null : body.get("lines");
+            String type = body == null ? null : String.valueOf(body.getOrDefault("returnType", "RETURN"));
+            String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", ""));
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> list = lines instanceof List ? (List<Map<String, Object>>) lines : List.of();
+            return Result.success(posReturnOrchestrator.createReturn(saleNo, list, type, reason));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
+            return Result.fail(409, e.getMessage());
+        }
+    }
+
+    /** D-816：人工确认已退款（本系统未接支付渠道退款接口，必须线下退款后确认） */
+    @PostMapping("/returns/{returnNo}/confirm-refund")
+    public Result<?> confirmRefund(@PathVariable String returnNo, @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String note = body == null ? null : (String) body.get("note");
+            return Result.success(posReturnOrchestrator.confirmRefund(returnNo, note));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        } catch (IllegalStateException e) {
             return Result.fail(409, e.getMessage());
         }
     }

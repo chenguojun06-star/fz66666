@@ -65,6 +65,9 @@ public class PosSale {
 
     private String outstockNo;
 
+    /** D-816：累计已退件数（可退量 = 已售 - 已退；明细真相源仍是退货单行） */
+    private Integer returnedCount;
+
     private String remark;
 
     private String cashier;
