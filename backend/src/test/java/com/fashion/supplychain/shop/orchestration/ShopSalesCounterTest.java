@@ -79,11 +79,17 @@ class ShopSalesCounterTest {
         return o;
     }
 
+    /** 带 styleId 的明细行（V202710160006 之后的主力行）。 */
     private ShopOrderItem item(String orderId, String styleNo, Integer qty) {
+        return item(orderId, styleNo, qty, null);
+    }
+
+    private ShopOrderItem item(String orderId, String styleNo, Integer qty, Long styleId) {
         ShopOrderItem i = new ShopOrderItem();
         i.setOrderId(orderId);
         i.setStyleNo(styleNo);
         i.setQuantity(qty);
+        i.setStyleId(styleId);
         return i;
     }
 
@@ -93,9 +99,9 @@ class ShopSalesCounterTest {
         // 用真实 lambda-wrapper 无法在单测里构造条件，这里验证「返回的订单集合被正确使用」：
         // 只给已发货订单 → 销量只来自它
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
-        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2)));
+        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2, 100L)));
 
-        assertEquals(Map.of("AAA", 2), counter.soldQtyByStyleNo(2L));
+        assertEquals(Map.of(100L, 2), counter.soldQtyByStyleId(2L));
     }
 
     @Test
@@ -103,37 +109,60 @@ class ShopSalesCounterTest {
     void sumsQuantitiesPerStyle() {
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED"), order("O2", "SHIPPED")));
         when(itemMapper.selectList(any())).thenReturn(List.of(
-                item("O1", "AAA", 1),
-                item("O1", "AAA", 3),
-                item("O2", "BBB", 2)));
+                item("O1", "AAA", 1, 100L),
+                item("O1", "AAA", 3, 100L),
+                item("O2", "BBB", 2, 200L)));
 
-        Map<String, Integer> out = counter.soldQtyByStyleNo(2L);
+        Map<Long, Integer> out = counter.soldQtyByStyleId(2L);
 
-        assertEquals(4, out.get("AAA"));
-        assertEquals(2, out.get("BBB"));
+        assertEquals(4, out.get(100L));
+        assertEquals(2, out.get(200L));
     }
 
     @Test
-    @DisplayName("脏数据：空款号 / 0 件 / 负数都不计入（不能把 0 累加成 0 掩盖缺失）")
+    @DisplayName("脏数据：0 件 / 负数 / 空数量都不计入（不能把 0 累加成 0 掩盖缺失）")
     void ignoresDirtyRows() {
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
         when(itemMapper.selectList(any())).thenReturn(List.of(
-                item("O1", null, 5),
-                item("O1", "  ", 5),
-                item("O1", "AAA", 0),
-                item("O1", "AAA", -2),
-                item("O1", "AAA", null),
-                item("O1", " AAA ", 1)));
+                item("O1", "AAA", 0, 100L),
+                item("O1", "AAA", -2, 100L),
+                item("O1", "AAA", null, 100L),
+                item("O1", "AAA", 1, 100L)));
 
-        Map<String, Integer> out = counter.soldQtyByStyleNo(2L);
+        Map<Long, Integer> out = counter.soldQtyByStyleId(2L);
 
-        assertEquals(Map.of("AAA", 1), out, "款号两端空格要归一，否则查销量永远查不到");
+        assertEquals(Map.of(100L, 1), out);
+    }
+
+    @Test
+    @DisplayName("**改款号不影响销量**：同一 styleId 下款号变了，销量仍按 style_id 归集")
+    void styleNoChangeDoesNotBreakSales() {
+        // 这就是补 style_id 的根因：以前只有款号，改号后历史销量直接断链
+        when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
+        when(itemMapper.selectList(any())).thenReturn(List.of(
+                item("O1", "OLD-AAA", 2, 100L),
+                item("O1", "NEW-AAA", 3, 100L)));
+
+        Map<Long, Integer> out = counter.soldQtyByStyleId(2L);
+
+        assertEquals(5, out.get(100L), "款号从 OLD-AAA 改成 NEW-AAA，销量必须仍是 5 而不是 3");
+    }
+
+    @Test
+    @DisplayName("style_id 为空的存量行不计入主口径（避免和款号兜底重复计算）")
+    void nullStyleIdNotCountedInPrimary() {
+        when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
+        when(itemMapper.selectList(any())).thenReturn(List.of(
+                item("O1", "AAA", 5, null)));
+
+        assertTrue(counter.soldQtyByStyleId(2L).isEmpty(),
+                "style_id 为空的行走兜底口径，主口径必须跳过，否则销量翻倍");
     }
 
     @Test
     @DisplayName("没有订单时返回空 Map —— 不是「销量 0」（两者在业务上不同）")
     void noOrdersMeansNoEntry() {
-        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
+        assertTrue(counter.soldQtyByStyleId(2L).isEmpty());
     }
 
     @Test
@@ -142,7 +171,7 @@ class ShopSalesCounterTest {
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
         when(itemMapper.selectList(any())).thenReturn(List.of());
 
-        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
+        assertTrue(counter.soldQtyByStyleId(2L).isEmpty());
     }
 
     @Test
@@ -151,7 +180,7 @@ class ShopSalesCounterTest {
         when(orderMapper.selectList(any())).thenReturn(List.of(order(null, "SHIPPED")));
         when(itemMapper.selectList(ArgumentMatchers.any())).thenReturn(List.of(item("O1", "AAA", 3)));
 
-        assertTrue(counter.soldQtyByStyleNo(2L).isEmpty());
+        assertTrue(counter.soldQtyByStyleId(2L).isEmpty());
     }
 
     @Test
@@ -163,7 +192,7 @@ class ShopSalesCounterTest {
         // D-811 线上实测踩过：单测里手动设了 UserContext 所以全绿，
         // 线上顾客端是免登录请求、UserContext 为空 → 销量恒为 0。
         // 这里显式锁住「租户不明就不统计」，防止有人又改回读 UserContext。
-        assertTrue(counter.soldQtyByStyleNo(null).isEmpty());
+        assertTrue(counter.soldQtyByStyleId(null).isEmpty());
         // 连查询都不该发出去 —— 拿不到租户还去查，等于全表扫描
         org.mockito.Mockito.verify(orderMapper, org.mockito.Mockito.never())
                 .selectList(any());
@@ -179,8 +208,8 @@ class ShopSalesCounterTest {
         UserContext.set(ctx);
 
         when(orderMapper.selectList(any())).thenReturn(List.of(order("O1", "SHIPPED")));
-        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2)));
+        when(itemMapper.selectList(any())).thenReturn(List.of(item("O1", "AAA", 2, 100L)));
 
-        assertEquals(Map.of("AAA", 2), counter.soldQtyByStyleNo(2L));
+        assertEquals(Map.of(100L, 2), counter.soldQtyByStyleId(2L));
     }
 }

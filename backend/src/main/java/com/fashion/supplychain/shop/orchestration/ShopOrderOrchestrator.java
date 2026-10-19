@@ -274,11 +274,21 @@ public class ShopOrderOrchestrator {
      */
     private Integer realSoldQty(com.fashion.supplychain.style.entity.StyleInfo style, Long tenantId) {
         try {
+            if (style.getId() == null) {
+                return null;
+            }
+            // 主口径：按 style_id 关联。款号改了也不影响历史销量。
+            Integer byId = shopSalesCounter.soldQtyByStyleId(tenantId).get(style.getId());
+            if (byId != null) {
+                return byId;
+            }
+            // 兜底：存量里 style_id 未回填上的老行，仍按款号算一次。
+            // 有异议时以 style_id 为准，但直接丢弃会让这批销量凭空消失。
             String no = style.getStyleNo();
             if (!StringUtils.hasText(no)) {
                 return null;
             }
-            return shopSalesCounter.soldQtyByStyleNo(tenantId).get(no.trim());
+            return shopSalesCounter.soldQtyByStyleNoFallback(tenantId).get(no.trim());
         } catch (Exception e) {
             // 销量取不到绝不能拖垮详情页：记 error 让问题可查，页面照常返回
             log.error("[真实销量] 统计失败 styleId={}: {}", style.getId(), e.getMessage());

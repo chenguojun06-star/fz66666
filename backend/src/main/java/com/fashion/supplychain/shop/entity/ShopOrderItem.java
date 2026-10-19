@@ -22,6 +22,14 @@ public class ShopOrderItem {
     private Long tenantId;
 
     private Long skuId;
+
+    /**
+     * 款式ID（t_style_info.id）。
+     *
+     * <p><b>统计一律按这个列关联</b>，不要再按 {@code styleNo}：
+     * 款号是可编辑的业务字段，改一次号历史销量就断链，且全程无报错。
+     */
+    private Long styleId;
     private String skuCode;
     private String styleNo;
     private String styleName;
