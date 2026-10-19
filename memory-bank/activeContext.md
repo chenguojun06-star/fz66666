@@ -22,16 +22,17 @@
 - **框架级**：服务端信封泄漏治理（`unwrapApiData` 幂等 + CI 门禁 baseline 177 棘轮，存量分批改）；生产库结构漂移全量核实（补 4 表 2 列、清 3 组死代码、74 段 DDL 与线上逐列一致）
 
 **进行中/已知问题**：
-- 信封存量 177 处待分批清理（第 1 批 sysNoticeApi 已清 2 处）
+- 信封存量 **312 处**待分批清理（2026-10-19 门禁加固后补录口径：此前 304 只统计「泛型信封+多行 return」，单行直接 return 漏检；新增 25 处漏网存量分布于 shopApi 11 / paymentApi 3 / productionApi 3 / systemStatusService 4 / styleApi 1 / announcementApi 1 / organizationApi 1）
+- 门禁加固已完成（2026-10-19）：`check-api-envelope-leak.py` 修复单行漏检 bug + `--update` 必须 `--reason` 否则拒绝放大（此前 ef40a136c 无理由把 175→337）；新增 `scripts/check-d-number.py`（查重/最近编号/待推送撞号三模式，D-808 实测报撞号）
 - `t_payment_config` 仍空（微信/支付宝商户号未配），POS 投产前需先配支付
-- 主图区/详情画布删除用例仍概率性 flaky（d0841e94c/4d38e7cfd 两次放宽 waitFor 均无效，待换方案而非继续放宽超时）
+- ~~主图区用例概率性 flaky~~ ✅ **已根治（d0841e94c，10-18）**：根因是测试等待条件写错——`waitFor` 等 `<details>`（0 耗时立即通过），真正异步是 Image.onload→canvas→fetch HEAD；改 `getByText`→`findByText` 让断言自己等，连跑 8 次全绿。教训：放宽 timeout 治不了「等待条件选错对象」，偶发绿比红更危险
 - db-query-mcp 本地 3308 未起 + 对正常 SELECT 误报「SELECT...INTO」待修
-- D 号撞号复发（D-808 双用、D-785 未取号即被引用），取号须先 `git log` 查重
+- D 号撞号复发（D-808 双用、D-785 未取号即被引用），取号须先 `scripts/check-d-number.py` 查重
 
 **下一步**：
-1. 信封存量分批收敛（每批删 baseline，门禁棘轮保证只减不增）
-2. 收银台真实场景投产验证（配支付商户号 → 班次/会员/小票走真实收银）
-3. 主图 flaky 用例根因修复（定位竞态，停止放宽超时）
+1. 信封存量分批收敛（按消费方风险分级：直接进 Table/数组的先清；每批删 baseline，门禁棘轮保证只减不增）
+2. 收银台真实场景投产验证（配支付商户号 → 分配 MENU_POS → 班次/会员/小票走真实收银）
+3. 本地起 MySQL 3308 容器恢复 db-query-mcp；SELECT...INTO 误报查 MCP 侧配置
 
 ## ✅ D-808 收银台投产核实 + 全站「今日统计」时区修复（2026-10-16，已上线）
 

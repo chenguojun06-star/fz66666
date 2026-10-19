@@ -45,15 +45,13 @@ const InvoiceTab: React.FC = () => {
         invoiceApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
         invoiceApi.stats(),
       ]);
-      const _r0 = (data as any)?.records;
-      const records = Array.isArray(_r0) ? _r0 : (Array.isArray(data) ? data : []);
-      setList(records);
-      setTotal((data as any)?.total ?? records.length);
+      setList(data?.records ?? []);
+      setTotal(data?.total ?? 0);
       setStats({
-        draftCount: Number((statsData as any)?.draftCount || 0),
-        issuedCount: Number((statsData as any)?.issuedCount || 0),
-        monthAmount: Number((statsData as any)?.monthAmount || 0),
-        totalIssued: Number((statsData as any)?.totalIssued || 0),
+        draftCount: Number(statsData?.draftCount || 0),
+        issuedCount: Number(statsData?.issuedCount || 0),
+        monthAmount: Number(statsData?.monthAmount || 0),
+        totalIssued: Number(statsData?.totalIssued || 0),
       });
     } catch { message.error('加载发票列表失败'); }
     finally { setLoading(false); }

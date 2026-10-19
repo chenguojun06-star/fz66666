@@ -58,7 +58,7 @@ const EcSalesRevenue: React.FC = () => {
         startDate: startDateStr,
         endDate: endDateStr,
       });
-      setSummary(data as unknown as EcRevenueSummary);
+      setSummary(data);
     } catch {
       message.warning('汇总数据加载失败，金额可能不准确');
     } finally {
@@ -78,9 +78,8 @@ const EcSalesRevenue: React.FC = () => {
         startDate: startDateStr,
         endDate: endDateStr,
       });
-      const data = resp as unknown as { records: EcRevenueRecord[]; total: number };
-      setRecords(data.records ?? []);
-      setTotal(data.total ?? 0);
+      setRecords(resp.records ?? []);
+      setTotal(resp.total ?? 0);
     } catch {
       message.error('加载失败，请刷新重试');
     } finally {

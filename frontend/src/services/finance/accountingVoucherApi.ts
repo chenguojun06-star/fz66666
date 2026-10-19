@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 // ============================================================
 // D-513 会计凭证 — 类型定义
@@ -61,31 +61,37 @@ export interface VoucherDetail {
 // ============================================================
 // 接口
 //
-// 返回值统一声明为 Promise<unknown>：api 客户端返回的是后端 Result 信封
-// （{code, data, message}），调用方需用 unwrapApiData<T>() 解包并做失败判定，
-// 避免用类型断言掩盖类型（前端质量基线 ratchet 只许降不许升）。
+// D-817：service 层统一解包（api 客户端返回的是 {code,data,message} 信封）。
+// 调用方直接拿业务数据；失败会抛错，由页面 catch 提示。
 // ============================================================
 
 export const accountingVoucherApi = {
   /** 凭证列表（按凭证日期范围过滤，后端 LIMIT 500） */
-  listVouchers: (startDate?: string, endDate?: string): Promise<unknown> =>
-    api.get<unknown>('/finance/accounting/voucher/list', {
-      params: { startDate, endDate },
-    }),
+  listVouchers: async (startDate?: string, endDate?: string): Promise<AccountingVoucher[]> =>
+    unwrapApiData<AccountingVoucher[]>(
+      await api.get('/finance/accounting/voucher/list', { params: { startDate, endDate } }),
+      '加载凭证失败',
+    ),
 
   /** 凭证详情（含分录行） */
-  getVoucherDetail: (id: number): Promise<unknown> =>
-    api.get<unknown>(`/finance/accounting/voucher/detail/${id}`),
+  getVoucherDetail: async (id: number): Promise<VoucherDetail> =>
+    unwrapApiData<VoucherDetail>(
+      await api.get(`/finance/accounting/voucher/detail/${id}`),
+      '加载凭证详情失败',
+    ),
 
   /** 冲销凭证（生成红字凭证，借贷互换） */
-  reverseVoucher: (id: number): Promise<unknown> =>
-    api.post<unknown>(`/finance/accounting/voucher/reverse/${id}`),
+  reverseVoucher: async (id: number): Promise<void> => {
+    await unwrapApiData<void>(await api.post(`/finance/accounting/voucher/reverse/${id}`), '冲销凭证失败');
+  },
 
   /** 补生成缺失的记账凭证（历史补账，幂等，返回本次新生成张数） */
-  backfillVouchers: (): Promise<unknown> => api.post<unknown>('/finance/accounting/voucher/backfill'),
+  backfillVouchers: async (): Promise<number> =>
+    unwrapApiData<number>(await api.post('/finance/accounting/voucher/backfill'), '补生成凭证失败'),
 
   /** 会计科目列表 */
-  listSubjects: (): Promise<unknown> => api.get<unknown>('/finance/accounting/subjects'),
+  listSubjects: async (): Promise<AccountSubject[]> =>
+    unwrapApiData<AccountSubject[]>(await api.get('/finance/accounting/subjects'), '加载会计科目失败'),
 };
 
 // ============================================================

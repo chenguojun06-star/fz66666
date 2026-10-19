@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 // ============================================================
 // 类型定义（与后端 Invoice Entity 对齐）
@@ -59,28 +59,33 @@ export interface InvoiceStats {
 
 const invoiceApi = {
   /** 分页列表 */
-  list: (params: InvoiceListReq) =>
-    api.post<any>('/finance/invoice/list', params),
+  list: async (params: InvoiceListReq): Promise<{ records: Invoice[]; total: number }> =>
+    unwrapApiData<{ records: Invoice[]; total: number }>(
+      await api.post('/finance/invoice/list', params),
+      '加载发票列表失败',
+    ),
 
   /** 统计 */
-  stats: () =>
-    api.get<InvoiceStats>('/finance/invoice/stats'),
+  stats: async (): Promise<InvoiceStats> =>
+    unwrapApiData<InvoiceStats>(await api.get('/finance/invoice/stats'), '加载发票统计失败'),
 
   /** 新建发票 */
-  create: (data: Omit<Invoice, 'id'>) =>
-    api.post<Invoice>('/finance/invoice/create', data),
+  create: async (data: Omit<Invoice, 'id'>): Promise<Invoice> =>
+    unwrapApiData<Invoice>(await api.post('/finance/invoice/create', data), '新建发票失败'),
 
   /** 更新发票（仅草稿状态可编辑） */
-  update: (data: Invoice) =>
-    api.put<Invoice>('/finance/invoice/update', data),
+  update: async (data: Invoice): Promise<Invoice> =>
+    unwrapApiData<Invoice>(await api.put('/finance/invoice/update', data), '更新发票失败'),
 
   /** 标记已开票 */
-  issue: (id: string) =>
-    api.post<void>(`/finance/invoice/${id}/issue`),
+  issue: async (id: string): Promise<void> => {
+    await unwrapApiData<void>(await api.post(`/finance/invoice/${id}/issue`), '标记开票失败');
+  },
 
   /** 作废发票 */
-  cancel: (id: string) =>
-    api.post<void>(`/finance/invoice/${id}/cancel`),
+  cancel: async (id: string): Promise<void> => {
+    await unwrapApiData<void>(await api.post(`/finance/invoice/${id}/cancel`), '作废发票失败');
+  },
 };
 
 export default invoiceApi;

@@ -1,4 +1,4 @@
-import api from '../../utils/api';
+import api, { unwrapApiData } from '../../utils/api';
 
 export interface EcRevenueListParams {
   page?: number;
@@ -65,17 +65,21 @@ const BASE = '/finance/ec-revenue';
 
 export const ecSalesRevenueApi = {
   /** 分页查询 EC 销售收入列表 */
-  list: (params: EcRevenueListParams) =>
-    api.post<{ records: EcRevenueRecord[]; total: number; current: number; size: number }>(
-      `${BASE}/list`,
-      params
+  list: async (params: EcRevenueListParams): Promise<{ records: EcRevenueRecord[]; total: number; current: number; size: number }> =>
+    unwrapApiData<{ records: EcRevenueRecord[]; total: number; current: number; size: number }>(
+      await api.post(`${BASE}/list`, params),
+      '加载 EC 销售收入失败',
     ),
 
   /** 汇总统计（待核账 / 已核账 / 已入账 金额+单数）*/
-  summary: (params?: { platform?: string; startDate?: string; endDate?: string }) =>
-    api.post<EcRevenueSummary>(`${BASE}/summary`, params ?? {}),
+  summary: async (params?: { platform?: string; startDate?: string; endDate?: string }): Promise<EcRevenueSummary> =>
+    unwrapApiData<EcRevenueSummary>(await api.post(`${BASE}/summary`, params ?? {}), '加载汇总失败'),
 
   /** 状态流转：confirm（核账）| reconcile（入账）*/
-  stageAction: (id: number, action: 'confirm' | 'reconcile', remark?: string) =>
-    api.post(`${BASE}/${id}/stage-action`, { remark }, { params: { action } }),
+  stageAction: async (id: number, action: 'confirm' | 'reconcile', remark?: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`${BASE}/${id}/stage-action`, { remark }, { params: { action } }),
+      '状态流转失败',
+    );
+  },
 };

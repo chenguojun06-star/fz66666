@@ -319,6 +319,10 @@ Note: **三端测试源码均已入库，无一端被排除**。历史教训：�
 
     推论：凡是用户给出了**明确的数字/比例/位置**，就当成约束而不是建议。
     凭经验优化只能在用户没表态的地方做。
+12. **D 编号取号前必须查重**：`python3 scripts/check-d-number.py --last 10` 看当前最大号，
+    再用候选号跑 `python3 scripts/check-d-number.py <号>` 确认未占用，两个都干净才落
+    commit message。历史撞号 6 次（D-362/618/667/702/808 双用、D-785 未取号即被引用）
+    全是事故——撞号会让 memory-bank 的 progress/decisionLog 条目互相覆盖。
 
 ### CI 门禁里「真实踩过的坑」清单
 
@@ -330,6 +334,7 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
 | `check-native-sql-columns.py` | SQL 引用生产库不存在的列（8 处缺陷的守护） |
 | `check-db-repair-vs-flyway.py` | 往启动自愈清单加条目却不补 Flyway 迁移（结构真相源只能有一个） |
 | `check-silent-catch.py` | 新增「catch 里只打 log.debug」的静默吞异常 |
+| `check-api-envelope-leak.py` | service 层把 `{code,data}` 信封直接 return 给调用方（收银台白屏/丢挂单守护） |
 | `check-shop-c-page.py` | 顾客端店铺页交互（切图 / 放大 / 选色出尺码） |
 | `audit-tenant-id.py` | Entity/Mapper 缺 tenant_id（P0 铁律） |
 | `check-entity-flyway.py` | 新增 `@TableField` 没有 Flyway 迁移 |
@@ -337,6 +342,17 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
 **写这类守护脚本的纪律**：必须**双向验证** —— 对修复前的代码要失败、对修复版要通过。
 不验证就会出现"脚本永远绿灯、其实什么都没拦"。本轮三个新脚本都返工过
 （漏扫 `jdbcTemplate`、误报洪水、被自己写的注释骗过、抓不到单行 catch 写法）。
+
+**门禁自己也会坏，且坏法更隐蔽**（2026-10-19 实测）：
+`check-api-envelope-leak.py` 曾因主循环一个条件写反
+（`if kind is None and not DIRECT_RETURN.search(line)`），
+**单行 `list: () => api.get<T>('/x')` 完全漏检**——docstring 举例要拦的
+最典型写法反而畅通无阻，25 处存量就是这么漏掉的。
+同脚本的 `--update` 原先无任何约束，一次无理由执行把 baseline 从 175 放大到 337
+（+196 被洗成"历史存量"）。现已双修：单行/多行/泛型三种写法全检出；
+`--update` 遇新增键必须传 `--reason` 否则拒绝保存。
+**推论：守护脚本的"检出能力"和"baseline 纪律"本身也要有人周期性怀疑——
+跑一遍 `--all` 看存量、拿探针文件试检出，别默认它还在好好干活。**
 
 ## 第三方平台对接与集成规范（P0 铁律）
 
@@ -482,10 +498,10 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
     | 措施 | 位置 |
     |---|---|
     | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
-    | 禁止新增 service 层信封泄漏（存量 304 处分批清；posApi/crm/production 已清） | `scripts/check-api-envelope-leak.py` |
+    | 禁止新增 service 层信封泄漏（存量 312 处分批清；posApi/crm/production/finance 已清） | `scripts/check-api-envelope-leak.py` |
     | posApi / ticketApi 已在 service 层解包 | 已改造 |
 
-    ⚠️ 剩余 304 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
+    ⚠️ 剩余 312 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
     机械替换会产出错误类型，且无法逐页端到端验证。幂等改造后它们不再危险，
     按模块分批改，改一处删一条 baseline。
 

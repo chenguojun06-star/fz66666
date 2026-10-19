@@ -34,15 +34,24 @@ mock 返回的是已解包数组。**mock 什么形状本身就是测试的一�
 ----
     python3 scripts/check-api-envelope-leak.py            # 只报新增（对比 baseline）
     python3 scripts/check-api-envelope-leak.py --all      # 打印全部存量
-    python3 scripts/check-api-envelope-leak.py --update   # 重新记录 baseline
+    python3 scripts/check-api-envelope-leak.py --update   # 重新记录 baseline（只减不增）
+    python3 scripts/check-api-envelope-leak.py --update --reason "..."  # 有理由的合法放大
 
 baseline
 --------
-历史存量记录在 `scripts/baseline/api-envelope-leak.json`（键为 `文件:行`）。
+历史存量记录在 `scripts/baseline/api-envelope-leak.json`（键为 `文件|方法名`）。
+用方法名而非行号，是因为行号会随任意上方代码增删漂移 —— 实测一次普通改动
+就制造 25 处「幽灵新增」，同时把真泄漏掩成「已修复」。
 新增泄漏会被拦截；修掉一处就删掉对应键，然后 `--update` 收敛。
 
-**baseline 只能变小不能变大** —— 否则把脚本跑一次 `--update` 就等于
-把刚引入的问题也登记成"历史存量"，门控当场失效。
+**baseline 只能变小不能变大** —— 本纪律由代码强制执行（2026-10-19 加固）：
+`--update` 时若发现新增键，必须同时传 `--reason`，否则拒绝保存。
+背景：该纪律原先只写在本 docstring 里，`ef40a136c` 一次无理由 `--update`
+把 175 放大到 337（+196 被登记成"存量"），门禁对那些泄漏永久失效。
+
+**检出规则同样踩过坑**（2026-10-19 修复）：单行 `list: () => api.get<T>('/x')`
+曾因主循环条件写反而完全漏检——最典型的写法反而不过门禁。修规则属
+「扫描能力升级」，随之补录的存量用 `--reason` 登记，属合法放大。
 """
 from __future__ import annotations
 
@@ -90,6 +99,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--all", action="store_true", help="打印全部存量，不做新增比对")
     ap.add_argument("--update", action="store_true", help="重新记录 baseline")
+    ap.add_argument(
+        "--reason",
+        default="",
+        help="baseline 合法放大时必须给出理由（如：修复漏检 bug 后补录存量）",
+    )
     args = ap.parse_args()
 
     if not SERVICES.exists():
@@ -97,6 +111,23 @@ def main() -> int:
         return 1
 
     hits: dict[str, str] = {}
+
+    def method_name(lines: list[str], idx: int) -> str:
+        """向上回溯最多 8 行找方法名。
+
+        用「文件|方法名」而不是「文件:行号」作 baseline 键 ——
+        行号会随着上方任何一行代码增删而漂移，把已登记的存量变成
+        "新增"，同时把真问题掩成"已修复"（2026-10-19 实际发生：
+        仅给 productionApi 增加几行，就冒出 25 处幽灵新增）。
+        """
+        for back in range(0, 9):
+            i = idx - back
+            if i < 0:
+                break
+            m = re.search(r"^\s{0,6}([A-Za-z_$][\w$]*)\s*[:(]", lines[i])
+            if m and m.group(1) not in ("api", "export", "const", "function", "async"):
+                return m.group(1)
+        return "<unknown>"
 
     def classify(line: str) -> str | None:
         stripped = line.strip()
@@ -114,11 +145,18 @@ def main() -> int:
         for lineno, line in enumerate(lines, start=1):
             rel = str(f.relative_to(ROOT))
             kind = classify(line)
+            # 单行直接 return：list: () => api.get<T>('/x')
+            # ⚠️ 历史 bug：这里原来写的是
+            #   `if kind is None and not DIRECT_RETURN.search(line):`（只做多行检查）
+            # 导致**单行直接 return 完全漏检** —— 而这正是最常见、docstring 举例
+            # 要拦的那种写法。实测（2026-10-19）：三种写法只有它过不了门禁。
+            if kind is None and DIRECT_RETURN.search(line):
+                kind = "直接 return api 结果（信封外泄）"
             # 多行写法：xxx: (..) =>
             #           api.get<T>(...)
             # 单行匹配不到 DIRECT_RETURN（=> 和 api 分居两行），单独判：
             # 本行以 => 结尾、下一行以 api.get/post< 开头 即外泄。
-            if kind is None and not DIRECT_RETURN.search(line):
+            if kind is None:
                 nxt = lines[lineno].strip() if lineno < len(lines) else ""
                 joined = line.rstrip() + " " + nxt
                 this_ends_arrow = line.rstrip().endswith("=>")
@@ -126,13 +164,38 @@ def main() -> int:
                 if this_ends_arrow and nxt_starts_api and "unwrapApiData" not in joined:
                     kind = "直接 return api 结果（信封外泄）"
             if kind:
-                hits[f"{rel}:{lineno}"] = f"[{kind}] {line.strip()[:100]}"
+                name = method_name(lines, lineno - 1)
+                key = f"{rel}|{name}"
+                seq = 2
+                while key in hits:
+                    key = f"{rel}|{name}#{seq}"
+                    seq += 1
+                hits[key] = f"[{kind}] L{lineno} {line.strip()[:100]}"
 
     current = set(hits)
 
     if args.update:
+        old = load_baseline()
+        added = sorted(current - old)
+        removed = sorted(old - current)
+        # 「baseline 只能变小不能变大」原来只写在 docstring 里、无任何机制执行，
+        # 结果 ef40a136c 一次 --update 把 175 放大到 337（+196 登记），
+        # 新泄漏被洗成"历史存量"，门禁对它们永久失效。这里把纪律变成代码：
+        if added and not args.reason:
+            print(f"❌ 拒绝更新 baseline：新增 {len(added)} 处（另修复 {len(removed)} 处）。")
+            print("   baseline 只能变小不能变大 —— 要么当场修掉这些泄漏，")
+            print("   要么用 --reason 说明为什么必须登记（如：修复漏检 bug 后补录存量），")
+            print("   并把理由写进 commit message，否则后人无法判断这次放大是否合法。\n")
+            for k in added[:20]:
+                print(f"  {k}  {hits[k]}")
+            if len(added) > 20:
+                print(f"  ... 其余 {len(added) - 20} 处略")
+            return 1
         save_baseline(current)
         print(f"✅ baseline 已更新：{len(current)} 处存量")
+        if added:
+            print(f"⚠️ 本次登记 {len(added)} 处新增存量，理由：{args.reason}")
+            print("   请把该理由原样写进 commit message。")
         return 0
 
     baseline = load_baseline()

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 // ============================================================
 // 类型定义（与后端 TaxConfig Entity 对齐）
@@ -29,20 +29,20 @@ export interface TaxConfig {
 
 const taxConfigApi = {
   /** 全量列表（GET） */
-  list: () =>
-    api.get<TaxConfig[]>('/finance/tax-config/list'),
+  list: async (): Promise<TaxConfig[]> =>
+    unwrapApiData<TaxConfig[]>(await api.get('/finance/tax-config/list'), '加载税率配置失败'),
 
   /** 仅启用项（GET） */
-  active: () =>
-    api.get<TaxConfig[]>('/finance/tax-config/active'),
+  active: async (): Promise<TaxConfig[]> =>
+    unwrapApiData<TaxConfig[]>(await api.get('/finance/tax-config/active'), '加载启用税率失败'),
 
   /** 新增税率 */
-  create: (data: Omit<TaxConfig, 'id'>) =>
-    api.post<TaxConfig>('/finance/tax-config/create', data),
+  create: async (data: Omit<TaxConfig, 'id'>): Promise<TaxConfig> =>
+    unwrapApiData<TaxConfig>(await api.post('/finance/tax-config/create', data), '新增税率失败'),
 
   /** 更新税率 */
-  update: (data: TaxConfig) =>
-    api.put<TaxConfig>('/finance/tax-config/update', data),
+  update: async (data: TaxConfig): Promise<TaxConfig> =>
+    unwrapApiData<TaxConfig>(await api.put('/finance/tax-config/update', data), '更新税率失败'),
 
   /** 删除税率 */
   remove: (id: string) =>

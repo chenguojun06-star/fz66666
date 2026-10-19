@@ -38,10 +38,9 @@ const PayableTab: React.FC = () => {
         payableApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
         payableApi.stats(),
       ]);
-      const _pr = (listData as any)?.records;
-      setList(Array.isArray(_pr) ? _pr : (Array.isArray(listData) ? listData : []));
-      setTotal((listData as any)?.total ?? 0);
-      setStats(statsData || {});
+      setList(listData?.records ?? []);
+      setTotal(listData?.total ?? 0);
+      setStats(statsData);
     } catch { message.error('加载应付账款失败'); }
     finally { setLoading(false); }
   }, [filters, page]);

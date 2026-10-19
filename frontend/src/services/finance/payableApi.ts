@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 // ============================================================
 // 类型定义（与后端 Payable Entity 对齐）
@@ -54,32 +54,38 @@ export interface PayableListReq {
 
 const payableApi = {
   /** 分页列表 */
-  list: (params: PayableListReq) =>
-    api.post<any>('/finance/payable/list', params),
+  list: async (params: PayableListReq): Promise<{ records: Payable[]; total: number }> =>
+    unwrapApiData<{ records: Payable[]; total: number }>(
+      await api.post('/finance/payable/list', params),
+      '加载应付账款失败',
+    ),
 
   /** 汇总统计 */
-  stats: () =>
-    api.get<PayableStats>('/finance/payable/stats'),
+  stats: async (): Promise<PayableStats> =>
+    unwrapApiData<PayableStats>(await api.get('/finance/payable/stats'), '加载应付统计失败'),
 
   /** 新建应付单 */
-  create: (data: Omit<Payable, 'id'>) =>
-    api.post<Payable>('/finance/payable/create', data),
+  create: async (data: Omit<Payable, 'id'>): Promise<Payable> =>
+    unwrapApiData<Payable>(await api.post('/finance/payable/create', data), '新建应付单失败'),
 
   /**
    * 标记付款。amount 为 null 时后端自动结清全部剩余款项。
    */
-  markPaid: (id: string, amount?: number) => {
+  markPaid: async (id: string, amount?: number): Promise<void> => {
     const url = amount != null
       ? `/finance/payable/${id}/mark-paid?amount=${amount}`
       : `/finance/payable/${id}/mark-paid`;
-    return api.post<void>(url);
+    await unwrapApiData<void>(await api.post(url), '标记付款失败');
   },
 
   /**
    * 补填/修改到期日（D-752）。付款计划页到期日列行内编辑用。
    */
-  updateDueDate: (id: string, dueDate: string) =>
-    api.post<Payable>(`/finance/payable/${id}/due-date?dueDate=${dueDate}`),
+  updateDueDate: async (id: string, dueDate: string): Promise<Payable> =>
+    unwrapApiData<Payable>(
+      await api.post(`/finance/payable/${id}/due-date?dueDate=${dueDate}`),
+      '更新到期日失败',
+    ),
 };
 
 export default payableApi;

@@ -11,7 +11,6 @@ import RowActions, { type RowAction } from '@/components/common/RowActions';
 import payableApi, { type Payable } from '@/services/finance/payableApi';
 import { message } from '@/utils/antdStatic';
 import CounterpartyDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/CounterpartyDetailDrawer';
-import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
 
 const { Text } = Typography;
@@ -55,7 +54,7 @@ const PaymentSchedule: React.FC = () => {
   const fetchPayables = useCallback(async () => {
     setLoading(true);
     try {
-      const res: ApiResult = await payableApi.list({
+      const data = await payableApi.list({
         page,
         pageSize,
         startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
@@ -63,20 +62,18 @@ const PaymentSchedule: React.FC = () => {
         // D-243：未填到期日的应付单也要能看到，否则会在这个页面彻底消失
         includeNoDueDate: true,
       });
-      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-      setRecords((data?.records as Payable[]) ?? []);
-      setTotal((data?.total as number) ?? 0);
+      setRecords(data?.records ?? []);
+      setTotal(data?.total ?? 0);
 
       // 全量拉一份做统计（与列表同筛选条件，数量级为应付单总数）
-      const statsRes: ApiResult = await payableApi.list({
+      const statsData = await payableApi.list({
         page: 1,
         pageSize: 1000,
         startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
         endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
         includeNoDueDate: true,
       });
-      const statsData = (statsRes?.data ?? statsRes) as Record<string, unknown> | undefined;
-      const allRecords = (statsData?.records as Payable[]) ?? [];
+      const allRecords = statsData?.records ?? [];
       const pendingRecords = allRecords.filter(r => Number(r.amount) - Number(r.paidAmount ?? 0) > 0);
       const calcAmountInDays = (days: number) => {
         const targetDate = new Date();

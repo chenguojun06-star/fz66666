@@ -19,7 +19,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { RangePickerProps } from 'antd/es/date-picker';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { unwrapApiData } from '@/utils/api';
 import {
   accountingVoucherApi,
   AccountingEntry,
@@ -29,7 +28,6 @@ import {
   BALANCE_DIRECTION_MAP,
   SUBJECT_TYPE_MAP,
   VOUCHER_TYPE_MAP,
-  VoucherDetail,
 } from '@/services/finance/accountingVoucherApi';
 
 const { Text } = Typography;
@@ -83,7 +81,7 @@ const AccountingVoucherPage: React.FC = () => {
         dateRange?.[0]?.format('YYYY-MM-DD'),
         dateRange?.[1]?.format('YYYY-MM-DD'),
       );
-      setVouchers(unwrapApiData<AccountingVoucher[]>(res, '加载凭证失败'));
+      setVouchers(res);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载凭证失败');
     } finally {
@@ -95,7 +93,7 @@ const AccountingVoucherPage: React.FC = () => {
     setSubjectsLoading(true);
     try {
       const res = await accountingVoucherApi.listSubjects();
-      setSubjects(unwrapApiData<AccountSubject[]>(res, '加载会计科目失败'));
+      setSubjects(res);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载会计科目失败');
     } finally {
@@ -138,8 +136,7 @@ const AccountingVoucherPage: React.FC = () => {
       setDetailVoucher(voucher);
       setDetailEntries([]);
       try {
-        const res = await accountingVoucherApi.getVoucherDetail(voucher.id);
-        const data = unwrapApiData<VoucherDetail>(res, '加载凭证详情失败');
+        const data = await accountingVoucherApi.getVoucherDetail(voucher.id);
         setDetailVoucher(data?.voucher ?? voucher);
         setDetailEntries(data?.entries ?? []);
       } catch (e: unknown) {
@@ -188,8 +185,7 @@ const AccountingVoucherPage: React.FC = () => {
       onOk: async () => {
         setBackfilling(true);
         try {
-          const res = await accountingVoucherApi.backfillVouchers();
-          const created = unwrapApiData<number>(res, '补生成凭证失败');
+          const created = await accountingVoucherApi.backfillVouchers();
           message.success(`已补生成 ${created ?? 0} 张凭证`);
           void fetchVouchers();
         } catch (e: unknown) {
