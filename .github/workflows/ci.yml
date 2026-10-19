@@ -59,6 +59,12 @@ jobs:
     - name: 禁止新增「catch 里只打 log.debug」的静默吞异常
       run: python3 scripts/check-silent-catch.py
 
+    # 存量 177 处暂不动，但不允许再新增。
+    # 收银台整页白屏就是从这来的：api.get 返回 {code,data} 信封，
+    # service 把信封原样 return，调用方当数组塞给 antd Table。
+    - name: 禁止新增 service 层信封泄漏
+      run: python3 scripts/check-api-envelope-leak.py
+
     - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
       run: |
         echo "🔍 核对原生 SQL 里的列名是否真的存在于数据库..."

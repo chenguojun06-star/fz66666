@@ -459,7 +459,37 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
    `PlatformWebhookController.receiveOrder`（D-523 修）同一 bug 各写一遍；
    物流回调也曾把未处理写成 `processed=true`。**改动任一回调时，顺手扫一遍同类入口。**
 
-15. **电商/仓库的每一张商品相关列表都必须带「款式图 + 款号」列**
+15. **api.get 返回的是信封 `{code,data}`，不是业务数据**（2026-10-18 收银台整页白屏）
+    `createApiClient` 的响应拦截器 `return response.data`，所以
+    `api.get<T>()` 返回的是**信封**。约定：**service 层解包，调用方拿裸数据**。
+
+    ```ts
+    // ✅ 正确
+    list: async () => unwrapApiData<Row[]>(await api.get('/x'), '加载失败')
+    // ❌ 禁止：泛型不要写 { code: number; data: X }，那等于对外声明"返回信封"
+    getById: (id: string) => api.get<ApiResult<Customer>>(`/c/${id}`)
+    ```
+
+    事故经过：三个新面板（挂单/退货/交接班）都把返回值直接塞给 antd Table，
+    信封是对象不是数组 → `dataSource.some is not a function` → **整页白屏**。
+    更严重的是 `resumeHold` 因此拿不到 `lines`，**取回挂单会把空购物车交给收银台**，
+    顾客的东西在界面上消失而无人察觉。
+
+    为什么单测全绿：测试 `vi.mock` 整个 service 模块，mock 返回的是**已解包数组**。
+    **mock 什么形状本身就是测试的一部分** —— mock 成已解包等于替实现说谎。
+
+    三道防线（都已落地）：
+    | 措施 | 位置 |
+    |---|---|
+    | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
+    | 禁止新增 service 层信封泄漏（存量 177 处分批清） | `scripts/check-api-envelope-leak.py` |
+    | posApi / ticketApi 已在 service 层解包 | 已改造 |
+
+    ⚠️ 剩余 177 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
+    机械替换会产出错误类型，且无法逐页端到端验证。幂等改造后它们不再危险，
+    按模块分批改，改一处删一条 baseline。
+
+16. **电商/仓库的每一张商品相关列表都必须带「款式图 + 款号」列**
    用户原话：「所有的电商的这些 必须都要有图片列，不然看都不好看，还不知道是什么订单」。
    只看一串 `skuCode` / 一个 `skuId` 数字，运营根本无法确认是不是那件货。
 

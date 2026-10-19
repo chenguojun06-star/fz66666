@@ -17,8 +17,27 @@ export const getApiMessage = (result: unknown, fallback: string): string => {
   return fallback;
 };
 
+/** 是否是「没带 code 字段」的裸值 —— 即已经是业务数据、不是信封。 */
+const isBareData = (result: unknown): boolean =>
+  !(typeof result === 'object' && result !== null && 'code' in result);
+
+/**
+ * 解包 `{code, data, message}` 信封。
+ *
+ * <p><b>刻意做成幂等的</b>：入参不是信封（没有 code 字段）时**原样返回**，不抛错。
+ *
+ * <p>原因：项目里长期存在两种约定 —— 部分 service 直接 `return api.get(...)`
+ * （把信封丢给调用方），部分 service 自己解包后返回裸数据。
+ * 两种并存时，任何一侧重写都可能在另一侧造成**双重解包**，
+ * 而双重解包的表现是"恒抛异常 → 被 catch 吞掉 → 数据静默为空"，极难定位。
+ *
+ * <p>幂等之后：service 层解包了，调用方那个多余的 `unwrapApiData` 就成了空操作，
+ * 可以分批迁移而不必一次改完 149 处。真正的失败信封（有 code 且非 200）依旧抛错，
+ * 错误可见性没有被削弱。
+ */
 export const unwrapApiData = <T = unknown>(result: unknown, fallbackMessage: string): T => {
   if (isApiSuccess(result)) return (result as ApiResult<T>).data;
+  if (isBareData(result)) return result as T;
   throw new Error(getApiMessage(result, fallbackMessage));
 };
 
