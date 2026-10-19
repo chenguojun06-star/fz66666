@@ -58,7 +58,8 @@ run_check() {
   if "$@"; then
     pass "$name"
   else
-    fail "$name" "退出码 $?"
+    local rc=$?
+    fail "$name" "退出码 $rc"
   fi
 }
 
@@ -153,7 +154,7 @@ fi
 if [[ "$MODE" == "all" || "$MODE" == "backend" ]]; then
   if [[ "$QUICK" == "false" ]]; then
     if [[ -f backend/pom.xml ]]; then
-      run_check "后端编译（mvn compile）" bash -c 'cd backend && mvn compile -DskipTests -q 2>&1 | tail -5'
+      run_check "后端编译（mvn compile）" bash -c 'set -o pipefail; cd backend && mvn compile -DskipTests -q 2>&1 | tail -5'
     else
       skip "后端编译（pom.xml 不存在）"
     fi
@@ -166,7 +167,7 @@ fi
 if [[ "$MODE" == "all" || "$MODE" == "frontend" ]]; then
   if [[ "$QUICK" == "false" ]]; then
     if [[ -f frontend/tsconfig.json ]]; then
-      run_check "前端类型检查（tsc --noEmit）" bash -c 'cd frontend && npx tsc --noEmit 2>&1 | tail -10'
+      run_check "前端类型检查（tsc --noEmit）" bash -c 'set -o pipefail; cd frontend && npx tsc --noEmit 2>&1 | tail -10'
     else
       skip "前端类型检查（tsconfig.json 不存在）"
     fi
@@ -194,7 +195,7 @@ if [[ "$MODE" == "all" || "$MODE" == "backend" ]]; then
   if [[ "$QUICK" == "false" ]]; then
     if [[ -d backend/src/test/java/com/fashion/supplychain/architecture ]]; then
       run_check "ArchUnit 架构守护" bash -c \
-        'cd backend && mvn test -Dtest="ArchitectureConstraintTest,ArchitectureRulesTest" -DfailIfNoTests=false -q 2>&1 | tail -10'
+        'set -o pipefail; cd backend && mvn test -Dtest="ArchitectureConstraintTest,ArchitectureRulesTest" -DfailIfNoTests=false -q 2>&1 | tail -10'
     else
       skip "ArchUnit 架构守护（测试源码不存在）"
     fi

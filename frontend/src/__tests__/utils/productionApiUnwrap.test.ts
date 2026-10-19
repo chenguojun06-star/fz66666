@@ -121,7 +121,7 @@ describe('production 残余批次（D-820）', () => {
     mockHttp.get.mockResolvedValue({ code: 200, data: { records: [{ id: 'o1', orderNo: 'P001' }], total: 1 } });
     mockHttp.put.mockResolvedValue({ code: 400, message: '订单已关闭，不可编辑' });
 
-    const page = await productionOrderApi.list({ page: 1 });
+    const page = await productionOrderApi.list({ page: 1, pageSize: 20 });
     expect(page.records).toHaveLength(1);
     await expect(productionOrderApi.quickEdit({ id: 'o1' })).rejects.toThrow('订单已关闭，不可编辑');
   });
