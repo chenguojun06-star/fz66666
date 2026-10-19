@@ -1,4 +1,4 @@
-import api from '../../utils/api';
+import api, { unwrapApiData } from '../../utils/api';
 import { downloadFile } from '../../utils/fileUrl';
 import type { ProductionQueryParams, ProductionOrder } from '../../types/production';
 import type { ApiResponse, PaginatedData } from '../../types/api';
@@ -320,11 +320,24 @@ export const sysNoticeApi = {
   /** 发送通知给跟单员 */
   send: (orderNo: string, noticeType: string) =>
     api.post('/production/notice/send', { orderNo, noticeType }),
-  /** 获取当前用户通知列表 */
-  getMyNotices: () =>
-    api.get<{ code: number; data: SysNotice[] }>('/production/notice/my', { retry: 0 } as any),
-  getUnreadCount: () =>
-    api.get<{ code: number; data: { count: number } }>('/production/notice/unread-count', { retry: 0 } as any),
+  /**
+   * 获取当前用户通知列表（**已解包，返回裸数组**）。
+   *
+   * <p>retry: 0 —— 通知铃是轮询的，每隔几秒就问一次，
+   * 失败还重试会把后端的并发数白白抬上去。
+   */
+  getMyNotices: async (): Promise<SysNotice[]> =>
+    unwrapApiData<SysNotice[]>(
+      await api.get('/production/notice/my', { retry: 0 } as any),
+      '获取通知列表失败',
+    ),
+  getUnreadCount: async (): Promise<number> => {
+    const r = await unwrapApiData<{ count: number }>(
+      await api.get('/production/notice/unread-count', { retry: 0 } as any),
+      '获取未读数失败',
+    );
+    return Number(r?.count ?? 0);
+  },
   /** 标记单条已读 */
   markRead: (id: number) =>
     api.post(`/production/notice/${id}/read`),

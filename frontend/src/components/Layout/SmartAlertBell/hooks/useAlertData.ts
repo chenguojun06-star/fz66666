@@ -90,15 +90,18 @@ export function useAlertData(): UseAlertDataReturn {
 
   const fetchMyNotices = useCallback(async () => {
     try {
+      // service 已解包，这里直接拿裸数据。
+      // 原来的 `as Promise<any>` + `?.data` 是为了迁就信封，
+      // 代价是整条链路丢掉类型：拼错字段名要等运行时才发现。
       const [noticesRes, countRes] = await Promise.allSettled([
-        sysNoticeApi.getMyNotices() as Promise<any>,
-        sysNoticeApi.getUnreadCount() as Promise<any>,
+        sysNoticeApi.getMyNotices(),
+        sysNoticeApi.getUnreadCount(),
       ]);
-      if (noticesRes.status === 'fulfilled' && noticesRes.value?.data) {
-        setMyNotices(noticesRes.value.data);
+      if (noticesRes.status === 'fulfilled' && Array.isArray(noticesRes.value)) {
+        setMyNotices(noticesRes.value);
       }
-      if (countRes.status === 'fulfilled' && countRes.value?.data?.count !== undefined) {
-        setMyUnreadCount(Number(countRes.value.data.count));
+      if (countRes.status === 'fulfilled' && typeof countRes.value === 'number') {
+        setMyUnreadCount(countRes.value);
       }
       const bothFailed = noticesRes.status === 'rejected' && countRes.status === 'rejected';
       return bothFailed ? 'failed' : 'ok';
