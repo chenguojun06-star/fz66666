@@ -28,10 +28,7 @@ export const loadProgressNodesForStyle = async (styleNo: string, setProgressNode
   const sn = String(styleNo || '').trim();
   if (!sn) return;
   try {
-    const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-    const result = res as Record<string, unknown>;
-    if (result.code !== 200) return;
-    const rows = Array.isArray(result.data) ? result.data : [];
+    const rows = await templateLibraryApi.progressNodeUnitPrices(sn);
     const normalized = buildProgressNodesFromTemplate(rows);
     if (normalized.length) {
       setProgressNodes(normalized);

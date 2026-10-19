@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 /**
  * 收款设置（商家自己的微信/支付宝商户参数）。
@@ -62,19 +62,27 @@ export interface PaymentSaveBody {
   sandbox?: boolean;
 }
 
+export interface PaymentVerifyResult {
+  ok: boolean;
+  message: string;
+}
+
 export const paymentApi = {
   /** 各渠道配置状态（不含密钥内容） */
-  status: () => api.get<unknown>('/payment/config/status'),
+  status: async (): Promise<PaymentConfigStatus> =>
+    unwrapApiData<PaymentConfigStatus>(await api.get('/payment/config/status'), '收款设置请求失败'),
 
   /** 渠道可用性（收银台据此决定按钮是否可点） */
-  readiness: () => api.get<unknown>('/payment/config/readiness'),
+  readiness: async (): Promise<PaymentChannelReadiness> =>
+    unwrapApiData<PaymentChannelReadiness>(await api.get('/payment/config/readiness'), '收款设置请求失败'),
 
   /** 保存某渠道配置 */
-  save: (channel: string, body: PaymentSaveBody) =>
-    api.post<unknown>(`/payment/config/${channel}`, body),
+  save: async (channel: string, body: PaymentSaveBody): Promise<void> =>
+    unwrapApiData<void>(await api.post(`/payment/config/${channel}`, body), '收款设置保存失败'),
 
   /** 连通性验证（用不存在的单号查询，鉴权通过即算通过，不产生资金动作） */
-  verify: (channel: string) => api.post<unknown>(`/payment/config/${channel}/verify`, {}),
+  verify: async (channel: string): Promise<PaymentVerifyResult> =>
+    unwrapApiData<PaymentVerifyResult>(await api.post(`/payment/config/${channel}/verify`, {}), '连通性验证失败'),
 };
 
 export default paymentApi;

@@ -1,6 +1,6 @@
-import api from '../../utils/api';
+import api, { unwrapApiData } from '../../utils/api';
 import type { StyleInfo, StyleProcess } from '../../types/style';
-import type { ApiResponse, PaginatedData } from '../../types/api';
+import type { PaginatedData } from '../../types/api';
 
 const normalizeStyleLookupKey = (value?: string | number | null) => String(value ?? '').trim();
 
@@ -18,12 +18,10 @@ export const getStyleInfoByRef = async (styleRef?: string | number | null, style
 
   if (lookupStyleNo) {
     try {
-      const res = await api.get<ApiResponse<PaginatedData<StyleInfo>>>('/style/info/list', {
+      const data = await unwrapApiData<PaginatedData<StyleInfo>>(await api.get('/style/info/list', {
         params: { styleNo: lookupStyleNo, page: 1, pageSize: 5 },
-      });
-      if (res?.code === 200) {
-        return pickStyleFromList(res.data, lookupStyleNo);
-      }
+      }), '款式查询失败');
+      return pickStyleFromList(data, lookupStyleNo);
     } catch (err) {
       console.warn('[styleApi] 款式按编号查询失败:', (err as Error)?.message || err);
     }
@@ -31,9 +29,9 @@ export const getStyleInfoByRef = async (styleRef?: string | number | null, style
 
   if (key && /^\d+$/.test(key)) {
     try {
-      const res = await api.get<ApiResponse<StyleInfo>>(`/style/info/${encodeURIComponent(key)}`);
-      if (res?.code === 200 && res.data) {
-        return res.data;
+      const data = await unwrapApiData<StyleInfo | null>(await api.get(`/style/info/${encodeURIComponent(key)}`), '款式查询失败');
+      if (data) {
+        return data;
       }
     } catch (err) {
       console.warn('[styleApi] 款式按ID查询失败:', (err as Error)?.message || err);
@@ -44,7 +42,8 @@ export const getStyleInfoByRef = async (styleRef?: string | number | null, style
 };
 
 export const styleProcessApi = {
-  listByStyleId: (styleId: string) => api.get<ApiResponse<StyleProcess[]>>('/style/process/list', { params: { styleId } }),
+  listByStyleId: async (styleId: string): Promise<StyleProcess[]> =>
+    unwrapApiData<StyleProcess[]>(await api.get('/style/process/list', { params: { styleId } }), '工序列表加载失败'),
 };
 
 export default {

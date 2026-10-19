@@ -1,4 +1,4 @@
-import api from '../utils/api';
+import api, { unwrapApiData } from '../utils/api';
 
 export interface SystemStatusOverview {
   applicationName: string;
@@ -40,9 +40,11 @@ export interface TenantUserStatsResult {
 
 const systemStatusService = {
   /** 系统运行状态概览 */
-  overview: () => api.get<SystemStatusOverview>('/system/status/overview'),
+  overview: async (): Promise<SystemStatusOverview> =>
+    unwrapApiData<SystemStatusOverview>(await api.get('/system/status/overview'), '系统状态请求失败'),
   /** 租户人员统计 */
-  tenantUserStats: () => api.get<TenantUserStatsResult>('/system/status/tenant-user-stats'),
+  tenantUserStats: async (): Promise<TenantUserStatsResult> =>
+    unwrapApiData<TenantUserStatsResult>(await api.get('/system/status/tenant-user-stats'), '系统状态请求失败'),
 };
 
 export default systemStatusService;
@@ -69,7 +71,8 @@ export interface SystemIssueSummary {
 
 export const systemIssueApi = {
   /** 实时收集当前系统问题（只有 ROLE_SUPER_ADMIN 可调用） */
-  collect: () => api.get<SystemIssueSummary>('/system/issues/collect'),
+  collect: async (): Promise<SystemIssueSummary> =>
+    unwrapApiData<SystemIssueSummary>(await api.get('/system/issues/collect'), '系统问题收集失败'),
 };
 
 // ────────────────────────────────────────────────────────────
@@ -86,6 +89,7 @@ export interface FrontendErrorRecord {
 
 export const frontendErrorApi = {
   /** 最近 N 条前端异常（仅 ROLE_SUPER_ADMIN） */
-  recent: (limit = 50) => api.get<FrontendErrorRecord[]>(`/system/frontend-errors/recent?limit=${limit}`),
+  recent: async (limit = 50): Promise<FrontendErrorRecord[]> =>
+    unwrapApiData<FrontendErrorRecord[]>(await api.get(`/system/frontend-errors/recent?limit=${limit}`), '前端异常请求失败'),
 };
 

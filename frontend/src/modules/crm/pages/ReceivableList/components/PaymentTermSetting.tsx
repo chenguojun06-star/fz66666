@@ -20,8 +20,7 @@ const PaymentTermSetting: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await tenantSettingApi.get();
-        const d = res?.data;
+        const d = await tenantSettingApi.get();
         if (d && typeof d.paymentTermDays === 'number') setDays(d.paymentTermDays);
       } catch {
         // 读不到按默认 30 展示，不阻塞页面

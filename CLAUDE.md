@@ -498,10 +498,10 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
     | 措施 | 位置 |
     |---|---|
     | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
-    | 禁止新增 service 层信封泄漏（存量 211 处分批清；posApi/crm/production/finance/shop/system 已清） | `scripts/check-api-envelope-leak.py` |
+    | 禁止新增 service 层信封泄漏（存量 179 处分批清；posApi/crm/production/finance/shop/system 已清，剩 intelligence 179 处） | `scripts/check-api-envelope-leak.py` |
     | posApi / ticketApi 已在 service 层解包 | 已改造 |
 
-    ⚠️ 剩余 211 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
+    ⚠️ 剩余 179 处存量（全在 intelligenceApi）**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
     机械替换会产出错误类型，且无法逐页端到端验证。幂等改造后它们不再危险，
     按模块分批改，改一处删一条 baseline。
 

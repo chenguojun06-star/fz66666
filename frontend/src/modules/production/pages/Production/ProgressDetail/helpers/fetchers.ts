@@ -95,15 +95,9 @@ export const fetchPricingProcesses = async (args: {
   }
   setPricingProcessLoading(true);
   try {
-    const res = await styleProcessApi.listByStyleId(styleId);
-    const result = res as any;
-    if (result.code === 200) {
-      const list = Array.isArray(result.data) ? (result.data as StyleProcess[]) : [];
-      setPricingProcesses(list);
-      return list;
-    }
-    setPricingProcesses([]);
-    return [];
+    const list = await styleProcessApi.listByStyleId(styleId);
+    setPricingProcesses(list);
+    return list;
   } catch {
     setPricingProcesses([]);
     return [];

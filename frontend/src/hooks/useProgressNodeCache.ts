@@ -36,9 +36,7 @@ const fetchOne = async (styleNo: string): Promise<ProgressNode[]> => {
 
   const promise = (async () => {
     try {
-      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-      const r = res as Record<string, unknown>;
-      const rows = Array.isArray(r?.data) ? r.data : [];
+      const rows = await templateLibraryApi.progressNodeUnitPrices(styleNo);
       const nodes = stripWarehousingNode(normalizeNodes(rows));
       globalCache.set(styleNo, { nodes, ts: Date.now() });
       return nodes;

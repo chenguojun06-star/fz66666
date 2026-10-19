@@ -128,7 +128,7 @@ export interface ReceivableStats {
 }
 
 export const receivableApi = {
-  list: (params: {
+  list: async (params: {
     page?: number;
     pageSize?: number;
     customerId?: string;
@@ -136,8 +136,11 @@ export const receivableApi = {
     keyword?: string;
     sourceBizType?: string;
     sourceBizNo?: string;
-  }) =>
-    api.post<PageResult<Receivable>>('/crm/receivables/list', params),
+  }): Promise<PageResult<Receivable>> =>
+    unwrapApiData<PageResult<Receivable>>(
+      await api.post<ApiEnvelope<PageResult<Receivable>>>('/crm/receivables/list', params),
+      '加载应收列表失败',
+    ),
 
   stats: async (): Promise<ReceivableStats> =>
     unwrapApiData<ReceivableStats>(await api.get<ApiEnvelope<ReceivableStats>>('/crm/receivables/stats'), '应收统计加载失败'),

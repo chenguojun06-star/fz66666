@@ -15,11 +15,13 @@ export function useTemplateNodes({ setNodes, setProgressNodesByStyleNo }: UseTem
   const fetchTemplateNodes = useCallback(async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
-    const res = await templateLibraryApi.getById(tid);
-    const result = res as Record<string, unknown>;
-    if (result.code !== 200) return [];
-    const tpl = result.data as TemplateLibrary;
-    return parseProgressNodes(String(tpl?.templateContent ?? ''));
+    try {
+      const tpl = await templateLibraryApi.getById(tid) as TemplateLibrary;
+      return parseProgressNodes(String(tpl?.templateContent ?? ''));
+    } catch {
+      // 模板可能不存在或接口失败 —— 进度页允许无模板展示，回退空节点
+      return [];
+    }
   }, []);
 
   const ensureNodesFromTemplateIfNeeded = useCallback(async (order: ProductionOrder) => {

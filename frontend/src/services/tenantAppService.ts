@@ -1,4 +1,4 @@
-import api from '../utils/api';
+import api, { unwrapApiData } from '../utils/api';
 
 const BASE = '/system/tenant-app';
 
@@ -74,52 +74,52 @@ export interface AppStats {
 
 const tenantAppService = {
   /** 创建应用（返回含明文密钥） */
-  createApp: (data: CreateAppRequest) =>
-    api.post<TenantAppInfo>(`${BASE}/create`, data),
+  createApp: async (data: CreateAppRequest): Promise<TenantAppInfo> =>
+    unwrapApiData<TenantAppInfo>(await api.post(`${BASE}/create`, data), '应用请求失败'),
 
   /** 查询应用列表 */
-  listApps: (params: { appType?: string; status?: string; page?: number; size?: number }) =>
-    api.post(`${BASE}/list`, params),
+  listApps: async (params: { appType?: string; status?: string; page?: number; size?: number }): Promise<{ records: TenantAppInfo[]; total: number }> =>
+    unwrapApiData<{ records: TenantAppInfo[]; total: number }>(await api.post(`${BASE}/list`, params), '应用请求失败'),
 
   /** 获取应用详情 */
-  getAppDetail: (id: string) =>
-    api.get<TenantAppInfo>(`${BASE}/${id}`),
+  getAppDetail: async (id: string): Promise<TenantAppInfo> =>
+    unwrapApiData<TenantAppInfo>(await api.get(`${BASE}/${id}`), '应用请求失败'),
 
   /** 更新应用配置 */
-  updateApp: (id: string, data: Partial<CreateAppRequest>) =>
-    api.put<TenantAppInfo>(`${BASE}/${id}`, data),
+  updateApp: async (id: string, data: Partial<CreateAppRequest>): Promise<TenantAppInfo> =>
+    unwrapApiData<TenantAppInfo>(await api.put(`${BASE}/${id}`, data), '应用请求失败'),
 
   /** 切换状态（启用/停用） */
-  toggleStatus: (id: string) =>
-    api.post<TenantAppInfo>(`${BASE}/${id}/toggle-status`),
+  toggleStatus: async (id: string): Promise<TenantAppInfo> =>
+    unwrapApiData<TenantAppInfo>(await api.post(`${BASE}/${id}/toggle-status`), '应用请求失败'),
 
   /** 重置密钥 */
-  resetSecret: (id: string) =>
-    api.post<TenantAppInfo>(`${BASE}/${id}/reset-secret`),
+  resetSecret: async (id: string): Promise<TenantAppInfo> =>
+    unwrapApiData<TenantAppInfo>(await api.post(`${BASE}/${id}/reset-secret`), '应用请求失败'),
 
   /** 删除应用 */
-  deleteApp: (id: string) =>
-    api.delete(`${BASE}/${id}`),
+  deleteApp: async (id: string): Promise<void> =>
+    unwrapApiData<void>(await api.delete(`${BASE}/${id}`), '应用请求失败'),
 
   /** 获取可用应用类型 */
-  getAppTypes: () =>
-    api.get<AppTypeOption[]>(`${BASE}/app-types`),
+  getAppTypes: async (): Promise<AppTypeOption[]> =>
+    unwrapApiData<AppTypeOption[]>(await api.get(`${BASE}/app-types`), '应用请求失败'),
 
   /** 获取统计数据 */
-  getStats: () =>
-    api.get<AppStats>(`${BASE}/stats`),
+  getStats: async (): Promise<AppStats> =>
+    unwrapApiData<AppStats>(await api.get(`${BASE}/stats`), '应用请求失败'),
 
   /** 查询调用日志 */
-  listLogs: (appId: string, params: { page?: number; size?: number }) =>
-    api.post(`${BASE}/${appId}/logs`, params),
+  listLogs: async (appId: string, params: { page?: number; size?: number }): Promise<{ records: TenantAppLogInfo[]; total: number }> =>
+    unwrapApiData<{ records: TenantAppLogInfo[]; total: number }>(await api.post(`${BASE}/${appId}/logs`, params), '应用请求失败'),
 
   /** 查询所有应用日志（集成总览用） */
-  listAllLogs: (params: { page?: number; size?: number }) =>
-    api.post(`${BASE}/all-logs`, params),
+  listAllLogs: async (params: { page?: number; size?: number }): Promise<{ records: TenantAppLogInfo[]; total: number }> =>
+    unwrapApiData<{ records: TenantAppLogInfo[]; total: number }>(await api.post(`${BASE}/all-logs`, params), '应用请求失败'),
 
   /** 获取集成总览数据 */
-  getIntegrationOverview: () =>
-    api.get<IntegrationOverview>(`${BASE}/integration-overview`),
+  getIntegrationOverview: async (): Promise<IntegrationOverview> =>
+    unwrapApiData<IntegrationOverview>(await api.get(`${BASE}/integration-overview`), '应用请求失败'),
 };
 
 // ========== 集成总览类型 ==========

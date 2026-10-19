@@ -104,12 +104,7 @@ export default function SystemIssueBoard() {
     setLoading(true);
     setError(null);
     try {
-      const raw = await systemIssueApi.collect();
-      const anyRaw = raw as any;
-      const resolved: SystemIssueSummary =
-        typeof anyRaw?.errorCount === 'number' ? anyRaw :
-        typeof anyRaw?.data?.errorCount === 'number' ? anyRaw.data :
-        ({} as SystemIssueSummary);
+      const resolved = await systemIssueApi.collect();
       setSummary({
         errorCount: resolved?.errorCount ?? 0,
         warnCount:  resolved?.warnCount  ?? 0,
@@ -129,9 +124,7 @@ export default function SystemIssueBoard() {
     setFeLoading(true);
     setFeError(null);
     try {
-      const raw = await frontendErrorApi.recent(100) as any;
-      const list: FrontendErrorRecord[] = Array.isArray(raw) ? raw
-        : Array.isArray(raw?.data) ? raw.data : [];
+      const list = await frontendErrorApi.recent(100);
       setFeErrors([...list].reverse()); // 最新的排最前
     } catch (e: unknown) {
       setFeError(e instanceof Error ? e.message : '获取失败');

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 /**
  * 客户门户账号（D-732）
@@ -26,32 +26,39 @@ export interface CustomerUserItem {
 }
 
 const customerUserApi = {
-  list: (customerId: string) =>
-    api.get<{ code: number; data: CustomerUserItem[] }>(`/customer-user/list`, { params: { customerId } }),
+  list: async (customerId: string): Promise<CustomerUserItem[]> =>
+    unwrapApiData<CustomerUserItem[]>(
+      await api.get(`/customer-user/list`, { params: { customerId } }),
+      '客户账号请求失败',
+    ),
 
-  listAll: (params: { keyword?: string; status?: string; customerId?: string; page?: number; pageSize?: number }) =>
-    api.get<{ code: number; data: { list: CustomerUserItem[]; total: number } }>(`/customer-user/all-list`, { params }),
+  listAll: async (params: { keyword?: string; status?: string; customerId?: string; page?: number; pageSize?: number }): Promise<{ list: CustomerUserItem[]; total: number }> =>
+    unwrapApiData<{ list: CustomerUserItem[]; total: number }>(
+      await api.get(`/customer-user/all-list`, { params }),
+      '客户账号请求失败',
+    ),
 
-  create: (data: {
+  create: async (data: {
     customerId: string;
     username: string;
     password: string;
     contactPerson?: string;
     contactPhone?: string;
     contactEmail?: string;
-  }) => api.post<{ code: number; data: CustomerUserItem }>(`/customer-user/create`, data),
+  }): Promise<CustomerUserItem> =>
+    unwrapApiData<CustomerUserItem>(await api.post(`/customer-user/create`, data), '客户账号请求失败'),
 
-  resetPassword: (userId: string, newPassword: string) =>
-    api.post<{ code: number; data: { id: string; username: string; newPassword: string } }>(
-      `/customer-user/reset-password`,
-      { userId, newPassword },
+  resetPassword: async (userId: string, newPassword: string): Promise<{ id: string; username: string; newPassword: string }> =>
+    unwrapApiData<{ id: string; username: string; newPassword: string }>(
+      await api.post(`/customer-user/reset-password`, { userId, newPassword }),
+      '客户账号请求失败',
     ),
 
-  toggleStatus: (userId: string) =>
-    api.post<{ code: number }>(`/customer-user/toggle-status`, { userId }),
+  toggleStatus: async (userId: string): Promise<void> =>
+    unwrapApiData<void>(await api.post(`/customer-user/toggle-status`, { userId }), '客户账号请求失败'),
 
-  delete: (userId: string) =>
-    api.delete<{ code: number }>(`/customer-user/${userId}`),
+  delete: async (userId: string): Promise<void> =>
+    unwrapApiData<void>(await api.delete(`/customer-user/${userId}`), '客户账号请求失败'),
 };
 
 export default customerUserApi;

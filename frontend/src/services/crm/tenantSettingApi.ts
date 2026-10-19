@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 /**
  * 租户级设置（D-741）。
@@ -9,10 +9,14 @@ export interface TenantSettingView {
 }
 
 const tenantSettingApi = {
-  get: () => api.get<{ code: number; data: TenantSettingView }>(`/crm/tenant-setting`),
+  get: async (): Promise<TenantSettingView> =>
+    unwrapApiData<TenantSettingView>(await api.get(`/crm/tenant-setting`), '租户设置请求失败'),
 
-  savePaymentTerm: (paymentTermDays: number) =>
-    api.put<{ code: number; data: TenantSettingView }>(`/crm/tenant-setting/payment-term`, { paymentTermDays }),
+  savePaymentTerm: async (paymentTermDays: number): Promise<TenantSettingView> =>
+    unwrapApiData<TenantSettingView>(
+      await api.put(`/crm/tenant-setting/payment-term`, { paymentTermDays }),
+      '租户设置请求失败',
+    ),
 };
 
 export default tenantSettingApi;

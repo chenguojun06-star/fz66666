@@ -44,8 +44,6 @@ describe('useTemplateNodes', () => {
 
     it('应该正确获取模板节点', async () => {
       mockGetById.mockResolvedValue({
-        code: 200,
-        data: {
           id: 'tpl-001',
           templateContent: JSON.stringify({
             nodes: [
@@ -53,8 +51,7 @@ describe('useTemplateNodes', () => {
               { id: '2', name: '车缝', unitPrice: 20 },
             ],
           }),
-        },
-      });
+        });
       
       const { result } = renderHook(() => useTemplateNodes({
         setNodes: vi.fn(),
@@ -69,8 +66,8 @@ describe('useTemplateNodes', () => {
       expect(nodes[1].name).toBe('车缝');
     });
 
-    it('应该处理API返回非200状态码', async () => {
-      mockGetById.mockResolvedValue({ code: 500, message: 'Internal Error' });
+    it('应该容忍模板不存在或接口失败（返回空数组）', async () => {
+      mockGetById.mockRejectedValue(new Error('Internal Error'));
       
       const { result } = renderHook(() => useTemplateNodes({
         setNodes: vi.fn(),
@@ -84,12 +81,9 @@ describe('useTemplateNodes', () => {
 
     it('应该处理模板内容解析失败', async () => {
       mockGetById.mockResolvedValue({
-        code: 200,
-        data: {
           id: 'tpl-001',
           templateContent: 'invalid json',
-        },
-      });
+        });
       
       const { result } = renderHook(() => useTemplateNodes({
         setNodes: vi.fn(),
@@ -103,8 +97,6 @@ describe('useTemplateNodes', () => {
 
     it('应该过滤入库节点', async () => {
       mockGetById.mockResolvedValue({
-        code: 200,
-        data: {
           id: 'tpl-001',
           templateContent: JSON.stringify({
             nodes: [
@@ -114,8 +106,7 @@ describe('useTemplateNodes', () => {
               { id: '4', name: '发货', unitPrice: 8 },
             ],
           }),
-        },
-      });
+        });
       
       const { result } = renderHook(() => useTemplateNodes({
         setNodes: vi.fn(),
@@ -167,16 +158,13 @@ describe('useTemplateNodes', () => {
 
     it('应该正确获取模板节点并更新状态', async () => {
       mockGetById.mockResolvedValue({
-        code: 200,
-        data: {
           id: 'tpl-001',
           templateContent: JSON.stringify({
             nodes: [
               { id: '1', name: '裁剪', unitPrice: 10 },
             ],
           }),
-        },
-      });
+        });
       
       const setNodes = vi.fn();
       const setProgressNodesByStyleNo = vi.fn();
@@ -198,16 +186,13 @@ describe('useTemplateNodes', () => {
 
     it('应该正确更新progressNodesByStyleNo当order有styleNo', async () => {
       mockGetById.mockResolvedValue({
-        code: 200,
-        data: {
           id: 'tpl-001',
           templateContent: JSON.stringify({
             nodes: [
               { id: '1', name: '裁剪', unitPrice: 10 },
             ],
           }),
-        },
-      });
+        });
       
       const setNodes = vi.fn();
       const setProgressNodesByStyleNo = vi.fn();

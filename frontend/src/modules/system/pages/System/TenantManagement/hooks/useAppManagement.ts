@@ -35,17 +35,10 @@ export const useAppManagement = () => {
   const fetchApps = useCallback(async (autoActivate = false) => {
     setLoading(true);
     try {
-      const res: any = await tenantAppService.listApps(queryParams);
-      if (res?.code !== undefined && res.code !== 200) {
-        message.error(res.message || '加载应用列表失败');
-        setApps([]);
-        setTotal(0);
-        return;
-      }
-      const d = res?.data ?? res;
-      const records: TenantAppInfo[] = d?.records || [];
+      const res = await tenantAppService.listApps(queryParams);
+      const records: TenantAppInfo[] = res.records || [];
       setApps(records);
-      setTotal(d?.total || 0);
+      setTotal(res.total || 0);
 
       if (autoActivate && isSuperAdmin) {
         const activated = new Set(records.map((a: TenantAppInfo) => a.appType));
@@ -54,10 +47,9 @@ export const useAppManagement = () => {
           await Promise.all(missing.map(([type, cfg]) =>
             tenantAppService.createApp({ appName: `${cfg.label}对接`, appType: type }).catch(() => null)
           ));
-          const res2: any = await tenantAppService.listApps(queryParams);
-          const d2 = res2?.data ?? res2;
-          setApps(d2?.records || []);
-          setTotal(d2?.total || 0);
+          const res2 = await tenantAppService.listApps(queryParams);
+          setApps(res2.records || []);
+          setTotal(res2.total || 0);
         }
       }
     } catch {
@@ -68,8 +60,8 @@ export const useAppManagement = () => {
   }, [queryParams, isSuperAdmin]);
   const fetchStats = useCallback(async () => {
     try {
-      const res: any = await tenantAppService.getStats();
-      setStats(res?.data || res || { total: 0, active: 0, disabled: 0, totalCalls: 0 });
+      const res = await tenantAppService.getStats();
+      setStats(res);
     } catch { /* ignore */ }
   }, []);
 
@@ -117,8 +109,7 @@ export const useAppManagement = () => {
   const handleResetSecret = async (record: TenantAppInfo) => {
     confirmAction('重置密钥', '重置后旧密钥立即失效，客户系统需要更新配置。确认重置？', async () => {
       try {
-        const res: any = await tenantAppService.resetSecret(record.id);
-        const data = res?.data || res;
+        const data = await tenantAppService.resetSecret(record.id);
         setNewSecret(data?.appSecret || null);
         setSelectedApp(data);
         setDetailEditCallbackUrl(data?.callbackUrl || '');
@@ -144,10 +135,9 @@ export const useAppManagement = () => {
     logModal.open(record);
     setLogsLoading(true);
     try {
-      const res: any = await tenantAppService.listLogs(record.id, { page: 1, size: 50 });
-      const d = res?.data || res;
-      setLogs(d?.records || []);
-      setLogsTotal(d?.total || 0);
+      const d = await tenantAppService.listLogs(record.id, { page: 1, size: 50 });
+      setLogs(d.records || []);
+      setLogsTotal(d.total || 0);
     } catch {
       message.error('加载日志失败');
     } finally {
@@ -157,8 +147,7 @@ export const useAppManagement = () => {
 
   const handleViewDetail = async (record: TenantAppInfo) => {
     try {
-      const res: any = await tenantAppService.getAppDetail(record.id);
-      const data = res?.data || res;
+      const data = await tenantAppService.getAppDetail(record.id);
       setSelectedApp(data);
       setNewSecret(null);
       setDetailEditCallbackUrl(data?.callbackUrl || '');

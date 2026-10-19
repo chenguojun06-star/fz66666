@@ -18,8 +18,7 @@ const IntegrationOverviewTab: React.FC = () => {
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await tenantAppService.getIntegrationOverview();
-      const data = res?.data || res;
+      const data = await tenantAppService.getIntegrationOverview();
       setOverview(data);
       setAllLogs(data?.recentLogs || []);
     } catch {

@@ -77,7 +77,7 @@ describe('useProgressNodeCache', () => {
     });
 
     it('应该正确去重相同的styleNo', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      mockProgressNodeUnitPrices.mockResolvedValue([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       const { result } = renderHook(() => useProgressNodeCache());
       await result.current.fetchBatch(['STYLE001', 'STYLE001', 'STYLE001']);
       expect(mockProgressNodeUnitPrices).toHaveBeenCalledTimes(1);
@@ -85,8 +85,8 @@ describe('useProgressNodeCache', () => {
 
     it('应该正确批量获取多个styleNo的数据', async () => {
       mockProgressNodeUnitPrices
-        .mockResolvedValueOnce({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] })
-        .mockResolvedValueOnce({ code: 200, data: [{ id: '2', name: '车缝', unitPrice: 20 }] });
+        .mockResolvedValueOnce([{ id: '1', name: '裁剪', unitPrice: 10 }])
+        .mockResolvedValueOnce([{ id: '2', name: '车缝', unitPrice: 20 }]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       const resultData = await result.current.fetchBatch(['STYLE001', 'STYLE002']);
@@ -106,15 +106,12 @@ describe('useProgressNodeCache', () => {
     });
 
     it('应该过滤入库节点', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({
-        code: 200,
-        data: [
+      mockProgressNodeUnitPrices.mockResolvedValue([
           { id: '1', name: '裁剪', unitPrice: 10 },
           { id: '2', name: '车缝', unitPrice: 20 },
           { id: '3', name: '入库', unitPrice: 5 },
           { id: '4', name: '成品入库', unitPrice: 8 },
-        ],
-      });
+        ]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       const resultData = await result.current.fetchBatch(['STYLE001']);
@@ -125,14 +122,11 @@ describe('useProgressNodeCache', () => {
     });
 
     it('应该正确规范化节点数据', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({
-        code: 200,
-        data: [
+      mockProgressNodeUnitPrices.mockResolvedValue([
           { id: '1', name: ' 裁剪 ', unitPrice: '10', progressStage: ' 01 ' },
           { id: '', name: '车缝', unitPrice: 'abc', progressStage: '' },
           { id: null, name: null, unitPrice: -5 },
-        ],
-      });
+        ]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       const resultData = await result.current.fetchBatch(['STYLE001']);
@@ -145,7 +139,7 @@ describe('useProgressNodeCache', () => {
 
   describe('get 获取缓存', () => {
     it('应该返回缓存中的节点', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      mockProgressNodeUnitPrices.mockResolvedValue([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       await result.current.fetchBatch(['STYLE001']);
@@ -164,7 +158,7 @@ describe('useProgressNodeCache', () => {
 
   describe('invalidate 清除缓存', () => {
     it('应该清除指定styleNo的缓存', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      mockProgressNodeUnitPrices.mockResolvedValue([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       await result.current.fetchBatch(['STYLE001', 'STYLE002']);
@@ -179,7 +173,7 @@ describe('useProgressNodeCache', () => {
     });
 
     it('应该清除所有缓存当不传参数', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      mockProgressNodeUnitPrices.mockResolvedValue([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       await result.current.fetchBatch(['STYLE001', 'STYLE002']);
@@ -196,7 +190,7 @@ describe('useProgressNodeCache', () => {
 
   describe('缓存TTL机制', () => {
     it('应该在TTL内返回缓存数据', async () => {
-      mockProgressNodeUnitPrices.mockResolvedValue({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      mockProgressNodeUnitPrices.mockResolvedValue([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       
       const { result } = renderHook(() => useProgressNodeCache());
       
@@ -209,7 +203,7 @@ describe('useProgressNodeCache', () => {
 
   describe('并发请求去重', () => {
     it('应该避免重复请求相同的styleNo', async () => {
-      const promise = Promise.resolve({ code: 200, data: [{ id: '1', name: '裁剪', unitPrice: 10 }] });
+      const promise = Promise.resolve([{ id: '1', name: '裁剪', unitPrice: 10 }]);
       mockProgressNodeUnitPrices.mockReturnValue(promise);
       
       const { result } = renderHook(() => useProgressNodeCache());

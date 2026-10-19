@@ -45,7 +45,7 @@ export const useProcessDetailData = (
       try {
         const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
         if (cancelled) return;
-        const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+        const rows: any[] = Array.isArray(res) ? res : [];
         const pm = new Map<string, number>();
         const nl: TemplateNode[] = [];
         rows.forEach((n: any) => {

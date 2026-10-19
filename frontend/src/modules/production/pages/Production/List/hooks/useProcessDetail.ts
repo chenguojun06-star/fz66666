@@ -246,14 +246,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
     }
 
     try {
-      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error('获取工序模板失败');
-        return;
-      }
-
-      const rows = Array.isArray(result.data) ? result.data : [];
+      const rows = await templateLibraryApi.progressNodeUnitPrices(styleNo);
       if (rows.length === 0) {
         message.warning('未找到该款号的工序模板');
         return;

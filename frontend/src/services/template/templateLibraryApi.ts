@@ -1,11 +1,26 @@
-import api from '../../utils/api';
+import api, { unwrapApiData } from '../../utils/api';
 
 export const templateLibraryApi = {
-  getById: (id: string) => api.get<{ code: number; data: any }>(`/template-library/${encodeURIComponent(String(id || '').trim())}`),
-  list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', { params }),
-  listByType: (type: string) => api.get<{ code: number; data: any[] }>(`/template-library/type/${encodeURIComponent(String(type || '').trim())}`),
-  progressNodeUnitPrices: (styleNo: string) =>
-    api.get<{ code: number; data: any[] }>('/template-library/progress-node-unit-prices', { params: { styleNo } }),
+  getById: async (id: string): Promise<unknown> =>
+    unwrapApiData<unknown>(
+      await api.get(`/template-library/${encodeURIComponent(String(id || '').trim())}`),
+      '模板库请求失败',
+    ),
+  list: async (params: unknown): Promise<{ records: unknown[]; total: number }> =>
+    unwrapApiData<{ records: unknown[]; total: number }>(
+      await api.get('/template-library/list', { params }),
+      '模板库请求失败',
+    ),
+  listByType: async (type: string): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(
+      await api.get(`/template-library/type/${encodeURIComponent(String(type || '').trim())}`),
+      '模板库请求失败',
+    ),
+  progressNodeUnitPrices: async (styleNo: string): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(
+      await api.get('/template-library/progress-node-unit-prices', { params: { styleNo } }),
+      '模板库请求失败',
+    ),
 };
 
 export default {

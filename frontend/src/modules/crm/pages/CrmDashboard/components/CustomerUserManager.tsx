@@ -46,7 +46,7 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
     try {
       setLoading(true);
       const res = await customerUserApi.list(customerId);
-      setUsers(res?.data || []);
+      setUsers(res || []);
     } catch (err) {
       message.error(errMsg(err, '加载失败'));
     } finally {
@@ -98,7 +98,7 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
         contactPhone: values.contactPhone,
         contactEmail: values.contactEmail,
       });
-      const data = res?.data;
+      const data = res;
       const pwd = data?.initialPassword || values.password;
       setCreateOpen(false);
       createForm.resetFields();
@@ -136,7 +136,7 @@ const CustomerUserManager: React.FC<Props> = ({ open, customerId, customerName, 
         try {
           const newPwd = '123456';
           const res = await customerUserApi.resetPassword(user.id, newPwd);
-          const pwd = res?.data?.newPassword || newPwd;
+          const pwd = res?.newPassword || newPwd;
           modal.success({
             title: '密码已重置',
             width: 520,

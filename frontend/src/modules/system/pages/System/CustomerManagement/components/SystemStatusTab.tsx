@@ -19,8 +19,7 @@ const SystemStatusTab: React.FC = () => {
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await systemStatusService.overview();
-      const d = res?.data || res;
+      const d = await systemStatusService.overview();
       setOverview(d);
     } catch { message.error('加载系统状态失败'); } finally { setLoading(false); }
   }, []);
@@ -28,8 +27,7 @@ const SystemStatusTab: React.FC = () => {
   const fetchTenantStats = useCallback(async () => {
     setLoadingTenantStats(true);
     try {
-      const res: any = await systemStatusService.tenantUserStats();
-      setTenantStats(res?.data || res);
+      setTenantStats(await systemStatusService.tenantUserStats());
     } catch { /* ignore */ } finally { setLoadingTenantStats(false); }
   }, []);
 
