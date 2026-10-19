@@ -8,7 +8,6 @@ import {
 } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
 import { confirmDelete } from '@/utils/confirm';
-import type { ApiResult } from '@/utils/api';
 import { paths } from '@/routeConfig';
 import { INITIAL_STATS } from '../helpers';
 
@@ -41,7 +40,7 @@ export const useReceivableData = () => {
   ) => {
     setLoading(true);
     try {
-      const res: ApiResult = await receivableApi.list({
+      const data = await receivableApi.list({
         page,
         pageSize: pagination.pageSize,
         status: st || undefined,
@@ -49,9 +48,8 @@ export const useReceivableData = () => {
         sourceBizType: bizType || undefined,
         sourceBizNo: bizNo || undefined,
       });
-      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-      setRecords((data?.records as Receivable[]) ?? []);
-      setTotal((data?.total as number) ?? 0);
+      setRecords(data?.records ?? []);
+      setTotal(data?.total ?? 0);
     } catch {
       message.error('加载应收账款列表失败');
     } finally {
@@ -62,8 +60,7 @@ export const useReceivableData = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res: ApiResult = await receivableApi.stats();
-      const data = (res?.data ?? res) as ReceivableStats | undefined;
+      const data = await receivableApi.stats();
       setStats(data ?? INITIAL_STATS);
     } catch { /* 不影响主流程 */ }
   }, []);

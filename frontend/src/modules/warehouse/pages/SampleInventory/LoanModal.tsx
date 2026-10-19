@@ -89,7 +89,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
 
       // 借入人（客户）：客户下拉
       customerApi.list({ page: 1, pageSize: 500, status: 'ACTIVE' }).then(res => {
-        const records = res?.data?.records || [];
+        const records = res?.records || [];
         setCustomerOptions(records.map((c: any) => ({
           value: c.contactPerson || c.companyName,
           label: `${c.companyName}${c.contactPerson ? `（${c.contactPerson}）` : ''}`,

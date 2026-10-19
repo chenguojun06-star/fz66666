@@ -482,12 +482,18 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
     | 措施 | 位置 |
     |---|---|
     | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
-    | 禁止新增 service 层信封泄漏（存量 177 处分批清） | `scripts/check-api-envelope-leak.py` |
+    | 禁止新增 service 层信封泄漏（存量 337 处分批清；posApi/crm 已清） | `scripts/check-api-envelope-leak.py` |
     | posApi / ticketApi 已在 service 层解包 | 已改造 |
 
-    ⚠️ 剩余 177 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
+    ⚠️ 剩余 337 处存量**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
     机械替换会产出错误类型，且无法逐页端到端验证。幂等改造后它们不再危险，
     按模块分批改，改一处删一条 baseline。
+
+    ⚠️ 多行箭头写法（`=>` 结尾换行接 `api.get<T>`）也会被拦 ——
+    第 2 批升级守护后才看见它们，真实存量比首拍多一倍。posApi 会员脸上的
+    `setMember(信封)` 靠升级才暴露：信封恒 truthy，
+    会员面板读 `member.name` 全 undefined、充值提示「余额 undefined」。
+    混装解包比全量信封更容易藏 bug ——两批参考正反范本见 posApi。**
 
 16. **电商/仓库的每一张商品相关列表都必须带「款式图 + 款号」列**
    用户原话：「所有的电商的这些 必须都要有图片列，不然看都不好看，还不知道是什么订单」。

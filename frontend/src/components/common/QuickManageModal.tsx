@@ -133,7 +133,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           .map((r) => ({ id: String(r.id), name: r.dictLabel ?? '' }));
       } else if (mode === 'customer') {
         const res = await customerApi.list({ page: 1, pageSize: 500 });
-        const list = res?.data?.records || [];
+        const list = res?.records || [];
         result = list.map((c) => ({
           id: String(c.id),
           name: c.companyName,

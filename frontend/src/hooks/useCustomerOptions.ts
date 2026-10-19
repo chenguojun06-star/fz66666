@@ -18,9 +18,9 @@ export function useCustomerOptions() {
       setLoading(true);
       try {
         const resp = await customerApi.list({ pageSize: 1000, status: 'ACTIVE' });
-        if (!cancelled && resp.data?.records) {
+        if (!cancelled && resp?.records) {
           setCustomers(
-            resp.data.records.map((c: any) => ({
+            resp.records.map((c: any) => ({
               id: c.id,
               companyName: c.companyName,
               contactPerson: c.contactPerson,

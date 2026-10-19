@@ -1,5 +1,8 @@
 import api, { unwrapApiData } from '@/utils/api';
 
+/** 后端信封类型（仅 service 内部解包用） */
+interface ApiEnvelope<T> { code: number; data: T; message?: string; }
+
 /**
  * 收银台（POS 开单）服务。
  *
@@ -350,20 +353,34 @@ export const posApi = {
     ),
 
 
-  // ── D-817 会员 ──
-  memberByPhone: (phone: string) =>
-    api.get<PosMember | null>(`/pos/members/by-phone`, { params: { phone } }),
+  /**
+   * ── D-817 会员（全部返回裸数据）──
+   *
+   * <p>这里漏解包曾造成线上 bug：`setMember(信封)` → 信封恒为 truthy，
+   * 会员面板读 member.name / member.balance 全是 undefined；
+   * 充值成功提示显示「当前余额 undefined」，且用 `member.id = undefined`
+   * 去请求充值 —— 收银台会员路径最不能碰的两处都已钉契约测试。
+   */
+  memberByPhone: async (phone: string): Promise<PosMember | null> =>
+    unwrapApiData<PosMember | null>(
+      await api.get<ApiEnvelope<PosMember | null>>('/pos/members/by-phone', { params: { phone } }),
+      '会员查询失败',
+    ),
 
-  enrollMember: (body: { phone: string; name?: string; discountRate?: number; remark?: string }) =>
-    api.post<PosMember>('/pos/members', body),
+  enrollMember: async (body: { phone: string; name?: string; discountRate?: number; remark?: string }): Promise<PosMember> =>
+    unwrapApiData<PosMember>(await api.post<ApiEnvelope<PosMember>>('/pos/members', body), '建档失败'),
 
-  rechargeMember: (body: { memberId: string; amount: number; remark?: string }) =>
-    api.post<PosMember>('/pos/members/recharge', body),
+  rechargeMember: async (body: { memberId: string; amount: number; remark?: string }): Promise<PosMember> =>
+    unwrapApiData<PosMember>(await api.post<ApiEnvelope<PosMember>>('/pos/members/recharge', body), '充值失败'),
 
-  memberTransactions: (memberId: string, limit = 50) =>
-    api.get<PosMemberTx[]>(`/pos/members/${encodeURIComponent(memberId)}/transactions`, {
-      params: { limit },
-    }),
+  memberTransactions: async (memberId: string, limit = 50): Promise<PosMemberTx[]> =>
+    unwrapApiData<PosMemberTx[]>(
+      await api.get<ApiEnvelope<PosMemberTx[]>>(
+        `/pos/members/${encodeURIComponent(memberId)}/transactions`,
+        { params: { limit } },
+      ),
+      '会员流水加载失败',
+    ),
 
   // ── D-817 交接班 / 钱箱 ──
   currentShift: async () => unwrapApiData<PosShift | null>(await api.get('/pos/shifts/current'), '加载班次失败'),

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 export interface Customer {
   id?: string;
@@ -34,33 +34,54 @@ export interface CustomerStats {
   activeCount: number;
 }
 
-interface ApiResult<T> { code: number; data: T; message?: string; }
-type PageResult<T> = ApiResult<{ records: T[]; total: number; current: number; size: number }>;
+/** 分页结果（裸数据 —— 不是信封，records/total 直接可读） */
+export interface PageResult<T> {
+  records: T[];
+  total: number;
+  current: number;
+  size: number;
+}
+
+/**
+ * 后端信封类型（仅 service 内部解包用）。
+ * service 对外一律返回裸数据 —— 调用方拿到的就是业务对象，
+ * 不需要再猜 `res?.data ?? res`（这个猜测写法已随信封一起删除）。
+ */
+interface ApiEnvelope<T> { code: number; data: T; message?: string; }
 
 export const customerApi = {
-  /** 客户列表（分页） */
-  list: (params: CustomerListParams = {}) =>
-    api.post<PageResult<Customer>>('/crm/customers/list', params),
+  /** 客户列表（分页）——返回 PageResult，含 records/total */
+  list: async (params: CustomerListParams = {}): Promise<PageResult<Customer>> =>
+    unwrapApiData<PageResult<Customer>>(
+      await api.post<ApiEnvelope<PageResult<Customer>>>('/crm/customers/list', params),
+      '加载客户列表失败',
+    ),
 
   /** 获取单个客户详情 */
-  getById: (id: string) => api.get<ApiResult<Customer>>(`/crm/customers/${id}`),
+  getById: async (id: string): Promise<Customer> =>
+    unwrapApiData<Customer>(await api.get<ApiEnvelope<Customer>>(`/crm/customers/${id}`), '客户详情加载失败'),
 
   /** 新建客户 */
-  create: (data: Customer) => api.post<ApiResult<Customer>>('/crm/customers', data),
+  create: async (data: Customer): Promise<Customer> =>
+    unwrapApiData<Customer>(await api.post<ApiEnvelope<Customer>>('/crm/customers', data), '新建客户失败'),
 
   /** 更新客户 */
-  update: (id: string, data: Partial<Customer>) =>
-    api.put<ApiResult<void>>(`/crm/customers/${id}`, data),
+  update: async (id: string, data: Partial<Customer>): Promise<void> => {
+    await unwrapApiData<void>(await api.put<ApiEnvelope<void>>(`/crm/customers/${id}`, data), '更新客户失败');
+  },
 
   /** 删除客户 */
-  delete: (id: string) => api.delete<ApiResult<void>>(`/crm/customers/${id}`),
+  delete: async (id: string): Promise<void> => {
+    await unwrapApiData<void>(await api.delete<ApiEnvelope<void>>(`/crm/customers/${id}`), '删除客户失败');
+  },
 
   /** 获取客户关联的历史生产订单 */
-  getOrders: (customerId: string) =>
-    api.get<ApiResult<unknown[]>>(`/crm/customers/${customerId}/orders`),
+  getOrders: async (customerId: string): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(await api.get<ApiEnvelope<unknown[]>>(`/crm/customers/${customerId}/orders`), '历史订单加载失败'),
 
   /** 获取统计数据 */
-  getStats: () => api.get<ApiResult<CustomerStats>>('/crm/stats'),
+  getStats: async (): Promise<CustomerStats> =>
+    unwrapApiData<CustomerStats>(await api.get<ApiEnvelope<CustomerStats>>('/crm/stats'), '统计数据加载失败'),
 };
 
 // ─── 应收账款（AR）───────────────────────────────────────────────────────────
@@ -118,14 +139,26 @@ export const receivableApi = {
   }) =>
     api.post<PageResult<Receivable>>('/crm/receivables/list', params),
 
-  stats: () => api.get<ApiResult<ReceivableStats>>('/crm/receivables/stats'),
+  stats: async (): Promise<ReceivableStats> =>
+    unwrapApiData<ReceivableStats>(await api.get<ApiEnvelope<ReceivableStats>>('/crm/receivables/stats'), '应收统计加载失败'),
 
-  create: (data: Receivable) => api.post<ApiResult<Receivable>>('/crm/receivables', data),
+  create: async (data: Receivable): Promise<Receivable> =>
+    unwrapApiData<Receivable>(await api.post<ApiEnvelope<Receivable>>('/crm/receivables', data), '新建应收失败'),
 
-  detail: (id: string) => api.get<ApiResult<{ receivable: Receivable; receiptLogs: ReceivableReceiptLog[] }>>(`/crm/receivables/${id}`),
+  detail: async (id: string): Promise<{ receivable: Receivable; receiptLogs: ReceivableReceiptLog[] }> =>
+    unwrapApiData<{ receivable: Receivable; receiptLogs: ReceivableReceiptLog[] }>(
+      await api.get<ApiEnvelope<{ receivable: Receivable; receiptLogs: ReceivableReceiptLog[] }>>(`/crm/receivables/${id}`),
+      '应收详情加载失败',
+    ),
 
-  markReceived: (id: string, amount: number, remark?: string) =>
-    api.post<ApiResult<void>>(`/crm/receivables/${id}/receive`, { amount, remark }),
+  markReceived: async (id: string, amount: number, remark?: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post<ApiEnvelope<void>>(`/crm/receivables/${id}/receive`, { amount, remark }),
+      '登记收款失败',
+    );
+  },
 
-  delete: (id: string) => api.delete<ApiResult<void>>(`/crm/receivables/${id}`),
+  delete: async (id: string): Promise<void> => {
+    await unwrapApiData<void>(await api.delete<ApiEnvelope<void>>(`/crm/receivables/${id}`), '删除应收失败');
+  },
 };

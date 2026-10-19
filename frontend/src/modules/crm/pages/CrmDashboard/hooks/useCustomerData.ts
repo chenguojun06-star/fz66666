@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDebouncedValue } from '@/hooks/usePerformance';
-import { customerApi, receivableApi, type Customer, type Receivable } from '@/services/crm/customerApi';
+import { customerApi, receivableApi, type Customer, type CustomerStats, type Receivable } from '@/services/crm/customerApi';
 import { confirmDelete } from '@/utils/confirm';
-import type { ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useSync } from '@/utils/syncManager';
@@ -35,10 +34,9 @@ export const useCustomerData = () => {
   const fetchList = useCallback(async (page = pagination.current, kw = debouncedKeyword, st = statusFilter) => {
     setLoading(true);
     try {
-      const res: ApiResult = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
-      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-      setCustomers((data?.records as Customer[]) ?? []);
-      setTotal((data?.total as number) ?? 0);
+      const data = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
+      setCustomers(data?.records ?? []);
+      setTotal(data?.total ?? 0);
     } catch {
       message.error('加载客户列表失败');
     } finally {
@@ -49,9 +47,10 @@ export const useCustomerData = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res: ApiResult = await customerApi.getStats();
-      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-      setStats({ total: (data?.total as number) ?? 0, activeCount: (data?.activeCount as number) ?? 0, newThisMonth: (data?.newThisMonth as number) ?? 0, levelOne: (data?.levelOne as number) ?? 0 });
+      const data = await customerApi.getStats();
+      // 后端比 CustomerStats 多个 levelOne（D-736：1级客户数），读不到按 0 显隐
+      const { levelOne } = data as CustomerStats & { levelOne?: number };
+      setStats({ total: data?.total ?? 0, activeCount: data?.activeCount ?? 0, newThisMonth: data?.newThisMonth ?? 0, levelOne: levelOne ?? 0 });
     } catch { /* 统计失败不影响主流程 */ }
   }, []);
 
@@ -121,10 +120,10 @@ export const useCustomerData = () => {
       receivableApi.list({ customerId: record.id, pageSize: 50, page: 1 }),
     ]);
     setDrawerOrders(ordersRes.status === 'fulfilled'
-      ? (((ordersRes.value as any)?.data ?? ordersRes.value) ?? [])
+      ? (ordersRes.value ?? [])
       : []);
     setDrawerReceivables(receivablesRes.status === 'fulfilled'
-      ? ((receivablesRes.value as any)?.data?.records ?? (receivablesRes.value as any)?.records ?? [])
+      ? ((receivablesRes.value)?.records ?? [])
       : []);
     setDrawerLoading(false);
     setDrawerReceivableLoading(false);

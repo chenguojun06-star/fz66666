@@ -8,7 +8,6 @@ import {
   type ReceivableReceiptLog,
 } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
-import type { ApiResult } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import { STATUS_CONFIG } from '../helpers';
 
@@ -29,10 +28,9 @@ const ReceivableDetailModal: React.FC<{
     }
     setLoading(true);
     void receivableApi.detail(receivableId)
-      .then((res: ApiResult) => {
-        const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-        setDetail((data?.receivable as Receivable | null) ?? null);
-        setLogs(Array.isArray(data?.receiptLogs) ? (data.receiptLogs as ReceivableReceiptLog[]) : []);
+      .then(({ receivable, receiptLogs }) => {
+        setDetail(receivable ?? null);
+        setLogs(Array.isArray(receiptLogs) ? receiptLogs : []);
       })
       .catch(() => {
         message.error('加载应收详情失败');

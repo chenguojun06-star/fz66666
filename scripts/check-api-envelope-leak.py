@@ -58,9 +58,11 @@ BASELINE = Path(__file__).resolve().parent / "baseline" / "api-envelope-leak.jso
 
 # 形如 api.get<{ code: number; data: T }>(...) —— 泛型里显式声明了信封，
 # 说明这个方法的返回值**就是信封**，调用方必须自己解包（极易漏）。
-ENVELOPE_TYPED = re.compile(r"api\.(?:get|post)<\s*\{[^{}]*?\bcode\b\s*:[^{}]*?\bdata\b\s*:")
+# get/post/put/delete 全算：update/delete 同样会把信封塞给调用方。
+ENVELOPE_TYPED = re.compile(r"api\.(?:get|post|put|delete)<\s*\{[^{}]*?\bcode\b\s*:[^{}]*?\bdata\b\s*:")
 
 # 形如 name: (...) => api.get<T>(...) —— 把 api 结果直接 return，同样是泄漏信封。
+# 服务里多行写法（上一行结尾是 =>，api.* 在下一行）也会命中：先把两行拼起来再判。
 DIRECT_RETURN = re.compile(r"=>\s*api\.(?:get|post)<")
 
 
@@ -95,22 +97,36 @@ def main() -> int:
         return 1
 
     hits: dict[str, str] = {}
+
+    def classify(line: str) -> str | None:
+        stripped = line.strip()
+        if stripped.startswith(("*", "//", "/*")):
+            return None
+        if "unwrapApiData" in line:
+            return None
+        if ENVELOPE_TYPED.search(line):
+            return "泛型声明返回信封"
+        return None
+
     for f in iter_service_files():
         text = f.read_text(encoding="utf-8", errors="replace")
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            stripped = line.strip()
-            if stripped.startswith(("*", "//", "/*")):
-                continue
-            if "unwrapApiData" in line:
-                continue
-            kind = None
-            if ENVELOPE_TYPED.search(line):
-                kind = "泛型声明返回信封"
-            elif DIRECT_RETURN.search(line):
-                kind = "直接 return api 结果（信封外泄）"
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            rel = str(f.relative_to(ROOT))
+            kind = classify(line)
+            # 多行写法：xxx: (..) =>
+            #           api.get<T>(...)
+            # 单行匹配不到 DIRECT_RETURN（=> 和 api 分居两行），单独判：
+            # 本行以 => 结尾、下一行以 api.get/post< 开头 即外泄。
+            if kind is None and not DIRECT_RETURN.search(line):
+                nxt = lines[lineno].strip() if lineno < len(lines) else ""
+                joined = line.rstrip() + " " + nxt
+                this_ends_arrow = line.rstrip().endswith("=>")
+                nxt_starts_api = re.match(r"api\.(?:get|post)<", nxt) is not None
+                if this_ends_arrow and nxt_starts_api and "unwrapApiData" not in joined:
+                    kind = "直接 return api 结果（信封外泄）"
             if kind:
-                rel = str(f.relative_to(ROOT))
-                hits[f"{rel}:{lineno}"] = f"[{kind}] {stripped[:100]}"
+                hits[f"{rel}:{lineno}"] = f"[{kind}] {line.strip()[:100]}"
 
     current = set(hits)
 
