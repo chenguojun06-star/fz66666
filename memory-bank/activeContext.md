@@ -28,6 +28,7 @@
 - D-821（待提交）：productionApi.ts 25 处 `api.<verb><ApiResponse<T>>` 泛型信封声明收敛 + unused import 清理（纯编译期，tsc/eslint/17 测试/门禁/抽样双向验证全过）。注：25 处收敛已被并行会话 `git add -A` 吃进 D-820 提交，本批仅剩 import 一行
 - 已知 CI 行为：unused type import 在 eslint 为 **warning** 级（exit 0），CI 不拦——D-820 曾带着 unused ApiResponse import 提交成功，收敛靠人
 - ⚠️ 并行会话活跃：核实/改动前后先 `git status`，避免把别人的未提交改动卷进自己的批次
+- ⚠️⚠️ **并发 git 纪律（2026-10-19 实战事故）**：并行会话环境下，我 `git add`（2 文件）后、`git commit` 前，另一会话的 `git add -A` 污染了暂存区 → 我的 commit 吞掉他们 18 个未提交文件（D-824 脏批次）；我随后 `git reset --soft HEAD~1` 又差点抹掉他们已提交的 commit（reflog 找回 + 已 push 无损）。**纪律：①commit 前必须 `git diff --cached --stat | tail -1` 核对暂存文件数与预期一致，不一致就 `git restore --staged` 重来；②本地无独有内容时恢复同步用 `git reset --hard origin/main`；③绝不轻率 reset 共享分支历史（push 后不可重写）**
 - `t_payment_config` 仍空（微信/支付宝商户号未配），POS 投产前需先配支付
 - ~~主图区用例概率性 flaky~~ ✅ **已根治（d0841e94c，10-18）**：根因是测试等待条件写错——`waitFor` 等 `<details>`（0 耗时立即通过），真正异步是 Image.onload→canvas→fetch HEAD；改 `getByText`→`findByText` 让断言自己等，连跑 8 次全绿。教训：放宽 timeout 治不了「等待条件选错对象」，偶发绿比红更危险
 - db-query-mcp 本地 3308 未起 + 对正常 SELECT 误报「SELECT...INTO」待修
