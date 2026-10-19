@@ -26,7 +26,6 @@ import {
   AppstoreOutlined,
 } from "@ant-design/icons";
 import { message } from "@/utils/antdStatic";
-import { unwrapApiData } from "@/utils/api";
 import { formatMoney } from "@/utils/format";
 import {
   platformShopApi,
@@ -81,17 +80,14 @@ const PlatformShopOverview: React.FC = () => {
     async (p: number, keyword?: string, listed?: ListedFilter) => {
       setProductLoading(true);
       try {
-        const res = unwrapApiData<{ records: PlatformShopProductRow[]; total: number }>(
-          await platformShopApi.products({
-            page: p,
-            pageSize: 20,
-            keyword: (keyword ?? productKeyword) || undefined,
-            listedOnly: listed === undefined ? undefined : listed,
-          }),
-          "加载全站商品失败",
-        );
-        setProducts(res?.records ?? []);
-        setProductTotal(res?.total ?? 0);
+        const res = await platformShopApi.products({
+          page: p,
+          pageSize: 20,
+          keyword: (keyword ?? productKeyword) || undefined,
+          listedOnly: listed === undefined ? undefined : listed,
+        });
+        setProducts(res.records ?? []);
+        setProductTotal(res.total ?? 0);
         setProductPage(p);
       } catch {
         setProducts([]);
@@ -107,11 +103,7 @@ const PlatformShopOverview: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = unwrapApiData<PlatformShopOverviewData>(
-        await platformShopApi.overview(),
-        "加载平台总览失败",
-      );
-      setData(res);
+      setData(await platformShopApi.overview());
       void loadProducts(1);
     } catch (e) {
       setData(null);
@@ -135,10 +127,7 @@ const PlatformShopOverview: React.FC = () => {
     }
     setTakeSubmitting(true);
     try {
-      unwrapApiData(
-        await platformShopApi.takedown(takeTarget.styleId, reason),
-        "下架失败",
-      );
+      await platformShopApi.takedown(takeTarget.styleId, reason);
       message.success("已下架并通知商家");
       setTakeTarget(null);
       setTakeReason("");
@@ -154,7 +143,7 @@ const PlatformShopOverview: React.FC = () => {
     async (row: PlatformShopProductRow) => {
       setActingId(row.styleId);
       try {
-        unwrapApiData(await platformShopApi.relist(row.styleId), "恢复上架失败");
+        await platformShopApi.relist(row.styleId);
         message.success("已恢复上架并通知商家");
         void loadProducts(productPage);
       } catch (e) {

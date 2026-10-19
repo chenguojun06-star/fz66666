@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi, { shopProductApi } from '@/services/shop/shopApi';
 import type { BatchSaveSkuResult, ShopStyleInfoRow, ShopStyleSku } from '@/services/shop/shopApi';
-import { unwrap } from '../unwrap';
 import type { EditableSku, ListingRow } from '../types';
 
 const errText = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
@@ -52,7 +51,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
         r.styleNo ? shopProductApi.listColorImages(r.styleNo).catch(() => null) : Promise.resolve(null),
         shopProductApi.getStyle(r.id).catch(() => null),
       ]);
-      const skuList = unwrap<ShopStyleSku[] | null>(skuRaw) ?? [];
+      const skuList: ShopStyleSku[] = Array.isArray(skuRaw) ? skuRaw : [];
       setSkus(
         (Array.isArray(skuList) ? skuList : []).map((s) => ({
           skuId: s.id,
@@ -64,9 +63,9 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
           stockQuantity: s.stockQuantity ?? 0,
         })),
       );
-      const imgs = unwrap<Record<string, string> | null>(imgRaw) ?? {};
+      const imgs = imgRaw ?? {};
       setColorImages(imgs);
-      const detail = unwrap<ShopStyleInfoRow | null>(styleRaw);
+      const detail: ShopStyleInfoRow | null = styleRaw;
       const c = detail?.cover ?? r.cover ?? null;
       // D-800：主图组。历史数据 cover_group 为空时回退为 [cover]，保证老款式零影响。
       const cg2 = (() => {
@@ -147,7 +146,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
           row.id,
           dirty.map((s) => ({ skuId: s.skuId, salesPrice: s.salesPrice, stockQuantity: s.stockQuantity })),
         );
-        const body = unwrap<BatchSaveSkuResult>(res);
+        const body: BatchSaveSkuResult = res;
         const after: Record<string, number> = body?.stockAfter ?? {};
         // 回读真实库存：库存走 GREATEST(0,…) 增减，可能被钳制，不能沿用用户输入值
         setSkus((prev) =>

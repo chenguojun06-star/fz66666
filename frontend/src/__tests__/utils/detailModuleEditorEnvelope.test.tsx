@@ -7,13 +7,13 @@ import shopAdminApi from '../../services/shop/shopApi';
 /**
  * 详情页模块编辑器（D-785，承接 D-770）
  *
- * <b>线上事故</b>：打开商品编辑抽屉时顶部报红 `u.map is not a function`，
- * 整个布局区块加载不出来。
+ * <b>线上事故</b>：打开商品编辑抽屉时顶部报红 `u.map is not a function`。
+ * 根因是 axios 拦截器返回完整信封，组件把 `{}` 当数组 `.map()`。
  *
- * 根因：axios 响应拦截器是 `return response.data`，而后端返回的是**完整信封**
- * `{code, message, data, requestId}` —— 所以 `shopAdminApi.layoutModules()`
- * 拿到的是信封对象而不是数组。代码写成 `(defs || []).map(...)`，
- * 而 `{}` 是 truthy，`|| []` 兜不住，对象没有 .map → TypeError。
+ * D-818 起信封解包已收口到 shopApi service 层，组件拿到的就是裸数组。
+ * 因此这里 mock 的是「service 的真实契约」；信封→裸数据的转换由
+ * `shopApiUnwrap.test.ts` 在底层 http 层验证。继续在组件测试里 mock 信封，
+ * 等于替实现说谎——组件早已没有解包逻辑，测试却以为它还需要。
  */
 const mockApi = vi.hoisted(() => ({
   layoutModules: vi.fn(),
@@ -49,17 +49,13 @@ const ctx = (): ModuleContentCtx => ({
   styleNo: 'FZ001',
 });
 
-const DEF_ENVELOPE = {
-  code: 200,
-  message: '操作成功',
-  data: [
-    { moduleKey: 'gallery', defaultTitle: '图片轮播', canHide: false },
-    { moduleKey: 'price', defaultTitle: '价格与库存', canHide: false },
-    { moduleKey: 'points', defaultTitle: '核心卖点', canHide: true },
-    { moduleKey: 'size', defaultTitle: '尺码选择', canHide: true },
-    { moduleKey: 'faq', defaultTitle: '常见问题', canHide: true },
-  ],
-};
+const DEF_MODULES = [
+  { moduleKey: 'gallery', defaultTitle: '图片轮播', canHide: false },
+  { moduleKey: 'price', defaultTitle: '价格与库存', canHide: false },
+  { moduleKey: 'points', defaultTitle: '核心卖点', canHide: true },
+  { moduleKey: 'size', defaultTitle: '尺码选择', canHide: true },
+  { moduleKey: 'faq', defaultTitle: '常见问题', canHide: true },
+];
 
 beforeEach(() => {
   mockApi.layoutModules.mockReset();
@@ -67,49 +63,49 @@ beforeEach(() => {
   mockApi.saveStyleLayout.mockReset();
 });
 
-describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
-  it('拿到信封时必须正常渲染出模块，不能抛 map is not a function', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
+describe('详情页模块编辑器（service 裸数据契约 + 内容合一）', () => {
+  it('service 返回裸数组时正常渲染模块', async () => {
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
+    mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('图片轮播')).toBeTruthy());
     expect(screen.getByText('核心卖点')).toBeTruthy();
     expect(screen.queryByText(/is not a function/)).toBeNull();
   });
 
-  it('拿到已解包数组时同样正常（接口形态不能假设只有一种）', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE.data);
+  it('布局为空时仍渲染模块定义（全默认开启）', async () => {
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
     mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('图片轮播')).toBeTruthy());
   });
 
   it('接口返回非数组的怪东西时降级为空列表，不许把整个区块搞崩', async () => {
-    mockApi.layoutModules.mockResolvedValue({ code: 200, data: 'oops' });
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: null });
+    mockApi.layoutModules.mockResolvedValue({ unexpected: 'oops' });
+    mockApi.getStyleLayout.mockResolvedValue(null);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(mockApi.layoutModules).toHaveBeenCalled());
     expect(screen.queryByText(/is not a function/)).toBeNull();
   });
 
   it('不可隐藏的模块必须标出「必需」', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
+    mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getAllByText('必需').length).toBe(2));
   });
 
   it('有内容的模块默认展开，直接能看到这个开关管的是哪段内容', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
+    mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     // 「图片轮播」展开后应能看到轮播图输入区
     await waitFor(() => expect(screen.getByText('顶部轮播回落图')).toBeTruthy());
   });
 
   it('没有内容的模块要说清来源，而不是留一个空输入框', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
+    mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('尺码选择')).toBeTruthy());
     // 无内容的模块默认折叠，展开后才看到来源说明
@@ -118,8 +114,8 @@ describe('详情页模块编辑器（信封解包 + 内容合一）', () => {
   });
 
   it('每个模块都要有一句顾客端说明，避免商家猜开关作用（D-800：说明移入展开区）', async () => {
-    mockApi.layoutModules.mockResolvedValue(DEF_ENVELOPE);
-    mockApi.getStyleLayout.mockResolvedValue({ code: 200, data: [] });
+    mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
+    mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('价格与库存')).toBeTruthy());
     // D-800 起模块改为平铺（不再折叠），说明文字始终可见 —— 直接断言。

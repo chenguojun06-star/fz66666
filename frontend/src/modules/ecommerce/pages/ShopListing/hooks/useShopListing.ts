@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi, { shopProductApi } from '@/services/shop/shopApi';
-import { unwrap } from '../unwrap';
 import type { ListingFilter, ListingRow, ShopSkuSummary } from '../types';
 
 /** 一次拉取的最大款式数（后端 pageSize 上限 500），筛选与分页在前端做，保证「已上架/未上架」口径一致 */
@@ -20,20 +19,18 @@ export function useShopListing() {
   const load = useCallback(async (keyword: string) => {
     setLoading(true);
     try {
-      const raw = await shopProductApi.listStyles({
+      const body = await shopProductApi.listStyles({
         keyword: keyword || undefined,
         page: 1,
         pageSize: FETCH_SIZE,
       });
-      const body = unwrap<{ records?: ListingRow[]; total?: number }>(raw);
-      const records: ListingRow[] = Array.isArray(body?.records) ? body.records : [];
+      const records: ListingRow[] = Array.isArray(body.records) ? body.records : [];
       setRows(records);
-      setTruncated((body?.total ?? 0) > records.length);
+      setTruncated((body.total ?? 0) > records.length);
 
       if (records.length) {
-        const sumRaw = await shopAdminApi.skuSummary(records.map((r) => r.id));
-        const sumBody = unwrap<{ items?: Record<string, ShopSkuSummary> }>(sumRaw);
-        setSummary(sumBody?.items ?? {});
+        const sumBody = await shopAdminApi.skuSummary(records.map((r) => r.id));
+        setSummary(sumBody.items ?? {});
       } else {
         setSummary({});
       }

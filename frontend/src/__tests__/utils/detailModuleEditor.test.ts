@@ -133,9 +133,10 @@ describe('布局接口契约（D-770）', () => {
 
   it('三个接口都必须存在（模块定义 / 读布局 / 存布局）', () => {
     const s = readApi();
-    expect(s).toContain("layoutModules: () => api.get<LayoutModuleDef[]>('/shop/admin/layout-modules')");
-    expect(s).toContain("getStyleLayout: (styleId: number | string)");
-    expect(s).toContain("saveStyleLayout: (");
+    expect(s).toContain("layoutModules: async ()");
+    expect(s).toContain("'/shop/admin/layout-modules'");
+    expect(s).toContain("getStyleLayout: async (styleId: number | string)");
+    expect(s).toContain("saveStyleLayout: async (");
     expect(s).toContain("`/shop/admin/layout/${styleId}`");
   });
 });

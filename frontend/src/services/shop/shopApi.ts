@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 /**
  * D-763：C端店铺管理服务。
@@ -24,6 +24,11 @@ export interface ShopConfig {
   carouselAutoplay?: number | null;
   /** 轮播间隔毫秒（2000~10000，默认 4000） */
   carouselIntervalMs?: number | null;
+  /** D-769 服务承诺：退货天数（0=不承诺） */
+  returnDays?: number | null;
+  promiseInStock?: number | null;
+  promiseAuthentic?: number | null;
+  promiseExtra?: string | null;
 }
 
 /**
@@ -223,8 +228,11 @@ export const shopAdminApi = {
    *
    * 返回 Result 信封，调用方必须 unwrapApiData 取 data。
    */
-  dashboardDaily: (days = 30) =>
-    api.get<unknown>('/shop/admin/dashboard/daily', { params: { days } }),
+  dashboardDaily: async (days = 30): Promise<ShopDashboardData> =>
+    unwrapApiData<ShopDashboardData>(
+      await api.get('/shop/admin/dashboard/daily', { params: { days } }),
+      '加载店铺看板失败',
+    ),
 
   /**
    * 类目词表（中文规范类目）。
@@ -233,13 +241,18 @@ export const shopAdminApi = {
    * 让商家从同一份词表里选，才不会继续产生中英混杂的数据。
    * 这是公开接口（类目名本来就公开），无需额外权限。
    */
-  categoryOptions: () => api.get<unknown>('/shop/public/platform/categories'),
+  categoryOptions: async (): Promise<ShopCategoryOption[]> =>
+    unwrapApiData<ShopCategoryOption[]>(
+      await api.get('/shop/public/platform/categories'),
+      '加载类目词表失败',
+    ),
 
   /** 店铺配置（首次访问自动建档，slug=t{tenantId}，默认打烊） */
-  getConfig: () => api.get<ShopConfig>('/shop/admin/config'),
+  getConfig: async (): Promise<ShopConfig> =>
+    unwrapApiData<ShopConfig>(await api.get('/shop/admin/config'), '加载店铺配置失败'),
 
   /** 更新配置（名称/公告/打烊开关/配送设置） */
-  saveConfig: (body: {
+  saveConfig: async (body: {
     shopName?: string;
     notice?: string;
     enabled?: number | boolean;
@@ -255,60 +268,100 @@ export const shopAdminApi = {
     /** 详情页图片轮播：自动播放开关 + 间隔（秒 → 后端毫秒） */
     carouselAutoplay?: number | boolean;
     carouselIntervalMs?: number;
-  }) => api.post<null>('/shop/admin/config', body),
+  }): Promise<void> => {
+    await unwrapApiData<void>(await api.post('/shop/admin/config', body), '保存店铺配置失败');
+  },
 
   /** 上架/下架款式 */
-  setListing: (styleId: number | string, listed: boolean) =>
-    api.post<null>(`/shop/admin/listing/${styleId}?listed=${listed}`),
+  setListing: async (styleId: number | string, listed: boolean): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/listing/${styleId}?listed=${listed}`),
+      listed ? '上架失败' : '下架失败',
+    );
+  },
 
   /** 店铺订单分页 */
-  orders: (params: { page?: number; pageSize?: number; status?: string; keyword?: string }) =>
-    api.post<{ records: ShopOrder[]; total: number; current: number; pages: number }>(
-      '/shop/admin/orders',
-      params,
+  orders: async (params: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<{ records: ShopOrder[]; total: number; current: number; pages: number }> =>
+    unwrapApiData<{ records: ShopOrder[]; total: number; current: number; pages: number }>(
+      await api.post('/shop/admin/orders', params),
+      '加载店铺订单失败',
     ),
 
   /** 订单发货（待发货 → 已发货；快递公司与单号选填，自提/同城配送可不填） */
-  shipOrder: (orderId: string, body?: { expressCompany?: string; expressNo?: string }) =>
-    api.post<null>(`/shop/admin/orders/${orderId}/ship`, body ?? {}),
+  shipOrder: async (orderId: string, body?: { expressCompany?: string; expressNo?: string }): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/orders/${orderId}/ship`, body ?? {}),
+      '发货失败',
+    );
+  },
 
   /** 批量发货（逐条独立，返回成功数与被跳过原因） */
-  batchShipOrders: (orderIds: string[], body?: { expressCompany?: string; expressNo?: string }) =>
-    api.post<BatchShipResult>('/shop/admin/orders/batch-ship', {
-      orderIds,
-      expressCompany: body?.expressCompany,
-      expressNo: body?.expressNo,
-    }),
+  batchShipOrders: async (orderIds: string[], body?: { expressCompany?: string; expressNo?: string }): Promise<BatchShipResult> =>
+    unwrapApiData<BatchShipResult>(
+      await api.post('/shop/admin/orders/batch-ship', {
+        orderIds,
+        expressCompany: body?.expressCompany,
+        expressNo: body?.expressNo,
+      }),
+      '批量发货失败',
+    ),
 
   /** 订单详情（订单头 + 商品明细） */
-  orderDetail: (orderId: string) => api.post<ShopOrderDetail>(`/shop/admin/orders/${orderId}/detail`, {}),
+  orderDetail: async (orderId: string): Promise<ShopOrderDetail> =>
+    unwrapApiData<ShopOrderDetail>(
+      await api.post(`/shop/admin/orders/${orderId}/detail`, {}),
+      '加载订单详情失败',
+    ),
 
   /** 取消订单（仅待发货；会回补库存并撤销挂账应收） */
-  cancelOrder: (orderId: string, reason?: string) =>
-    api.post<null>(`/shop/admin/orders/${orderId}/cancel`, { reason }),
+  cancelOrder: async (orderId: string, reason?: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/orders/${orderId}/cancel`, { reason }),
+      '取消订单失败',
+    );
+  },
 
   /** 商家备注（买家不可见） */
-  updateOrderRemark: (orderId: string, remark: string) =>
-    api.post<null>(`/shop/admin/orders/${orderId}/remark`, { remark }),
+  updateOrderRemark: async (orderId: string, remark: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/orders/${orderId}/remark`, { remark }),
+      '保存备注失败',
+    );
+  },
 
   /** 订单概览统计 */
-  orderStats: () => api.get<ShopOrderStats>('/shop/admin/orders/stats'),
+  orderStats: async (): Promise<ShopOrderStats> =>
+    unwrapApiData<ShopOrderStats>(await api.get('/shop/admin/orders/stats'), '加载订单统计失败'),
 
   /** 登记售后（仅已发货订单；type: REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款） */
-  applyAfterSale: (orderId: string, type: 'REFUND_ONLY' | 'RETURN_REFUND', reason?: string) =>
-    api.post<null>(`/shop/admin/orders/${orderId}/after-sale/apply`, { type, reason }),
+  applyAfterSale: async (orderId: string, type: 'REFUND_ONLY' | 'RETURN_REFUND', reason?: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/orders/${orderId}/after-sale/apply`, { type, reason }),
+      '登记售后失败',
+    );
+  },
 
   /** 同意售后（退货退款会回补库存；未收款应收自动撤销；返回处理说明） */
-  approveAfterSale: (orderId: string, remark?: string) =>
-    api.post<{ restoredItems: number; message: string }>(`/shop/admin/orders/${orderId}/after-sale/approve`, { remark }),
+  approveAfterSale: async (orderId: string, remark?: string): Promise<{ restoredItems: number; message: string }> =>
+    unwrapApiData<{ restoredItems: number; message: string }>(
+      await api.post(`/shop/admin/orders/${orderId}/after-sale/approve`, { remark }),
+      '处理售后失败',
+    ),
 
   /** 拒绝售后 */
-  rejectAfterSale: (orderId: string, remark?: string) =>
-    api.post<null>(`/shop/admin/orders/${orderId}/after-sale/reject`, { remark }),
+  rejectAfterSale: async (orderId: string, remark?: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post(`/shop/admin/orders/${orderId}/after-sale/reject`, { remark }),
+      '拒绝售后失败',
+    );
+  },
 
   /** 款式维度 SKU 聚合：售价区间 / 可售总量 / 颜色数（列表展示用，避免逐行 N+1） */
-  skuSummary: (styleIds: Array<number | string>) =>
-    api.post<{ items: Record<string, ShopSkuSummary> }>('/shop/admin/sku/summary', { styleIds }),
+  skuSummary: async (styleIds: Array<number | string>): Promise<{ items: Record<string, ShopSkuSummary> }> =>
+    unwrapApiData<{ items: Record<string, ShopSkuSummary> }>(
+      await api.post('/shop/admin/sku/summary', { styleIds }),
+      '加载 SKU 汇总失败',
+    ),
 
   /** 批量保存 SKU 售价 + 库存（库存为「目标值」，服务端换算增减量并留操作日志） */
   /**
@@ -316,33 +369,58 @@ export const shopAdminApi = {
    * 必须先 dryRun=true 试算、确认后再 dryRun=false 执行——
    * 直接执行一旦出错只能靠反查日志回滚。
    */
-  batchAdjustPrice: (body: {
+  batchAdjustPrice: async (body: {
     styleIds: Array<number | string>;
     mode: BatchPriceMode;
     value: number;
     dryRun: boolean;
-  }) => api.post<BatchPricePreview>('/shop/admin/sku/batch-adjust-price', body),
+  }): Promise<BatchPricePreview> =>
+    unwrapApiData<BatchPricePreview>(
+      await api.post('/shop/admin/sku/batch-adjust-price', body),
+      '批量调价失败',
+    ),
   /** D-770：可选模块定义（哪些不可隐藏由后端裁决） */
-  layoutModules: () => api.get<LayoutModuleDef[]>('/shop/admin/layout-modules'),
+  layoutModules: async (): Promise<LayoutModuleDef[]> =>
+    unwrapApiData<LayoutModuleDef[]>(
+      await api.get('/shop/admin/layout-modules'),
+      '加载详情模块失败',
+    ),
   /** D-770：读某款式的详情页布局（无记录返回默认） */
-  getStyleLayout: (styleId: number | string) =>
-    api.get<StyleLayoutItem[]>(`/shop/admin/layout/${styleId}`),
+  getStyleLayout: async (styleId: number | string): Promise<StyleLayoutItem[]> =>
+    unwrapApiData<StyleLayoutItem[]>(
+      await api.get(`/shop/admin/layout/${styleId}`),
+      '加载详情布局失败',
+    ),
   /** D-770：保存详情页布局（模块开关 + 上到下顺序） */
-  saveStyleLayout: (
+  saveStyleLayout: async (
     styleId: number | string,
     body: { modules: Array<{ moduleKey: string; enabled: number; sortOrder: number }> },
-  ) => api.post<{ saved: number }>(`/shop/admin/layout/${styleId}`, body),
-  batchSaveSku: (styleId: number | string, items: BatchSaveSkuItem[]) =>
-    api.post<BatchSaveSkuResult>('/shop/admin/sku/batch-save', { styleId, items }),
+  ): Promise<{ saved: number }> =>
+    unwrapApiData<{ saved: number }>(
+      await api.post(`/shop/admin/layout/${styleId}`, body),
+      '保存详情布局失败',
+    ),
+  batchSaveSku: async (styleId: number | string, items: BatchSaveSkuItem[]): Promise<BatchSaveSkuResult> =>
+    unwrapApiData<BatchSaveSkuResult>(
+      await api.post('/shop/admin/sku/batch-save', { styleId, items }),
+      '保存 SKU 失败',
+    ),
 
   /* ── P2：商品评价（商家侧） ── */
 
   /** 本店铺评价分页（可按款号 / 星级过滤） */
-  reviews: (params: { page?: number; pageSize?: number; styleNo?: string; rating?: number }) =>
-    api.get<unknown>('/shop/admin/reviews', { params }),
+  reviews: async (params: { page?: number; pageSize?: number; styleNo?: string; rating?: number }): Promise<{ records: ShopReviewRow[]; total: number }> =>
+    unwrapApiData<{ records: ShopReviewRow[]; total: number }>(
+      await api.get('/shop/admin/reviews', { params }),
+      '加载评价失败',
+    ),
 
   /** 本店铺评价概览（均分 / 总数 / 各星级分布） */
-  reviewSummary: () => api.get<unknown>('/shop/admin/reviews/summary'),
+  reviewSummary: async (): Promise<ShopReviewSummary> =>
+    unwrapApiData<ShopReviewSummary>(
+      await api.get('/shop/admin/reviews/summary'),
+      '加载评价概览失败',
+    ),
 };
 
 /** P2：商家侧评价行 */
@@ -369,17 +447,21 @@ export interface ShopReviewSummary {
  */
 export const shopProductApi = {
   /** 款式列表（keyword 对 款号/款名/品类 做 OR 模糊匹配；勿同时传 styleName+styleNo） */
-  listStyles: (params: { keyword?: string; page?: number; pageSize?: number }) =>
-    api.get<{ records: ShopStyleInfoRow[]; total: number }>('/style/info/list', { params }),
+  listStyles: async (params: { keyword?: string; page?: number; pageSize?: number }): Promise<{ records: ShopStyleInfoRow[]; total: number }> =>
+    unwrapApiData<{ records: ShopStyleInfoRow[]; total: number }>(
+      await api.get('/style/info/list', { params }),
+      '加载款式列表失败',
+    ),
 
   /** 款式详情（取 cover / remark 等） */
-  getStyle: (id: number | string) => api.get<ShopStyleInfoRow>(`/style/info/${id}`),
+  getStyle: async (id: number | string): Promise<ShopStyleInfoRow> =>
+    unwrapApiData<ShopStyleInfoRow>(await api.get(`/style/info/${id}`), '加载款式详情失败'),
 
   /**
    * 保存款式字段（主图 / 商品说明 / 详情页三块内容）。
    * 后端 PUT /style/info 走 MyBatis-Plus 局部更新：只提交改动过的字段即可。
    */
-  updateStyle: (body: {
+  updateStyle: async (body: {
     id: number | string;
     cover?: string | null;
     remark?: string | null;
@@ -387,19 +469,31 @@ export const shopProductApi = {
     washInstructions?: string | null;
     description?: string | null;
     category?: string | null;
-  }) => api.put<unknown>('/style/info', body),
+  }): Promise<void> => {
+    await unwrapApiData<void>(await api.put('/style/info', body), '保存款式失败');
+  },
 
   /** 某款式全部 SKU */
-  searchSkus: (styleId: number | string) =>
-    api.post<ShopStyleSku[]>('/style/sku/search', { styleId }),
+  searchSkus: async (styleId: number | string): Promise<ShopStyleSku[]> =>
+    unwrapApiData<ShopStyleSku[]>(
+      await api.post('/style/sku/search', { styleId }),
+      '加载 SKU 失败',
+    ),
 
   /** 某款号的颜色 → 图片映射 */
-  listColorImages: (styleNo: string) =>
-    api.get<Record<string, string>>(`/style/sku/color-images/${encodeURIComponent(styleNo)}`),
+  listColorImages: async (styleNo: string): Promise<Record<string, string>> =>
+    unwrapApiData<Record<string, string>>(
+      await api.get(`/style/sku/color-images/${encodeURIComponent(styleNo)}`),
+      '加载颜色图片失败',
+    ),
 
   /** 保存颜色 → 图片映射 */
-  saveColorImages: (styleId: number | string, map: Record<string, string>) =>
-    api.put<unknown>(`/style/sku/color-images/${styleId}`, map),
+  saveColorImages: async (styleId: number | string, map: Record<string, string>): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.put(`/style/sku/color-images/${styleId}`, map),
+      '保存颜色图片失败',
+    );
+  },
 };
 
 /** /style/info/list 返回的行（只声明店铺运营用到的字段） */
@@ -503,31 +597,47 @@ export const platformShopApi = {
    * 注意返回的是 Result 信封（api 客户端不因业务 code≠200 抛错），
    * 调用方必须用 unwrapApiData 取 data，否则失败也会被当成成功。
    */
-  overview: () => api.get<unknown>('/shop/admin/platform/overview'),
+  overview: async (): Promise<PlatformShopOverview> =>
+    unwrapApiData<PlatformShopOverview>(
+      await api.get('/shop/admin/platform/overview'),
+      '加载平台总览失败',
+    ),
 
   /**
    * 平台全站商品（跨租户，仅平台超管）。
    *
    * listedOnly：不传=全部 / true=只看在架 / false=只看已下架。
    */
-  products: (params: {
+  products: async (params: {
     page?: number;
     pageSize?: number;
     keyword?: string;
     listedOnly?: boolean;
-  }) => api.get<unknown>('/shop/admin/platform/products', { params }),
+  }): Promise<{ records: PlatformShopProductRow[]; total: number }> =>
+    unwrapApiData<{ records: PlatformShopProductRow[]; total: number }>(
+      await api.get('/shop/admin/platform/products', { params }),
+      '加载全站商品失败',
+    ),
 
   /**
    * 平台一键下架（跨租户，仅平台超管）。
    *
    * 必须填原因：原因会随通知发给商家。不告诉商家为什么，商家只会反复重新上架。
    */
-  takedown: (styleId: number, reason: string) =>
-    api.post<unknown>('/shop/admin/platform/listing/takedown', { styleId, reason }),
+  takedown: async (styleId: number, reason: string): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post('/shop/admin/platform/listing/takedown', { styleId, reason }),
+      '下架失败',
+    );
+  },
 
   /** 平台恢复上架（下架必须可逆，否则等于平台能一键把别人的生意做没） */
-  relist: (styleId: number) =>
-    api.post<unknown>('/shop/admin/platform/listing/relist', { styleId }),
+  relist: async (styleId: number): Promise<void> => {
+    await unwrapApiData<void>(
+      await api.post('/shop/admin/platform/listing/relist', { styleId }),
+      '恢复上架失败',
+    );
+  },
 };
 
 export default shopAdminApi;

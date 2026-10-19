@@ -5,12 +5,10 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
 import BatchAdjustPriceModal from './BatchAdjustPriceModal';
-import type { ShopConfig } from '@/services/shop/shopApi';
 import { buildListingColumns } from './columns';
 import ListingEditDrawer from './components/ListingEditDrawer';
 import { filterRows, useShopListing } from './hooks/useShopListing';
 import { useListingEditor } from './hooks/useListingEditor';
-import { unwrap } from './unwrap';
 import type { ListingFilter, ListingRow } from './types';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
@@ -108,8 +106,7 @@ const ShopListing: React.FC = () => {
   /** 用手机尺寸窗口打开店铺门面，避免在电脑全屏下被拉成巨幅 */
   const openShop = async () => {
     try {
-      const res = await shopAdminApi.getConfig();
-      const cfg = unwrap<ShopConfig | null>(res);
+      const cfg = await shopAdminApi.getConfig();
       if (cfg?.slug) {
         window.open(
           `${window.location.origin}/shop/index.html?s=${cfg.slug}`,

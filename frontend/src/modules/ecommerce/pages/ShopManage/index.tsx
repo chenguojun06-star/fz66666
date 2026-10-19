@@ -31,7 +31,6 @@ import type {
   ShopDashboardData,
   ShopDashboardDailyRow,
 } from '@/services/shop/shopApi';
-import { unwrapApiData } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import { readPageSize } from '@/utils/pageSizeStore';
 import './index.css';
@@ -149,8 +148,7 @@ const ShopManage: React.FC = () => {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const res: any = await shopAdminApi.getConfig();
-      const cfg = res?.data ?? res;
+      const cfg = await shopAdminApi.getConfig();
       setConfig(cfg);
       setShopName(cfg?.shopName || '');
       setNotice(cfg?.notice || '');
@@ -175,15 +173,14 @@ const ShopManage: React.FC = () => {
     setOrderLoading(true);
     try {
       const pageSize = ps ?? orderPageSize;
-      const res: any = await shopAdminApi.orders({
+      const data = await shopAdminApi.orders({
         page: p,
         pageSize,
         status: (status ?? orderStatus) || undefined,
         keyword: (keyword ?? orderKw) || undefined,
       });
-      const data = res?.data ?? res;
-      setOrders(data?.records ?? []);
-      setOrderTotal(data?.total ?? 0);
+      setOrders(data.records ?? []);
+      setOrderTotal(data.total ?? 0);
       setOrderPage(p);
     } catch {
       setOrders([]);
@@ -195,8 +192,7 @@ const ShopManage: React.FC = () => {
   /** D-513：订单概览统计（待发货 / 今日 / 累计） */
   const fetchStats = useCallback(async () => {
     try {
-      const res = await shopAdminApi.orderStats();
-      setStats(unwrapApiData<ShopOrderStats>(res, '加载订单统计失败'));
+      setStats(await shopAdminApi.orderStats());
     } catch {
       setStats(null);
     }
@@ -214,8 +210,7 @@ const ShopManage: React.FC = () => {
   const fetchDashboard = useCallback(async (days: number) => {
     setDashLoading(true);
     try {
-      const res = await shopAdminApi.dashboardDaily(days);
-      setDashData(unwrapApiData<ShopDashboardData>(res, '加载看板失败'));
+      setDashData(await shopAdminApi.dashboardDaily(days));
     } catch (e) {
       setDashData(null);
       message.error(e instanceof Error ? e.message : '加载看板失败');
@@ -228,13 +223,12 @@ const ShopManage: React.FC = () => {
   const fetchReviews = useCallback(async (p: number, styleNo?: string, rating?: number, ps?: number) => {
     setReviewLoading(true);
     try {
-      const res = await shopAdminApi.reviews({
+      const data = await shopAdminApi.reviews({
         page: p,
         pageSize: ps ?? reviewPageSize,
         styleNo: (styleNo ?? reviewStyleNo) || undefined,
         rating: rating ?? reviewRating,
       });
-      const data = unwrapApiData<{ records: ShopReviewRow[]; total: number }>(res, '加载评价失败');
       setReviewRows(data?.records ?? []);
       setReviewTotal(data?.total ?? 0);
       setReviewPage(p);
@@ -249,8 +243,7 @@ const ShopManage: React.FC = () => {
   /** P2：本店铺评价概览 */
   const fetchReviewSummary = useCallback(async () => {
     try {
-      const res = await shopAdminApi.reviewSummary();
-      setReviewSummary(unwrapApiData<ShopReviewSummary>(res, '加载评价概览失败'));
+      setReviewSummary(await shopAdminApi.reviewSummary());
     } catch {
       setReviewSummary(null);
     }
@@ -280,7 +273,7 @@ const ShopManage: React.FC = () => {
     }
     setSaving(true);
     try {
-      const res = await shopAdminApi.saveConfig({
+      await shopAdminApi.saveConfig({
         shopName: shopName.trim(),
         notice: notice.trim(),
         enabled,
@@ -295,7 +288,6 @@ const ShopManage: React.FC = () => {
         carouselAutoplay: carouselAuto,
         carouselIntervalMs: Math.round(Number(carouselGap) || 4) * 1000,
       });
-      unwrapApiData(res, '保存失败');
       message.success('店铺配置已保存，顾客端即时生效');
       await fetchConfig();
       setPreviewKey((k) => k + 1);
@@ -315,13 +307,10 @@ const ShopManage: React.FC = () => {
     if (!shipTarget) return;
     setShipSubmitting(true);
     try {
-      unwrapApiData(
-        await shopAdminApi.shipOrder(shipTarget.id, {
-          expressCompany: shipCompany.trim() || undefined,
-          expressNo: shipNo.trim() || undefined,
-        }),
-        '发货失败',
-      );
+      await shopAdminApi.shipOrder(shipTarget.id, {
+        expressCompany: shipCompany.trim() || undefined,
+        expressNo: shipNo.trim() || undefined,
+      });
       message.success(`订单 ${shipTarget.orderNo} 已发货`);
       setShipTarget(null);
       setShipCompany('');
@@ -341,8 +330,7 @@ const ShopManage: React.FC = () => {
     setDetailLoading(true);
     setDetailData(null);
     try {
-      const res = await shopAdminApi.orderDetail(order.id);
-      setDetailData(unwrapApiData<ShopOrderDetail>(res, '加载订单详情失败'));
+      setDetailData(await shopAdminApi.orderDetail(order.id));
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载订单详情失败');
     } finally {
@@ -355,10 +343,7 @@ const ShopManage: React.FC = () => {
     if (!cancelTarget) return;
     setCancelSubmitting(true);
     try {
-      unwrapApiData(
-        await shopAdminApi.cancelOrder(cancelTarget.id, cancelReason.trim() || undefined),
-        '取消订单失败',
-      );
+      await shopAdminApi.cancelOrder(cancelTarget.id, cancelReason.trim() || undefined);
       message.success('订单已取消，库存已退回、应收已撤销');
       setCancelTarget(null);
       setCancelReason('');
@@ -376,7 +361,7 @@ const ShopManage: React.FC = () => {
     if (!remarkTarget) return;
     setRemarkSubmitting(true);
     try {
-      unwrapApiData(await shopAdminApi.updateOrderRemark(remarkTarget.id, remarkValue.trim()), '备注保存失败');
+      await shopAdminApi.updateOrderRemark(remarkTarget.id, remarkValue.trim());
       message.success('备注已保存');
       setRemarkTarget(null);
       void fetchOrders(orderPage);
@@ -415,11 +400,8 @@ const ShopManage: React.FC = () => {
         const results = await Promise.all(
           batch.map(async (o) => {
             try {
-              const d = unwrapApiData<{ items?: Array<Record<string, unknown>> }>(
-                await shopAdminApi.orderDetail(o.id),
-                '读取订单明细失败',
-              );
-              return [o.id, d?.items ?? []] as const;
+              const d = await shopAdminApi.orderDetail(o.id);
+              return [o.id, d.items ?? []] as const;
             } catch {
               // 单单拉取失败不阻断整批：发货单会显示「无明细」，仓库可自行核对
               return [o.id, []] as const;
@@ -448,11 +430,10 @@ const ShopManage: React.FC = () => {
     }
     setBatchSubmitting(true);
     try {
-      const res = await shopAdminApi.batchShipOrders(
+      const data = await shopAdminApi.batchShipOrders(
         pending.map((o) => o.id),
         { expressCompany: batchCompany.trim() || undefined, expressNo: batchNo.trim() || undefined },
       );
-      const data = unwrapApiData<{ shipped: number; failed: string[] }>(res, '批量发货失败');
       if (data.failed && data.failed.length > 0) {
         message.warning(`成功 ${data.shipped} 笔，跳过 ${data.failed.length} 笔：${data.failed[0]}`);
       } else {
@@ -476,10 +457,7 @@ const ShopManage: React.FC = () => {
     if (!afterSaleTarget) return;
     setAsSubmitting(true);
     try {
-      unwrapApiData(
-        await shopAdminApi.applyAfterSale(afterSaleTarget.id, asType, asReason.trim() || undefined),
-        '售后登记失败',
-      );
+      await shopAdminApi.applyAfterSale(afterSaleTarget.id, asType, asReason.trim() || undefined);
       message.success('售后已登记，请及时处理');
       setAfterSaleTarget(null);
       setAsReason('');
@@ -497,14 +475,10 @@ const ShopManage: React.FC = () => {
     setProcessSubmitting(true);
     try {
       if (action === 'approve') {
-        const res = await shopAdminApi.approveAfterSale(processTarget.id, processRemark.trim() || undefined);
-        const data = unwrapApiData<{ restoredItems: number; message: string }>(res, '处理售后失败');
+        const data = await shopAdminApi.approveAfterSale(processTarget.id, processRemark.trim() || undefined);
         message.success(data?.message || '已同意售后');
       } else {
-        unwrapApiData(
-          await shopAdminApi.rejectAfterSale(processTarget.id, processRemark.trim() || undefined),
-          '拒绝售后失败',
-        );
+        await shopAdminApi.rejectAfterSale(processTarget.id, processRemark.trim() || undefined);
         message.success('已拒绝售后');
       }
       setProcessTarget(null);

@@ -5,7 +5,6 @@ import {
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
-import { unwrap } from '../unwrap';
 import { MODULE_CONTENT, type ModuleContentCtx } from './DetailModuleContent';
 
 const { Text } = Typography;
@@ -85,17 +84,13 @@ export function DetailModuleEditor({
         shopAdminApi.layoutModules(),
         shopAdminApi.getStyleLayout(styleId),
       ]);
-      // ⚠️ 必须 unwrap：axios 拦截器 return response.data，返回的是完整信封
-      // {code,message,data,requestId}，不是数组本身。直接 .map 会得到
-      // "u.map is not a function"。再加 Array.isArray 兜底。
-      const defList = unwrap<unknown>(defs);
-      const layList = unwrap<unknown>(layout);
+      // shopApi 已在 service 层解包，这里拿到的是裸数组；保留 Array.isArray 兜底
       const defArr: Array<{ moduleKey: string; defaultTitle: string; canHide: boolean }> =
-        Array.isArray(defList) ? defList : [];
+        Array.isArray(defs) ? defs : [];
       const layArr: Array<{ moduleKey: string; enabled: number; sortOrder: number }> =
-        Array.isArray(layList) ? layList : [];
+        Array.isArray(layout) ? layout : [];
       const layMap = new Map(layArr.map((l) => [l.moduleKey, l]));
-      const merged: ModuleItem[] = defArr.map((d, i) => ({
+      const merged: ModuleItem[] = defArr.map((d) => ({
         moduleKey: d.moduleKey,
         defaultTitle: d.defaultTitle,
         canHide: d.canHide,

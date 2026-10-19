@@ -11,7 +11,6 @@ import type { ModuleContentCtx } from './DetailModuleContent';
 import shopAdminApi from '@/services/shop/shopApi';
 import type { ShopCategoryOption } from '@/services/shop/shopApi';
 import api from '@/utils/api';
-import { unwrap } from '../unwrap';
 import type { EditableSku, ListingContent, ListingRow } from '../types';
 
 const { Text } = Typography;
@@ -159,7 +158,7 @@ const ListingEditDrawer: React.FC<Props> = ({
     let alive = true;
     void (async () => {
       try {
-        const list = unwrap<ShopCategoryOption[]>(await shopAdminApi.categoryOptions()) ?? [];
+        const list = await shopAdminApi.categoryOptions();
         if (alive) setCatOptions(Array.isArray(list) ? list : []);
       } catch {
         if (alive) setCatOptions([]);
@@ -179,7 +178,7 @@ const ListingEditDrawer: React.FC<Props> = ({
     let alive = true;
     void (async () => {
       try {
-        const cfg = unwrap<{ slug?: string }>(await shopAdminApi.getConfig());
+        const cfg = await shopAdminApi.getConfig();
         if (alive) setShopSlug(cfg?.slug ?? null);
       } catch {
         if (alive) setShopSlug(null);
