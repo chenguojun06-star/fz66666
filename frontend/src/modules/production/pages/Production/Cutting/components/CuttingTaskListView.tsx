@@ -21,6 +21,7 @@ const CUTTING_TASK_COLUMNS = [
   { key: 'orderQuantity', label: '数量' },
   { key: 'cuttingQuantity', label: '裁剪数' },
   { key: 'cuttingBundleCount', label: '扎数' },
+  { key: 'remnantTotal', label: '余料' },
   { key: 'receiverName', label: '裁剪员' },
   { key: 'receivedTime', label: '领取时间' },
   { key: 'bundledTime', label: '完成时间' },

@@ -13,11 +13,23 @@ import { useCuttingTasks } from './hooks';
 
 type TasksState = ReturnType<typeof useCuttingTasks>;
 
+// D-823 余料徽标格式化辅助
+const num = (v: unknown): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const fmtNum = (v: unknown): string => {
+  const n = num(v);
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+};
+
 interface UseTaskColumnsParams {
   tasks: TasksState;
   goToEntry: (task: CuttingTask) => void;
   handleRollbackActive: (task: CuttingTask) => void;
   onOpenRemark: (orderNo: string) => void;
+  /** D-823：打开用料台账抽屉 */
+  onOpenUsage?: (task: CuttingTask) => void;
 }
 
 /**
@@ -29,6 +41,7 @@ export function useTaskColumns({
   goToEntry,
   handleRollbackActive,
   onOpenRemark,
+  onOpenUsage,
 }: UseTaskColumnsParams) {
   return [
     {
@@ -163,6 +176,18 @@ export function useTaskColumns({
       ),
     },
     {
+      // D-823：余料合计徽标（列表免开抽屉即可见）
+      title: '余料',
+      key: 'remnantTotal',
+      width: 100,
+      align: 'right' as const,
+      render: (v: unknown) => {
+        const n = Number(v ?? 0);
+        if (!n) return '-';
+        return <span style={{ color: 'var(--color-warning, #fa8c16)', fontWeight: 600 }}>{n}</span>;
+      },
+    },
+    {
       title: '操作',
       key: 'action',
       width: 120,
@@ -223,6 +248,15 @@ export function useTaskColumns({
                   onOpenRemark(record.productionOrderNo);
                 },
               },
+              ...(onOpenUsage && !isPending
+                ? [{
+                    key: 'usage',
+                    label: num(record.remnantTotal) > 0 ? `用料·余料${fmtNum(record.remnantTotal)}` : '用料',
+                    title: record.usageConfirmed ? '用料台账（已登记）' : '用料台账（待登记实际消耗）',
+                    primary: !record.usageConfirmed,
+                    onClick: () => onOpenUsage(record),
+                  }]
+                : []),
             ]}
           />
         );

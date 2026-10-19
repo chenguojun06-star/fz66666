@@ -64,6 +64,16 @@ public class CuttingTask {
      */
     private Integer cuttingBundleCount;
 
+    /**
+     * 用料台账是否已登记（D-823：登记实际消耗后置 1）
+     */
+    private Integer usageConfirmed;
+
+    /**
+     * 余料合计（D-823：各物料行余料的汇总，列表页免 join 展示）
+     */
+    private java.math.BigDecimal remnantTotal;
+
     // ==================== 订单关联字段（非数据库字段）====================
 
     /**

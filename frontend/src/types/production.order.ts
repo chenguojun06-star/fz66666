@@ -173,6 +173,10 @@ export interface CuttingTask {
   factoryType?: 'INTERNAL' | 'EXTERNAL';
   styleCover?: string;
   hasScanRecords?: boolean;
+  /** D-823：用料台账是否已登记（0/1） */
+  usageConfirmed?: number;
+  /** D-823：余料合计（各物料行汇总） */
+  remnantTotal?: number;
 }
 
 export interface ProductionQueryParams {

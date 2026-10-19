@@ -35,6 +35,7 @@ public class CuttingBundleCompletionHelper {
     @Autowired private TemplateLibraryService templateLibraryService;
     @Autowired private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
     @Autowired private com.fashion.supplychain.production.service.CuttingTaskService cuttingTaskService;
+    @Autowired private com.fashion.supplychain.production.orchestration.CuttingMaterialUsageOrchestrator materialUsageOrchestrator;
 
     public boolean markBundled(CuttingTask task) {
         if (task == null || !StringUtils.hasText(task.getProductionOrderId())) {
@@ -62,6 +63,9 @@ public class CuttingBundleCompletionHelper {
             task.setCuttingBundleCount((int) bundleCount);
             task.setUpdateTime(now);
             cuttingTaskService.updateById(task);
+
+            // D-823：完工即按裁剪BOM快照用料台账（计划量含损耗率），供后续登记实际消耗/余料回库
+            materialUsageOrchestrator.initFromTask(task);
 
             long already = computeAlreadyScannedQuantity(oid, requestId);
             long qtyToWrite = Math.max(0, cuttingQty - already);

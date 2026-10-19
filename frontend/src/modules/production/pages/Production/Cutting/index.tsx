@@ -22,6 +22,7 @@ import {
   useCuttingRouteParams,
 } from './hooks';
 import { CuttingEntryView, CuttingTaskListView, CuttingModals } from './components';
+import CuttingMaterialUsageDrawer from './components/CuttingMaterialUsageDrawer';
 import { useBundleColumns, useTaskColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
@@ -38,6 +39,9 @@ const CuttingManagement: React.FC = () => {
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  // D-823：用料台账抽屉
+  const [usageVisible, setUsageVisible] = useState(false);
+  const [usageTask, setUsageTask] = useState<CuttingTask | null>(null);
   // 明细页任务解析中（用于区分「加载中」与「任务已不存在」，避免白屏）
   const [taskResolving, setTaskResolving] = useState(false);
 
@@ -181,6 +185,10 @@ const CuttingManagement: React.FC = () => {
       setRemarkOrderNo(orderNo);
       setRemarkOpen(true);
     },
+    onOpenUsage: (task: CuttingTask) => {
+      setUsageTask(task);
+      setUsageVisible(true);
+    },
   });
 
   const handleReceiveClick = useCallback(async () => {
@@ -264,6 +272,13 @@ const CuttingManagement: React.FC = () => {
             remarkOpen={remarkOpen}
             setRemarkOpen={setRemarkOpen}
             remarkOrderNo={remarkOrderNo}
+          />
+
+          <CuttingMaterialUsageDrawer
+            task={usageTask}
+            visible={usageVisible}
+            onClose={() => setUsageVisible(false)}
+            onChanged={() => tasks.fetchTasks()}
           />
 
         </PageLayout>

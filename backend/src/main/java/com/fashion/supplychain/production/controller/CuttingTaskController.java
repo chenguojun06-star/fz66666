@@ -26,6 +26,58 @@ public class CuttingTaskController {
     @Autowired
     private CuttingBomOrchestrator cuttingBomOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.production.orchestration.CuttingMaterialUsageOrchestrator materialUsageOrchestrator;
+
+    /**
+     * D-823：查询裁剪任务的用料台账（计划/领出/实际/余料，按物料行）
+     */
+    @GetMapping("/{id}/material-usage")
+    public Result<?> materialUsage(@PathVariable String id) {
+        return Result.success(materialUsageOrchestrator.listByTask(id));
+    }
+
+    /**
+     * D-823：登记实际消耗。body: { rows: [{ materialCode, issuedAmount, actualUsed }] }
+     * 缺省值：领出=计划量，实际=领出（无余料一键确认）
+     */
+    @PostMapping("/{id}/material-usage")
+    public Result<?> saveMaterialUsage(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = body.get("rows") == null
+                ? new java.util.ArrayList<>()
+                : (List<Map<String, Object>>) body.get("rows");
+        return Result.success(materialUsageOrchestrator.saveActual(
+                id, rows,
+                com.fashion.supplychain.common.UserContext.userId(),
+                com.fashion.supplychain.common.UserContext.username()));
+    }
+
+    /**
+     * D-823：余料回库。body: { rows: [{ materialCode, quantity, warehouseLocation }] }
+     * quantity 缺省 = 该行全部余料；支持部分回库。
+     */
+    @PostMapping("/{id}/remnant-inbound")
+    public Result<?> remnantInbound(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = body.get("rows") == null
+                ? new java.util.ArrayList<>()
+                : (List<Map<String, Object>>) body.get("rows");
+        return Result.success(materialUsageOrchestrator.remnantInbound(
+                id, rows,
+                com.fashion.supplychain.common.UserContext.userId(),
+                com.fashion.supplychain.common.UserContext.username()));
+    }
+
+    /**
+     * D-823：采购↔裁剪全链路汇总（采购-到货-已用-剩余 ↔ 计划-领出-实际-余料-已回库）
+     */
+    @GetMapping("/material-usage-chain")
+    public Result<?> materialUsageChain(@RequestParam String orderNo,
+            @RequestParam(required = false) String materialCode) {
+        return Result.success(materialUsageOrchestrator.chainSummary(orderNo, materialCode));
+    }
+
     /**
      * 裁剪任务状态统计
      * 返回各状态数量：totalCount, pendingCount, receivedCount, bundledCount, totalQuantity
