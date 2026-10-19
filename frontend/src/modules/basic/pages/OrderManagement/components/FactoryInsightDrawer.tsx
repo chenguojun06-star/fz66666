@@ -68,10 +68,10 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
         intelligenceApi.getCapacityGap(),
         intelligenceApi.getFactoryActiveOrders(fn),
       ]);
-      setPrediction(predRes.data ?? null);
-      const gapResp: CapacityGapResponse | undefined = gapRes.data;
+      setPrediction(predRes ?? null);
+      const gapResp: CapacityGapResponse | undefined = gapRes;
       setGapList(gapResp?.factories.find((f) => f.factoryName === fn) ?? null);
-      setActiveOrders(ordersRes.data ?? []);
+      setActiveOrders(ordersRes ?? []);
     } catch (e: any) {
       console.error('[FactoryInsightDrawer] load failed', e);
       setError(e?.message || '加载工厂动态失败，请重试');

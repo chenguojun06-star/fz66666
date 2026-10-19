@@ -52,7 +52,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     if (briefingFetchedRef.current) return;
     briefingFetchedRef.current = true;
     intelligenceApi.detectAnomalies().then(resp => {
-      const data = resp?.data;
+      const data = resp;
       if (!data || !data.items || data.items.length === 0) return;
       const critical = data.items.filter((a: any) => a.severity === 'critical');
       const warning = data.items.filter((a: any) => a.severity === 'warning');

@@ -14,6 +14,7 @@ import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase } from '@/types/production';
 import { MATERIAL_TYPE_OPTIONS } from './helpers';
 import { getPurchaseMissingFields } from './hooks/types';
+import MaterialUsageChainCell from './components/MaterialUsageChainCell';
 
 const { Option } = Select;
 
@@ -299,6 +300,17 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
           </div>
         );
       },
+    },
+    {
+      // D-823：裁剪用料链路列——点击展开 采购↔裁剪 全链路（计划/领出/实际/余料/已回库）
+      title: '裁剪用料', key: 'cuttingUsage', width: colWidth || 120,
+      render: (_: unknown, record: MaterialPurchase) => (
+        <MaterialUsageChainCell
+          orderNo={record.orderNo}
+          materialCode={record.materialCode}
+          unit={record.unit}
+        />
+      ),
     },
     {
       title: '操作', key: 'action', width: 120, fixed: 'right' as const,

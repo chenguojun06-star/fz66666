@@ -194,15 +194,11 @@ export const useSubmitScan = ({
           operatorName: String(user.name || '').trim() || undefined,
         });
 
-        const precheckResult = precheckResp;
-        if (Number(precheckResult?.code) === 200) {
-          const precheckData = precheckResult?.data || {};
-          // 分级风险弹窗：LOW 静默通过，MEDIUM 可确认，HIGH 阻断需强制
-          const proceed = await confirmPrecheckRisk(precheckData);
-          if (!proceed) {
-            // 用户选择「返回修改」，由 finally 块重置 submitting 状态
-            return;
-          }
+        // 分级风险弹窗：LOW 静默通过，MEDIUM 可确认，HIGH 阻断需强制
+        const proceed = await confirmPrecheckRisk(precheckResp);
+        if (!proceed) {
+          // 用户选择「返回修改」，由 finally 块重置 submitting 状态
+          return;
         }
       } catch {
         // 预检失败不阻断扫码主流程

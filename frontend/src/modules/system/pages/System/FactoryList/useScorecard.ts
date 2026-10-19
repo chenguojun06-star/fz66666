@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
-import { type ApiResult } from '@/utils/api';
 import { buildScorecardMap } from './utils';
 
 export function useScorecard() {
@@ -13,8 +12,8 @@ export function useScorecard() {
     if (scorecardLoaded || scorecardLoading) return;
     setScorecardLoading(true);
     try {
-      const res = await intelligenceApi.getSupplierScorecard() as ApiResult<{ scores: SupplierScore[] }>;
-      const scores: SupplierScore[] = res?.data?.scores ?? [];
+      const res = await intelligenceApi.getSupplierScorecard();
+      const scores: SupplierScore[] = res?.scores ?? [];
       setScorecardMap(buildScorecardMap(scores));
       setScorecardLoaded(true);
     } catch { /* 静默失败 */ } finally {

@@ -498,12 +498,11 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
     | 措施 | 位置 |
     |---|---|
     | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
-    | 禁止新增 service 层信封泄漏（存量 179 处分批清；posApi/crm/production/finance/shop/system 已清，剩 intelligence 179 处） | `scripts/check-api-envelope-leak.py` |
+    | 禁止新增 service 层信封泄漏（**存量已全部清零**，2026-10-19 D-824：9 批共清 460+ 处；posApi/crm/production/finance/shop/system/intelligence 均已在 service 层解包） | `scripts/check-api-envelope-leak.py` |
     | posApi / ticketApi 已在 service 层解包 | 已改造 |
 
-    ⚠️ 剩余 179 处存量（全在 intelligenceApi）**不要一次性机械转换**：类型里含嵌套泛型与模板字符串，
-    机械替换会产出错误类型，且无法逐页端到端验证。幂等改造后它们不再危险，
-    按模块分批改，改一处删一条 baseline。
+    ✅ 2026-10-19 D-824 全部清零：intelligenceApi 96 法/179 处已迁完（脚本化平衡括号解析 + tsc 抓调用方 + 契约测试 10 例），
+    baseline 从 179 → 0。后续新增泄漏由该脚本在 CI 阻断。
 
     ⚠️ 多行箭头写法（`=>` 结尾换行接 `api.get<T>`）也会被拦 ——
     第 2 批升级守护后才看见它们，真实存量比首拍多一倍。posApi 会员脸上的

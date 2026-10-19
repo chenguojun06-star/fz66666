@@ -8,7 +8,6 @@ import type {
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
   StageBottleneckHeatmapResponse,
 } from '@/services/intelligence/intelligenceApi';
-import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -108,8 +107,8 @@ export function useCockpit() {
   const fetchPulseOnly = useCallback(async () => {
     if (loadingRef.current) return;
     try {
-      const res: ApiResult<LivePulseResponse> = await intelligenceApi.getLivePulse();
-      const newPulse = (res?.data ?? res) as LivePulseResponse;
+      const res = await intelligenceApi.getLivePulse();
+      const newPulse = res as LivePulseResponse;
       if (newPulse) setData(prev => ({ ...prev, pulse: newPulse }));
     } catch { /* silent */ }
   }, []);

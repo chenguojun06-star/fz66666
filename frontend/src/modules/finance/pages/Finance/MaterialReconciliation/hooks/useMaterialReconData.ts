@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dayjs } from 'dayjs';
 import type { MaterialReconType, MaterialReconQueryParams } from '@/types/finance';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
-import type { ApiResult } from '@/utils/api';
 import { unwrapApiData } from '@/utils/api';
 import { errorHandler } from '@/utils/errorHandling';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -26,7 +25,7 @@ export const useMaterialReconData = () => {
 
   const fetchFinanceAudit = useCallback(async () => {
     setAuditLoading(true);
-    try { const res: ApiResult = await intelligenceApi.getFinanceAudit(); if (res?.data) setFinanceAudit(res.data as FinanceAuditResponse); }
+    try { const res = await intelligenceApi.getFinanceAudit(); if (res) setFinanceAudit(res); }
     catch { /* 静默失败 */ }
     finally { setAuditLoading(false); }
   }, []);

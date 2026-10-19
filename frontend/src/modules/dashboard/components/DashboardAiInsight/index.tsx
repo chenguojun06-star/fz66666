@@ -59,8 +59,8 @@ const DashboardAiInsight: React.FC = () => {
         }
       }
 
-      if (brainRes.status === 'fulfilled' && brainRes.value?.data) {
-        const brain = brainRes.value.data;
+      if (brainRes.status === 'fulfilled' && brainRes.value) {
+        const brain = brainRes.value;
         const s = brain.summary;
         if (s) {
           const parts: string[] = [];
@@ -91,8 +91,8 @@ const DashboardAiInsight: React.FC = () => {
         }
       }
 
-      if (actionRes.status === 'fulfilled' && actionRes.value?.data) {
-        const action = actionRes.value.data;
+      if (actionRes.status === 'fulfilled' && actionRes.value) {
+        const action = actionRes.value;
         const highPriorityTasks = action.tasks?.filter(t => t.priority === 'HIGH' || t.priority === 'CRITICAL') || [];
         if (highPriorityTasks.length > 0) {
           items.push({

@@ -57,7 +57,7 @@ const DefectTracePopover: React.FC<{
     setLoading(true);
     try {
       const res = await intelligenceApi.getDefectTrace(orderId);
-      if (res?.data) setData(res.data as unknown as DefectTraceData);
+      if (res) setData(res as unknown as DefectTraceData);
     } catch {
       // 静默失败
     } finally {

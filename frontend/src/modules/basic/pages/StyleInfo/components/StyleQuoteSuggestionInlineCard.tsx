@@ -36,7 +36,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
     setError('');
     try {
       const res = await intelligenceApi.getStyleQuoteSuggestion(effectiveStyleNo);
-      const next = res?.data as StyleQuoteSuggestionResponse | null;
+      const next = res as StyleQuoteSuggestionResponse | null;
       if (!next?.styleNo) {
         setData(null);
         setError('暂无可用历史报价样本');

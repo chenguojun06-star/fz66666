@@ -52,7 +52,7 @@ const StyleQuotePopover: React.FC<{
     try {
       const res = await intelligenceApi.getStyleQuoteSuggestion(styleNo);
       if (requestIdRef.current !== requestId) return; // 丢弃过期响应
-      if (res?.data) setData(res.data as unknown as StyleQuoteData);
+      if (res) setData(res as unknown as StyleQuoteData);
     } catch {
       if (requestIdRef.current === requestId) setData(null);
     } finally {

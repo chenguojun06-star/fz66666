@@ -233,28 +233,28 @@ type ApiRequestConfig = AxiosRequestConfig & { retry?: number };
 ================================================================ */
 export const intelligenceApi = {
   /** AI 大脑总快照：统一感知、判断、行动、学习状态入口 */
-  getBrainSnapshot: () =>
-    api.get<{ code: number; data: IntelligenceBrainSnapshotResponse }>('/intelligence/brain/snapshot'),
+  getBrainSnapshot: async () =>
+    unwrapApiData<IntelligenceBrainSnapshotResponse>(await api.get('/intelligence/brain/snapshot'), '智能服务请求失败'),
 
   /** 行动中心：多域风险转可执行任务 */
-  getActionCenter: () =>
-    api.get<{ code: number; data: ActionCenterResponse }>('/intelligence/action-center'),
+  getActionCenter: async () =>
+    unwrapApiData<ActionCenterResponse>(await api.get('/intelligence/action-center'), '智能服务请求失败'),
 
-  submitActionTaskFeedback: (payload: ActionTaskFeedbackRequest) =>
-    api.post<{ code: number; data: ActionTaskFeedbackItem }>('/intelligence/action-center/task-feedback', payload),
+  submitActionTaskFeedback: async (payload: ActionTaskFeedbackRequest) =>
+    unwrapApiData<ActionTaskFeedbackItem>(await api.post('/intelligence/action-center/task-feedback', payload), '智能服务请求失败'),
 
-  listActionTaskFeedback: (limit = 20) =>
-    api.get<{ code: number; data: ActionTaskFeedbackItem[] }>('/intelligence/action-center/task-feedback/list', { params: { limit } }),
+  listActionTaskFeedback: async (limit = 20) =>
+    unwrapApiData<ActionTaskFeedbackItem[]>(await api.get('/intelligence/action-center/task-feedback/list', { params: { limit } }), '智能服务请求失败'),
 
   /** 服务端租户级智能开关，优先级应高于前端 localStorage */
-  getTenantSmartFeatureFlags: () =>
-    api.get<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature/list'),
+  getTenantSmartFeatureFlags: async () =>
+    unwrapApiData<Record<string, boolean>>(await api.get('/system/tenant-smart-feature/list'), '智能服务请求失败'),
 
   /** @deprecated 使用 tenantSmartFeatureService.save 替代 */
-  saveTenantSmartFeatureFlags: (features: Record<string, boolean>) =>
-    api.put<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature', { features }),
+  saveTenantSmartFeatureFlags: async (features: Record<string, boolean>) =>
+    unwrapApiData<Record<string, boolean>>(await api.put('/system/tenant-smart-feature', { features }), '智能服务请求失败'),
 
-  precheckScan: (payload: {
+  precheckScan: async (payload: {
     orderId?: string;
     orderNo?: string;
     stageName?: string;
@@ -262,16 +262,16 @@ export const intelligenceApi = {
     quantity?: number;
     operatorId?: string;
     operatorName?: string;
-  }) => api.post<{ code: number; data: { riskLevel?: string; issues?: Array<{ title?: string; reason?: string; suggestion?: string }> } }>('/intelligence/precheck/scan', payload),
+  }) => unwrapApiData<{ riskLevel?: string; issues?: Array<{ title?: string; reason?: string; suggestion?: string }> }>(await api.post('/intelligence/precheck/scan', payload), '智能服务请求失败'),
 
-  predictFinishTime: (payload: {
+  predictFinishTime: async (payload: {
     orderId?: string;
     orderNo?: string;
     styleNo?: string;
     stageName?: string;
     processName?: string;
     currentProgress?: number;
-  }) => api.post<{ code: number; data: {
+  }) => unwrapApiData<{
     predictedFinishTime?: string;
     confidence?: number;
     reasons?: string[];
@@ -280,23 +280,23 @@ export const intelligenceApi = {
     totalQuantity?: number;
     doneQuantity?: number;
     remainingQuantity?: number;
-  } }>('/intelligence/predict/finish-time', payload),
+  }>(await api.post('/intelligence/predict/finish-time', payload), '智能服务请求失败'),
 
   /** 出入库智能分流建议 */
-  recommendInout: (payload: {
+  recommendInout: async (payload: {
     orderNo?: string;
     operatorId?: string;
     operatorName?: string;
     purchaseIds?: string[];
-  }) => api.post<{ code: number; data: {
+  }) => unwrapApiData<{
     strategy?: string;
     reason?: string;
     suggestions?: string[];
     relatedPurchaseIds?: string[];
-  } }>('/intelligence/recommend/inout', payload),
+  }>(await api.post('/intelligence/recommend/inout', payload), '智能服务请求失败'),
 
   /** 反馈闭环 — 静默提交实际完成数据 */
-  feedback: (payload: {
+  feedback: async (payload: {
     predictionId?: string;
     suggestionType?: string;
     reasonCode?: string;
@@ -309,18 +309,18 @@ export const intelligenceApi = {
     actualFinishTime?: string;
     actualResult?: string;
     acceptedSuggestion?: boolean;
-  }) => api.post<{ code: number; data: {
+  }) => unwrapApiData<{
     accepted?: boolean;
     deviationMinutes?: number;
     message?: string;
-  } }>('/intelligence/feedback', payload),
+  }>(await api.post('/intelligence/feedback', payload), '智能服务请求失败'),
 
   /** 工人效率画像 */
-  workerProfile: (payload: {
+  workerProfile: async (payload: {
     operatorName?: string;
     dateFrom?: string;
     dateTo?: string;
-  }) => api.post<{ code: number; data: {
+  }) => unwrapApiData<{
     operatorName?: string;
     stages?: Array<{
       stageName: string;
@@ -333,102 +333,102 @@ export const intelligenceApi = {
     totalQty?: number;
     lastScanTime?: string | null;
     dateDays?: number;
-  } }>('/intelligence/worker-profile', payload),
+  }>(await api.post('/intelligence/worker-profile', payload), '智能服务请求失败'),
 
   // ── 第二批智能化 API ──
 
   /** 工序瓶颈检测 */
-  detectBottleneck: (payload?: { orderId?: string; orderNo?: string }) =>
-    api.post<{ code: number; data: BottleneckDetectionResponse }>('/intelligence/bottleneck/detect', payload ?? {}),
+  detectBottleneck: async (payload?: { orderId?: string; orderNo?: string }) =>
+    unwrapApiData<BottleneckDetectionResponse>(await api.post('/intelligence/bottleneck/detect', payload ?? {}), '智能服务请求失败'),
 
   /** 交期风险评估 */
-  assessDeliveryRisk: (payload?: { orderId?: string }) =>
-    api.post<{ code: number; data: DeliveryRiskResponse }>('/intelligence/delivery-risk/assess', payload ?? {}),
+  assessDeliveryRisk: async (payload?: { orderId?: string }) =>
+    unwrapApiData<DeliveryRiskResponse>(await api.post('/intelligence/delivery-risk/assess', payload ?? {}), '智能服务请求失败'),
 
   /** 异常行为检测 */
-  detectAnomalies: () =>
-    api.post<{ code: number; data: AnomalyDetectionResponse }>('/intelligence/anomaly/detect', {}),
+  detectAnomalies: async () =>
+    unwrapApiData<AnomalyDetectionResponse>(await api.post('/intelligence/anomaly/detect', {}), '智能服务请求失败'),
 
   /** 智能派工推荐 */
-  recommendAssignment: (payload: { stageName: string; quantity?: number; orderId?: string }) =>
-    api.post<{ code: number; data: SmartAssignmentResponse }>('/intelligence/smart-assignment/recommend', payload),
+  recommendAssignment: async (payload: { stageName: string; quantity?: number; orderId?: string }) =>
+    unwrapApiData<SmartAssignmentResponse>(await api.post('/intelligence/smart-assignment/recommend', payload), '智能服务请求失败'),
 
   /** AI 学习报告 */
-  getLearningReport: () =>
-    api.get<{ code: number; data: LearningReportResponse }>('/intelligence/learning-report'),
+  getLearningReport: async () =>
+    unwrapApiData<LearningReportResponse>(await api.get('/intelligence/learning-report'), '智能服务请求失败'),
 
   /** 手动触发 AI 学习 */
-  triggerLearning: () =>
-    api.post<{ code: number; data: { message: string; updatedCount: number } }>('/intelligence/learning/trigger', {}),
+  triggerLearning: async () =>
+    unwrapApiData<{ message: string; updatedCount: number }>(await api.post('/intelligence/learning/trigger', {}), '智能服务请求失败'),
 
   // ── 第三批：12大黑科技 API ──
 
   /** ① 实时生产脉搏 */
-  getLivePulse: () =>
-    api.post<{ code: number; data: LivePulseResponse }>('/intelligence/live-pulse', {}),
+  getLivePulse: async () =>
+    unwrapApiData<LivePulseResponse>(await api.post('/intelligence/live-pulse', {}), '智能服务请求失败'),
 
   /** ② 工人效率画像 */
-  getWorkerEfficiency: () =>
-    api.post<{ code: number; data: WorkerEfficiencyResponse }>('/intelligence/worker-efficiency', {}),
+  getWorkerEfficiency: async () =>
+    unwrapApiData<WorkerEfficiencyResponse>(await api.post('/intelligence/worker-efficiency', {}), '智能服务请求失败'),
 
   /** ③ 完工日期预测 */
-  predictDelivery: (payload: { orderId: string }) =>
-    api.post<{ code: number; data: DeliveryPredictionResponse }>('/intelligence/delivery-prediction', payload),
+  predictDelivery: async (payload: { orderId: string }) =>
+    unwrapApiData<DeliveryPredictionResponse>(await api.post('/intelligence/delivery-prediction', payload), '智能服务请求失败'),
 
   /** ③b 预下单三档交期预测（不依赖 orderId，下单页详情抽屉用） */
-  predictPreOrderDelivery: (payload: PreOrderDeliveryPredictionRequest) =>
-    api.post<{ code: number; data: PreOrderDeliveryPredictionResponse }>('/intelligence/pre-order-delivery-prediction', payload),
+  predictPreOrderDelivery: async (payload: PreOrderDeliveryPredictionRequest) =>
+    unwrapApiData<PreOrderDeliveryPredictionResponse>(await api.post('/intelligence/pre-order-delivery-prediction', payload), '智能服务请求失败'),
 
   /** ③c 工厂在产订单明细（下单页详情抽屉用） */
-  getFactoryActiveOrders: (factoryName: string) =>
-    api.get<{ code: number; data: FactoryActiveOrderDTO[] }>('/intelligence/factory-active-orders', { params: { factoryName } }),
+  getFactoryActiveOrders: async (factoryName: string) =>
+    unwrapApiData<FactoryActiveOrderDTO[]>(await api.get('/intelligence/factory-active-orders', { params: { factoryName } }), '智能服务请求失败'),
 
   /** ④ 订单利润预估 */
-  estimateProfit: (payload: { orderId: string }) =>
-    api.post<{ code: number; data: ProfitEstimationResponse }>('/intelligence/profit-estimation', payload),
+  estimateProfit: async (payload: { orderId: string }) =>
+    unwrapApiData<ProfitEstimationResponse>(await api.post('/intelligence/profit-estimation', payload), '智能服务请求失败'),
 
   /** ⑤ 工厂绩效排行 */
-  getFactoryLeaderboard: () =>
-    api.post<{ code: number; data: FactoryLeaderboardResponse }>('/intelligence/factory-leaderboard', {}),
+  getFactoryLeaderboard: async () =>
+    unwrapApiData<FactoryLeaderboardResponse>(await api.post('/intelligence/factory-leaderboard', {}), '智能服务请求失败'),
 
   /** ⑥ 生产节奏DNA */
-  getRhythmDna: () =>
-    api.post<{ code: number; data: RhythmDnaResponse }>('/intelligence/rhythm-dna', {}),
+  getRhythmDna: async () =>
+    unwrapApiData<RhythmDnaResponse>(await api.post('/intelligence/rhythm-dna', {}), '智能服务请求失败'),
 
   /** ⑦ 智能异常自愈（诊断） */
-  runSelfHealing: () =>
-    api.post<{ code: number; data: SelfHealingResponse }>('/intelligence/self-healing', {}),
+  runSelfHealing: async () =>
+    unwrapApiData<SelfHealingResponse>(await api.post('/intelligence/self-healing', {}), '智能服务请求失败'),
 
   /** ⑦b 智能异常自愈 — 一键修复 */
-  runSelfHealingRepair: () =>
-    api.post<{ code: number; data: SelfHealingResponse }>('/intelligence/self-healing/repair', {}),
+  runSelfHealingRepair: async () =>
+    unwrapApiData<SelfHealingResponse>(await api.post('/intelligence/self-healing/repair', {}), '智能服务请求失败'),
 
   /** Agent例会 — 召开 */
-  holdAgentMeeting: (topic: string, meetingType?: string) =>
-    api.post<{ code: number; data: AgentMeetingRecord }>('/intelligence/meeting/hold', { topic, meetingType: meetingType ?? 'decision_debate' }),
+  holdAgentMeeting: async (topic: string, meetingType?: string) =>
+    unwrapApiData<AgentMeetingRecord>(await api.post('/intelligence/meeting/hold', { topic, meetingType: meetingType ?? 'decision_debate' }), '智能服务请求失败'),
 
   /** Agent例会 — 历史列表 */
-  listAgentMeetings: (limit = 10) =>
-    api.get<{ code: number; data: AgentMeetingRecord[] }>(`/intelligence/meeting/list?limit=${limit}`),
+  listAgentMeetings: async (limit = 10) =>
+    unwrapApiData<AgentMeetingRecord[]>(await api.get(`/intelligence/meeting/list?limit=${limit}`), '智能服务请求失败'),
 
   /** ⑧ 小程序智能提醒 */
-  getSmartNotifications: () =>
-    api.post<{ code: number; data: SmartNotificationResponse }>('/intelligence/smart-notification', {}),
+  getSmartNotifications: async () =>
+    unwrapApiData<SmartNotificationResponse>(await api.post('/intelligence/smart-notification', {}), '智能服务请求失败'),
 
   /** ⑨ AI决策助手 */
-  nlQuery: (payload: { question: string }) =>
-    api.post<{ code: number; data: NlQueryResponse }>('/intelligence/nl-query', payload),
+  nlQuery: async (payload: { question: string }) =>
+    unwrapApiData<NlQueryResponse>(await api.post('/intelligence/nl-query', payload), '智能服务请求失败'),
 
   /** ⑩ 供应链健康指数 */
-  getHealthIndex: () =>
-    api.post<{ code: number; data: HealthIndexResponse }>('/intelligence/health-index', {}),
+  getHealthIndex: async () =>
+    unwrapApiData<HealthIndexResponse>(await api.post('/intelligence/health-index', {}), '智能服务请求失败'),
 
   /** ⑪ 自动排产建议 */
-  suggestScheduling: (payload: { styleNo: string; quantity: number; deadline: string; productCategory?: string }) =>
-    api.post<{ code: number; data: SchedulingSuggestionResponse }>('/intelligence/scheduling-suggestion', payload),
+  suggestScheduling: async (payload: { styleNo: string; quantity: number; deadline: string; productCategory?: string }) =>
+    unwrapApiData<SchedulingSuggestionResponse>(await api.post('/intelligence/scheduling-suggestion', payload), '智能服务请求失败'),
 
   /** ⑪-2 采纳排产建议（D-754 P4）：写回订单工厂/计划起止并留采纳痕迹 */
-  adoptScheduling: (payload: {
+  adoptScheduling: async (payload: {
     orderId: string;
     factoryName: string;
     factoryId?: string;
@@ -437,75 +437,75 @@ export const intelligenceApi = {
     matchScore?: number;
     reason?: string;
   }) =>
-    api.post<{ code: number; data: SchedulingAdoptionResult }>('/intelligence/scheduling-suggestion/adopt', payload),
+    unwrapApiData<SchedulingAdoptionResult>(await api.post('/intelligence/scheduling-suggestion/adopt', payload), '智能服务请求失败'),
 
   /** ⑫ 质量缺陷热力图 */
-  getDefectHeatmap: () =>
-    api.post<{ code: number; data: DefectHeatmapResponse }>('/intelligence/defect-heatmap', {}),
+  getDefectHeatmap: async () =>
+    unwrapApiData<DefectHeatmapResponse>(await api.post('/intelligence/defect-heatmap', {}), '智能服务请求失败'),
 
   /** ⑬ 财务审核智能分析 */
-  getFinanceAudit: () =>
-    api.post<{ code: number; data: FinanceAuditResponse }>('/intelligence/finance-audit', {}),
+  getFinanceAudit: async () =>
+    unwrapApiData<FinanceAuditResponse>(await api.post('/intelligence/finance-audit', {}), '智能服务请求失败'),
 
   /** ⑭ 产能缺口分析（下单页详情抽屉用） */
-  getCapacityGap: () =>
-    api.get<{ code: number; data: CapacityGapResponse }>('/intelligence/capacity-gap'),
+  getCapacityGap: async () =>
+    unwrapApiData<CapacityGapResponse>(await api.get('/intelligence/capacity-gap'), '智能服务请求失败'),
 
   // ── 嵌入式智能 API ──
 
   /** 次品溯源（按订单聚合） */
-  getDefectTrace: (orderId: string) =>
-    api.get<{ code: number; data: DefectTraceResponse }>('/intelligence/defect-trace', { params: { orderId } }),
+  getDefectTrace: async (orderId: string) =>
+    unwrapApiData<DefectTraceResponse>(await api.get('/intelligence/defect-trace', { params: { orderId } }), '智能服务请求失败'),
 
   /** 款式报价建议（按款号聚合） */
-  getStyleQuoteSuggestion: (styleNo: string) =>
-    api.get<{ code: number; data: StyleQuoteSuggestionResponse }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
+  getStyleQuoteSuggestion: async (styleNo: string) =>
+    unwrapApiData<StyleQuoteSuggestionResponse>(await api.get('/intelligence/style-quote-suggestion', { params: { styleNo } }), '智能服务请求失败'),
 
   /** 款式智能档案卡（按款式聚合开发/生产/库存/财务） */
-  getStyleIntelligenceProfile: (params: { styleId?: string | number; styleNo?: string }) =>
-    api.get<{ code: number; data: StyleIntelligenceProfileResponse }>('/intelligence/style-profile', { params }),
+  getStyleIntelligenceProfile: async (params: { styleId?: string | number; styleNo?: string }) =>
+    unwrapApiData<StyleIntelligenceProfileResponse>(await api.get('/intelligence/style-profile', { params }), '智能服务请求失败'),
 
   /** 款式制作难度 AI 增强分析（用户主动触发，含图像分析） */
-  analyzeStyleDifficulty: (params: { styleId: number | string; coverUrl?: string }) =>
-    api.post<{ code: number; data: DifficultyAssessment }>('/intelligence/style-difficulty', params),
+  analyzeStyleDifficulty: async (params: { styleId: number | string; coverUrl?: string }) =>
+    unwrapApiData<DifficultyAssessment>(await api.post('/intelligence/style-difficulty', params), '智能服务请求失败'),
 
   /** 工序单价 AI 提示 */
-  getProcessPriceHint: (processName: string, standardTime?: number) =>
-    api.get<{ code: number; data: ProcessPriceHintResponse }>('/intelligence/process-price-hint', {
+  getProcessPriceHint: async (processName: string, standardTime?: number) =>
+    unwrapApiData<ProcessPriceHintResponse>(await api.get('/intelligence/process-price-hint', {
       params: { processName, ...(standardTime != null ? { standardTime } : {}) },
-    }),
+    }), '智能服务请求失败'),
 
   /** 工序知识库 */
-  getProcessKnowledge: (keyword?: string, category?: string, difficultyLevel?: string) =>
-    api.get<{ code: number; data: ProcessKnowledgeResponse }>('/intelligence/process-knowledge', {
+  getProcessKnowledge: async (keyword?: string, category?: string, difficultyLevel?: string) =>
+    unwrapApiData<ProcessKnowledgeResponse>(await api.get('/intelligence/process-knowledge', {
       params: {
         ...(keyword ? { keyword } : {}),
         ...(category ? { category } : {}),
         ...(difficultyLevel ? { difficultyLevel } : {}),
       },
-    }),
+    }), '智能服务请求失败'),
 
   /** 面料缺口预测 */
-  getMaterialShortage: () =>
-    api.get<{ code: number; data: MaterialShortageResult }>('/intelligence/material-shortage'),
+  getMaterialShortage: async () =>
+    unwrapApiData<MaterialShortageResult>(await api.get('/intelligence/material-shortage'), '智能服务请求失败'),
 
   /** 工厂工序瓶颈分析 — 基于真实扫码数据 */
-  getFactoryBottleneck: () =>
-    api.get<{ code: number; data: FactoryBottleneckItem[] }>('/intelligence/factory-bottleneck'),
+  getFactoryBottleneck: async () =>
+    unwrapApiData<FactoryBottleneckItem[]>(await api.get('/intelligence/factory-bottleneck'), '智能服务请求失败'),
 
   /** 环节瓶颈热力看板 — 工厂×环节积压量 + 按在岗人力折算的消化天数（D-754 P2） */
-  getStageBottleneckHeatmap: () =>
-    api.get<{ code: number; data: StageBottleneckHeatmapResponse }>('/intelligence/advanced/stage-bottleneck/heatmap'),
+  getStageBottleneckHeatmap: async () =>
+    unwrapApiData<StageBottleneckHeatmapResponse>(await api.get('/intelligence/advanced/stage-bottleneck/heatmap'), '智能服务请求失败'),
 
   /** 最近智能建议反馈原因 */
-  listFeedbackReasons: (limit = 20) =>
-    api.get<{ code: number; data: FeedbackReasonRecord[] }>('/intelligence/feedback-reason/list', {
+  listFeedbackReasons: async (limit = 20) =>
+    unwrapApiData<FeedbackReasonRecord[]>(await api.get('/intelligence/feedback-reason/list', {
       params: { limit },
-    }),
+    }), '智能服务请求失败'),
 
   /** AI顾问状态（是否已配置 DEEPSEEK_API_KEY） */
-  getAiAdvisorStatus: () =>
-    api.get<{ code: number; data: { enabled: boolean; message: string } }>('/intelligence/ai-advisor/status'),
+  getAiAdvisorStatus: async () =>
+    unwrapApiData<{ enabled: boolean; message: string }>(await api.get('/intelligence/ai-advisor/status'), '智能服务请求失败'),
 
   /** AI顾问问答 — 优先本地规则引擎，无法回答时走 DeepSeek */
   /**
@@ -515,24 +515,24 @@ export const intelligenceApi = {
    * 后端直查判定是「包含关键词」的松散正则 —— 只看原话才能避免
    * 「停在生产管理页 → 任何问题（连订单号）都被异常检测直查劫持」。
    */
-  aiAdvisorChat: (question: string, rawQuestion?: string) =>
-    api.post<{ code: number; data: {
+  aiAdvisorChat: async (question: string, rawQuestion?: string) =>
+    unwrapApiData<{
       answer: string;
       displayAnswer?: string;
       source: 'local' | 'ai' | 'none' | 'error';
       commandId?: string;
       suggestions?: string[];
       cards?: Array<Record<string, unknown>>;
-    } }>(
+    }>(await api.post(
       '/intelligence/ai-advisor/chat',
       { question, rawQuestion },
       { timeout: 90000 },
-    ),
+    ), '智能服务请求失败'),
 
-  getAiAgentTraceDetail: (commandId: string) =>
-    api.get<{ code: number; data: { commandId: string; logs: Array<Record<string, unknown>>; count: number } }>(`/intelligence/ai-agent/traces/${commandId}`),
+  getAiAgentTraceDetail: async (commandId: string) =>
+    unwrapApiData<{ commandId: string; logs: Array<Record<string, unknown>>; count: number }>(await api.get(`/intelligence/ai-agent/traces/${commandId}`), '智能服务请求失败'),
 
-  getAiAgentRecentTraces: (params?: {
+  getAiAgentRecentTraces: async (params?: {
     limit?: number;
     toolName?: string;
     status?: string;
@@ -540,29 +540,29 @@ export const intelligenceApi = {
     startTime?: string;
     endTime?: string;
   }) =>
-    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/ai-agent/traces/recent', { params }),
+    unwrapApiData<Array<Record<string, unknown>>>(await api.get('/intelligence/ai-agent/traces/recent', { params }), '智能服务请求失败'),
 
-  getAgentActivityList: () =>
-    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/agents'),
+  getAgentActivityList: async () =>
+    unwrapApiData<Array<Record<string, unknown>>>(await api.get('/intelligence/agent-activity/agents'), '智能服务请求失败'),
 
-  getAgentTrajectory: (agentId: string, startTime?: string, endTime?: string) =>
-    api.get<{ code: number; data: Array<Record<string, unknown>> }>(`/intelligence/agent-activity/agents/${agentId}/trajectory`, {
+  getAgentTrajectory: async (agentId: string, startTime?: string, endTime?: string) =>
+    unwrapApiData<Array<Record<string, unknown>>>(await api.get(`/intelligence/agent-activity/agents/${agentId}/trajectory`, {
       params: { startTime, endTime },
-    }),
+    }), '智能服务请求失败'),
 
-  getAgentDepartmentStats: () =>
-    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/departments'),
+  getAgentDepartmentStats: async () =>
+    unwrapApiData<Array<Record<string, unknown>>>(await api.get('/intelligence/agent-activity/departments'), '智能服务请求失败'),
 
-  getAgentAlerts: () =>
-    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/alerts'),
+  getAgentAlerts: async () =>
+    unwrapApiData<Array<Record<string, unknown>>>(await api.get('/intelligence/agent-activity/alerts'), '智能服务请求失败'),
 
   /** SafeAdvisor — RAG 增强问答（知识库召回 + DeepSeek 推理，精度更高） */
-  safeAdvisorAnalyze: (question: string) =>
-    api.post<{ answer: string; source: string }>(
+  safeAdvisorAnalyze: async (question: string) =>
+    unwrapApiData<{ answer: string; source: string }>(await api.post(
       '/intelligence/safe-advisor/analyze',
       { question },
       { timeout: 90000 },
-    ),
+    ), '智能服务请求失败'),
 
   /** AI顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
   aiAdvisorChatStream: (
@@ -646,75 +646,75 @@ export const intelligenceApi = {
   // ── 第五批：新建订单智能辅助 ──
 
   /** 交货期智能建议 */
-  getDeliveryDateSuggestion: (factoryName?: string, orderQuantity?: number) =>
-    api.get<{ code: number; data: DeliveryDateSuggestionResponse }>(
+  getDeliveryDateSuggestion: async (factoryName?: string, orderQuantity?: number) =>
+    unwrapApiData<DeliveryDateSuggestionResponse>(await api.get(
       '/intelligence/delivery-date-suggestion',
       { params: { ...(factoryName ? { factoryName } : {}), ...(orderQuantity != null ? { orderQuantity } : {}) } },
-    ),
+    ), '智能服务请求失败'),
 
   /** 工序AI补全 */
-  getProcessTemplate: (category?: string, styleId?: string) =>
-    api.get<{ code: number; data: ProcessTemplateResponse }>(
+  getProcessTemplate: async (category?: string, styleId?: string) =>
+    unwrapApiData<ProcessTemplateResponse>(await api.get(
       '/intelligence/process-template',
       { params: { ...(category ? { category } : {}), ...(styleId ? { styleId } : {}) } },
-    ),
+    ), '智能服务请求失败'),
 
   // ── 第六批：MindPush 主动推送中枢 + OrderTrack 客户进度门户 ──
 
   /** 获取推送规则配置和最近日志 */
-  getMindPushStatus: () =>
-    api.get<{ code: number; data: MindPushStatusData }>('/intelligence/mind-push/status'),
+  getMindPushStatus: async () =>
+    unwrapApiData<MindPushStatusData>(await api.get('/intelligence/mind-push/status'), '智能服务请求失败'),
 
   /** 保存推送规则（启停/阈值） */
-  saveMindPushRule: (rule: MindPushRuleDTO) =>
-    api.post<{ code: number; data: string }>('/intelligence/mind-push/rule', rule),
+  saveMindPushRule: async (rule: MindPushRuleDTO) =>
+    unwrapApiData<string>(await api.post('/intelligence/mind-push/rule', rule), '智能服务请求失败'),
 
   /** 手动触发推送检测，返回触发条数 */
-  runMindPushCheck: () =>
-    api.post<{ code: number; data: number }>('/intelligence/mind-push/check', {}),
+  runMindPushCheck: async () =>
+    unwrapApiData<number>(await api.post('/intelligence/mind-push/check', {}), '智能服务请求失败'),
 
   /** 保存推送时段（所有规则统一时段） */
-  savePushTime: (notifyTimeStart: string, notifyTimeEnd: string) =>
-    api.post<{ code: number; data: string }>('/intelligence/mind-push/push-time', { notifyTimeStart, notifyTimeEnd }),
+  savePushTime: async (notifyTimeStart: string, notifyTimeEnd: string) =>
+    unwrapApiData<string>(await api.post('/intelligence/mind-push/push-time', { notifyTimeStart, notifyTimeEnd }), '智能服务请求失败'),
 
   /** 生成订单分享 token（固定1小时有效） */
-  generateShareToken: (orderId: string) =>
-    api.post<{ code: number; data: string }>('/intelligence/order-track/generate-token', { orderId }),
+  generateShareToken: async (orderId: string) =>
+    unwrapApiData<string>(await api.post('/intelligence/order-track/generate-token', { orderId }), '智能服务请求失败'),
 
   /** 撤销订单分享 token */
-  revokeShareToken: (orderId: string) =>
-    api.delete<{ code: number; data: string }>(`/intelligence/order-track/revoke/${orderId}`),
+  revokeShareToken: async (orderId: string) =>
+    unwrapApiData<string>(await api.delete(`/intelligence/order-track/revoke/${orderId}`), '智能服务请求失败'),
 
   // ── 第七批：款式报价 + 供应商评分卡 + 实时成本追踪 ──
 
   /** 供应商智能评分卡（近3个月工厂履约/质量得分） */
-  getSupplierScorecard: () =>
-    api.get<{ code: number; data: SupplierScorecardResponse }>('/intelligence/supplier-scorecard'),
+  getSupplierScorecard: async () =>
+    unwrapApiData<SupplierScorecardResponse>(await api.get('/intelligence/supplier-scorecard'), '智能服务请求失败'),
 
   /** 实时成本追踪（订单工序成本进度与利润预估） */
-  getLiveCostTracker: (orderId: string) =>
-    api.get<{ code: number; data: LiveCostResponse }>('/intelligence/live-cost', { params: { orderId } }),
+  getLiveCostTracker: async (orderId: string) =>
+    unwrapApiData<LiveCostResponse>(await api.get('/intelligence/live-cost', { params: { orderId } }), '智能服务请求失败'),
 
   /** 销量预测（基于历史入库数据的WMA预测） */
-  getSalesForecast: (styleNo: string, horizonMonths = 1) =>
-    api.get<{ code: number; data: import('./intelligenceTypes').SalesForecastResponse }>('/intelligence/sales-forecast', {
+  getSalesForecast: async (styleNo: string, horizonMonths = 1) =>
+    unwrapApiData<import('./intelligenceTypes').SalesForecastResponse>(await api.get('/intelligence/sales-forecast', {
       params: { styleNo, horizonMonths },
-    }),
+    }), '智能服务请求失败'),
 
   /** 尺码曲线预测（基于历史入库数据的尺码分布） */
-  getSizeCurve: (styleNo: string) =>
-    api.get<{ code: number; data: import('./intelligenceTypes').SizeCurveResponse }>('/intelligence/size-curve', {
+  getSizeCurve: async (styleNo: string) =>
+    unwrapApiData<import('./intelligenceTypes').SizeCurveResponse>(await api.get('/intelligence/size-curve', {
       params: { styleNo },
-    }),
+    }), '智能服务请求失败'),
 
   // ── 专业报告 ──
 
   /** 获取专业运营报告 JSON 摘要（卡片预览，与 Excel 同源数据） */
-  getProfessionalReportPreview: (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) =>
-    api.get<{ code: number; data: import('@/components/common/GlobalAiAssistant/types').ReportPreviewData }>(
+  getProfessionalReportPreview: async (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) =>
+    unwrapApiData<import('@/components/common/GlobalAiAssistant/types').ReportPreviewData>(await api.get(
       '/intelligence/professional-report/preview',
       { params: date ? { type, date } : { type } },
-    ),
+    ), '智能服务请求失败'),
 
   /** 下载专业运营报告（Excel） */
   downloadProfessionalReport: async (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) => {
@@ -814,14 +814,14 @@ export const intelligenceApi = {
   hyperAdvisorFeedback: async (params: {
     sessionId: string; traceId: string; query: string; advice: string; score: number; feedbackText?: string;
   }): Promise<void> => {
-    await api.post('/hyper-advisor/feedback', params);
+    await unwrapApiData<unknown>(await api.post('/hyper-advisor/feedback', params), '智能服务请求失败');
   },
 
   /** P0: AI Agent 对话消息显式反馈（👍/👎），写入 PRM 表用于自适应工具权重 */
   submitAiMessageFeedback: async (params: {
     sessionId: string; commandId?: string; score: number; userQuery?: string; aiContent?: string;
   }): Promise<void> => {
-    await api.post('/intelligence/feedback-reason/ai-message-feedback', params);
+    await unwrapApiData<unknown>(await api.post('/intelligence/feedback-reason/ai-message-feedback', params), '智能服务请求失败');
   },
 
   /** 超级顾问：加载历史聊天记录（按 createTime 升序） */
@@ -831,87 +831,87 @@ export const intelligenceApi = {
   },
 
   /** 小云全域待办任务聚合：裁剪/质检/返修/物料/逾期订单/异常/样衣/工资/对账/报销 */
-  getMyPendingTasks: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my', { retry: 0 } as ApiRequestConfig),
+  getMyPendingTasks: async () =>
+    unwrapApiData<import('./intelligenceTypes').PendingTaskDTO[]>(await api.get('/intelligence/pending-tasks/my', { retry: 0 } as ApiRequestConfig), '智能服务请求失败'),
 
-  getMyPendingTaskSummary: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary', { retry: 0 } as ApiRequestConfig),
+  getMyPendingTaskSummary: async () =>
+    unwrapApiData<import('./intelligenceTypes').PendingTaskSummaryDTO>(await api.get('/intelligence/pending-tasks/summary', { retry: 0 } as ApiRequestConfig), '智能服务请求失败'),
 
-  createTask: (data: Record<string, unknown>) =>
-    api.post<{ code: number; data: Record<string, unknown> }>('/intelligence/task-center/tasks', data),
+  createTask: async (data: Record<string, unknown>) =>
+    unwrapApiData<Record<string, unknown>>(await api.post('/intelligence/task-center/tasks', data), '智能服务请求失败'),
 
-  updateTask: (taskId: string, data: Record<string, unknown>) =>
-    api.put<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}`, data),
+  updateTask: async (taskId: string, data: Record<string, unknown>) =>
+    unwrapApiData<Record<string, unknown>>(await api.put(`/intelligence/task-center/tasks/${taskId}`, data), '智能服务请求失败'),
 
   deleteTask: (taskId: string) =>
     api.delete<{ code: number }>(`/intelligence/task-center/tasks/${taskId}`),
 
-  claimTask: (taskId: string) =>
-    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/claim`),
+  claimTask: async (taskId: string) =>
+    unwrapApiData<Record<string, unknown>>(await api.post(`/intelligence/task-center/tasks/${taskId}/claim`), '智能服务请求失败'),
 
-  getMyTasks: (status?: string, priority?: string, module?: string, page?: number, size?: number, includeCompleted?: boolean) =>
-    api.get<{ code: number; data: { rows: unknown[]; total: number } }>('/intelligence/task-center/my-tasks', {
+  getMyTasks: async (status?: string, priority?: string, module?: string, page?: number, size?: number, includeCompleted?: boolean) =>
+    unwrapApiData<{ rows: unknown[]; total: number }>(await api.get('/intelligence/task-center/my-tasks', {
       params: { status, priority, module, includeCompleted, page: page ?? 1, size: size ?? 50 }
-    }),
+    }), '智能服务请求失败'),
 
-  updateTaskStatus: (taskId: string, status: string, note?: string) =>
-    api.put<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/status`, {
+  updateTaskStatus: async (taskId: string, status: string, note?: string) =>
+    unwrapApiData<Record<string, unknown>>(await api.put(`/intelligence/task-center/tasks/${taskId}/status`, {
       status, note: note ?? ''
-    }),
+    }), '智能服务请求失败'),
 
   // 订单关联和监控 API
-  linkTaskToOrder: (taskId: string, orderNo: string) =>
-    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/link-order`, { orderNo }),
+  linkTaskToOrder: async (taskId: string, orderNo: string) =>
+    unwrapApiData<Record<string, unknown>>(await api.post(`/intelligence/task-center/tasks/${taskId}/link-order`, { orderNo }), '智能服务请求失败'),
 
-  refreshTaskOrderStatus: (taskId: string) =>
-    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/refresh-order-status`),
+  refreshTaskOrderStatus: async (taskId: string) =>
+    unwrapApiData<Record<string, unknown>>(await api.post(`/intelligence/task-center/tasks/${taskId}/refresh-order-status`), '智能服务请求失败'),
 
-  getTasksByOrderNo: (orderNo: string) =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>(`/intelligence/task-center/tasks/by-order/${orderNo}`),
+  getTasksByOrderNo: async (orderNo: string) =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get(`/intelligence/task-center/tasks/by-order/${orderNo}`), '智能服务请求失败'),
 
-  scanOrphanData: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataScanResultDTO }>('/intelligence/orphan-data/scan'),
+  scanOrphanData: async () =>
+    unwrapApiData<import('./intelligenceTypes').OrphanDataScanResultDTO>(await api.get('/intelligence/orphan-data/scan'), '智能服务请求失败'),
 
-  listOrphanData: (tableName: string, page = 1, pageSize = 20) =>
-    api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataItemDTO[] }>('/intelligence/orphan-data/list', {
+  listOrphanData: async (tableName: string, page = 1, pageSize = 20) =>
+    unwrapApiData<import('./intelligenceTypes').OrphanDataItemDTO[]>(await api.get('/intelligence/orphan-data/list', {
       params: { tableName, page, pageSize },
-    }),
+    }), '智能服务请求失败'),
 
-  deleteOrphanData: (tableName: string, ids: string[]) =>
-    api.post<{ code: number; data: number }>('/intelligence/orphan-data/delete', { tableName, ids }),
+  deleteOrphanData: async (tableName: string, ids: string[]) =>
+    unwrapApiData<number>(await api.post('/intelligence/orphan-data/delete', { tableName, ids }), '智能服务请求失败'),
 
-  platformSuperDashboard: (days = 30): Promise<Record<string, unknown>> =>
-    api.get<{ code: number; data: Record<string, unknown> }>('/intelligence/platform/super-dashboard', { params: { days } }).then((r) => r?.data ?? {}),
+  platformSuperDashboard: async (days = 30): Promise<Record<string, unknown>> =>
+    unwrapApiData<Record<string, unknown>>(await api.get('/intelligence/platform/super-dashboard', { params: { days } }), '智能服务请求失败') ?? {},
 
-  platformToolPerformance: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/tool-performance', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
+  platformToolPerformance: async (days = 30): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/platform/tool-performance', { params: { days } }), '智能服务请求失败') ?? [],
 
-  platformDecisionAdoption: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/decision-adoption', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
+  platformDecisionAdoption: async (days = 30): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/platform/decision-adoption', { params: { days } }), '智能服务请求失败') ?? [],
 
-  platformPatrolMttr: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/patrol-mttr', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
+  platformPatrolMttr: async (days = 30): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/platform/patrol-mttr', { params: { days } }), '智能服务请求失败') ?? [],
 
-  evolutionPending: (): Promise<Record<string, unknown>[]> =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/evolution/pending').then((r) => Array.isArray(r?.data) ? r.data : []),
+  evolutionPending: async (): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/evolution/pending'), '智能服务请求失败') ?? [],
 
-  evolutionHistory: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/evolution/history', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
+  evolutionHistory: async (days = 30): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/evolution/history', { params: { days } }), '智能服务请求失败') ?? [],
 
-  evolutionActiveOverrides: (): Promise<Record<string, string>> =>
-    api.get<{ code: number; data: Record<string, string> }>('/intelligence/evolution/active-overrides').then((r) => r?.data ?? {}),
+  evolutionActiveOverrides: async (): Promise<Record<string, string>> =>
+    unwrapApiData<Record<string, string>>(await api.get('/intelligence/evolution/active-overrides'), '智能服务请求失败') ?? {},
 
-  evolutionApprove: (proposalId: string): Promise<boolean> =>
-    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/approve/${proposalId}`).then((r) => r?.data === true),
+  evolutionApprove: async (proposalId: string): Promise<boolean> =>
+    (await unwrapApiData<boolean>(await api.post(`/intelligence/evolution/approve/${proposalId}`), '智能服务请求失败')) === true,
 
-  evolutionRollback: (proposalId: string): Promise<boolean> =>
-    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/rollback/${proposalId}`).then((r) => r?.data === true),
+  evolutionRollback: async (proposalId: string): Promise<boolean> =>
+    (await unwrapApiData<boolean>(await api.post(`/intelligence/evolution/rollback/${proposalId}`), '智能服务请求失败')) === true,
 
-  evolutionTest: (proposalId: string): Promise<Record<string, unknown>> =>
-    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/evolution/test/${proposalId}`).then((r) => r?.data ?? {}),
+  evolutionTest: async (proposalId: string): Promise<Record<string, unknown>> =>
+    unwrapApiData<Record<string, unknown>>(await api.post(`/intelligence/evolution/test/${proposalId}`), '智能服务请求失败') ?? {},
 
-  evolutionDeploy: (proposalId: string): Promise<boolean> =>
-    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/deploy/${proposalId}`).then((r) => r?.data === true),
+  evolutionDeploy: async (proposalId: string): Promise<boolean> =>
+    (await unwrapApiData<boolean>(await api.post(`/intelligence/evolution/deploy/${proposalId}`), '智能服务请求失败')) === true,
 
   // ── 命令执行引擎 ──
 
@@ -1017,7 +1017,7 @@ export const intelligenceApi = {
   },
 
   submitGraphFeedback: async (executionId: string, score: number, note?: string): Promise<void> => {
-    await api.post('/intelligence/multi-agent-graph/feedback', { executionId, score, note });
+    await unwrapApiData<unknown>(await api.post('/intelligence/multi-agent-graph/feedback', { executionId, score, note }), '智能服务请求失败');
   },
 
   getGraphAbStats: async (days = 30): Promise<ABSceneStat[]> => {
@@ -1077,11 +1077,11 @@ export const intelligenceApi = {
   },
 
   approvePatrolAction: async (actionId: number, remark?: string): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/approve`, { remark: remark ?? '' });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/approve`, { remark: remark ?? '' }), '智能服务请求失败');
   },
 
   rejectPatrolAction: async (actionId: number, remark?: string): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' }), '智能服务请求失败');
   },
 
   getPendingPatrolActions: async (): Promise<PatrolAction[]> => {
@@ -1095,114 +1095,94 @@ export const intelligenceApi = {
   },
 
   executePatrolAction: async (actionId: number, result?: string): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/execute`, { result: result ?? '' });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/execute`, { result: result ?? '' }), '智能服务请求失败');
   },
 
   cancelPatrolAction: async (actionId: number, reason?: string): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/cancel`, { reason: reason ?? '' });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/cancel`, { reason: reason ?? '' }), '智能服务请求失败');
   },
 
   closePatrolAction: async (actionId: number): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/close`);
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/close`), '智能服务请求失败');
   },
 
   failPatrolAction: async (actionId: number, reason?: string): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/fail`, { reason: reason ?? '' });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/fail`, { reason: reason ?? '' }), '智能服务请求失败');
   },
 
   submitPatrolFeedback: async (actionId: number, feedback: string, rating: number): Promise<void> => {
-    await api.post(`/intelligence/patrol/actions/${actionId}/feedback`, { feedback, rating: String(rating) });
+    await unwrapApiData<unknown>(await api.post(`/intelligence/patrol/actions/${actionId}/feedback`, { feedback, rating: String(rating) }), '智能服务请求失败');
   },
 
   // ===== P1升级: AI质量评估 =====
 
   /** 运行Golden Test Dataset回归测试 */
-  runGoldenEval: () =>
-    api.post<{ status: string; total: number; passed: number; avgScore: number; results: Array<Record<string, unknown>> }>(
+  runGoldenEval: async () =>
+    unwrapApiData<{ status: string; total: number; passed: number; avgScore: number; results: Array<Record<string, unknown>> }>(await api.post(
       '/intelligence/golden-eval',
-    ),
+    ), '智能服务请求失败'),
 
   // ===== P2升级: 安全护栏管理 =====
 
   /** 查看安全规则配置 */
-  getGuardrails: () =>
-    api.get<Record<string, unknown>>('/intelligence/guardrails'),
+  getGuardrails: async () =>
+    unwrapApiData<Record<string, unknown>>(await api.get('/intelligence/guardrails'), '智能服务请求失败'),
 
   /** 热更新安全规则 */
-  reloadGuardrails: () =>
-    api.post<{ status: string; message: string }>('/intelligence/guardrails/reload'),
+  reloadGuardrails: async () =>
+    unwrapApiData<{ status: string; message: string }>(await api.post('/intelligence/guardrails/reload'), '智能服务请求失败'),
 
   // ── 仪表盘卡片专用预测接口 ──
 
-  getDailyBriefing: (): Promise<DailyBriefing> =>
-    api
-      .get<{ code: number; data: DailyBriefing }>('/dashboard/briefing/today')
-      .then((r) => (r?.data ?? ({} as DailyBriefing))),
+  getDailyBriefing: async (): Promise<DailyBriefing> =>
+    unwrapApiData<DailyBriefing>(await api.get('/dashboard/briefing/today'), '智能服务请求失败') ?? ({} as DailyBriefing),
 
-  getDeliveryRisks: (topN = 10): Promise<PredictionDeliveryRiskItem[]> =>
-    api
-      .get<{ code: number; data: PredictionDeliveryRiskItem[] }>(
+  getDeliveryRisks: async (topN = 10): Promise<PredictionDeliveryRiskItem[]> =>
+    unwrapApiData<PredictionDeliveryRiskItem[]>(await api.get(
         '/intelligence/prediction/delivery-risks',
         { params: { topN } },
-      )
-      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+      ), '智能服务请求失败') ?? [],
 
-  getRestockSuggestions: (topN = 10): Promise<PredictionRestockSuggestionItem[]> =>
-    api
-      .get<{ code: number; data: PredictionRestockSuggestionItem[] }>(
+  getRestockSuggestions: async (topN = 10): Promise<PredictionRestockSuggestionItem[]> =>
+    unwrapApiData<PredictionRestockSuggestionItem[]>(await api.get(
         '/intelligence/prediction/restock-suggestions',
         { params: { topN } },
-      )
-      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+      ), '智能服务请求失败') ?? [],
 
-  generatePurchaseRequest: (payload: GeneratePurchaseRequestPayload): Promise<GeneratePurchaseRequestResult> =>
-    api
-      .post<{ code: number; data: GeneratePurchaseRequestResult }>(
+  generatePurchaseRequest: async (payload: GeneratePurchaseRequestPayload): Promise<GeneratePurchaseRequestResult> =>
+    unwrapApiData<GeneratePurchaseRequestResult>(await api.post(
         '/intelligence/prediction/purchase-request/generate',
         payload,
-      )
-      .then((r) => (r?.data as GeneratePurchaseRequestResult) ?? ({} as GeneratePurchaseRequestResult)),
+      ), '智能服务请求失败') ?? ({} as GeneratePurchaseRequestResult),
 
-  getBackgroundActiveTasks: (limit = 20): Promise<AgentBackgroundTaskDTO[]> =>
-    api
-      .get<{ code: number; data: AgentBackgroundTaskDTO[] }>(
+  getBackgroundActiveTasks: async (limit = 20): Promise<AgentBackgroundTaskDTO[]> =>
+    unwrapApiData<AgentBackgroundTaskDTO[]>(await api.get(
         '/intelligence/background-task/active',
         { params: { limit } },
-      )
-      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+      ), '智能服务请求失败') ?? [],
 
-  getBackgroundTaskList: (pageNum = 1, pageSize = 20): Promise<BackgroundTaskListResponse> =>
-    api
-      .get<{ code: number; data: BackgroundTaskListResponse }>(
+  getBackgroundTaskList: async (pageNum = 1, pageSize = 20): Promise<BackgroundTaskListResponse> =>
+    unwrapApiData<BackgroundTaskListResponse>(await api.get(
         '/intelligence/background-task/list',
         { params: { pageNum, pageSize } },
-      )
-      .then((r) => (r?.data ?? { list: [], total: 0, pageNum: 1, pageSize: 20 })),
+      ), '智能服务请求失败') ?? { list: [], total: 0, pageNum: 1, pageSize: 20 },
 
-  getBackgroundTaskDetail: (taskId: string): Promise<AgentBackgroundTaskDTO | null> =>
-    api
-      .get<{ code: number; data: AgentBackgroundTaskDTO }>(
+  getBackgroundTaskDetail: async (taskId: string): Promise<AgentBackgroundTaskDTO | null> =>
+    unwrapApiData<AgentBackgroundTaskDTO>(await api.get(
         `/intelligence/background-task/${taskId}`,
-      )
-      .then((r) => (r?.data ?? null)),
+      ), '智能服务请求失败') ?? null,
 
-  cancelBackgroundTask: (taskId: string): Promise<boolean> =>
-    api
-      .post<{ code: number; data: boolean }>(
+  cancelBackgroundTask: async (taskId: string): Promise<boolean> =>
+    unwrapApiData<boolean>(await api.post(
         `/intelligence/background-task/${taskId}/cancel`,
-      )
-      .then((r) => (r?.data ?? false)),
+      ), '智能服务请求失败') ?? false,
 
   // ── P1-3: 小云主动洞察（Redis 未读列表 + 标记已读） ──
-  getProactiveInsights: (): Promise<ProactiveInsightItem[]> =>
-    api
-      .get<ApiResult<ProactiveInsightItem[]>>('/intelligence/insights', { retry: 0 } as ApiRequestConfig)
-      .then((r) => r?.data ?? []),
+  getProactiveInsights: async (): Promise<ProactiveInsightItem[]> =>
+    unwrapApiData<ProactiveInsightItem[]>(await api.get('/intelligence/insights', { retry: 0 } as ApiRequestConfig), '智能服务请求失败') ?? [],
 
-  markProactiveInsightRead: (id: string): Promise<boolean> =>
-    api
-      .post<ApiResult<null>>(`/intelligence/insights/${id}/read`)
-      .then((r) => r?.code === 200 || r?.code === 0),
+  markProactiveInsightRead: async (id: string): Promise<boolean> =>
+    { await unwrapApiData<null>(await api.post(`/intelligence/insights/${id}/read`), '智能服务请求失败'); return true; },
 
 };
 
