@@ -84,6 +84,17 @@ public class MaterialRoll implements Serializable {
     /** 发料操作人姓名 */
     private String issuedByName;
 
+    /**
+     * D-826：关联裁剪用料台账行ID（t_cutting_material_usage.id，登记实际消耗时回写）
+     */
+    private String cuttingUsageId;
+
+    /**
+     * D-826：本卷实际消耗（裁剪完工登记时回写）。
+     * 本卷剩余 = quantity - used_quantity；为空 = 尚未按卷登记。
+     */
+    private BigDecimal usedQuantity;
+
     /** 供应商名称 */
     private String supplierName;
 

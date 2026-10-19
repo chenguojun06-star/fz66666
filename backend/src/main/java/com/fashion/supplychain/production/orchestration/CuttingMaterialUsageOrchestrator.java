@@ -6,10 +6,12 @@ import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.entity.CuttingMaterialUsage;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.MaterialRoll;
 import com.fashion.supplychain.production.service.CuttingBomService;
 import com.fashion.supplychain.production.service.CuttingMaterialUsageService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialRollService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -53,6 +55,9 @@ public class CuttingMaterialUsageOrchestrator {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private MaterialRollService materialRollService;
 
     @Autowired
     private MaterialInboundOrchestrator materialInboundOrchestrator;
@@ -346,6 +351,283 @@ public class CuttingMaterialUsageOrchestrator {
         result.put("message", "余料回库完成，共 " + inboundTotal.stripTrailingZeros().toPlainString()
                 + "（" + inboundResults.size() + " 项）已入库");
         return result;
+    }
+
+    // ==================== 4.5 料卷级登记与余料卷回库（D-826） ====================
+
+    /**
+     * 查询某裁剪任务已发料的料卷（按订单号关联），每卷标注匹配的台账行。
+     * 卷级登记入口：车间按卷录实际消耗，比任务级总账更细。
+     */
+    public Map<String, Object> listRolls(String cuttingTaskId) {
+        CuttingTask task = requireTask(cuttingTaskId);
+        Map<String, Object> result = new HashMap<>();
+        if (!StringUtils.hasText(task.getProductionOrderNo())) {
+            result.put("rolls", new ArrayList<>());
+            return result;
+        }
+        Long tenantId = UserContext.tenantId();
+        List<MaterialRoll> rolls = materialRollService.lambdaQuery()
+                .eq(MaterialRoll::getIssuedOrderNo, task.getProductionOrderNo().trim())
+                .eq(tenantId != null, MaterialRoll::getTenantId, tenantId)
+                .orderByAsc(MaterialRoll::getCreateTime)
+                .list();
+        List<CuttingMaterialUsage> usageRows = usageService.listByCuttingTaskId(task.getId());
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (MaterialRoll roll : rolls == null ? List.<MaterialRoll>of() : rolls) {
+            CuttingMaterialUsage matched = matchUsageRow(usageRows, roll);
+            Map<String, Object> item = new HashMap<>();
+            item.put("rollId", roll.getId());
+            item.put("rollCode", roll.getRollCode());
+            item.put("materialCode", roll.getMaterialCode());
+            item.put("materialName", roll.getMaterialName());
+            item.put("color", roll.getColor());
+            item.put("unit", roll.getUnit());
+            item.put("rollQuantity", roll.getQuantity());
+            item.put("status", roll.getStatus());
+            item.put("usedQuantity", roll.getUsedQuantity());
+            item.put("remaining", nz(roll.getQuantity()).subtract(nz(roll.getUsedQuantity())));
+            item.put("usageId", matched != null ? matched.getId() : null);
+            out.add(item);
+        }
+        result.put("rolls", out);
+        result.put("orderNo", task.getProductionOrderNo());
+        return result;
+    }
+
+    /**
+     * 卷级登记实际消耗。rows: [{ rollId, usedQuantity }]
+     * - usedQuantity ∈ [0, 本卷数量]；卷必须属于本订单（issuedOrderNo 匹配）
+     * - 有卷关联的台账行：领出 = Σ卷数量（卷是真相源），实际 = Σ卷消耗，余料自动重算
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> saveRollUsage(String cuttingTaskId, List<Map<String, Object>> rows,
+            String operatorId, String operatorName) {
+        CuttingTask task = requireTask(cuttingTaskId);
+        List<CuttingMaterialUsage> usageRows = usageService.listByCuttingTaskId(task.getId());
+        if (usageRows == null || usageRows.isEmpty()) {
+            throw new IllegalArgumentException("该任务暂无用料台账");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        int touched = 0;
+        for (Map<String, Object> row : rows == null ? new ArrayList<Map<String, Object>>() : rows) {
+            String rollId = str(row.get("rollId"));
+            if (!StringUtils.hasText(rollId)) {
+                continue;
+            }
+            MaterialRoll roll = materialRollService.getById(rollId.trim());
+            if (roll == null) {
+                throw new IllegalArgumentException("料卷不存在：" + rollId);
+            }
+            TenantAssert.assertBelongsToCurrentTenant(roll.getTenantId(), "料卷");
+            if (StringUtils.hasText(task.getProductionOrderNo())
+                    && !task.getProductionOrderNo().trim().equals(String.valueOf(roll.getIssuedOrderNo()).trim())) {
+                throw new IllegalArgumentException("料卷「" + roll.getRollCode() + "」不属于本订单，不能登记");
+            }
+            BigDecimal used = dec(row.get("usedQuantity"), BigDecimal.ZERO);
+            BigDecimal rollQty = nz(roll.getQuantity());
+            if (used.compareTo(BigDecimal.ZERO) < 0 || used.compareTo(rollQty) > 0) {
+                throw new IllegalArgumentException("料卷「" + roll.getRollCode() + "」消耗数量必须在 0 ~ " + rollQty + " 之间");
+            }
+            CuttingMaterialUsage matched = matchUsageRow(usageRows, roll);
+            roll.setUsedQuantity(used);
+            roll.setCuttingUsageId(matched != null ? matched.getId() : roll.getCuttingUsageId());
+            roll.setUpdateTime(now);
+            materialRollService.updateById(roll);
+            touched++;
+        }
+        if (touched == 0) {
+            throw new IllegalArgumentException("没有有效的料卷登记行");
+        }
+        recalcUsageFromRolls(task, usageRows);
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "已登记 " + touched + " 卷的实际消耗");
+        return result;
+    }
+
+    /**
+     * 卷级余料回库：每卷剩余生成「余料卷」（新 rollCode、IN_STOCK、备注来源）
+     * + 走手动入库链路加库存 + 扣减台账行余料。rows: [{ rollId, quantity, warehouseLocation }]
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> remnantInboundByRoll(String cuttingTaskId, List<Map<String, Object>> rows,
+            String operatorId, String operatorName) {
+        CuttingTask task = requireTask(cuttingTaskId);
+        List<CuttingMaterialUsage> usageRows = usageService.listByCuttingTaskId(task.getId());
+        if (usageRows == null || usageRows.isEmpty()) {
+            throw new IllegalArgumentException("该任务暂无用料台账");
+        }
+        List<Map<String, Object>> results = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> row : rows == null ? new ArrayList<Map<String, Object>>() : rows) {
+            String rollId = str(row.get("rollId"));
+            if (!StringUtils.hasText(rollId)) {
+                continue;
+            }
+            MaterialRoll roll = materialRollService.getById(rollId.trim());
+            if (roll == null) {
+                throw new IllegalArgumentException("料卷不存在：" + rollId);
+            }
+            TenantAssert.assertBelongsToCurrentTenant(roll.getTenantId(), "料卷");
+            BigDecimal remaining = nz(roll.getQuantity()).subtract(nz(roll.getUsedQuantity()));
+            BigDecimal quantity = dec(row.get("quantity"), remaining);
+            if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            if (quantity.compareTo(remaining) > 0) {
+                throw new IllegalArgumentException("料卷「" + roll.getRollCode() + "」回库数量不能大于剩余 " + remaining);
+            }
+            String location = str(row.get("warehouseLocation"));
+            if (!StringUtils.hasText(location)) {
+                location = StringUtils.hasText(roll.getWarehouseLocation()) ? roll.getWarehouseLocation() : "默认仓";
+            }
+
+            // 1) 生成余料卷（实物标签，可再扫码流转）
+            MaterialRoll remnant = new MaterialRoll();
+            remnant.setId(com.baomidou.mybatisplus.core.toolkit.IdWorker.get32UUID());
+            remnant.setRollCode(materialRollService.generateRollCode());
+            remnant.setMaterialCode(roll.getMaterialCode());
+            remnant.setMaterialName(roll.getMaterialName());
+            remnant.setMaterialType(roll.getMaterialType());
+            remnant.setColor(roll.getColor());
+            remnant.setSpecifications(roll.getSpecifications());
+            remnant.setUnit(roll.getUnit());
+            remnant.setQuantity(quantity);
+            remnant.setStatus("IN_STOCK");
+            remnant.setWarehouseLocation(location);
+            remnant.setSupplierName(roll.getSupplierName());
+            remnant.setCuttingUsageId(roll.getCuttingUsageId());
+            remnant.setRemark("余料 · 来源 " + roll.getRollCode()
+                    + (StringUtils.hasText(task.getProductionOrderNo()) ? " · 订单 " + task.getProductionOrderNo() : ""));
+            remnant.setTenantId(roll.getTenantId());
+            remnant.setCreatorId(operatorId);
+            remnant.setCreatorName(operatorName);
+            remnant.setCreateTime(LocalDateTime.now());
+            remnant.setUpdateTime(LocalDateTime.now());
+            materialRollService.save(remnant);
+
+            // 2) 入库（库存账）+ 台账扣减
+            materialInboundOrchestrator.manualInbound(
+                    roll.getMaterialCode(), roll.getMaterialName(), roll.getMaterialType(),
+                    roll.getColor(), roll.getSpecifications(), quantity, location,
+                    roll.getSupplierName(), operatorId, operatorName,
+                    "裁剪余料回库 · 来源卷 " + roll.getRollCode()
+                            + (StringUtils.hasText(task.getProductionOrderNo()) ? " · 订单 " + task.getProductionOrderNo() : ""));
+
+            if (StringUtils.hasText(roll.getCuttingUsageId())) {
+                CuttingMaterialUsage usage = usageService.getById(roll.getCuttingUsageId());
+                if (usage != null) {
+                    BigDecimal newRemnant = nz(usage.getRemnantAmount()).subtract(quantity)
+                            .max(BigDecimal.ZERO).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+                    usage.setRemnantAmount(newRemnant);
+                    usage.setRemnantStatus(newRemnant.compareTo(BigDecimal.ZERO) > 0 ? "PENDING" : "INBOUNDED");
+                    usage.setUpdateTime(LocalDateTime.now());
+                    usageService.updateById(usage);
+                }
+            }
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("rollCode", roll.getRollCode());
+            item.put("materialName", roll.getMaterialName());
+            item.put("quantity", quantity);
+            item.put("remnantRollCode", remnant.getRollCode());
+            results.add(item);
+            total = total.add(quantity);
+        }
+        if (results.isEmpty()) {
+            throw new IllegalArgumentException("没有可回库的料卷");
+        }
+
+        // 重算任务余料合计
+        BigDecimal remnantTotal = BigDecimal.ZERO;
+        for (CuttingMaterialUsage u : usageService.listByCuttingTaskId(task.getId())) {
+            remnantTotal = remnantTotal.add(nz(u.getRemnantAmount()));
+        }
+        cuttingTaskService.lambdaUpdate()
+                .eq(com.fashion.supplychain.production.entity.CuttingTask::getId, task.getId())
+                .set(com.fashion.supplychain.production.entity.CuttingTask::getRemnantTotal, remnantTotal)
+                .update();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("inbounds", results);
+        result.put("inboundTotal", total);
+        result.put("remnantTotal", remnantTotal);
+        result.put("message", "余料回库完成，共 " + total.stripTrailingZeros().toPlainString()
+                + "（" + results.size() + " 卷）已生成余料卷并入账");
+        return result;
+    }
+
+    /** 台账行 ↔ 料卷匹配：物料编码 + 颜色（尺码卷级通常不分） */
+    private CuttingMaterialUsage matchUsageRow(List<CuttingMaterialUsage> usageRows, MaterialRoll roll) {
+        if (usageRows == null || roll == null) {
+            return null;
+        }
+        String code = String.valueOf(roll.getMaterialCode() == null ? "" : roll.getMaterialCode()).trim();
+        String color = String.valueOf(roll.getColor() == null ? "" : roll.getColor()).trim();
+        for (CuttingMaterialUsage u : usageRows) {
+            if (code.equals(String.valueOf(u.getMaterialCode() == null ? "" : u.getMaterialCode()).trim())
+                    && color.equals(String.valueOf(u.getColor() == null ? "" : u.getColor()).trim())) {
+                return u;
+            }
+        }
+        // 降级：仅按物料编码匹配（颜色不一致时至少不错账）
+        for (CuttingMaterialUsage u : usageRows) {
+            if (code.equals(String.valueOf(u.getMaterialCode() == null ? "" : u.getMaterialCode()).trim())) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 按卷重算台账行：有卷关联的行，领出 = Σ卷数量（卷是真相源）、实际 = Σ卷消耗。
+     * 无卷关联的行保持任务级登记值不动。
+     */
+    private void recalcUsageFromRolls(CuttingTask task, List<CuttingMaterialUsage> usageRows) {
+        Long tenantId = UserContext.tenantId();
+        List<MaterialRoll> rolls = materialRollService.lambdaQuery()
+                .eq(MaterialRoll::getIssuedOrderNo, task.getProductionOrderNo())
+                .eq(tenantId != null, MaterialRoll::getTenantId, tenantId)
+                .list();
+        if (rolls == null) {
+            rolls = new ArrayList<>();
+        }
+        LocalDateTime now = LocalDateTime.now();
+        BigDecimal remnantTotal = BigDecimal.ZERO;
+        for (CuttingMaterialUsage u : usageRows) {
+            BigDecimal issued = BigDecimal.ZERO;
+            BigDecimal actual = BigDecimal.ZERO;
+            boolean hasRoll = false;
+            for (MaterialRoll roll : rolls) {
+                CuttingMaterialUsage matched = matchUsageRow(java.util.Collections.singletonList(u), roll);
+                if (matched == null || !matched.getId().equals(u.getId())) {
+                    continue;
+                }
+                hasRoll = true;
+                issued = issued.add(nz(roll.getQuantity()));
+                actual = actual.add(nz(roll.getUsedQuantity()));
+            }
+            if (hasRoll) {
+                BigDecimal remnant = issued.subtract(actual).max(BigDecimal.ZERO)
+                        .setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+                u.setIssuedAmount(issued);
+                u.setActualUsed(actual);
+                u.setRemnantAmount(remnant);
+                // 已回库过的不降级（INBOUNDED → 保持，除非又有新余料）
+                if (!"INBOUNDED".equals(u.getRemnantStatus()) || remnant.compareTo(BigDecimal.ZERO) > 0) {
+                    u.setRemnantStatus(remnant.compareTo(BigDecimal.ZERO) > 0 ? "PENDING" : "NONE");
+                }
+                u.setUpdateTime(now);
+                usageService.updateById(u);
+            }
+            remnantTotal = remnantTotal.add(nz(u.getRemnantAmount()));
+        }
+        cuttingTaskService.lambdaUpdate()
+                .eq(com.fashion.supplychain.production.entity.CuttingTask::getId, task.getId())
+                .set(com.fashion.supplychain.production.entity.CuttingTask::getRemnantTotal, remnantTotal)
+                .update();
     }
 
     // ==================== 5. 全链路汇总（采购 ↔ 裁剪穿透，P1 数据源） ====================

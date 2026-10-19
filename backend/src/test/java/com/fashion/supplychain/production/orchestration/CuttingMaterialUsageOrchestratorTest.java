@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWra
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.entity.CuttingMaterialUsage;
+import com.fashion.supplychain.production.entity.MaterialRoll;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.CuttingBomService;
 import com.fashion.supplychain.production.service.CuttingMaterialUsageService;
@@ -32,8 +33,10 @@ import org.mockito.quality.Strictness;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -67,6 +70,12 @@ class CuttingMaterialUsageOrchestratorTest {
     private MaterialPurchaseService materialPurchaseService;
 
     @Mock
+    private com.fashion.supplychain.production.service.MaterialRollService materialRollService;
+
+    @Mock
+    private com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<MaterialRoll> rollQueryChain;
+
+    @Mock
     private MaterialInboundOrchestrator materialInboundOrchestrator;
 
     @InjectMocks
@@ -83,6 +92,10 @@ class CuttingMaterialUsageOrchestratorTest {
         when(cuttingTaskUpdateChain.eq(any(), any())).thenReturn(cuttingTaskUpdateChain);
         when(cuttingTaskUpdateChain.set(any(), any())).thenReturn(cuttingTaskUpdateChain);
         when(cuttingTaskUpdateChain.update()).thenReturn(true);
+        // 料卷 lambdaQuery 链式打桩（list 由各用例按需返回）
+        when(materialRollService.lambdaQuery()).thenReturn(rollQueryChain);
+        when(rollQueryChain.eq(any(), any())).thenReturn(rollQueryChain);
+        when(rollQueryChain.eq(anyBoolean(), any(), any())).thenReturn(rollQueryChain);
     }
 
     @AfterEach
@@ -313,5 +326,140 @@ class CuttingMaterialUsageOrchestratorTest {
                 .hasMessageContaining("回库数量不能大于余料量");
         verify(materialInboundOrchestrator, never()).manualInbound(any(), any(), any(), any(), any(),
                 any(), any(), any(), any(), any(), any());
+    }
+
+    // ==================== D-826 料卷级登记 ====================
+
+    private MaterialRoll roll(String id, String code, String color, BigDecimal qty) {
+        MaterialRoll r = new MaterialRoll();
+        r.setId(id);
+        r.setRollCode("MR2026102000001" + id);
+        r.setMaterialCode(code);
+        r.setMaterialName("面料" + code);
+        r.setMaterialType("面料");
+        r.setColor(color);
+        r.setSpecifications("150cm");
+        r.setUnit("米");
+        r.setQuantity(qty);
+        r.setStatus("ISSUED");
+        r.setIssuedOrderNo("PO-1");
+        r.setTenantId(1001L);
+        return r;
+    }
+
+    @Test
+    @DisplayName("D-826 卷级登记：Σ卷消耗重算台账行（领出=Σ卷量、实际=Σ消耗、余料自动）")
+    void saveRollUsage_recalculatesUsageFromRolls() {
+        CuttingMaterialUsage u = usageRow("M-1", new BigDecimal("210"));
+        when(cuttingTaskService.getById("t-1")).thenReturn(task("t-1"));
+        when(usageService.listByCuttingTaskId("t-1")).thenReturn(new ArrayList<>(List.of(u)));
+        MaterialRoll r1 = roll("r1", "M-1", "黑色", new BigDecimal("120"));
+        MaterialRoll r2 = roll("r2", "M-1", "黑色", new BigDecimal("90"));
+        when(rollQueryChain.list()).thenReturn(List.of(r1, r2));
+        when(materialRollService.getById("r1")).thenReturn(r1);
+        when(materialRollService.getById("r2")).thenReturn(r2);
+        when(materialRollService.updateById(any())).thenReturn(true);
+        when(usageService.updateById(any())).thenReturn(true);
+
+        Map<String, Object> row1 = new HashMap<>();
+        row1.put("rollId", "r1");
+        row1.put("usedQuantity", "100");
+        Map<String, Object> row2 = new HashMap<>();
+        row2.put("rollId", "r2");
+        row2.put("usedQuantity", "80");
+        Map<String, Object> result = orchestrator.saveRollUsage("t-1", List.of(row1, row2), "op1", "张三");
+
+        assertThat(result.get("success")).isEqualTo(true);
+        // 领出 = 120+90=210；实际 = 100+80=180；余料 = 30
+        ArgumentCaptor<CuttingMaterialUsage> captor = ArgumentCaptor.forClass(CuttingMaterialUsage.class);
+        verify(usageService, atLeastOnce()).updateById(captor.capture());
+        CuttingMaterialUsage last = captor.getValue();
+        assertThat(last.getIssuedAmount()).isEqualByComparingTo("210");
+        assertThat(last.getActualUsed()).isEqualByComparingTo("180");
+        assertThat(last.getRemnantAmount()).isEqualByComparingTo("30");
+        assertThat(last.getRemnantStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("D-826 卷级登记：消耗超过本卷数量必须抛错")
+    void saveRollUsage_rejectsUsedExceedsRollQuantity() {
+        when(cuttingTaskService.getById("t-1")).thenReturn(task("t-1"));
+        when(usageService.listByCuttingTaskId("t-1"))
+                .thenReturn(new ArrayList<>(List.of(usageRow("M-1", new BigDecimal("210")))));
+        MaterialRoll r1 = roll("r1", "M-1", "黑色", new BigDecimal("120"));
+        when(materialRollService.getById("r1")).thenReturn(r1);
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("rollId", "r1");
+        row.put("usedQuantity", "130");
+        assertThatThrownBy(() -> orchestrator.saveRollUsage("t-1", List.of(row), "op1", "张三"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("消耗数量必须在 0 ~ 120");
+    }
+
+    @Test
+    @DisplayName("D-826 卷级登记：不属于本订单的卷必须拒绝（防串单）")
+    void saveRollUsage_rejectsForeignOrderRoll() {
+        when(cuttingTaskService.getById("t-1")).thenReturn(task("t-1"));
+        when(usageService.listByCuttingTaskId("t-1"))
+                .thenReturn(new ArrayList<>(List.of(usageRow("M-1", new BigDecimal("210")))));
+        MaterialRoll foreign = roll("r9", "M-1", "黑色", new BigDecimal("120"));
+        foreign.setIssuedOrderNo("PO-OTHER");
+        when(materialRollService.getById("r9")).thenReturn(foreign);
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("rollId", "r9");
+        row.put("usedQuantity", "50");
+        assertThatThrownBy(() -> orchestrator.saveRollUsage("t-1", List.of(row), "op1", "张三"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("不属于本订单");
+    }
+
+    @Test
+    @DisplayName("D-826 卷级余料回库：生成余料卷 + 走入库链路 + 台账余料扣减")
+    void remnantInboundByRoll_createsRemnantRollAndInbounds() {
+        CuttingMaterialUsage u = usageRow("M-1", new BigDecimal("210"));
+        u.setId("u-M-1");
+        u.setIssuedAmount(new BigDecimal("210"));
+        u.setActualUsed(new BigDecimal("180"));
+        u.setRemnantAmount(new BigDecimal("30"));
+        u.setRemnantStatus("PENDING");
+        when(cuttingTaskService.getById("t-1")).thenReturn(task("t-1"));
+        when(usageService.listByCuttingTaskId("t-1"))
+                .thenReturn(new ArrayList<>(List.of(u)));
+        MaterialRoll r1 = roll("r1", "M-1", "黑色", new BigDecimal("120"));
+        r1.setUsedQuantity(new BigDecimal("100"));
+        r1.setCuttingUsageId("u-M-1");
+        when(materialRollService.getById("r1")).thenReturn(r1);
+        when(materialRollService.generateRollCode()).thenReturn("MR2026102000099");
+        when(materialRollService.save(any())).thenReturn(true);
+        when(rollQueryChain.list()).thenReturn(List.of(r1));
+        Map<String, Object> inboundResult = new HashMap<>();
+        inboundResult.put("inboundNo", "RK20261020000001");
+        when(materialInboundOrchestrator.manualInbound(any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any())).thenReturn(inboundResult);
+        when(usageService.updateById(any())).thenReturn(true);
+        when(usageService.getById("u-M-1")).thenReturn(u);
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("rollId", "r1");
+        row.put("quantity", "20"); // 本卷剩 20，先回 20
+        Map<String, Object> result = orchestrator.remnantInboundByRoll("t-1", List.of(row), "op1", "张三");
+
+        assertThat((BigDecimal) result.get("inboundTotal")).isEqualByComparingTo("20");
+        // 数量由余料卷 captor 断言覆盖（ BigDecimal scale 差异会让 eq 匹配脆弱），此处只验调用发生
+        verify(materialInboundOrchestrator).manualInbound(any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any());
+        ArgumentCaptor<MaterialRoll> rollCaptor = ArgumentCaptor.forClass(MaterialRoll.class);
+        verify(materialRollService).save(rollCaptor.capture());
+        assertThat(rollCaptor.getValue().getRollCode()).isEqualTo("MR2026102000099");
+        assertThat(rollCaptor.getValue().getQuantity()).isEqualByComparingTo("20");
+        assertThat(rollCaptor.getValue().getStatus()).isEqualTo("IN_STOCK");
+        assertThat(String.valueOf(rollCaptor.getValue().getRemark())).contains("来源 MR2026102000001r1");
+        // 台账余料 30 - 20 = 10，保持 PENDING
+        ArgumentCaptor<CuttingMaterialUsage> usageCaptor = ArgumentCaptor.forClass(CuttingMaterialUsage.class);
+        verify(usageService, atLeastOnce()).updateById(usageCaptor.capture());
+        assertThat(usageCaptor.getValue().getRemnantAmount()).isEqualByComparingTo("10");
+        assertThat(usageCaptor.getValue().getRemnantStatus()).isEqualTo("PENDING");
     }
 }

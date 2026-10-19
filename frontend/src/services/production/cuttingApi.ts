@@ -60,6 +60,20 @@ export interface RemnantInboundRow {
   warehouseLocation?: string;
 }
 
+export interface MaterialRollRow {
+  rollId: string;
+  rollCode: string;
+  materialCode: string;
+  materialName: string;
+  color?: string;
+  unit?: string;
+  rollQuantity: number;
+  status: string;
+  usedQuantity?: number | null;
+  remaining: number;
+  usageId?: string | null;
+}
+
 export const cuttingApi = {
   /** 查询某裁剪任务的用料台账 */
   detail: async (taskId: string): Promise<CuttingMaterialUsageDetail> =>
@@ -101,5 +115,38 @@ export const cuttingApi = {
         params: { orderNo, ...(materialCode ? { materialCode } : {}) },
       }),
       '链路汇总加载失败',
+    ),
+
+  /** D-826：查询某裁剪任务已发料的料卷（卷级登记入口） */
+  rolls: async (taskId: string): Promise<{ rolls: MaterialRollRow[]; orderNo?: string }> =>
+    unwrapApiData<{ rolls: MaterialRollRow[]; orderNo?: string }>(
+      await api.get(`/production/cutting-task/${encodeURIComponent(taskId)}/material-rolls`),
+      '料卷列表加载失败',
+    ),
+
+  /** D-826：卷级登记实际消耗（Σ卷自动重算台账行） */
+  saveRollUsage: async (taskId: string, rows: Array<{ rollId: string; usedQuantity: number }>): Promise<{ success: boolean; message: string }> =>
+    unwrapApiData<{ success: boolean; message: string }>(
+      await api.post(`/production/cutting-task/${encodeURIComponent(taskId)}/roll-usage`, { rows }),
+      '登记失败',
+    ),
+
+  /** D-826：卷级余料回库（生成余料卷 + 入库） */
+  rollRemnantInbound: async (taskId: string, rows: Array<{ rollId: string; quantity?: number; warehouseLocation?: string }>): Promise<{
+    success: boolean;
+    inboundTotal: number;
+    remnantTotal: number;
+    message: string;
+    inbounds: Array<{ rollCode: string; materialName: string; quantity: number; remnantRollCode: string }>;
+  }> =>
+    unwrapApiData<{
+      success: boolean;
+      inboundTotal: number;
+      remnantTotal: number;
+      message: string;
+      inbounds: Array<{ rollCode: string; materialName: string; quantity: number; remnantRollCode: string }>;
+    }>(
+      await api.post(`/production/cutting-task/${encodeURIComponent(taskId)}/roll-remnant-inbound`, { rows }),
+      '回库失败',
     ),
 };

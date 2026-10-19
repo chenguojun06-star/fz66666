@@ -70,6 +70,44 @@ public class CuttingTaskController {
     }
 
     /**
+     * D-826：查询某裁剪任务已发料的料卷（卷级登记入口）
+     */
+    @GetMapping("/{id}/material-rolls")
+    public Result<?> materialRolls(@PathVariable String id) {
+        return Result.success(materialUsageOrchestrator.listRolls(id));
+    }
+
+    /**
+     * D-826：卷级登记实际消耗。body: { rows: [{ rollId, usedQuantity }] }
+     */
+    @PostMapping("/{id}/roll-usage")
+    public Result<?> saveRollUsage(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = body.get("rows") == null
+                ? new java.util.ArrayList<>()
+                : (List<Map<String, Object>>) body.get("rows");
+        return Result.success(materialUsageOrchestrator.saveRollUsage(
+                id, rows,
+                com.fashion.supplychain.common.UserContext.userId(),
+                com.fashion.supplychain.common.UserContext.username()));
+    }
+
+    /**
+     * D-826：卷级余料回库（生成余料卷 + 入库）。body: { rows: [{ rollId, quantity, warehouseLocation }] }
+     */
+    @PostMapping("/{id}/roll-remnant-inbound")
+    public Result<?> rollRemnantInbound(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = body.get("rows") == null
+                ? new java.util.ArrayList<>()
+                : (List<Map<String, Object>>) body.get("rows");
+        return Result.success(materialUsageOrchestrator.remnantInboundByRoll(
+                id, rows,
+                com.fashion.supplychain.common.UserContext.userId(),
+                com.fashion.supplychain.common.UserContext.username()));
+    }
+
+    /**
      * D-823：采购↔裁剪全链路汇总（采购-到货-已用-剩余 ↔ 计划-领出-实际-余料-已回库）
      */
     @GetMapping("/material-usage-chain")
