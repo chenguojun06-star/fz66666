@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * intelligenceApi 解包契约（D-824）
+ * intelligenceApi 解包契约（D-825）
  *
  * 96 个方法全部改裸数据：信封 → data；失败信封 → 抛错；
  * 已是裸值（getGuardrails 等原生 Map 接口）→ 幂等透传。
@@ -22,7 +22,7 @@ vi.mock('@/utils/api', async () => {
 
 import { intelligenceApi } from '../../services/intelligence/intelligenceApi';
 
-describe('intelligenceApi 解包（D-824）', () => {
+describe('intelligenceApi 解包（D-825）', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('getBrainSnapshot 返回裸快照；失败信封抛错', async () => {

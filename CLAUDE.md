@@ -498,10 +498,10 @@ quality-gate 有 50+ 步骤，以下几条是**这个项目真实发生、且靠
     | 措施 | 位置 |
     |---|---|
     | `unwrapApiData` 改成**幂等**（非信封原样返回） | `utils/api/core/helpers.ts` |
-    | 禁止新增 service 层信封泄漏（**存量已全部清零**，2026-10-19 D-824：9 批共清 460+ 处；posApi/crm/production/finance/shop/system/intelligence 均已在 service 层解包） | `scripts/check-api-envelope-leak.py` |
+    | 禁止新增 service 层信封泄漏（**存量已全部清零**，2026-10-19 D-825：9 批共清 460+ 处（终批代码因并行会话 git add -A 落于 60e1bf2c2，编号改记 D-825）；posApi/crm/production/finance/shop/system/intelligence 均已在 service 层解包） | `scripts/check-api-envelope-leak.py` |
     | posApi / ticketApi 已在 service 层解包 | 已改造 |
 
-    ✅ 2026-10-19 D-824 全部清零：intelligenceApi 96 法/179 处已迁完（脚本化平衡括号解析 + tsc 抓调用方 + 契约测试 10 例），
+    ✅ 2026-10-19 D-825 全部清零：intelligenceApi 96 法/179 处已迁完（脚本化平衡括号解析 + tsc 抓调用方 + 契约测试 10 例），
     baseline 从 179 → 0。后续新增泄漏由该脚本在 CI 阻断。
 
     ⚠️ 多行箭头写法（`=>` 结尾换行接 `api.get<T>`）也会被拦 ——

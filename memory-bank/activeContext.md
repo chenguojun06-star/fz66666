@@ -22,8 +22,8 @@
 - **框架级**：服务端信封泄漏治理（`unwrapApiData` 幂等 + CI 门禁 baseline 177 棘轮，存量分批改）；生产库结构漂移全量核实（补 4 表 2 列、清 3 组死代码、74 段 DDL 与线上逐列一致）
 
 **进行中/已知问题**：
-- **D-824 裁剪用料台账 + 余料回库闭环（16 文件，代码完成待提交）**：新表 `t_cutting_material_usage`（计划/领出/实际/余料/回库五态）+ `CuttingMaterialUsageOrchestrator` + 4 端点 + 前端台账抽屉（按物料行登记、一键回库、全链路穿透展开）。完工（分扎生成）自动快照台账；领出默认=计划、实际默认=领出（无余料一键确认）；回库复用 `manualInbound` 入库链路。验证：mvn compile/production 104 测试/新 8 单测全绿、tsc 0、eslint 0、迁移 SQL 本地 MySQL 8.0.45 实跑通过、应用启动成功（Bean 装配验证）。设计决策详见 decisionLog D-824
-- 信封存量 **0 处**（D-824 已全部清零）（2026-10-19 门禁加固后补录口径：此前 304 只统计「泛型信封+多行 return」，单行直接 return 漏检；新增 25 处漏网存量分布于 shopApi 11 / paymentApi 3 / productionApi 3 / systemStatusService 4 / styleApi 1 / announcementApi 1 / organizationApi 1。第 5 批 finance 修 17 处、第 6 批 shop 修 31 处、第 7 批 production 残余修 30 处后降至 251、第 8 批 system 修 40 处后降至 211、第 9 批杂项（crm/tenantApp/template/payment/systemStatus/style）修 32 处后降至 179、第 10 批 intelligenceApi 修 179 处后清零（D-824））
+- **D-825 裁剪用料台账 + 余料回库闭环（16 文件，代码完成待提交）**：新表 `t_cutting_material_usage`（计划/领出/实际/余料/回库五态）+ `CuttingMaterialUsageOrchestrator` + 4 端点 + 前端台账抽屉（按物料行登记、一键回库、全链路穿透展开）。完工（分扎生成）自动快照台账；领出默认=计划、实际默认=领出（无余料一键确认）；回库复用 `manualInbound` 入库链路。验证：mvn compile/production 104 测试/新 8 单测全绿、tsc 0、eslint 0、迁移 SQL 本地 MySQL 8.0.45 实跑通过、应用启动成功（Bean 装配验证）。设计决策详见 decisionLog D-825
+- 信封存量 **0 处**（D-825 已全部清零）（2026-10-19 门禁加固后补录口径：此前 304 只统计「泛型信封+多行 return」，单行直接 return 漏检；新增 25 处漏网存量分布于 shopApi 11 / paymentApi 3 / productionApi 3 / systemStatusService 4 / styleApi 1 / announcementApi 1 / organizationApi 1。第 5 批 finance 修 17 处、第 6 批 shop 修 31 处、第 7 批 production 残余修 30 处后降至 251、第 8 批 system 修 40 处后降至 211、第 9 批杂项（crm/tenantApp/template/payment/systemStatus/style）修 32 处后降至 179、第 10 批 intelligenceApi 修 179 处后清零（D-825））
 - 门禁加固已完成（2026-10-19）：`check-api-envelope-leak.py` 修复单行漏检 bug + `--update` 必须 `--reason` 否则拒绝放大（此前 ef40a136c 无理由把 175→337）；新增 `scripts/check-d-number.py`（查重/最近编号/待推送撞号三模式，D-808 实测报撞号）
 - D-821（待提交）：productionApi.ts 25 处 `api.<verb><ApiResponse<T>>` 泛型信封声明收敛 + unused import 清理（纯编译期，tsc/eslint/17 测试/门禁/抽样双向验证全过）。注：25 处收敛已被并行会话 `git add -A` 吃进 D-820 提交，本批仅剩 import 一行
 - 已知 CI 行为：unused type import 在 eslint 为 **warning** 级（exit 0），CI 不拦——D-820 曾带着 unused ApiResponse import 提交成功，收敛靠人
@@ -34,8 +34,8 @@
 - D 号撞号复发（D-808 双用、D-785 未取号即被引用），取号须先 `scripts/check-d-number.py` 查重
 
 **下一步**：
-1. 提交 D-824（16 文件）；部署后真机验证：完工→台账自动生成→登记实际→余料回库→库存增加
-2. D-824 二期：料卷级余料登记（每卷用了多少）、采购详情页链路区块
+1. 提交 D-825（16 文件）；部署后真机验证：完工→台账自动生成→登记实际→余料回库→库存增加
+2. D-825 二期：料卷级余料登记（每卷用了多少）、采购详情页链路区块
 3. P2 用料准确率分析（单件实际 vs BOM 计划，反哺损耗率）——待真实数据积累
 4. 信封存量分批收敛（按消费方风险分级：直接进 Table/数组的先清；每批删 baseline，门禁棘轮保证只减不增）
 2. 收银台真实场景投产验证（配支付商户号 → 分配 MENU_POS → 班次/会员/小票走真实收银）
