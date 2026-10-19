@@ -97,11 +97,10 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     if (!orderId) return;
     setLoading(true);
     try {
-      const res = await productionOrderApi.getNodeOperations(orderId);
-      if (res.code === 200 && res.data) {
-        const parsed = typeof res.data === 'string'
-          ? JSON.parse(res.data)
-          : res.data;
+      // service 已解包：直接拿到 JSON 字符串
+      const raw = await productionOrderApi.getNodeOperations(orderId);
+      if (raw) {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         setNodeOperations(parsed || {});
       }
     } catch (err) {
@@ -121,8 +120,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       let page = 1;
 
       while (page <= maxPages) {
-        const res = await productionScanApi.listByOrderId(orderId, { page, pageSize });
-        const resData: unknown = res?.data;
+        const resData = await productionScanApi.listByOrderId(orderId, { page, pageSize });
         const pageObj = resData && typeof resData === 'object' && !Array.isArray(resData) ? resData as { records?: unknown[] } : null;
         const records = Array.isArray(pageObj?.records)
           ? pageObj!.records

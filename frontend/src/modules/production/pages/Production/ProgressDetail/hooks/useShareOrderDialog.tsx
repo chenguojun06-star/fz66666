@@ -3,7 +3,6 @@ import { Button, Input } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
-import type { ApiResult } from '@/utils/api';
 
 interface UseShareOrderDialogOptions {
   message: any;
@@ -68,8 +67,9 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
     if (!order.id) return;
     setShareModal({ open: true, shareUrl: '', loading: true });
     try {
-      const res = await productionOrderApi.generateShareToken(String(order.id)) as ApiResult<{ token?: string }>;
-      const token = res?.data?.token;
+      // service 已解包：直接是 { token, shareUrl }
+      const res = await productionOrderApi.generateShareToken(String(order.id));
+      const token = res?.token;
       const shareUrl = token ? `${window.location.origin}/share/${token}` : '';
       if (!shareUrl) {
         closeShareModal();

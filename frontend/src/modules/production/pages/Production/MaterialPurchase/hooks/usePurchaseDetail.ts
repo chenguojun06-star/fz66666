@@ -149,9 +149,10 @@ export function usePurchaseDetail({ currentPurchase, visible, dialogMode }: UseP
       let orderRecord: ProductionOrder | null = null;
       if (patternProductionId) {
         try {
+          // service 已解包：直接是样衣详情
           const patternRes = await productionPatternApi.getPatternDetail(patternProductionId);
-          if (patternRes?.code === 200 && patternRes?.data) {
-            const p = patternRes.data;
+          if (patternRes) {
+            const p = patternRes;
             let pColor = String(p.color || (currentPurchase as any)?.orderColor || currentPurchase?.color || '').trim();
             let pSize = String(p.size || '').trim();
             let pQty = Number(p.quantity || (currentPurchase as any)?.orderQuantity || 0);

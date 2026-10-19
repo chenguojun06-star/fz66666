@@ -40,9 +40,10 @@ const OverdueOrderTable: React.FC = () => {
     if (orders.length === 0) return;
     try {
       const ids = orders.map(o => o.id);
+      // service 已解包：直接是 { urgedOrderIds }
       const res = await urgeApi.checkUrged(ids);
-      if (res?.data?.urgedOrderIds) {
-        setUrgedIds(new Set(res.data.urgedOrderIds));
+      if (res?.urgedOrderIds) {
+        setUrgedIds(new Set(res.urgedOrderIds));
       }
     } catch {
       // silent fail

@@ -171,14 +171,10 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
 
     // 获取扫码记录
     try {
+      // service 已解包：兼容后端两种返回（分页对象 / 裸数组）
       const res = await productionScanApi.listByOrderId(String(record.id), { page: 1, pageSize: 1000 });
-      if (res.code === 200 && Array.isArray((res.data as any)?.records)) {
-        setProcessDetailScanRecords((res.data as any).records);
-      } else if (res.code === 200 && Array.isArray(res.data)) {
-        setProcessDetailScanRecords(res.data);
-      } else {
-        setProcessDetailScanRecords([]);
-      }
+      const pageRecords = (res as { records?: unknown[] } | null)?.records;
+      setProcessDetailScanRecords(Array.isArray(pageRecords) ? pageRecords : res ?? []);
     } catch (error) {
       console.error('[扫码记录] 获取失败:', error);
       setProcessDetailScanRecords([]);
@@ -186,9 +182,9 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
 
     // 获取委派记录
     try {
-      const res = await productionOrderApi.getNodeOperations(String(record.id));
-      if (res.code === 200 && res.data) {
-        const raw = res.data;
+      // service 已解包：直接是 JSON 字符串
+      const raw = await productionOrderApi.getNodeOperations(String(record.id));
+      if (raw) {
         const parsed = typeof raw === 'string' ? (() => {
           try { return JSON.parse(raw); } catch { return {}; }
         })() : raw;

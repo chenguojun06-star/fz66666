@@ -63,7 +63,7 @@ const CapacityLedgerTab: React.FC = () => {
     setError(null);
     try {
       const res = await productionOrderApi.getCapacityLedger();
-      setRows(res?.data ?? []);
+      setRows(res ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : '加载失败');
     } finally {

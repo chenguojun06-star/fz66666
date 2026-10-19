@@ -86,7 +86,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   useEffect(() => {
     productionOrderApi.getFactoryCapacity()
       .then((res) => {
-        if (res?.data) setFactoryCapacities(res.data);
+        if (res) setFactoryCapacities(res);
       })
       .catch((err) => console.error('加载工厂产能数据失败:', err));
   }, []);

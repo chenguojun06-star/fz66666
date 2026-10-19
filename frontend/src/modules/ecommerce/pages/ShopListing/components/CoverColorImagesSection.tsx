@@ -212,7 +212,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
           type="warning"
           showIcon
           className="shop-listing__alert"
-          message="还没设置主图"
+          title="还没设置主图"
           description="主图为空时，店铺列表会显示「暂无图片」占位。可上传，或先给某个颜色配图后点「设为主图」。"
         />
       ) : coverBad && blockers.length === 0 ? (
@@ -221,7 +221,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
           type="warning"
           showIcon
           className="shop-listing__alert"
-          message="当前主图是一张占位图（尺寸过小）"
+          title="当前主图是一张占位图（尺寸过小）"
           description="这类图被拉伸后店铺里会变成一整块纯色，看起来像页面坏了。请重新上传一张真实商品图。"
         />
       ) : null}
@@ -266,7 +266,7 @@ const CoverColorImagesSection: React.FC<Props> = ({
       ) : null}
 
       {analyzing ? (
-        <Alert type="info" showIcon className="shop-listing__alert" message="正在检测主图规范…" />
+        <Alert type="info" showIcon className="shop-listing__alert" title="正在检测主图规范…" />
       ) : null}
 
     </div>

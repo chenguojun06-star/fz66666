@@ -65,15 +65,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           }].slice(-20),
         }
       };
-      const res = await productionOrderApi.saveNodeOperations(orderId, JSON.stringify(updatedOperations));
-      if (res.code === 200) {
-        setNodeOperations(updatedOperations);
-        message.success(checked
-          ? '环节核验已开启：本环节扫码前核验上一环节子工序完成（对管理员同样生效）'
-          : '环节核验已关闭：本环节扫码不核验上一环节');
-      } else {
-        message.error(res.message || '环节核验保存失败');
-      }
+      // service 已解包：失败直接抛错走 catch，成功才走到这里
+      await productionOrderApi.saveNodeOperations(orderId, JSON.stringify(updatedOperations));
+      setNodeOperations(updatedOperations);
+      message.success(checked
+        ? '环节核验已开启：本环节扫码前核验上一环节子工序完成（对管理员同样生效）'
+        : '环节核验已关闭：本环节扫码不核验上一环节');
     } catch (err) {
       message.error('环节核验保存失败');
       console.error(err);
@@ -125,13 +122,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         nodeName,
         ...payload,
       });
-      if (res.code === 200) {
-        message.success(`委派成功，共 ${res.data?.delegatedCount ?? payload.bundleIds.length} 扎`);
-        await Promise.all([refreshBundles(), reloadNodeOperations()]);
-        onSaved?.();
-      } else {
-        message.error(res.message || '委派失败');
-      }
+      message.success(`委派成功，共 ${res?.delegatedCount ?? payload.bundleIds.length} 扎`);
+      await Promise.all([refreshBundles(), reloadNodeOperations()]);
+      onSaved?.();
     } catch (err) {
       message.error('委派失败');
       console.error(err);
@@ -235,12 +228,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         }
       };
 
-      const res = await productionOrderApi.saveNodeOperations(
+      await productionOrderApi.saveNodeOperations(
         orderId,
         JSON.stringify(updatedOperations)
       );
-      if (res.code === 200) {
-        message.success('保存成功');
+      message.success('保存成功');
         const qty = currentData.assigneeQuantity;
         if (!isPatternProduction && typeof qty === 'number' && qty > 0) {
           const nodeKey = String(nodeTypeKey);
@@ -278,12 +270,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             message.warning(syncErr instanceof Error ? syncErr.message : 'PC同步扫码失败');
           }
         }
-        setAdminUnlocked(false);
-        onSaved?.();
-        onClose();
-      } else {
-        message.error(res.message || '保存失败');
-      }
+      setAdminUnlocked(false);
+      onSaved?.();
+      onClose();
     } catch (err) {
       message.error('保存失败');
       console.error(err);
@@ -316,16 +305,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         }
       };
 
-      const res = await productionOrderApi.saveNodeOperations(
+      await productionOrderApi.saveNodeOperations(
         orderId,
         JSON.stringify(updatedOperations)
       );
-      if (res.code === 200) {
-        setNodeOperations(updatedOperations);
-        message.success('已清空设置');
-      } else {
-        message.error(res.message || '清空失败');
-      }
+      setNodeOperations(updatedOperations);
+      message.success('已清空设置');
     } catch (err) {
       message.error('清空失败');
       console.error(err);

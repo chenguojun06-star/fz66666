@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Form } from 'antd';
-import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
+import api, { toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import { OrderLineWarehousingRow, WarehousingDetailRecord, CuttingBundleRow, OrderLine } from '../../types';
@@ -93,7 +93,7 @@ export function useInspectionDetail(props: InspectionDetailProps) {
     if (!orderId) return;
     setAiLoading(true);
     qualityAiApi.getSuggestion(orderId)
-      .then((res: ApiResult) => { setAiSuggestion((res?.data ?? null) as QualityAiSuggestionResult | null); })
+      .then((res) => { setAiSuggestion((res ?? null) as QualityAiSuggestionResult | null); })
       .catch(() => { message.warning('AI质检建议加载失败'); })
       .finally(() => setAiLoading(false));
   }, [orderId]);

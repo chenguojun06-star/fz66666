@@ -105,29 +105,45 @@ export const productionOrderApi = {
   },
   list: (params: ProductionOrderListParams) => api.get<ApiResponse<PaginatedData<ProductionOrder>>>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
-  close: (id: string, sourceModule: string, remark?: string, specialClose?: boolean) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule, remark, specialClose }),
-  copy: (id: string) => api.post<{ code: number; message: string; data: unknown }>(`/production/order/copy/${encodeURIComponent(id)}`),
-  updateProgress: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/update-progress', payload),
-  saveProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/lock', payload),
-  rollbackProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/rollback', payload),
+  close: async (id: string, sourceModule: string, remark?: string, specialClose?: boolean): Promise<boolean> =>
+    unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/close', { id, sourceModule, remark, specialClose }), '关单失败'),
+  copy: async (id: string): Promise<unknown> =>
+    unwrapApiData<unknown>(await api.post<ApiResponse<unknown>>(`/production/order/copy/${encodeURIComponent(id)}`), '复制订单失败'),
+  updateProgress: async (payload: Record<string, unknown>): Promise<boolean> =>
+    unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/update-progress', payload), '更新进度失败'),
+  saveProgressWorkflow: async (payload: Record<string, unknown>): Promise<boolean> =>
+    unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/progress-workflow/lock', payload), '锁定工序流程失败'),
+  rollbackProgressWorkflow: async (payload: Record<string, unknown>): Promise<boolean> =>
+    unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/progress-workflow/rollback', payload), '回滚工序流程失败'),
   quickEdit: (payload: Partial<ProductionOrder> & { id: string }) => api.put<ApiResponse<ProductionOrder>>('/production/order/quick-edit', payload),
   // 节点操作记录 API
-  getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
-  saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
+  getNodeOperations: async (id: string): Promise<string> =>
+    unwrapApiData<string>(await api.get<ApiResponse<string>>(`/production/order/node-operations/${encodeURIComponent(id)}`), '节点操作记录加载失败'),
+  saveNodeOperations: async (id: string, nodeOperations: string): Promise<void> => {
+    await unwrapApiData<void>(await api.post<ApiResponse<void>>('/production/order/node-operations', { id, nodeOperations }), '保存节点操作记录失败');
+  },
   /** 菲号批量委派（裁剪后节点 → 外发工厂/人员） */
-  bundleDelegate: (payload: Record<string, unknown>) =>
-    api.post<{ code: number; message: string; data?: { delegatedCount?: number } }>('/production/order/bundle-delegate', payload),
-  stats: (params?: Partial<ProductionOrderListParams>) => api.get<{ code: number; data: ProductionOrderStats }>('/production/order/stats', { params }),
+  bundleDelegate: async (payload: Record<string, unknown>): Promise<{ delegatedCount?: number } | undefined> =>
+    unwrapApiData<{ delegatedCount?: number } | undefined>(
+      await api.post<ApiResponse<{ delegatedCount?: number } | undefined>>('/production/order/bundle-delegate', payload),
+      '菲号委派失败',
+    ),
+  stats: async (params?: Partial<ProductionOrderListParams>): Promise<ProductionOrderStats> =>
+    unwrapApiData<ProductionOrderStats>(await api.get<ApiResponse<ProductionOrderStats>>('/production/order/stats', { params }), '生产统计加载失败'),
   // 工厂产能雷达
-  getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
+  getFactoryCapacity: async (): Promise<FactoryCapacityItem[]> =>
+    unwrapApiData<FactoryCapacityItem[]>(await api.get<ApiResponse<FactoryCapacityItem[]>>('/production/order/factory-capacity'), '工厂产能加载失败'),
   /** D-779：外发工厂产能台账（判断「订单该外推给谁」） */
-  getCapacityLedger: () =>
-    api.get<{ code: number; data: CapacityLedgerRow[] }>('/production/order/capacity-ledger'),
+  getCapacityLedger: async (): Promise<CapacityLedgerRow[]> =>
+    unwrapApiData<CapacityLedgerRow[]>(await api.get<ApiResponse<CapacityLedgerRow[]>>('/production/order/capacity-ledger'), '产能台账加载失败'),
   // 客户分享链接：生成分享令牌（30天有效）
-  generateShareToken: (orderId: string) =>
-    api.post<{ code: number; data: { token: string; shareUrl: string } }>(
-      `/production/orders/${encodeURIComponent(orderId)}/share-token`,
-      {}
+  generateShareToken: async (orderId: string): Promise<{ token: string; shareUrl: string }> =>
+    unwrapApiData<{ token: string; shareUrl: string }>(
+      await api.post<ApiResponse<{ token: string; shareUrl: string }>>(
+        `/production/orders/${encodeURIComponent(orderId)}/share-token`,
+        {},
+      ),
+      '生成分享链接失败',
     ),
 };
 
@@ -140,17 +156,31 @@ export const productionCuttingApi = {
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
     downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
-  list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/cutting/list', { params }),
-  getByCode: (qrCode: string) => api.post<{ code: number; data: unknown }>('/production/cutting/by-code', { qrCode }),
+  list: async (params: unknown): Promise<{ records: unknown[]; total: number }> =>
+    unwrapApiData<{ records: unknown[]; total: number }>(
+      await api.get<ApiResponse<{ records: unknown[]; total: number }>>('/production/cutting/list', { params }),
+      '裁剪任务加载失败',
+    ),
+  getByCode: async (qrCode: string): Promise<unknown> =>
+    unwrapApiData<unknown>(await api.post<ApiResponse<unknown>>('/production/cutting/by-code', { qrCode }), '扫码查询失败'),
   listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
 };
 
 export const productionScanApi = {
-  execute: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: unknown }>('/production/scan/execute', payload),
-  listByOrderId: (orderId: string, params: Record<string, unknown>) => api.get<{ code: number; data: unknown[] }>(`/production/scan/list`, { params: { orderId: String(orderId || '').trim(), ...params } }),
+  execute: async (payload: Record<string, unknown>): Promise<unknown> =>
+    unwrapApiData<unknown>(await api.post<ApiResponse<unknown>>('/production/scan/execute', payload), '扫码执行失败'),
+  listByOrderId: async (orderId: string, params: Record<string, unknown>): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(
+      await api.get<ApiResponse<unknown[]>>('/production/scan/list', { params: { orderId: String(orderId || '').trim(), ...params } }),
+      '扫码记录加载失败',
+    ),
   create: (payload: any) => api.post<any>('/production/scan/execute', payload),
   /** 撤回扫码记录（1小时内、未结算、订单未完成） */
-  undo: (payload: { recordId: string }) => api.post<{ code: number; message: string; data: { success: boolean; message: string } }>('/production/scan/undo', payload),
+  undo: async (payload: { recordId: string }): Promise<{ success: boolean; message: string }> =>
+    unwrapApiData<{ success: boolean; message: string }>(
+      await api.post<ApiResponse<{ success: boolean; message: string }>>('/production/scan/undo', payload),
+      '撤回扫码失败',
+    ),
 };
 
 // ─── ⌘K 全局搜索 ─────────────────────────────────────────────
@@ -190,8 +220,8 @@ export interface GlobalSearchResult {
 }
 
 export const globalSearchApi = {
-  search: (q: string) =>
-    api.get<{ code: number; data: GlobalSearchResult }>('/search/global', { params: { q } }),
+  search: async (q: string): Promise<GlobalSearchResult> =>
+    unwrapApiData<GlobalSearchResult>(await api.get<ApiResponse<GlobalSearchResult>>('/search/global', { params: { q } }), '全局搜索失败'),
 };
 
 export const materialPurchaseApi = {
@@ -199,17 +229,20 @@ export const materialPurchaseApi = {
    * 按订单查询采购记录，返回 arrivedQuantity / actualArrivalDate 等字段。
    * 使用 orderNo 精确匹配（后端 sourceType=order + orderNo 过滤），排除样衣独立采购单。
    */
-  listByOrderNo: (orderNo: string) =>
-    api.get<{ code: number; data: { records: unknown[]; total: number } }>(
-      '/production/purchase/list',
-      { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
+  listByOrderNo: async (orderNo: string): Promise<{ records: unknown[]; total: number }> =>
+    unwrapApiData<{ records: unknown[]; total: number }>(
+      await api.get<ApiResponse<{ records: unknown[]; total: number }>>(
+        '/production/purchase/list',
+        { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
+      ),
+      '采购记录加载失败',
     ),
 
   /**
    * 按款号/订单号汇总面辅料采购数据（采购量/到货量/使用量/剩余量）
    */
-  styleSummary: (params: { styleId?: string; orderNo?: string }) =>
-    api.get<{ code: number; data: unknown[] }>('/production/purchase/style-summary', { params }),
+  styleSummary: async (params: { styleId?: string; orderNo?: string }): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(await api.get<ApiResponse<unknown[]>>('/production/purchase/style-summary', { params }), '采购汇总加载失败'),
 };
 
 /** 样衣生产详情 API */
@@ -233,9 +266,12 @@ export const productionPatternApi = {
    * 返回字段含 styleName / coverImage / color / size / quantity / sizeColorMatrix 等，
    * 用于样衣模式下构造订单头信息（PC 端无原生订单，需用样衣详情兜底）。
    */
-  getPatternDetail: (patternId: string) =>
-    api.get<{ code: number; data: PatternProductionDetail }>(
-      `/production/pattern/${encodeURIComponent(String(patternId || '').trim())}`,
+  getPatternDetail: async (patternId: string): Promise<PatternProductionDetail> =>
+    unwrapApiData<PatternProductionDetail>(
+      await api.get<ApiResponse<PatternProductionDetail>>(
+        `/production/pattern/${encodeURIComponent(String(patternId || '').trim())}`,
+      ),
+      '样衣详情加载失败',
     ),
 
   /**
@@ -243,29 +279,34 @@ export const productionPatternApi = {
    * 后端 PatternProductionOrchestrator.getPatternTimeline 聚合 PatternScanRecord 各节点。
    * 用于"跟随模式"：合并到备注日志时间线展示，避免新建独立页面。
    */
-  getTimeline: (patternId: string) =>
-    api.get<{
-      code: number;
-      data: {
-        patternId: string;
-        styleNo?: string;
-        status?: string;
-        nodes: Array<{
-          node: string;
-          time: string;
-          operator?: string;
-          durationHours?: number;
-        }>;
-        anomalies: string[];
-      };
-    }>(`/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/timeline`),
+  getTimeline: async (patternId: string): Promise<PatternTimeline> =>
+    unwrapApiData<PatternTimeline>(
+      await api.get<ApiResponse<PatternTimeline>>(
+        `/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/timeline`,
+      ),
+      '样衣时间线加载失败',
+    ),
 };
+
+/** 样衣链路时间线（创建/领取/制作/审核/入库/出库/归还 + 异常） */
+export interface PatternTimeline {
+  patternId: string;
+  styleNo?: string;
+  status?: string;
+  nodes: Array<{
+    node: string;
+    time: string;
+    operator?: string;
+    durationHours?: number;
+  }>;
+  anomalies: string[];
+}
 
 /** 工序→父节点动态映射 API（替代硬编码关键词列表） */
 export const processParentMappingApi = {
   /** 获取全部映射 { keyword: parentNode } */
-  list: () =>
-    api.get<{ code: number; data: Record<string, string> }>('/production/process-mapping/list'),
+  list: async (): Promise<Record<string, string>> =>
+    unwrapApiData<Record<string, string>>(await api.get<ApiResponse<Record<string, string>>>('/production/process-mapping/list'), '工序映射加载失败'),
 };
 
 // ─── AI质检建议 ─────────────────────────────────────────────
@@ -283,10 +324,11 @@ export interface QualityAiSuggestionResult {
 }
 
 export const qualityAiApi = {
-  getSuggestion: (orderId: string) =>
-    api.get<{ code: number; data: QualityAiSuggestionResult }>('/quality/ai-suggestion', {
-      params: { orderId },
-    }),
+  getSuggestion: async (orderId: string): Promise<QualityAiSuggestionResult> =>
+    unwrapApiData<QualityAiSuggestionResult>(
+      await api.get<ApiResponse<QualityAiSuggestionResult>>('/quality/ai-suggestion', { params: { orderId } }),
+      'AI 质检建议加载失败',
+    ),
 };
 
 // ── 站内通知（跟单员收件箱）──
@@ -312,8 +354,11 @@ export const urgeApi = {
     api.post('/production/order/urge', { orderId, remark: remark || '' }),
   reply: (urgeRecordId: string, replyContent: string, expectedShipDate?: string) =>
     api.post('/production/order/urge/reply', { urgeRecordId, replyContent, expectedShipDate }),
-  checkUrged: (orderIds: string[]) =>
-    api.post<{ code: number; data: { urgedOrderIds: string[] } }>('/production/order/urge/check-urged', { orderIds }),
+  checkUrged: async (orderIds: string[]): Promise<{ urgedOrderIds: string[] }> =>
+    unwrapApiData<{ urgedOrderIds: string[] }>(
+      await api.post<ApiResponse<{ urgedOrderIds: string[] }>>('/production/order/urge/check-urged', { orderIds }),
+      '催单状态查询失败',
+    ),
 };
 
 export const sysNoticeApi = {

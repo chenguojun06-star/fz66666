@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import { productionScanApi } from '@/services/production/productionApi';
-import type { ApiResult } from '@/utils/api';
 
 const _scanCache = new Map<string, { records: Record<string, unknown>[]; ts: number }>();
 const _inflight = new Map<string, Promise<Record<string, unknown>[]>>();
@@ -13,11 +12,11 @@ async function loadOrderScans(orderId: string): Promise<Record<string, unknown>[
   if (_inflight.has(orderId)) return _inflight.get(orderId)!;
   const p = (async () => {
     try {
+      // service 已解包：兼容分页对象 / 裸数组
       const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 500 });
-      const r = res as ApiResult<any>;
-      const raw = r?.data?.records ?? r?.data ?? [];
+      const raw = (res as { records?: unknown[] } | null)?.records ?? res ?? [];
       const records: Record<string, unknown>[] = Array.isArray(raw)
-        ? raw.filter((r: any) => String(r?.scanResult ?? '') === 'success' && Number(r?.quantity ?? 0) > 0)
+        ? (raw as Record<string, unknown>[]).filter((r) => String(r?.scanResult ?? '') === 'success' && Number(r?.quantity ?? 0) > 0)
         : [];
       _scanCache.set(orderId, { records, ts: Date.now() });
       return records;

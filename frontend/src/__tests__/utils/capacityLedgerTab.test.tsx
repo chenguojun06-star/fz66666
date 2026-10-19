@@ -47,7 +47,8 @@ beforeEach(() => {
 
 describe('外发工厂产能台账（D-779）', () => {
   it('有余量的工厂显示为可承接，并给出余量数字', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({ data: [base] });
+    // service 已解包（D-817）：mock 裸数组，别再 mock 信封
+    mockApi.getCapacityLedger.mockResolvedValue([base]);
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('有余量')).toBeTruthy());
     await waitFor(() => expect(screen.getByText('33.3%')).toBeTruthy());
@@ -56,8 +57,7 @@ describe('外发工厂产能台账（D-779）', () => {
   });
 
   it('未配置产能必须显示「未配置」而不是 0', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({
-      data: [
+    mockApi.getCapacityLedger.mockResolvedValue([
         {
           ...base,
           factoryId: 'F2',
@@ -70,8 +70,7 @@ describe('外发工厂产能台账（D-779）', () => {
           freeCapacity30d: null,
           status: 'UNCONFIGURED',
         },
-      ],
-    });
+    ]);
     render(<CapacityLedgerTab />);
     // ⚠️ 所有断言都要包在 waitFor 里：表格是异步填的，
     // 先等到「未配置产能」标签出现，再取其他节点，中间仍可能发生一次重渲染
@@ -83,8 +82,7 @@ describe('外发工厂产能台账（D-779）', () => {
   });
 
   it('未配置产能的数量必须被单独提示出来', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({
-      data: [
+    mockApi.getCapacityLedger.mockResolvedValue([
         base,
         {
           ...base,
@@ -98,8 +96,7 @@ describe('外发工厂产能台账（D-779）', () => {
           freeCapacity30d: null,
           status: 'UNCONFIGURED',
         },
-      ],
-    });
+    ]);
     render(<CapacityLedgerTab />);
     await waitFor(() =>
       expect(screen.getByText(/有 1 家外发工厂未配置日产能/)).toBeTruthy(),
@@ -107,8 +104,7 @@ describe('外发工厂产能台账（D-779）', () => {
   });
 
   it('超载工厂负荷率标红，余量显示负数', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({
-      data: [
+    mockApi.getCapacityLedger.mockResolvedValue([
         {
           ...base,
           factoryId: 'F4',
@@ -118,8 +114,7 @@ describe('外发工厂产能台账（D-779）', () => {
           freeCapacity30d: -3000,
           status: 'OVERLOADED',
         },
-      ],
-    });
+    ]);
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('已超载')).toBeTruthy());
     // 同样要等：表格是异步填的，紧随其后的裸断言会偶发失败
@@ -128,8 +123,7 @@ describe('外发工厂产能台账（D-779）', () => {
   });
 
   it('负载不可知时显示「负载未知」，不给负荷率', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({
-      data: [
+    mockApi.getCapacityLedger.mockResolvedValue([
         {
           ...base,
           factoryId: 'F5',
@@ -140,16 +134,13 @@ describe('外发工厂产能台账（D-779）', () => {
           freeCapacity30d: null,
           status: 'UNKNOWN',
         },
-      ],
-    });
+    ]);
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('负载未知')).toBeTruthy());
   });
 
   it('实测产能来源要标出来，便于判断数据可信度', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({
-      data: [{ ...base, capacitySource: 'real', realDailyOutput: 200 }],
-    });
+    mockApi.getCapacityLedger.mockResolvedValue([{ ...base, capacitySource: 'real', realDailyOutput: 200 }]);
     render(<CapacityLedgerTab />);
     await waitFor(() => expect(screen.getByText('实测')).toBeTruthy());
   });
@@ -161,7 +152,7 @@ describe('外发工厂产能台账（D-779）', () => {
   });
 
   it('必须声明近30天余量只是排产口径、不是档期预留', async () => {
-    mockApi.getCapacityLedger.mockResolvedValue({ data: [base] });
+    mockApi.getCapacityLedger.mockResolvedValue([base]);
     render(<CapacityLedgerTab />);
     expect(screen.getByText(/真正的可接单日期需要另建工厂档期/)).toBeTruthy();
   });

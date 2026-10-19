@@ -171,7 +171,7 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
   useEffect(() => {
     Promise.all([fetchFactories(), fetchUsers(), fetchDepartments(), productionOrderApi.getFactoryCapacity()])
       .then(([, , , capRes]) => {
-        if (capRes?.data) setFactoryCapacities(capRes.data);
+        if (capRes) setFactoryCapacities(capRes);
       })
       .catch((err) => { console.error('辅助数据加载失败:', err); });
   }, []);

@@ -37,12 +37,9 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
   const fetchSuggestion = useCallback(async (id: string) => {
     setLoading(true);
     try {
+      // service 已解包：直接是建议对象
       const res = await qualityAiApi.getSuggestion(id);
-      if (res?.code === 200 && res.data) {
-        setData(res.data);
-      } else {
-        setData(null);
-      }
+      setData(res ?? null);
     } catch {
       setData(null);
     } finally {
