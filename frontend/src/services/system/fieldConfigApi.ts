@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 export interface FieldConfigSaveRequest {
@@ -7,19 +7,17 @@ export interface FieldConfigSaveRequest {
   fields: FieldConfigItem[];
 }
 
-interface ApiResult<T> { code: number; data: T; message?: string; }
-
 export const fieldConfigApi = {
-  list: (bizType: string, platform: string = 'pc', includeDisabled: boolean = false) =>
-    api.get<ApiResult<FieldConfigItem[]>>('/system/field-config', {
+  list: async (bizType: string, platform: string = 'pc', includeDisabled: boolean = false) =>
+    unwrapApiData<FieldConfigItem[]>(await api.get('/system/field-config', {
       params: { bizType, platform, includeDisabled },
-    }),
+    }), '字段配置请求失败'),
 
-  saveBatch: (data: FieldConfigSaveRequest) =>
-    api.put<ApiResult<FieldConfigItem[]>>('/system/field-config', data),
+  saveBatch: async (data: FieldConfigSaveRequest) =>
+    unwrapApiData<FieldConfigItem[]>(await api.put('/system/field-config', data), '字段配置请求失败'),
 
-  delete: (bizType: string, fieldKey: string) =>
-    api.delete<ApiResult<void>>('/system/field-config', { params: { bizType, fieldKey } }),
+  delete: async (bizType: string, fieldKey: string) =>
+    unwrapApiData<void>(await api.delete('/system/field-config', { params: { bizType, fieldKey } }), '字段配置请求失败'),
 };
 
 export const BIZ_TYPE_OPTIONS = [

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 export interface PlatformAnnouncement {
   id: number;
@@ -15,13 +15,13 @@ export interface PlatformAnnouncement {
 
 export const announcementApi = {
   /** 获取当前生效的未读公告 */
-  getActive: () => api.post<PlatformAnnouncement[]>('/system/announcement/active', {}),
+  getActive: async () => unwrapApiData<PlatformAnnouncement[]>(await api.post('/system/announcement/active', {}), '公告请求失败'),
   /** 标记已读 */
   markRead: (id: number) => api.post(`/system/announcement/${id}/read`, {}),
   /**
    * 发布公告（D-513 新增）
    * 后端权限：SUPER_ADMIN（可发全局）或 TENANT_OWNER（强制归属本租户，忽略传入 tenantId）
    */
-  create: (payload: { title: string; content?: string; type?: 'info' | 'warning' | 'important' }) =>
-    api.post<PlatformAnnouncement>('/system/announcement/', payload),
+  create: async (payload: { title: string; content?: string; type?: 'info' | 'warning' | 'important' }) =>
+    unwrapApiData<PlatformAnnouncement>(await api.post('/system/announcement/', payload), '公告请求失败'),
 };

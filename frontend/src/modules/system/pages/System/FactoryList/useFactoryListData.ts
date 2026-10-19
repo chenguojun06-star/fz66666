@@ -149,15 +149,11 @@ export function useFactoryListData() {
     if (!auditTarget?.id) return;
     setAuditLoading(true);
     try {
-      const response = await factoryApi.approveAdmission(auditTarget.id, action, reason || undefined);
-      if (response.code === 200) {
-        message.success('准入审核完成');
-        setAuditModalOpen(false);
-        setAuditTarget(null);
-        fetchFactories();
-      } else {
-        message.error(response.message || '审核失败');
-      }
+      await factoryApi.approveAdmission(auditTarget.id, action, reason || undefined);
+      message.success('准入审核完成');
+      setAuditModalOpen(false);
+      setAuditTarget(null);
+      fetchFactories();
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '审核失败');
     } finally {

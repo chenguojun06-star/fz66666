@@ -18,8 +18,7 @@ const AnnouncementBanner: React.FC = () => {
 
   const fetchActive = useCallback(async () => {
     try {
-      const res = await announcementApi.getActive();
-      const data = (res as any)?.data;
+      const data = await announcementApi.getActive();
       if (Array.isArray(data)) setList(data);
     } catch { /* ignore */ }
   }, []);

@@ -26,8 +26,8 @@ export function useFieldConfig() {
     setLoading(true);
     try {
       const res = await fieldConfigApi.list(bizType, 'pc', true);
-      if (res?.code === 200 && Array.isArray(res.data)) {
-        setRows(res.data);
+      if (Array.isArray(res)) {
+        setRows(res);
         setDirty(false);
       }
     } catch (e) {
@@ -145,13 +145,9 @@ export function useFieldConfig() {
 
   const handleDelete = useCallback(async (row: FieldConfigItem) => {
     try {
-      const res = await fieldConfigApi.delete(bizType, row.fieldKey);
-      if (res?.code === 200) {
-        message.success('已删除');
-        fetchList();
-      } else {
-        message.error(res?.message || '删除失败');
-      }
+      await fieldConfigApi.delete(bizType, row.fieldKey);
+      message.success('已删除');
+      fetchList();
     } catch (e: any) {
       message.error(e?.message || '删除失败');
     }
@@ -160,7 +156,7 @@ export function useFieldConfig() {
   const handleSaveAll = useCallback(async () => {
     setSaving(true);
     try {
-      const res = await fieldConfigApi.saveBatch({
+      const saved = await fieldConfigApi.saveBatch({
         bizType,
         platform: 'pc',
         fields: rows.map((r, i) => ({
@@ -170,13 +166,9 @@ export function useFieldConfig() {
           h5ColSpan: r.h5ColSpan ?? 24,
         })),
       });
-      if (res?.code === 200) {
-        message.success('保存成功，配置已生效');
-        setRows(res.data || rows);
-        setDirty(false);
-      } else {
-        message.error(res?.message || '保存失败');
-      }
+      message.success('保存成功，配置已生效');
+      setRows(saved || rows);
+      setDirty(false);
     } catch (e: any) {
       message.error(e?.message || '保存失败');
     } finally {

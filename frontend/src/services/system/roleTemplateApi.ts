@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 export interface RoleTemplate {
   id: number;
@@ -23,13 +23,13 @@ export interface QuickSetupResult {
 }
 
 export const roleTemplateApi = {
-  list: () => api.get<{ code: number; data: RoleTemplate[]; message?: string }>('/role-template/list'),
+  list: async () => unwrapApiData<RoleTemplate[]>(await api.get('/role-template/list'), '角色模板请求失败'),
 
-  getById: (id: number) => api.get<{ code: number; data: RoleTemplate; message?: string }>(`/role-template/${id}`),
+  getById: async (id: number) => unwrapApiData<RoleTemplate>(await api.get(`/role-template/${id}`), '角色模板请求失败'),
 
-  checkNewTenant: () =>
-    api.get<{ code: number; data: NewTenantCheckResult; message?: string }>('/role-template/check-new-tenant'),
+  checkNewTenant: async () =>
+    unwrapApiData<NewTenantCheckResult>(await api.get('/role-template/check-new-tenant'), '角色模板请求失败'),
 
-  quickSetup: (templateIds: number[]) =>
-    api.post<{ code: number; data: QuickSetupResult; message?: string }>('/role-template/quick-setup', templateIds),
+  quickSetup: async (templateIds: number[]) =>
+    unwrapApiData<QuickSetupResult>(await api.post('/role-template/quick-setup', templateIds), '角色模板请求失败'),
 };

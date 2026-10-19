@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
 
 export const transform = (unit: any): OrganizationUnit => {
@@ -25,47 +25,47 @@ export const revert = (unit: Partial<OrganizationUnit>): any => {
 
 export const organizationApi = {
   tree: async () => {
-    const res = await api.get<any>('/system/organization/tree');
-    const list = Array.isArray(res) ? res : (res?.data || []);
+    const data = await unwrapApiData<any>(await api.get('/system/organization/tree'), '组织架构请求失败');
+    const list = Array.isArray(data) ? data : (data?.data || []);
     return Array.isArray(list) ? list.map(transform) : [];
   },
   departments: async () => {
-    const res = await api.get<any>('/system/organization/departments');
-    const list = Array.isArray(res) ? res : (res?.data || []);
+    const data = await unwrapApiData<any>(await api.get('/system/organization/departments'), '组织架构请求失败');
+    const list = Array.isArray(data) ? data : (data?.data || []);
     return Array.isArray(list) ? list.map(transform) : [];
   },
   externalTree: async () => {
-    const res = await api.get<any>('/system/organization/external-tree');
-    const list = Array.isArray(res) ? res : (res?.data || []);
+    const data = await unwrapApiData<any>(await api.get('/system/organization/external-tree'), '组织架构请求失败');
+    const list = Array.isArray(data) ? data : (data?.data || []);
     return Array.isArray(list) ? list.map(transform) : [];
   },
   members: async () => {
-    const res = await api.get<any>('/system/organization/members');
-    return (res?.data || res) as Record<string, User[]>;
+    const data = await unwrapApiData<any>(await api.get('/system/organization/members'), '组织架构请求失败');
+    return (data ?? {}) as Record<string, User[]>;
   },
   assignableUsers: async () => {
-    const res = await api.get<any>('/system/organization/assignable-users');
-    return (Array.isArray(res) ? res : (res?.data || [])) as User[];
+    const data = await unwrapApiData<any>(await api.get('/system/organization/assignable-users'), '组织架构请求失败');
+    return (Array.isArray(data) ? data : []) as User[];
   },
-  assignMember: (userId: string, orgUnitId: string) =>
-    api.post<void>('/system/organization/assign-member', { userId, orgUnitId }),
-  batchAssignMembers: (userIds: string[], orgUnitId: string) =>
-    api.post<number>('/system/organization/assign-members', { userIds, orgUnitId }),
-  removeMember: (userId: string, remark?: string) =>
-    api.post<void>('/system/organization/remove-member', { userId, remark }),
-  setFactoryOwner: (userId: string, factoryId: string) =>
-    api.post<void>('/system/organization/factory/set-owner', { userId, factoryId }),
-  setManager: (unitId: string, managerUserId: string) =>
-    api.post<boolean>(`/system/organization/${unitId}/set-manager`, { managerUserId }),
-  create: (payload: Partial<OrganizationUnit>) => api.post<boolean>('/system/organization', revert(payload)),
-  update: (payload: Partial<OrganizationUnit>) => api.put<boolean>('/system/organization', revert(payload)),
-  delete: (id: string, remark: string) => api.delete<boolean>(`/system/organization/${id}`, { params: { remark } }),
-  initTemplate: (templateType: string, rootName: string, factoryId?: string) =>
-    api.post<void>('/system/organization/init-template', { templateType, rootName, factoryId }),
-  adminResetMemberPwd: (userId: string, newPassword: string) =>
-    api.post<void>('/system/user/admin-reset-member-pwd', { userId, newPassword }),
-  ownerResetMemberPwd: (userId: string) =>
-    api.post<void>('/system/user/owner-reset-member-pwd', { userId }),
+  assignMember: async (userId: string, orgUnitId: string) =>
+    unwrapApiData<void>(await api.post('/system/organization/assign-member', { userId, orgUnitId }), '组织架构请求失败'),
+  batchAssignMembers: async (userIds: string[], orgUnitId: string) =>
+    unwrapApiData<number>(await api.post('/system/organization/assign-members', { userIds, orgUnitId }), '组织架构请求失败'),
+  removeMember: async (userId: string, remark?: string) =>
+    unwrapApiData<void>(await api.post('/system/organization/remove-member', { userId, remark }), '组织架构请求失败'),
+  setFactoryOwner: async (userId: string, factoryId: string) =>
+    unwrapApiData<void>(await api.post('/system/organization/factory/set-owner', { userId, factoryId }), '组织架构请求失败'),
+  setManager: async (unitId: string, managerUserId: string) =>
+    unwrapApiData<boolean>(await api.post(`/system/organization/${unitId}/set-manager`, { managerUserId }), '组织架构请求失败'),
+  create: async (payload: Partial<OrganizationUnit>) => unwrapApiData<boolean>(await api.post('/system/organization', revert(payload)), '组织架构请求失败'),
+  update: async (payload: Partial<OrganizationUnit>) => unwrapApiData<boolean>(await api.put('/system/organization', revert(payload)), '组织架构请求失败'),
+  delete: async (id: string, remark: string) => unwrapApiData<boolean>(await api.delete(`/system/organization/${id}`, { params: { remark } }), '组织架构请求失败'),
+  initTemplate: async (templateType: string, rootName: string, factoryId?: string) =>
+    unwrapApiData<void>(await api.post('/system/organization/init-template', { templateType, rootName, factoryId }), '组织架构请求失败'),
+  adminResetMemberPwd: async (userId: string, newPassword: string) =>
+    unwrapApiData<void>(await api.post('/system/user/admin-reset-member-pwd', { userId, newPassword }), '组织架构请求失败'),
+  ownerResetMemberPwd: async (userId: string) =>
+    unwrapApiData<void>(await api.post('/system/user/owner-reset-member-pwd', { userId }), '组织架构请求失败'),
 };
 
 export default organizationApi;

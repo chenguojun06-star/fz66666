@@ -1,7 +1,7 @@
 import api, { unwrapApiData } from '../../utils/api';
 import { downloadFile } from '../../utils/fileUrl';
 import type { ProductionQueryParams, ProductionOrder } from '../../types/production';
-import type { ApiResponse, PaginatedData } from '../../types/api';
+import type { PaginatedData } from '../../types/api';
 
 export type ProductionOrderListParams = ProductionQueryParams & {
   startDate?: string;

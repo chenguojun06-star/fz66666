@@ -81,8 +81,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         const response = await factoryApi.list({
           pageSize: 1000, supplierType: 'MATERIAL', status: 'active'
         });
-        if (mounted && response?.data?.records) {
-          setSuppliers(response.data.records);
+        if (mounted && response?.records) {
+          setSuppliers(response.records);
         }
       } catch (error) {
         console.error('加载供应商列表失败:', error);
@@ -169,8 +169,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         factoryType: 'EXTERNAL',
         status: 'active'
       });
-      if (response?.data?.id) {
-        const newFactory = response.data;
+      if (response?.id) {
+        const newFactory = response;
         setSuppliers(prev => [...prev, newFactory]);
         onChange?.(name, {
           id: newFactory.id,

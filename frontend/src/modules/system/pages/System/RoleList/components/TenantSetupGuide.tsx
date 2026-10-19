@@ -28,8 +28,8 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
     setChecking(true);
     try {
       const res = await roleTemplateApi.checkNewTenant();
-      if (res.code === 200 && res.data?.isNewTenant) {
-        setTemplates(res.data.recommendedTemplates || []);
+      if (res?.isNewTenant) {
+        setTemplates(res.recommendedTemplates || []);
       }
     } catch (e) {
       console.error('检查新租户失败', e);
@@ -46,13 +46,8 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
 
     setLoading(true);
     try {
-      const res = await roleTemplateApi.quickSetup(selectedIds);
-
-      if (res.code === 200) {
-        setStep(1);
-      } else {
-        message.error(res.message || '创建失败');
-      }
+      await roleTemplateApi.quickSetup(selectedIds);
+      setStep(1);
     } catch (e) {
       message.error('创建失败');
     } finally {

@@ -69,8 +69,7 @@ const ServiceSidebar: React.FC = () => {
 
   const loadAnnouncements = useCallback(async () => {
     try {
-      const res = await announcementApi.getActive();
-      const data = (res as any)?.data;
+      const data = await announcementApi.getActive();
       if (Array.isArray(data)) setAnnouncements(data);
     } catch { /* 拉取失败时保持静态更新列表，不影响页面 */ }
   }, []);

@@ -60,7 +60,7 @@ const FactoryList: React.FC = () => {
     setSyncLoading(true);
     try {
       const res = await factoryApi.syncOrderFactoryType();
-      const data = res?.data;
+      const data = res;
       const updated = data?.updatedOrders ?? 0;
       if (updated > 0) {
         message.success(

@@ -45,8 +45,8 @@ export function useTemplateAndQr(loadData: () => Promise<void>) {
   // 模板弹窗打开时加载工厂列表
   useEffect(() => {
     if (tplModal.open) {
-      factoryApi.list({ pageSize: 500, status: 'active' }).then((res: ApiResult<{ records: Factory[] }>) => {
-        setFactories(res?.data?.records ?? []);
+      factoryApi.list({ pageSize: 500, status: 'active' }).then((res) => {
+        setFactories(res.records ?? []);
       }).catch(() => setFactories([]));
     }
   }, [tplModal.open]);

@@ -137,9 +137,9 @@ export function useColumnSettings() {
   useEffect(() => {
     let cancelled = false;
     userPreferenceApi.list(PREFERENCE_PAGE_KEY)
-      .then((res) => {
-        if (cancelled || res?.code !== 200 || !Array.isArray(res.data)) return;
-        const pref = res.data.find((p) => p.preferenceType === PREFERENCE_TYPE);
+      .then((prefs) => {
+        if (cancelled || !Array.isArray(prefs)) return;
+        const pref = prefs.find((p) => p.preferenceType === PREFERENCE_TYPE);
         if (!pref?.preferenceValue) return;
         try {
           const parsed = JSON.parse(pref.preferenceValue) as Record<string, boolean>;

@@ -26,7 +26,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
     try {
       setLoading(true);
       const res = await supplierUserApi.list(supplierId);
-      setUsers(res?.data || []);
+      setUsers(res || []);
     } catch (err: any) {
       message.error(err?.message || '加载失败');
     } finally {
@@ -49,7 +49,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         contactPerson: values.contactPerson,
         contactPhone: values.contactPhone,
       });
-      const data = res?.data;
+      const data = res;
       if (data?.initialPassword || data?.username) {
         modal.success({
           title: '账号创建成功',
@@ -82,7 +82,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         try {
           const newPwd = '123456';
           const res = await supplierUserApi.resetPassword(user.id, newPwd);
-          const data = res?.data;
+          const data = res;
           modal.success({
             title: '密码已重置',
             content: (

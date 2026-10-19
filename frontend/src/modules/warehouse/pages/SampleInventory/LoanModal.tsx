@@ -67,7 +67,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
   useEffect(() => {
     if (visible) {
       factoryApi.list({ page: 1, pageSize: 500, status: 'active' }).then(res => {
-        const records = res?.data?.records || [];
+        const records = res.records || [];
         setFactoryOptions(records.map((f: any) => ({
           label: f.factoryName || f.name || f.id,
           value: f.id,

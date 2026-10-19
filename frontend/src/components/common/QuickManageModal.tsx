@@ -144,7 +144,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       } else {
         // D-216：supplierType 可指定 OUTSOURCE（外发工厂快捷维护，下单抽屉齿轮入口）
         const res = await factoryApi.list({ pageSize: 1000, supplierType, status: 'active' });
-        const list = res?.data?.records || [];
+        const list = res.records || [];
         result = list.map((f) => ({
           id: String(f.id),
           name: f.factoryName,

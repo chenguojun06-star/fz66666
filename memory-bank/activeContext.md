@@ -22,8 +22,11 @@
 - **框架级**：服务端信封泄漏治理（`unwrapApiData` 幂等 + CI 门禁 baseline 177 棘轮，存量分批改）；生产库结构漂移全量核实（补 4 表 2 列、清 3 组死代码、74 段 DDL 与线上逐列一致）
 
 **进行中/已知问题**：
-- 信封存量 **251 处**待分批清理（2026-10-19 门禁加固后补录口径：此前 304 只统计「泛型信封+多行 return」，单行直接 return 漏检；新增 25 处漏网存量分布于 shopApi 11 / paymentApi 3 / productionApi 3 / systemStatusService 4 / styleApi 1 / announcementApi 1 / organizationApi 1。第 5 批 finance 修 17 处、第 6 批 shop 修 31 处、第 7 批 production 残余修 30 处后降至 251）
+- 信封存量 **211 处**待分批清理（2026-10-19 门禁加固后补录口径：此前 304 只统计「泛型信封+多行 return」，单行直接 return 漏检；新增 25 处漏网存量分布于 shopApi 11 / paymentApi 3 / productionApi 3 / systemStatusService 4 / styleApi 1 / announcementApi 1 / organizationApi 1。第 5 批 finance 修 17 处、第 6 批 shop 修 31 处、第 7 批 production 残余修 30 处后降至 251、第 8 批 system 修 40 处后降至 211）
 - 门禁加固已完成（2026-10-19）：`check-api-envelope-leak.py` 修复单行漏检 bug + `--update` 必须 `--reason` 否则拒绝放大（此前 ef40a136c 无理由把 175→337）；新增 `scripts/check-d-number.py`（查重/最近编号/待推送撞号三模式，D-808 实测报撞号）
+- D-821（待提交）：productionApi.ts 25 处 `api.<verb><ApiResponse<T>>` 泛型信封声明收敛 + unused import 清理（纯编译期，tsc/eslint/17 测试/门禁/抽样双向验证全过）。注：25 处收敛已被并行会话 `git add -A` 吃进 D-820 提交，本批仅剩 import 一行
+- 已知 CI 行为：unused type import 在 eslint 为 **warning** 级（exit 0），CI 不拦——D-820 曾带着 unused ApiResponse import 提交成功，收敛靠人
+- ⚠️ 并行会话活跃：核实/改动前后先 `git status`，避免把别人的未提交改动卷进自己的批次
 - `t_payment_config` 仍空（微信/支付宝商户号未配），POS 投产前需先配支付
 - ~~主图区用例概率性 flaky~~ ✅ **已根治（d0841e94c，10-18）**：根因是测试等待条件写错——`waitFor` 等 `<details>`（0 耗时立即通过），真正异步是 Image.onload→canvas→fetch HEAD；改 `getByText`→`findByText` 让断言自己等，连跑 8 次全绿。教训：放宽 timeout 治不了「等待条件选错对象」，偶发绿比红更危险
 - db-query-mcp 本地 3308 未起 + 对正常 SELECT 误报「SELECT...INTO」待修

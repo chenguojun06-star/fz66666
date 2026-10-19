@@ -143,7 +143,7 @@ export function useRoleListData() {
   const checkNewTenant = async () => {
     try {
       const res = await roleTemplateApi.checkNewTenant();
-      if (res.data?.isNewTenant) {
+      if (res?.isNewTenant) {
         setShowSetupGuide(true);
       }
     } catch (e) {

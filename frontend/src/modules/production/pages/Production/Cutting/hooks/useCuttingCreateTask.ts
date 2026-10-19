@@ -144,10 +144,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         factoryType,
         factoryName: String(keyword || '').trim() || undefined,
       });
-      if (res.code === 200) {
-        const records = Array.isArray(res.data?.records) ? res.data.records : [];
-        setCreateFactoryOptions(records.filter((item) => String(item?.factoryName || '').trim()));
-      }
+      const records = Array.isArray(res.records) ? res.records : [];
+      setCreateFactoryOptions(records.filter((item) => String(item?.factoryName || '').trim()));
     } catch {
       // Intentionally empty
     } finally {
