@@ -51,9 +51,9 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     setHasError(false);
     try {
       // 拉取该款历史订单（最近30条，足够计算周期/准时率/频率统计）
-      const res = await productionOrderApi.list({ styleNo, pageSize: 30, page: 1 } as any) as any;
+      const res = await productionOrderApi.list({ styleNo, pageSize: 30, page: 1 });
       if (requestIdRef.current !== requestId) return; // 旧请求丢弃
-      const records: any[] = res?.data?.records ?? res?.records ?? [];
+      const records: any[] = res.records ?? [];
 
       if (records.length === 0) {
         setInsight(null);

@@ -103,7 +103,11 @@ export const productionOrderApi = {
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
     downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
-  list: (params: ProductionOrderListParams) => api.get<ApiResponse<PaginatedData<ProductionOrder>>>('/production/order/list', { params }),
+  list: async (params: ProductionOrderListParams): Promise<PaginatedData<ProductionOrder>> =>
+    unwrapApiData<PaginatedData<ProductionOrder>>(
+      await api.get('/production/order/list', { params }),
+      '生产订单加载失败',
+    ),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
   close: async (id: string, sourceModule: string, remark?: string, specialClose?: boolean): Promise<boolean> =>
     unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/close', { id, sourceModule, remark, specialClose }), '关单失败'),
@@ -115,7 +119,11 @@ export const productionOrderApi = {
     unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/progress-workflow/lock', payload), '锁定工序流程失败'),
   rollbackProgressWorkflow: async (payload: Record<string, unknown>): Promise<boolean> =>
     unwrapApiData<boolean>(await api.post<ApiResponse<boolean>>('/production/order/progress-workflow/rollback', payload), '回滚工序流程失败'),
-  quickEdit: (payload: Partial<ProductionOrder> & { id: string }) => api.put<ApiResponse<ProductionOrder>>('/production/order/quick-edit', payload),
+  quickEdit: async (payload: Partial<ProductionOrder> & { id: string }): Promise<ProductionOrder> =>
+    unwrapApiData<ProductionOrder>(
+      await api.put('/production/order/quick-edit', payload),
+      '保存失败',
+    ),
   // 节点操作记录 API
   getNodeOperations: async (id: string): Promise<string> =>
     unwrapApiData<string>(await api.get<ApiResponse<string>>(`/production/order/node-operations/${encodeURIComponent(id)}`), '节点操作记录加载失败'),
@@ -163,7 +171,11 @@ export const productionCuttingApi = {
     ),
   getByCode: async (qrCode: string): Promise<unknown> =>
     unwrapApiData<unknown>(await api.post<ApiResponse<unknown>>('/production/cutting/by-code', { qrCode }), '扫码查询失败'),
-  listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
+  listBundles: async (orderId: string): Promise<unknown[]> =>
+    unwrapApiData<unknown[]>(
+      await api.get(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
+      '加载裁剪分扎失败',
+    ),
 };
 
 export const productionScanApi = {
@@ -174,7 +186,6 @@ export const productionScanApi = {
       await api.get<ApiResponse<unknown[]>>('/production/scan/list', { params: { orderId: String(orderId || '').trim(), ...params } }),
       '扫码记录加载失败',
     ),
-  create: (payload: any) => api.post<any>('/production/scan/execute', payload),
   /** 撤回扫码记录（1小时内、未结算、订单未完成） */
   undo: async (payload: { recordId: string }): Promise<{ success: boolean; message: string }> =>
     unwrapApiData<{ success: boolean; message: string }>(

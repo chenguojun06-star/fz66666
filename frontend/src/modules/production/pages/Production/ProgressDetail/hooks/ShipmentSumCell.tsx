@@ -9,7 +9,7 @@ export const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
   }> | null>(null);
   useEffect(() => {
     factoryShipmentApi.getOrderDetailSum(orderId)
-      .then(res => { if (res?.data?.length) setData(res.data); })
+      .then(res => { if (res?.length) setData(res); })
       .catch((err) => { console.warn('[Progress] 发货汇总加载失败:', err?.message || err); });
   }, [orderId]);
   if (!data) return <span className="u-fs-12" style={{ color: 'var(--color-border-antd)' }}>-</span>;

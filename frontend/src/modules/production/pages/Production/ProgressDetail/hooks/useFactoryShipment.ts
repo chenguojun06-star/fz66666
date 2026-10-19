@@ -39,14 +39,14 @@ export function useFactoryShipment({ message }: {
         factoryShipmentApi.getOrderDetailSum(String(record.id)),
         factoryShipmentApi.listByOrder(String(record.id)),
       ]);
-      if (shippableRes.status === 'fulfilled' && shippableRes.value?.data) {
-        setShippableInfo(shippableRes.value.data);
+      if (shippableRes.status === 'fulfilled') {
+        setShippableInfo(shippableRes.value);
       }
-      if (detailSumRes.status === 'fulfilled' && detailSumRes.value?.data) {
-        setDetailSum(detailSumRes.value.data);
+      if (detailSumRes.status === 'fulfilled') {
+        setDetailSum(detailSumRes.value);
       }
-      if (historyRes.status === 'fulfilled' && historyRes.value?.data) {
-        setShipHistory(historyRes.value.data);
+      if (historyRes.status === 'fulfilled') {
+        setShipHistory(historyRes.value);
       }
     } catch { /* silent */ }
   }, [shipForm]);

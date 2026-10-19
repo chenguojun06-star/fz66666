@@ -194,13 +194,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!oid) return null;
     try {
       const res = await productionOrderApi.list({ orderNo: oid, page: 1, pageSize: 1 });
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        const data = result.data as { records?: any[] };
-        const records = data?.records || [];
-        return records.length > 0 ? (records[0] as ProductionOrder) : null;
-      }
-      return null;
+      const records = res.records || [];
+      return records.length > 0 ? (records[0] as ProductionOrder) : null;
     } catch { return null; }
   };
 

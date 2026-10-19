@@ -30,6 +30,7 @@ vi.mock('@/utils/api', async () => {
 
 import {
   productionOrderApi,
+  productionCuttingApi,
   productionScanApi,
   productionPatternApi,
   processParentMappingApi,
@@ -37,6 +38,10 @@ import {
   urgeApi,
   qualityAiApi,
 } from '../../services/production/productionApi';
+import { factoryShipmentApi } from '../../services/production/factoryShipmentApi';
+import attendanceApi from '../../services/production/attendanceApi';
+import exceptionReportApi from '../../services/production/exceptionReportApi';
+import { materialQualityIssueApi } from '../../services/production/materialQualityIssueApi';
 
 describe('productionApi 解包（D-817 第 4 批）', () => {
   beforeEach(() => {
@@ -106,5 +111,82 @@ describe('productionApi 解包（D-817 第 4 批）', () => {
   it('关单失败必须抛错 —— 此前 `if (res.code === 200)` 漏 else 会让失败静默', async () => {
     mockHttp.post.mockResolvedValue({ code: 409, message: '订单已结算，不可关单' });
     await expect(productionOrderApi.close('o1', 'production')).rejects.toThrow('订单已结算，不可关单');
+  });
+});
+
+describe('production 残余批次（D-820）', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('order.list 返回裸分页对象；quickEdit 失败抛错', async () => {
+    mockHttp.get.mockResolvedValue({ code: 200, data: { records: [{ id: 'o1', orderNo: 'P001' }], total: 1 } });
+    mockHttp.put.mockResolvedValue({ code: 400, message: '订单已关闭，不可编辑' });
+
+    const page = await productionOrderApi.list({ page: 1 });
+    expect(page.records).toHaveLength(1);
+    await expect(productionOrderApi.quickEdit({ id: 'o1' })).rejects.toThrow('订单已关闭，不可编辑');
+  });
+
+  it('cutting.listBundles 返回裸数组（调用方不再读 res.data）', async () => {
+    mockHttp.get.mockResolvedValue({ code: 200, data: [{ id: 1, bundleNo: 'B1', quantity: 10 }] });
+    const bundles = await productionCuttingApi.listBundles('o1');
+    expect(Array.isArray(bundles)).toBe(true);
+    expect(bundles).toHaveLength(1);
+  });
+
+  it('外发发货：list / shippable / getDetails 全部是裸数据', async () => {
+    mockHttp.post.mockResolvedValue({ code: 200, data: { records: [{ id: 's1', quantity: 5 }], total: 1 } });
+    mockHttp.get
+      .mockResolvedValueOnce({ code: 200, data: { cuttingTotal: 10, shippedTotal: 5, remaining: 5 } })
+      .mockResolvedValueOnce({ code: 200, data: [{ color: '黑', sizes: [], total: 5 }] });
+
+    const page = await factoryShipmentApi.list({ page: 1 });
+    const shippable = await factoryShipmentApi.shippable('o1');
+    const details = await factoryShipmentApi.getDetails('s1');
+    expect(page.records).toHaveLength(1);
+    expect(shippable.remaining).toBe(5);
+    expect(details[0].color).toBe('黑');
+  });
+
+  it('外发发货删除失败必须抛错（不能假成功）', async () => {
+    mockHttp.delete.mockResolvedValue({ code: 409, message: '已收货，不可删除' });
+    await expect(factoryShipmentApi.delete('s1')).rejects.toThrow('已收货，不可删除');
+  });
+
+  it('考勤 adminList 返回裸分页；补录失败抛错', async () => {
+    mockHttp.get.mockResolvedValue({ code: 200, data: { records: [{ id: 'a1' }], total: 1 } });
+    mockHttp.post.mockResolvedValue({ code: 400, message: '该员工当日已打卡' });
+
+    const page = await attendanceApi.adminList({});
+    expect(page.records).toHaveLength(1);
+    await expect(attendanceApi.supplement({ userId: 'u1', date: '2026-10-19' } as never)).rejects.toThrow('该员工当日已打卡');
+  });
+
+  it('异常报告：list 返回裸分页；handle 返回裸记录，失败抛错', async () => {
+    mockHttp.get.mockResolvedValue({ code: 200, data: { records: [{ id: 1 }], total: 1 } });
+    mockHttp.post.mockResolvedValueOnce({ code: 200, data: { id: 1, status: 'RESOLVED' } });
+
+    const page = await exceptionReportApi.list({ page: 1 });
+    const handled = await exceptionReportApi.handle(1, 'resolve', '已处理');
+    expect(page.records).toHaveLength(1);
+    expect(handled.status).toBe('RESOLVED');
+
+    mockHttp.post.mockResolvedValue({ code: 500, message: '处理失败' });
+    await expect(exceptionReportApi.handle(1, 'resolve')).rejects.toThrow('处理失败');
+  });
+
+  it('来料质量问题：list / create / resolve 返回裸对象', async () => {
+    mockHttp.get.mockResolvedValue({ code: 200, data: [{ id: 'q1', severity: 'HIGH' }] });
+    mockHttp.post
+      .mockResolvedValueOnce({ code: 200, data: { id: 'q1', status: 'OPEN' } })
+      .mockResolvedValueOnce({ code: 200, data: { id: 'q1', status: 'RESOLVED' } });
+
+    const list = await materialQualityIssueApi.listByPurchaseId('p1');
+    const created = await materialQualityIssueApi.create({
+      purchaseId: 'p1', issueQuantity: 1, issueType: 'COLOR', severity: 'HIGH', disposition: 'RETURN', remark: '',
+    });
+    const resolved = await materialQualityIssueApi.resolve('q1', { resolutionRemark: '已退' });
+    expect(list[0].severity).toBe('HIGH');
+    expect(created.status).toBe('OPEN');
+    expect(resolved.status).toBe('RESOLVED');
   });
 });

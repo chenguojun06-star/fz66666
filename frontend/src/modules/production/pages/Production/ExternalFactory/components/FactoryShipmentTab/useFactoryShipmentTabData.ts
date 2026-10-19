@@ -37,10 +37,8 @@ export function useFactoryShipmentTabData(selectedFactoryId: string | null) {
       const params: Record<string, unknown> = { page, pageSize };
       if (selectedFactoryId) params.factoryId = selectedFactoryId;
       const res = await factoryShipmentApi.list(params);
-      if (res?.data) {
-        setShipments(res.data.records || []);
-        setTotal(res.data.total || 0);
-      }
+      setShipments(res.records || []);
+      setTotal(res.total || 0);
     } catch (err: unknown) {
       message.error(err instanceof Error ? err.message : '获取发货记录失败');
     } finally {
@@ -62,13 +60,11 @@ export function useFactoryShipmentTabData(selectedFactoryId: string | null) {
         factoryType: 'EXTERNAL',
         excludeTerminal: true,
       });
-      if (res?.data) {
-        let records = (res.data.records || []) as ProductionOrder[];
-        if (selectedFactoryId) {
-          records = records.filter(o => o.factoryId === selectedFactoryId);
-        }
-        setOrderList(records);
+      let records = (res.records || []) as ProductionOrder[];
+      if (selectedFactoryId) {
+        records = records.filter(o => o.factoryId === selectedFactoryId);
       }
+      setOrderList(records);
     } catch {
       message.warning('订单列表加载失败，发货时可能无法选择订单');
     } finally {
@@ -91,9 +87,7 @@ export function useFactoryShipmentTabData(selectedFactoryId: string | null) {
     setShippableLoading(true);
     try {
       const res = await factoryShipmentApi.shippable(orderId);
-      if (res?.data) {
-        setShippableInfo(res.data);
-      }
+      setShippableInfo(res);
     } catch {
       setShippableInfo(null);
       message.warning('可发货信息查询失败');
@@ -194,7 +188,7 @@ export function useFactoryShipmentTabData(selectedFactoryId: string | null) {
     if (expanded && record.id && !expandedDetails[record.id]) {
       setExpandedLoading(prev => ({ ...prev, [record.id!]: true }));
       factoryShipmentApi.getDetails(record.id).then(res => {
-        setExpandedDetails(prev => ({ ...prev, [record.id!]: res?.data ?? [] }));
+        setExpandedDetails(prev => ({ ...prev, [record.id!]: res ?? [] }));
       }).finally(() => {
         setExpandedLoading(prev => ({ ...prev, [record.id!]: false }));
       });

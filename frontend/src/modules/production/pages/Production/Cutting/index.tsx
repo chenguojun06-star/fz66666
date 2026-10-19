@@ -62,7 +62,7 @@ const CuttingManagement: React.FC = () => {
     if (!orderNo) { message.warning('该裁剪任务缺少订单号'); return; }
     try {
       const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 });
-      const order = (res?.data?.records ?? [])[0];
+      const order = (res.records ?? [])[0];
       if (!order) { message.warning('未找到对应生产订单'); return; }
       processDetail.openProcessDetail(order, 'all');
     } catch {

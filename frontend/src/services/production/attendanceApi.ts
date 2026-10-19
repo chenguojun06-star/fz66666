@@ -1,5 +1,4 @@
-import api from '../../utils/api';
-import type { ApiResponse } from '../../types/api';
+import api, { unwrapApiData } from '../../utils/api';
 
 /**
  * 考勤管理 API
@@ -102,31 +101,46 @@ const toSearchParams = (obj: Record<string, unknown>): URLSearchParams => {
 
 const attendanceApi = {
   /** 管理端列表 */
-  adminList: (params: { startDate?: string; endDate?: string; userId?: string; status?: string }) =>
-    api.get<ApiResponse<AdminListResp>>('/production/attendance/admin/list', { params }),
+  adminList: async (params: { startDate?: string; endDate?: string; userId?: string; status?: string }): Promise<AdminListResp> =>
+    unwrapApiData<AdminListResp>(
+      await api.get('/production/attendance/admin/list', { params }),
+      '加载考勤列表失败',
+    ),
 
   /** 管理员补录打卡 */
-  supplement: (req: SupplementReq) =>
-    api.post<ApiResponse<{ message: string }>>(
-      `/production/attendance/admin/supplement?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+  supplement: async (req: SupplementReq): Promise<{ message: string }> =>
+    unwrapApiData<{ message: string }>(
+      await api.post(
+        `/production/attendance/admin/supplement?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+      ),
+      '补录打卡失败',
     ),
 
   /** 管理员修改打卡 */
-  adjust: (req: AdjustReq) =>
-    api.post<ApiResponse<{ message: string }>>(
-      `/production/attendance/admin/adjust?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+  adjust: async (req: AdjustReq): Promise<{ message: string }> =>
+    unwrapApiData<{ message: string }>(
+      await api.post(
+        `/production/attendance/admin/adjust?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+      ),
+      '修改打卡失败',
     ),
 
   /** 管理员作废打卡 */
-  cancel: (req: CancelReq) =>
-    api.post<ApiResponse<{ message: string }>>(
-      `/production/attendance/admin/cancel?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+  cancel: async (req: CancelReq): Promise<{ message: string }> =>
+    unwrapApiData<{ message: string }>(
+      await api.post(
+        `/production/attendance/admin/cancel?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+      ),
+      '作废打卡失败',
     ),
 
   /** 管理员批量标记休假 */
-  batchLeave: (req: BatchLeaveReq) =>
-    api.post<ApiResponse<{ message: string; created: number; skipped: number }>>(
-      `/production/attendance/admin/batch-leave?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+  batchLeave: async (req: BatchLeaveReq): Promise<{ message: string; created: number; skipped: number }> =>
+    unwrapApiData<{ message: string; created: number; skipped: number }>(
+      await api.post(
+        `/production/attendance/admin/batch-leave?${toSearchParams(req as unknown as Record<string, unknown>).toString()}`,
+      ),
+      '批量休假失败',
     ),
 };
 

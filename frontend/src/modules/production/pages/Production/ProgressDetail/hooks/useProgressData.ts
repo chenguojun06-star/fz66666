@@ -91,10 +91,9 @@ export function useProgressData({
           endDate: currentDateRange[1].endOf('day').toISOString(),
         } : {}),
       };
-      const response = await productionOrderApi.list(params);
-      const result = response as { code: number; message?: string; data: { records: ProductionOrder[]; total: number } };
-      if (result.code === 200) {
-        const rawRecords = result.data.records || [];
+      const result = await productionOrderApi.list(params);
+      {
+        const rawRecords = result.records || [];
         const filteredRecords = (() => {
           if (focusedOrderNosRef.current.length === 0) return rawRecords;
           const orderNoSet = new Set(focusedOrderNosRef.current);
@@ -108,7 +107,7 @@ export function useProgressData({
             });
         })();
         setOrders(filteredRecords);
-        setTotal(focusedOrderNosRef.current.length > 0 ? filteredRecords.length : (result.data.total || 0));
+        setTotal(focusedOrderNosRef.current.length > 0 ? filteredRecords.length : (result.total || 0));
         if (showSmartErrorNotice) setSmartError(null);
         // 仅非静默刷新（用户手动、换页、换过滤条件）才清空进度球缓存
         // silent=true（轮询）保留旧缓存，避免进度球瞬间闪白再回来
@@ -134,10 +133,6 @@ export function useProgressData({
             }
           })();
         }
-      } else if (!silent) {
-        const errMessage = result.message || '获取生产订单失败';
-        reportSmartError('生产进度加载失败', errMessage, 'PROGRESS_LIST_LOAD_FAILED');
-        message.error(errMessage);
       }
     } catch (err: unknown) {
       if (!silent) {

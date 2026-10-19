@@ -62,9 +62,8 @@ export function useWashLabelData() {
         styleNo: debouncedStyleNo.trim() || undefined,
         status: statusFilter || undefined,
       } as any);
-      const raw = res as ApiResult<any>;
-      const records = raw?.data?.records ?? (raw as any)?.records ?? [];
-      const tot = raw?.data?.total ?? (raw as any)?.total ?? records.length;
+      const records = res.records ?? [];
+      const tot = res.total ?? records.length;
       setOrders(records as ProductionOrder[]);
       setTotal(tot);
       void fetchStyleInfoForOrders(records as ProductionOrder[]);

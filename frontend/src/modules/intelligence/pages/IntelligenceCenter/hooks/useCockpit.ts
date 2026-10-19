@@ -65,13 +65,13 @@ export function useCockpit() {
       ]);
 
     const orderResult: ProductionOrder[] = rOrders.status === 'fulfilled'
-      ? ((rOrders.value as any)?.data?.records ?? (rOrders.value as any)?.records ?? [])
+      ? (rOrders.value.records ?? [])
       : [];
     const factoryCapResult: FactoryCapacityItem[] = rFactoryCap.status === 'fulfilled'
-      ? ((rFactoryCap.value as any)?.data ?? [])
+      ? rFactoryCap.value
       : [];
     const productionStatsResult: ProductionOrderStats | null = rProductionStats.status === 'fulfilled'
-      ? (((rProductionStats.value as any)?.data ?? null) as ProductionOrderStats | null)
+      ? rProductionStats.value
       : null;
 
     setData({

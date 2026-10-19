@@ -53,8 +53,8 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
   const loadWorkflow = async () => {
     setLoading(true);
     try {
-      const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 } as any);
-      const order = (res as any)?.data?.records?.[0];
+      const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 });
+      const order = res.records?.[0];
       if (!order) {
         message.error('未找到对应生产订单');
         return;

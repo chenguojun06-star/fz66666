@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 
 export interface MaterialQualityIssue {
   id: string;
@@ -28,12 +28,13 @@ export interface MaterialQualityIssue {
 }
 
 export const materialQualityIssueApi = {
-  listByPurchaseId: (purchaseId: string) =>
-    api.get<{ code: number; data: MaterialQualityIssue[] }>('/production/material-quality-issues', {
-      params: { purchaseId },
-    }),
+  listByPurchaseId: async (purchaseId: string): Promise<MaterialQualityIssue[]> =>
+    unwrapApiData<MaterialQualityIssue[]>(
+      await api.get('/production/material-quality-issues', { params: { purchaseId } }),
+      '加载质量问题失败',
+    ),
 
-  create: (data: {
+  create: async (data: {
     purchaseId: string;
     issueQuantity: number;
     issueType: string;
@@ -41,9 +42,15 @@ export const materialQualityIssueApi = {
     disposition: string;
     remark: string;
     evidenceImageUrls?: string;
-  }) =>
-    api.post<{ code: number; data: MaterialQualityIssue }>('/production/material-quality-issues', data),
+  }): Promise<MaterialQualityIssue> =>
+    unwrapApiData<MaterialQualityIssue>(
+      await api.post('/production/material-quality-issues', data),
+      '登记质量问题失败',
+    ),
 
-  resolve: (id: string, data: { resolutionRemark: string; disposition?: string }) =>
-    api.post<{ code: number; data: MaterialQualityIssue }>(`/production/material-quality-issues/${id}/resolve`, data),
+  resolve: async (id: string, data: { resolutionRemark: string; disposition?: string }): Promise<MaterialQualityIssue> =>
+    unwrapApiData<MaterialQualityIssue>(
+      await api.post(`/production/material-quality-issues/${id}/resolve`, data),
+      '处理质量问题失败',
+    ),
 };

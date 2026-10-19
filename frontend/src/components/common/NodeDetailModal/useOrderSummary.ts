@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '@/utils/api';
-import { isApiSuccess, parseProductionOrderLines } from '@/utils/api';
+import { parseProductionOrderLines } from '@/utils/api';
 import { productionOrderApi } from '@/services/production/productionApi';
 
 interface UseOrderSummaryParams {
@@ -45,9 +45,8 @@ export function useOrderSummary(params: UseOrderSummaryParams) {
       }
       try {
         const res = await productionOrderApi.list({ orderNo: String(orderNo || orderId).trim(), page: 1, pageSize: 1 });
-        if (!cancelled && isApiSuccess(res) && res?.data) {
-          const data = res.data as { records?: unknown[] };
-          const records = data?.records || [];
+        if (!cancelled) {
+          const records = ((res?.records ?? []) as unknown[]);
           if (records.length > 0) {
             const orderData = records[0] as Record<string, unknown>;
             const parsedLines = parseProductionOrderLines(orderData);

@@ -79,10 +79,8 @@ const ExternalFactory: React.FC = () => {
         factoryId: selectedFactoryId || undefined,
       };
       const res = await productionOrderApi.list(params);
-      if (res && res.data) {
-        setOrders((res.data.records || []) as ProductionOrder[]);
-        setTotal(res.data.total || 0);
-      }
+      setOrders((res.records || []) as ProductionOrder[]);
+      setTotal(res.total || 0);
     } catch (err: unknown) {
       message.error(err instanceof Error ? err.message : '获取订单列表失败');
     } finally {
@@ -99,8 +97,8 @@ const ExternalFactory: React.FC = () => {
         includeScrapped: true,
         excludeTerminal: false,
       });
-      if (res && res.data) {
-        const allOrders = (res.data.records || []) as ProductionOrder[];
+      {
+        const allOrders = (res.records || []) as ProductionOrder[];
         const statsMap = new Map<string, FactoryStats>();
         const now = new Date();
 

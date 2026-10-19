@@ -1,5 +1,5 @@
-import api from '../../utils/api';
-import type { ApiResponse, PaginatedData } from '../../types/api';
+import api, { unwrapApiData } from '../../utils/api';
+import type { PaginatedData } from '../../types/api';
 
 /**
  * 生产异常报告（D-417）
@@ -45,8 +45,11 @@ export const exceptionReportApi = {
    * 异常报告分页列表
    * 工厂账号后端自动只返回本工厂订单的异常。
    */
-  list: (params: ExceptionReportQueryParams) =>
-    api.get<ApiResponse<PaginatedData<ProductionExceptionReport>>>('/production/exception/list', { params }),
+  list: async (params: ExceptionReportQueryParams): Promise<PaginatedData<ProductionExceptionReport>> =>
+    unwrapApiData<PaginatedData<ProductionExceptionReport>>(
+      await api.get('/production/exception/list', { params }),
+      '加载异常报告失败',
+    ),
 
   /**
    * 处理异常报告
@@ -54,11 +57,14 @@ export const exceptionReportApi = {
    * @param action resolve=标记已解决 / reopen=重新打开
    * @param note 处理说明
    */
-  handle: (id: number | string, action: 'resolve' | 'reopen', note?: string) =>
-    api.post<ApiResponse<ProductionExceptionReport>>(
-      `/production/exception/${encodeURIComponent(String(id))}/handle`,
-      undefined,
-      { params: { action, ...(note ? { note } : {}) } },
+  handle: async (id: number | string, action: 'resolve' | 'reopen', note?: string): Promise<ProductionExceptionReport> =>
+    unwrapApiData<ProductionExceptionReport>(
+      await api.post(
+        `/production/exception/${encodeURIComponent(String(id))}/handle`,
+        undefined,
+        { params: { action, ...(note ? { note } : {}) } },
+      ),
+      '处理异常报告失败',
     ),
 };
 

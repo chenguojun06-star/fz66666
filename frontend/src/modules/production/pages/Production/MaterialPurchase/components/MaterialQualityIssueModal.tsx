@@ -8,7 +8,6 @@ import { materialQualityIssueApi, type MaterialQualityIssue } from '@/services/p
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { getMaterialTypeLabel } from '@/utils/materialType';
-import type { ApiResult } from '@/utils/api';
 
 interface Props {
   open: boolean;
@@ -70,9 +69,8 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
     }
     setLoading(true);
     try {
-      const res = await materialQualityIssueApi.listByPurchaseId(purchaseId) as ApiResult<MaterialQualityIssue[]>;
-      const data = res?.data ?? res;
-      setIssues(Array.isArray(data) ? data : []);
+      const res = await materialQualityIssueApi.listByPurchaseId(purchaseId);
+      setIssues(Array.isArray(res) ? res : []);
     } catch {
       message.error('加载品质异常记录失败');
     } finally {
