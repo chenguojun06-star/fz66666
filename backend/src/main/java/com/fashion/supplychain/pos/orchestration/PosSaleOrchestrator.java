@@ -8,8 +8,11 @@ import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.orchestration.PaymentOrchestrator;
 import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosSaleItem;
+import com.fashion.supplychain.pos.entity.PosSalePayment;
+import com.fashion.supplychain.pos.entity.PosWholesaleTier;
 import com.fashion.supplychain.pos.mapper.PosSaleItemMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.pos.mapper.PosWholesaleTierMapper;
 import com.fashion.supplychain.pos.service.PosSaleWriteService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -71,9 +74,12 @@ public class PosSaleOrchestrator {
     private static final int MAX_QTY = 9999;
     private static final int MAX_LINES = 200;
     private static final int MAX_SEARCH = 60;
+    /** 组合支付最多几种方式混收 */
+    private static final int MAX_PAYMENTS = 6;
 
     private final PosSaleMapper saleMapper;
     private final PosSaleItemMapper saleItemMapper;
+    private final PosWholesaleTierMapper wholesaleTierMapper;
     private final ProductSkuService productSkuService;
     private final StyleInfoService styleInfoService;
     private final CustomerOrchestrator customerOrchestrator;
@@ -93,30 +99,40 @@ public class PosSaleOrchestrator {
      */
     public List<Map<String, Object>> searchSkus(String keyword, int limit) {
         Long tenantId = UserContext.tenantId();
-        if (tenantId == null || !StringUtils.hasText(keyword)) {
+        if (tenantId == null) {
             return List.of();
         }
-        String kw = keyword.trim();
+        String kw = keyword == null ? "" : keyword.trim();
         int size = Math.min(Math.max(1, limit), MAX_SEARCH);
 
+        boolean browseMode = kw.isEmpty();
         // 款名匹配要先落到款式 ID 上（SKU 表没有款名）
-        List<Long> styleIds = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+        List<Long> styleIds = browseMode ? List.of()
+                : styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
                         .eq(StyleInfo::getTenantId, tenantId)
                         .like(StyleInfo::getStyleName, kw)
                         .last("LIMIT 50"))
                 .stream().map(StyleInfo::getId).collect(Collectors.toList());
 
-        List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
-                .eq(ProductSku::getTenantId, tenantId)
-                .and(w -> {
-                    w.like(ProductSku::getSkuCode, kw)
-                            .or().like(ProductSku::getBarcode, kw)
-                            .or().like(ProductSku::getStyleNo, kw);
-                    if (!styleIds.isEmpty()) {
-                        w.or().in(ProductSku::getStyleId, styleIds);
-                    }
-                })
-                .last("LIMIT " + size));
+        LambdaQueryWrapper<ProductSku> qw = new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getTenantId, tenantId);
+        if (browseMode) {
+            // 浏览模式：不输关键词也出商品宫格（分类页签点选是主路径之一），
+            // 只给有库存的货，避免收银员点了一片「无库存」
+            qw.gt(ProductSku::getStockQuantity, 0)
+                    .orderByDesc(ProductSku::getId)
+                    .last("LIMIT " + size);
+        } else {
+            qw.and(w -> {
+                w.like(ProductSku::getSkuCode, kw)
+                        .or().like(ProductSku::getBarcode, kw)
+                        .or().like(ProductSku::getStyleNo, kw);
+                if (!styleIds.isEmpty()) {
+                    w.or().in(ProductSku::getStyleId, styleIds);
+                }
+            }).last("LIMIT " + size);
+        }
+        List<ProductSku> skus = productSkuService.list(qw);
 
         // 款名/封面（一次查全，避免逐行 N+1）
         Set<Long> ids = skus.stream().map(ProductSku::getStyleId)
@@ -138,6 +154,8 @@ public class PosSaleOrchestrator {
                     : (st == null ? null : st.getStyleNo()));
             row.put("styleName", st == null ? null : st.getStyleName());
             row.put("cover", st == null ? null : st.getCover());
+            // 品类：前端分类页签按它过滤（空品类归「未分类」）
+            row.put("category", st == null ? null : st.getCategory());
             row.put("color", k.getColor());
             row.put("size", k.getSize());
             row.put("tagPrice", k.getTagPrice());
@@ -199,6 +217,65 @@ public class PosSaleOrchestrator {
         return out;
     }
 
+    /* ── 批发阶梯价 ───────────────────────────────────────────────────────── */
+
+    /**
+     * 当前租户的批发阶梯价配置（单档：满 minQty 件打 discountRate 折）。
+     *
+     * <p>未配置返回 enabled=false 的默认值，前端据此隐藏批发价横幅。
+     */
+    public Map<String, Object> wholesaleTier() {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Object> out = new LinkedHashMap<>();
+        PosWholesaleTier tier = tenantId == null ? null
+                : wholesaleTierMapper.selectList(new LambdaQueryWrapper<PosWholesaleTier>()
+                        .eq(PosWholesaleTier::getTenantId, tenantId)
+                        .orderByDesc(PosWholesaleTier::getMinQty)
+                        .last("LIMIT 1"))
+                .stream().findFirst().orElse(null);
+        if (tier == null) {
+            out.put("configured", false);
+            out.put("minQty", 0);
+            out.put("discountRate", 1);
+            out.put("enabled", false);
+            return out;
+        }
+        out.put("configured", true);
+        out.put("minQty", tier.getMinQty());
+        out.put("discountRate", tier.getDiscountRate());
+        out.put("enabled", Integer.valueOf(1).equals(tier.getEnabled()));
+        out.put("remark", tier.getRemark());
+        return out;
+    }
+
+    /** 保存批发阶梯价配置（租户级单档，覆盖式保存） */
+    public Map<String, Object> saveWholesaleTier(Map<String, Object> body) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new IllegalArgumentException("请先登录");
+        }
+        int minQty = toInt(body.get("minQty"));
+        BigDecimal rate = toAmount(body.get("discountRate"));
+        if (minQty < 2) {
+            throw new IllegalArgumentException("批发件数门槛至少 2 件");
+        }
+        if (rate == null || rate.signum() <= 0 || rate.compareTo(BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException("折扣率必须在 0 ~ 1 之间（0.90 = 九折）");
+        }
+        boolean enabled = !Boolean.FALSE.equals(body.get("enabled"))
+                && !"false".equalsIgnoreCase(String.valueOf(body.get("enabled")));
+        PosWholesaleTier tier = new PosWholesaleTier();
+        tier.setTenantId(tenantId);
+        tier.setMinQty(minQty);
+        tier.setDiscountRate(rate.setScale(2, RoundingMode.HALF_UP));
+        tier.setEnabled(enabled ? 1 : 0);
+        tier.setRemark(str(body.get("remark")));
+        tier.setCreateTime(LocalDateTime.now());
+        tier.setUpdateTime(LocalDateTime.now());
+        writeService.saveWholesaleTier(tier);
+        return wholesaleTier();
+    }
+
     /* ── 开单 ─────────────────────────────────────────────────────────────── */
 
     /**
@@ -251,14 +328,6 @@ public class PosSaleOrchestrator {
 
         String customerName = str(body.get("customerName"));
         String customerPhone = str(body.get("customerPhone"));
-        if (PAY_CREDIT.equals(payMethod) && !StringUtils.hasText(customerPhone)) {
-            throw new IllegalArgumentException("挂账需要填写客户手机号（要挂到客户名下）");
-        }
-        // 挂账是唯一不到账就能出单的方式，必须有授权人签字。
-        // 不做则资损口子敞开：挂账走掉，事后核销抹平，查不出来。
-        String creditApprover = PAY_CREDIT.equals(payMethod)
-                ? authorizeCredit(str(body.get("creditApprover")), str(body.get("creditApproverPassword")))
-                : null;
         if (PAY_ONLINE.contains(payMethod) && !StringUtils.hasText(customerPhone)) {
             // 不强制：扫码支付不需要手机号，但留个提示由前端决定是否要填
             log.debug("[POS] 在线支付未填客户手机号，按散客处理");
@@ -338,6 +407,17 @@ public class PosSaleOrchestrator {
         }
         BigDecimal total = afterDiscount.subtract(roundOff).setScale(2, RoundingMode.HALF_UP);
 
+        // 2.5 组合支付拆分：body.payments 为空 = 单一方式（老协议，自动补一行明细）；
+        //     给了就逐行校验。挂账（组合里含 CREDIT 行）与单一挂账一样
+        //     要手机号 + 授权人签字 —— 不到账出单的口子不因为"只是收了一半"而放松。
+        PaymentSplit split = resolvePayments(body, payMethod, total, memberId);
+        if (split.creditTotal().signum() > 0 && !StringUtils.hasText(customerPhone)) {
+            throw new IllegalArgumentException("挂账需要填写客户手机号（要挂到客户名下）");
+        }
+        String creditApprover = split.creditTotal().signum() > 0
+                ? authorizeCredit(str(body.get("creditApprover")), str(body.get("creditApproverPassword")))
+                : null;
+
         // 3. 客户（有手机号就归并/建档；挂账必须有）
         Customer customer = null;
         if (StringUtils.hasText(customerPhone)) {
@@ -358,7 +438,7 @@ public class PosSaleOrchestrator {
         sale.setDiscountAmount(discount);
         sale.setRoundOffAmount(roundOff);
         sale.setTotalAmount(total);
-        sale.setPayMethod(payMethod);
+        sale.setPayMethod(split.primaryMethod());
         sale.setPayStatus("PAYING");
         String remark = str(body.get("remark"));
         if (creditApprover != null) {
@@ -371,7 +451,7 @@ public class PosSaleOrchestrator {
         sale.setStatus("NORMAL");
         sale.setCreateTime(LocalDateTime.now());
         sale.setUpdateTime(LocalDateTime.now());
-        writeService.createSale(sale, items);
+        writeService.createSale(sale, items, split.rows());
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("saleNo", sale.getSaleNo());
@@ -379,59 +459,134 @@ public class PosSaleOrchestrator {
         resp.put("discountAmount", discount);
         resp.put("roundOffAmount", roundOff);
         resp.put("totalAmount", total);
-        resp.put("payMethod", payMethod);
+        resp.put("payMethod", split.primaryMethod());
         resp.put("itemCount", itemCount);
         resp.put("saleId", sale.getId());
         resp.put("memberId", memberId);
 
-        // 5z. 会员余额：先扣款成功才结算出库。
+        // 5z. 在线支付（单一方式）：向渠道下单拿二维码，**此时不出库**，等回调/轮询确认
+        if (PAY_ONLINE.contains(payMethod) && split.rows().size() == 1
+                && split.creditTotal().signum() == 0 && split.memberBalanceTotal().signum() == 0) {
+            try {
+                Map<String, Object> prepay = paymentOrchestrator.prepay(
+                        tenantId, "POS_SALE", sale.getSaleNo(),
+                        total.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact(),
+                        "收银台 " + sale.getSaleNo(), channelOf(payMethod));
+                resp.putAll(prepay);
+                // 显式给出单据的收款状态：prepay 返回的 status 是**渠道视角**的（PENDING），
+                // 而前端要判断的是"这张销售单处于待支付"。两者语义不同，不能混用。
+                resp.put("payStatus", "PAYING");
+                resp.put("saleNo", sale.getSaleNo());
+                resp.put("totalAmount", total);
+                log.info("[POS] 待支付单已生成 saleNo={} 方式={} 金额={}", sale.getSaleNo(), payMethod, total);
+                return resp;
+            } catch (RuntimeException e) {
+                // 发起支付失败 → 把单置为已取消，避免留下一张永远待支付的废单
+                writeService.markCancelled(sale.getId(), "发起支付失败：" + e.getMessage());
+                throw new IllegalStateException("发起" + payMethod + "支付失败：" + e.getMessage(), e);
+            }
+        }
+
+        // 5y. 会员余额：先扣款成功才结算出库。
         // 顺序不能反 —— 先出库再扣，一旦扣款失败就是"货已走、钱没扣"的纯资损。
-        if (PAY_MEMBER_BALANCE.equals(payMethod)) {
-            memberOrchestrator.consumeBalance(memberId, total, sale.getSaleNo());
-            Map<String, Object> settled = writeService.settle(sale.getId(), "PAID", null);
-            resp.putAll(settled);
-            resp.put("saleNo", sale.getSaleNo());
-            resp.put("totalAmount", total);
-            return resp;
+        // 组合支付时只扣「余额行」的合计，其余部分由对应方式收款。
+        if (split.memberBalanceTotal().signum() > 0) {
+            memberOrchestrator.consumeBalance(memberId, split.memberBalanceTotal(), sale.getSaleNo());
         }
 
-        // 5a. 现金/刷卡：当场收款 → 立即结算（出库）
-        if ("CASH".equals(payMethod) || "CARD".equals(payMethod)) {
-            Map<String, Object> settled = writeService.settle(sale.getId(), "PAID", null);
-            resp.putAll(settled);
-            resp.put("saleNo", sale.getSaleNo());
-            resp.put("totalAmount", total);
-            return resp;
-        }
+        // 5x. 统一结算：含挂账行 → UNPAID（应收 = 挂账部分）；否则当场收齐 → PAID 出库
+        String finalStatus = split.creditTotal().signum() > 0 ? "UNPAID" : "PAID";
+        Map<String, Object> settled = writeService.settle(sale.getId(), finalStatus, null,
+                split.creditTotal().signum() > 0 ? split.creditTotal() : null);
+        resp.putAll(settled);
+        resp.put("saleNo", sale.getSaleNo());
+        resp.put("totalAmount", total);
+        return resp;
+    }
 
-        // 5b. 挂账：生成应收 → 结算为未收（出库）
-        if (PAY_CREDIT.equals(payMethod)) {
-            Map<String, Object> settled = writeService.settle(sale.getId(), "UNPAID", null);
-            resp.putAll(settled);
-            resp.put("saleNo", sale.getSaleNo());
-            resp.put("totalAmount", total);
-            return resp;
-        }
+    /** 组合支付拆分结果 */
+    private record PaymentSplit(List<PosSalePayment> rows, String primaryMethod,
+                                BigDecimal memberBalanceTotal, BigDecimal creditTotal) {
+    }
 
-        // 5c. 在线支付：向渠道下单拿二维码，**此时不出库**，等回调/轮询确认
-        try {
-            Map<String, Object> prepay = paymentOrchestrator.prepay(
-                    tenantId, "POS_SALE", sale.getSaleNo(),
-                    total.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact(),
-                    "收银台 " + sale.getSaleNo(), channelOf(payMethod));
-            resp.putAll(prepay);
-            // 显式给出单据的收款状态：prepay 返回的 status 是**渠道视角**的（PENDING），
-            // 而前端要判断的是"这张销售单处于待支付"。两者语义不同，不能混用。
-            resp.put("payStatus", "PAYING");
-            resp.put("saleNo", sale.getSaleNo());
-            resp.put("totalAmount", total);
-            log.info("[POS] 待支付单已生成 saleNo={} 方式={} 金额={}", sale.getSaleNo(), payMethod, total);
-            return resp;
-        } catch (RuntimeException e) {
-            // 发起支付失败 → 把单置为已取消，避免留下一张永远待支付的废单
-            writeService.markCancelled(sale.getId(), "发起支付失败：" + e.getMessage());
-            throw new IllegalStateException("发起" + payMethod + "支付失败：" + e.getMessage(), e);
+    /**
+     * 解析并校验组合支付明细。
+     *
+     * <p>规则：
+     * <ul>
+     *   <li>body.payments 缺省 → 老协议单方式收款，自动补一行明细（报表口径统一）；</li>
+     *   <li>方式必须在白名单内且不重复；微信/支付宝为在线扫码通道，
+     *       暂不支持与其他方式组合（一笔渠道单对应一个金额，拆金额要多次下单）；</li>
+     *   <li>各行合计必须等于应收金额 —— 现金找零在前端完成，入库只存应纳金额，
+     *       否则「收了 1000 存了 1000」账对不上；</li>
+     *   <li>余额行合计由 consumeBalance 原子扣减（余额不足自然拦截）；</li>
+     *   <li>挂账行的合计 = 生成应收的金额，其余部分必须是当场到账的方式。</li>
+     * </ul>
+     */
+    private PaymentSplit resolvePayments(Map<String, Object> body, String payMethod,
+                                         BigDecimal total, String memberId) {
+        List<Map<String, Object>> raw = asList(body.get("payments"));
+        List<PosSalePayment> rows = new ArrayList<>();
+        if (raw.isEmpty()) {
+            PosSalePayment p = new PosSalePayment();
+            p.setPayMethod(payMethod);
+            p.setAmount(total);
+            p.setCreateTime(LocalDateTime.now());
+            rows.add(p);
+            return new PaymentSplit(rows, payMethod,
+                    PAY_MEMBER_BALANCE.equals(payMethod) ? total : BigDecimal.ZERO,
+                    PAY_CREDIT.equals(payMethod) ? total : BigDecimal.ZERO);
         }
+        if (raw.size() > MAX_PAYMENTS) {
+            throw new IllegalArgumentException("组合支付最多 " + MAX_PAYMENTS + " 种方式");
+        }
+        Set<String> seen = new LinkedHashSet<>();
+        BigDecimal sum = BigDecimal.ZERO;
+        BigDecimal memberBalance = BigDecimal.ZERO;
+        BigDecimal credit = BigDecimal.ZERO;
+        String primary = null;
+        BigDecimal primaryAmt = null;
+        for (Map<String, Object> r : raw) {
+            String m = str(r.get("payMethod"));
+            m = m == null ? "" : m.toUpperCase();
+            if (!PAY_METHODS.contains(m)) {
+                throw new IllegalArgumentException("不支持的收款方式：" + m);
+            }
+            if (PAY_ONLINE.contains(m)) {
+                throw new IllegalArgumentException("微信/支付宝为在线扫码收款，暂不支持组合支付，请单独使用");
+            }
+            if (!seen.add(m)) {
+                throw new IllegalArgumentException("收款方式重复：" + m);
+            }
+            BigDecimal amt = toAmount(r.get("amount"));
+            if (amt == null || amt.signum() <= 0) {
+                throw new IllegalArgumentException("每种收款方式的金额必须大于 0");
+            }
+            amt = amt.setScale(2, RoundingMode.HALF_UP);
+            if (PAY_MEMBER_BALANCE.equals(m)) {
+                if (!StringUtils.hasText(memberId)) {
+                    throw new IllegalArgumentException("余额支付必须先识别会员");
+                }
+                memberBalance = memberBalance.add(amt);
+            }
+            if (PAY_CREDIT.equals(m)) {
+                credit = credit.add(amt);
+            }
+            sum = sum.add(amt);
+            PosSalePayment p = new PosSalePayment();
+            p.setPayMethod(m);
+            p.setAmount(amt);
+            p.setCreateTime(LocalDateTime.now());
+            rows.add(p);
+            if (primaryAmt == null || amt.compareTo(primaryAmt) > 0) {
+                primaryAmt = amt;
+                primary = m;
+            }
+        }
+        if (sum.compareTo(total) != 0) {
+            throw new IllegalArgumentException("组合收款合计 " + sum + " 元，必须等于应收 " + total + " 元");
+        }
+        return new PaymentSplit(rows, primary == null ? payMethod : primary, memberBalance, credit);
     }
 
     /* ── 在线支付确认（回调 / 轮询共用） ───────────────────────────────────── */
@@ -599,7 +754,9 @@ public class PosSaleOrchestrator {
             // 不区分「账号不存在」和「密码错误」：报了账号是否存在等于给了撞库提示
             throw new IllegalArgumentException("授权账号或密码不正确");
         }
-        if (!"ACTIVE".equals(approver.getStatus())) {
+        // 库里 status 存的是小写（active/inactive），必须忽略大小写比较，
+        // 否则全部存量账号都会被判成"已停用"，挂账授权永远走不通
+        if (!"active".equalsIgnoreCase(approver.getStatus())) {
             throw new IllegalArgumentException("授权账号已停用");
         }
         boolean owner = Boolean.TRUE.equals(approver.getIsTenantOwner());

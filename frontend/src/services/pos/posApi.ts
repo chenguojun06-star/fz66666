@@ -18,6 +18,8 @@ export interface PosSku {
   styleNo?: string | null;
   styleName?: string | null;
   cover?: string | null;
+  /** 品类（分类页签过滤用；空值归「未分类」） */
+  category?: string | null;
   color?: string | null;
   size?: string | null;
   /** 吊牌价 */
@@ -25,6 +27,16 @@ export interface PosSku {
   /** 店铺售价（收银台默认带出的单价） */
   salesPrice?: number | null;
   stock: number;
+}
+
+/** 批发阶梯价配置（满 N 件整单打 X 折；未配置时 enabled=false） */
+export interface PosWholesaleTier {
+  configured?: boolean;
+  minQty: number;
+  /** 折扣率 0.90 = 九折 */
+  discountRate: number;
+  enabled: boolean;
+  remark?: string | null;
 }
 
 export interface PosCustomer {
@@ -44,17 +56,28 @@ export interface PosCheckoutItem {
   unitPrice?: number;
 }
 
+/** 组合支付的一行：方式 + 实收金额（现金行存应纳金额，找零在前端展示不入库） */
+export interface PosPaymentLine {
+  payMethod: PosPayMethod;
+  amount: number;
+}
+
 export interface PosCheckoutBody {
   items: PosCheckoutItem[];
   payMethod: PosPayMethod;
+  /**
+   * 组合支付明细（多种方式混收，如现金500+微信300）。
+   * 各行合计必须等于应收金额；缺省 = 单一方式收款（老协议）。
+   */
+  payments?: PosPaymentLine[];
   discount?: number;
   roundOff?: number;
   customerName?: string;
   customerPhone?: string;
   remark?: string;
-  /** 会员ID（决定会员折扣；payMethod=MEMBER_BALANCE 时必填） */
+  /** 会员ID（决定会员折扣；含 MEMBER_BALANCE 行时必填） */
   memberId?: string;
-  /** 挂账授权人账号（payMethod=CREDIT 时必填，后端会校验密码与授权资格） */
+  /** 挂账授权人账号（含 CREDIT 行时必填，后端会校验密码与授权资格） */
   creditApprover?: string;
   /** 挂账授权密码（只在这一次请求里传输，不做任何缓存） */
   creditApproverPassword?: string;
@@ -310,6 +333,14 @@ export const posApi = {
       await api.get('/pos/customer', { params: { phone } }),
       '查询客户失败',
     ),
+
+  /** 批发阶梯价配置（未配置时 enabled=false） */
+  wholesaleTier: async () =>
+    unwrapApiData<PosWholesaleTier>(await api.get('/pos/wholesale-tier'), '批发价配置加载失败'),
+
+  /** 保存批发阶梯价配置（覆盖式，单档） */
+  saveWholesaleTier: async (body: { minQty: number; discountRate: number; enabled: boolean }) =>
+    unwrapApiData<PosWholesaleTier>(await api.post('/pos/wholesale-tier', body), '批发价配置保存失败'),
 
   /** 开单 */
   checkout: async (body: PosCheckoutBody) => unwrapApiData<PosCheckoutResult>(await api.post('/pos/checkout', body), '开单失败'),

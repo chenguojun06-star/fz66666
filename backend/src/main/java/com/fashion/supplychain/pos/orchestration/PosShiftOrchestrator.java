@@ -5,9 +5,11 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.pos.entity.PosReturn;
 import com.fashion.supplychain.pos.entity.PosSale;
+import com.fashion.supplychain.pos.entity.PosSalePayment;
 import com.fashion.supplychain.pos.entity.PosShift;
 import com.fashion.supplychain.pos.mapper.PosReturnMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.pos.mapper.PosSalePaymentMapper;
 import com.fashion.supplychain.pos.mapper.PosShiftMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,9 @@ public class PosShiftOrchestrator {
 
     @Autowired
     private PosReturnMapper returnMapper;
+
+    @Autowired
+    private PosSalePaymentMapper salePaymentMapper;
 
     // ───────────────────────── 开班 ─────────────────────────
 
@@ -206,19 +211,55 @@ public class PosShiftOrchestrator {
         Long tenantId = s.getTenantId();
         LocalDateTime from = s.getOpenedAt();
 
+        // 已收款单按**收款时间**归班；挂账单（UNPAID，含组合支付"收了一部分"的单）
+        // 没有收款时间，按**开单时间**归班 —— 组合支付的现金部分物理上进过钱箱，
+        // 不算进本班钱箱必然对不平。下面循环只统计"当场收到的部分"，
+        // 挂账行单独进 creditAmount（本班新挂出去的账）。
+        LocalDateTime now = LocalDateTime.now();
         List<PosSale> sales = saleMapper.selectList(new LambdaQueryWrapper<PosSale>()
                 .eq(PosSale::getTenantId, tenantId)
-                .eq(PosSale::getPayStatus, "PAID")
-                .ge(PosSale::getPaidTime, from)
-                .le(PosSale::getPaidTime, LocalDateTime.now()));
+                .eq(PosSale::getStatus, "NORMAL")
+                .and(w -> w
+                        .and(a -> a.eq(PosSale::getPayStatus, "PAID")
+                                .ge(PosSale::getPaidTime, from)
+                                .le(PosSale::getPaidTime, now))
+                        .or(a -> a.eq(PosSale::getPayStatus, "UNPAID")
+                                .ge(PosSale::getCreateTime, from)
+                                .le(PosSale::getCreateTime, now))));
 
         int count = 0;
         BigDecimal cash = BigDecimal.ZERO;
         BigDecimal online = BigDecimal.ZERO;
         BigDecimal card = BigDecimal.ZERO;
         BigDecimal credit = BigDecimal.ZERO;
+
+        // 组合支付按明细行拆分：现金500+微信300 的单，现金只进钱箱 500，
+        // 不能按主方式把 800 全记现金。历史单没有明细行，回退整单口径。
+        List<Long> saleIds = sales.stream().map(PosSale::getId).toList();
+        Map<Long, List<PosSalePayment>> paymentsBySale = saleIds.isEmpty() ? Map.of()
+                : salePaymentMapper.selectList(new LambdaQueryWrapper<PosSalePayment>()
+                        .in(PosSalePayment::getSaleId, saleIds))
+                .stream().collect(java.util.stream.Collectors.groupingBy(PosSalePayment::getSaleId));
+
         for (PosSale sale : sales) {
             count++;
+            List<PosSalePayment> pays = paymentsBySale.get(sale.getId());
+            if (pays != null && !pays.isEmpty()) {
+                for (PosSalePayment p : pays) {
+                    String pm = p.getPayMethod() == null ? PAY_CASH : p.getPayMethod().toUpperCase();
+                    BigDecimal amt = scale(p.getAmount());
+                    if (PAY_CASH.equals(pm)) {
+                        cash = cash.add(amt);
+                    } else if (PAY_ONLINE_A.equals(pm) || PAY_ONLINE_B.equals(pm)) {
+                        online = online.add(amt);
+                    } else if (PAY_CARD.equals(pm)) {
+                        card = card.add(amt);
+                    } else if (PAY_CREDIT.equals(pm)) {
+                        credit = credit.add(amt);
+                    }
+                }
+                continue;
+            }
             BigDecimal amt = scale(sale.getTotalAmount());
             String pm = sale.getPayMethod() == null ? PAY_CASH : sale.getPayMethod().toUpperCase();
             // 规则②：只有现金进钱箱

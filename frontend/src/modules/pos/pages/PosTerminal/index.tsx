@@ -11,8 +11,10 @@ import {
   Modal,
   Radio,
   Row,
+  Select,
   Space,
   Statistic,
+  Switch,
   Table,
   Tag,
   Typography,
@@ -23,12 +25,14 @@ import {
   CalculatorOutlined,
   DeleteOutlined,
   PauseCircleOutlined,
+  PlusOutlined,
   ProfileOutlined,
   ReloadOutlined,
   RollbackOutlined,
   ScanOutlined,
   ShoppingCartOutlined,
   FieldTimeOutlined,
+  TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
@@ -45,6 +49,7 @@ import type {
   PosPayMethod,
   PosSku,
   PosToday,
+  PosWholesaleTier,
 } from '@/services/pos/posApi';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketModal from '@/components/common/TicketModal';
@@ -84,6 +89,23 @@ const PAY_OPTIONS: Array<{ value: PosPayMethod; label: string }> = [
   { value: 'MEMBER_BALANCE', label: '会员余额' },
   { value: 'CREDIT', label: '挂账' },
 ];
+
+/**
+ * 组合收款可选的方式：微信/支付宝是「一笔渠道单对应一个金额」的在线通道，
+ * 拆金额要多次下单，暂不进组合；其余四种都能当场混收。
+ */
+const COMBO_OPTIONS: Array<{ value: PosPayMethod; label: string }> = [
+  { value: 'CASH', label: '现金' },
+  { value: 'CARD', label: '刷卡' },
+  { value: 'MEMBER_BALANCE', label: '会员余额' },
+  { value: 'CREDIT', label: '挂账' },
+];
+
+/** 组合收款的一行（前端态） */
+interface ComboRow {
+  payMethod: PosPayMethod;
+  amount: number;
+}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -141,6 +163,19 @@ const PosTerminal: React.FC = () => {
    * 购物车 state 仍在本组件，切 Tab 不会丢（Tabs 不设 destroyOnClose）。
    */
   const [tab, setTab] = React.useState<'checkout' | 'return' | 'hold' | 'shift'>('checkout');
+  // 分类页签：点分类过滤宫格，不用每次敲搜索词
+  const [activeCat, setActiveCat] = React.useState('全部');
+  // 组合收款（一笔单多种方式混收，如现金500+微信300）
+  const [comboMode, setComboMode] = React.useState(false);
+  const [payRows, setPayRows] = React.useState<ComboRow[]>([]);
+  // 批发阶梯价（满 N 件打 X 折）+ 设置弹窗草稿
+  const [wsTier, setWsTier] = React.useState<PosWholesaleTier | null>(null);
+  const [wsOpen, setWsOpen] = React.useState(false);
+  const [wsDraft, setWsDraft] = React.useState({ minQty: 10, discountRate: 0.9, enabled: true });
+  const [wsSaving, setWsSaving] = React.useState(false);
+  /** 批发价是否已应用（自动套用后可一键撤销，不反复打扰） */
+  const [wsApplied, setWsApplied] = React.useState(false);
+  const wsAutoRef = React.useRef(false);
 
   const searchRef = React.useRef<InputRef>(null);
 
@@ -152,8 +187,21 @@ const PosTerminal: React.FC = () => {
     }
   }, []);
 
+  /** 浏览模式：不输关键词也出商品宫格（分类页签点选是主路径之一） */
+  const loadGoods = React.useCallback(async () => {
+    setSearching(true);
+    try {
+      setResults(await posApi.searchSkus('', 60));
+    } catch {
+      // 拿不到就保持空宫格，不打断收银
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadToday();
+    void loadGoods();
     void (async () => {
       try {
         setChannels(await posApi.channels());
@@ -161,8 +209,14 @@ const PosTerminal: React.FC = () => {
         // 拿不到渠道状态就按"都不可用"处理：宁可让收银员用现金，也不能点了报错
         setChannels(null);
       }
+      try {
+        setWsTier(await posApi.wholesaleTier());
+      } catch {
+        // 批发价配置加载失败 = 没有批发价，不影响正常收银
+        setWsTier(null);
+      }
     })();
-  }, [loadToday]);
+  }, [loadToday, loadGoods]);
 
   const goodsAmount = React.useMemo(
     () => round2(lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0)),
@@ -177,12 +231,58 @@ const PosTerminal: React.FC = () => {
     [received, totalAmount],
   );
 
+  /* ── 分类页签 ── */
+  const categories = React.useMemo(() => {
+    const set = new Set<string>();
+    results.forEach((r) => set.add(r.category?.trim() || '未分类'));
+    return ['全部', ...Array.from(set)];
+  }, [results]);
+  const shownSkus = React.useMemo(
+    () =>
+      activeCat === '全部'
+        ? results
+        : results.filter((r) => (r.category?.trim() || '未分类') === activeCat),
+    [results, activeCat],
+  );
+
+  /* ── 批发阶梯价：件数达标自动提示/应用 ── */
+  const itemCount = React.useMemo(() => lines.reduce((s, l) => s + l.quantity, 0), [lines]);
+  const wsEligible =
+    !!wsTier && wsTier.enabled && Number(wsTier.minQty) > 0 && itemCount >= Number(wsTier.minQty) && goodsAmount > 0;
+  const wsSave = wsEligible ? round2(goodsAmount * (1 - Number(wsTier?.discountRate ?? 1))) : 0;
+  const wsSaveRef = React.useRef(0);
+  wsSaveRef.current = wsSave;
+
+  // 跨过门槛自动套用一次；回落到门槛以下自动撤回（只撤自动加的折扣，不动手工折扣）
+  React.useEffect(() => {
+    if (wsEligible && !wsAutoRef.current) {
+      wsAutoRef.current = true;
+      setWsApplied(true);
+      setDiscount((d) => (d === 0 && wsSaveRef.current > 0 ? wsSaveRef.current : d));
+    } else if (!wsEligible && wsAutoRef.current) {
+      wsAutoRef.current = false;
+      setWsApplied(false);
+      setDiscount((d) => (Math.abs(d - wsSaveRef.current) < 0.01 ? 0 : d));
+    }
+  }, [wsEligible]);
+
+  /* ── 组合收款：分配进度 ── */
+  const comboAssigned = React.useMemo(
+    () => round2(payRows.reduce((s, r) => s + (r.amount || 0), 0)),
+    [payRows],
+  );
+  const comboRemaining = React.useMemo(() => round2(totalAmount - comboAssigned), [totalAmount, comboAssigned]);
+  const comboHasCredit = payRows.some((r) => r.payMethod === 'CREDIT');
+  const comboHasBalance = payRows.some((r) => r.payMethod === 'MEMBER_BALANCE');
+
   /* ── 选货 ── */
 
   const doSearch = React.useCallback(async (kw: string): Promise<PosSku[]> => {
     const q = kw.trim();
     if (!q) {
-      setResults([]);
+      // 清空搜索 → 回到浏览模式（按当前分类展示宫格）
+      setActiveCat('全部');
+      await loadGoods();
       return [];
     }
     setSearching(true);
@@ -196,7 +296,7 @@ const PosTerminal: React.FC = () => {
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [loadGoods]);
 
   const addLine = React.useCallback((sku: PosSku) => {
     if (sku.stock <= 0) {
@@ -246,10 +346,10 @@ const PosTerminal: React.FC = () => {
     if (list.length === 1) {
       addLine(list[0]);
       setKeyword('');
-      setResults([]);
+      await loadGoods();
       searchRef.current?.focus();
     }
-  }, [keyword, doSearch, addLine]);
+  }, [keyword, doSearch, addLine, loadGoods]);
 
   /* ── 客户 ── */
 
@@ -313,10 +413,15 @@ const PosTerminal: React.FC = () => {
     setRemark('');
     setPayMethod('CASH');
     setKeyword('');
-    setResults([]);
+    setComboMode(false);
+    setPayRows([]);
+    setWsApplied(false);
+    wsAutoRef.current = false;
+    setActiveCat('全部');
     setResult(null);
+    void loadGoods();
     searchRef.current?.focus();
-  }, []);
+  }, [loadGoods]);
 
   /** 拉小票并打开打印窗；拉不到不阻断开单（小票可以事后补打） */
   const openPrint = React.useCallback(async (
@@ -337,23 +442,59 @@ const PosTerminal: React.FC = () => {
       message.warning('请先添加商品');
       return;
     }
-    if (payMethod === 'CREDIT' && !phone.trim()) {
-      message.warning('挂账需要填写客户手机号');
-      return;
+    if (comboMode) {
+      // 组合收款：前端先把明显不对的分配拦下来，给收银员即时纠错的机会
+      if (!payRows.length) {
+        message.warning('请至少添加一种收款方式');
+        return;
+      }
+      if (payRows.some((r) => !r.amount || r.amount <= 0)) {
+        message.warning('每种收款方式的金额必须大于 0');
+        return;
+      }
+      if (comboRemaining > 0) {
+        message.warning(`还有 ${formatMoney(comboRemaining)} 未收，请补充分配金额`);
+        return;
+      }
+      if (comboRemaining < 0) {
+        message.warning(`收款合计超出应收 ${formatMoney(-comboRemaining)}，请核对`);
+        return;
+      }
+      if (comboHasBalance && !member) {
+        message.warning('余额支付需先识别会员（输入手机号）');
+        return;
+      }
+      if (comboHasCredit && !phone.trim()) {
+        message.warning('挂账需要填写客户手机号');
+        return;
+      }
+      if (comboHasCredit && !creditAuth.user.trim()) {
+        message.warning('挂账需要店长或财务授权，请先填写授权账号');
+        setCreditAuthOpen(true);
+        return;
+      }
+    } else {
+      if (payMethod === 'CREDIT' && !phone.trim()) {
+        message.warning('挂账需要填写客户手机号');
+        return;
+      }
+      // 挂账必须先取得店长/财务授权，否则直接拦在提交之前，
+      // 不让收银员先开单再补授权（补了就等于没有约束）
+      if (payMethod === 'CREDIT' && !creditAuth.user.trim()) {
+        message.warning('挂账需要店长或财务授权，请先填写授权账号');
+        setCreditAuthOpen(true);
+        return;
+      }
     }
-    // 挂账必须先取得店长/财务授权，否则直接拦在提交之前，
-    // 不让收银员先开单再补授权（补了就等于没有约束）
-    if (payMethod === 'CREDIT' && !creditAuth.user.trim()) {
-      message.warning('挂账需要店长或财务授权，请先填写授权账号');
-      setCreditAuthOpen(true);
-      return;
-    }
+    const withCredit = comboMode ? comboHasCredit : payMethod === 'CREDIT';
     setSubmitting(true);
     try {
       const res = (await posApi.checkout({
           items: lines.map((l) => ({ skuId: l.skuId, quantity: l.quantity, unitPrice: l.unitPrice })),
-          payMethod,
-          ...(payMethod === 'CREDIT'
+          payMethod: comboMode ? payRows[0].payMethod : payMethod,
+          // 组合收款：每种方式一行；单方式走老协议（后端自动补明细行）
+          ...(comboMode ? { payments: payRows.map((r) => ({ payMethod: r.payMethod, amount: r.amount })) } : {}),
+          ...(withCredit
             ? {
                 creditApprover: creditAuth.user.trim(),
                 creditApproverPassword: creditAuth.pwd,
@@ -386,13 +527,21 @@ const PosTerminal: React.FC = () => {
       setRoundOff(0);
       setReceived(null);
       setRemark('');
+      setComboMode(false);
+      setPayRows([]);
+      setWsApplied(false);
+      wsAutoRef.current = false;
       void loadToday();
     } catch (e) {
       message.error(e instanceof Error ? e.message : '开单失败');
     } finally {
       setSubmitting(false);
     }
-  }, [lines, payMethod, phone, discount, roundOff, customerName, remark, loadToday]);
+  }, [
+    lines, comboMode, payRows, comboRemaining, comboHasCredit, comboHasBalance,
+    payMethod, phone, member, creditAuth, discount, roundOff, customerName, remark,
+    loadToday,
+  ]);
 
   /**
    * 待支付单轮询：每 2 秒问一次服务端。
@@ -510,7 +659,7 @@ const PosTerminal: React.FC = () => {
     {
       title: '单价',
       dataIndex: 'unitPrice',
-      width: 130,
+      width: 120,
       render: (v: number, r) => {
         const last = lastPriceOf(r.skuId);
         const changed = r.tagPrice != null && v !== Number(r.tagPrice);
@@ -521,7 +670,7 @@ const PosTerminal: React.FC = () => {
               min={0}
               precision={2}
               size="small"
-              style={{ width: 110 }}
+              style={{ width: 104 }}
               onChange={(nv) =>
                 setLines((prev) =>
                   prev.map((l) => (l.skuId === r.skuId ? { ...l, unitPrice: Number(nv) || 0 } : l)),
@@ -544,26 +693,44 @@ const PosTerminal: React.FC = () => {
     {
       title: '数量',
       dataIndex: 'quantity',
-      width: 100,
+      width: 116,
+      // 行内 ± 步进：加一件/减一件是收银台最高频动作，不能每次都弹输入框
       render: (v: number, r) => (
-        <InputNumber
-          value={v}
-          min={1}
-          max={r.stock}
-          size="small"
-          style={{ width: 80 }}
-          onChange={(nv) =>
-            setLines((prev) =>
-              prev.map((l) => (l.skuId === r.skuId ? { ...l, quantity: Number(nv) || 1 } : l)),
-            )
-          }
-        />
+        <div className="pos-qty">
+          <button
+            type="button"
+            className="pos-qty__btn"
+            aria-label="减一件"
+            disabled={v <= 1}
+            onClick={() =>
+              setLines((prev) =>
+                prev.map((l) => (l.skuId === r.skuId ? { ...l, quantity: Math.max(1, l.quantity - 1) } : l)),
+              )
+            }
+          >
+            −
+          </button>
+          <span className="pos-qty__num">{v}</span>
+          <button
+            type="button"
+            className="pos-qty__btn"
+            aria-label="加一件"
+            disabled={v >= r.stock}
+            onClick={() =>
+              setLines((prev) =>
+                prev.map((l) => (l.skuId === r.skuId ? { ...l, quantity: Math.min(r.stock, l.quantity + 1) } : l)),
+              )
+            }
+          >
+            +
+          </button>
+        </div>
       ),
     },
     {
       title: '小计',
       dataIndex: 'unitPrice',
-      width: 100,
+      width: 90,
       align: 'right',
       render: (v: number, r) => formatMoney(round2(v * r.quantity)),
     },
@@ -572,10 +739,12 @@ const PosTerminal: React.FC = () => {
       width: 48,
       render: (_v, r) => (
         <Button
-          type="text"
           danger
-          size="small"
+          type="text"
+          size="middle"
+          className="pos-del"
           icon={<DeleteOutlined />}
+          aria-label="删除本行"
           onClick={() => setLines((prev) => prev.filter((l) => l.skuId !== r.skuId))}
         />
       ),
@@ -599,6 +768,16 @@ const PosTerminal: React.FC = () => {
             prefix="¥"
             valueStyle={{ color: '#d46b08' }}
           />
+          <Button icon={<TagsOutlined />} onClick={() => {
+            setWsDraft({
+              minQty: Number(wsTier?.minQty ?? 0) || 10,
+              discountRate: Number(wsTier?.discountRate ?? 1) || 0.9,
+              enabled: !!wsTier?.enabled,
+            });
+            setWsOpen(true);
+          }}>
+            批发价{wsTier?.enabled ? '·开' : ''}
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={() => void loadToday()}>
             刷新
           </Button>
@@ -669,6 +848,32 @@ const PosTerminal: React.FC = () => {
 
                 <Divider style={{ margin: '10px 0' }} />
 
+                {wsEligible ? (
+                  <Alert
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 8 }}
+                    message={
+                      <Space size={8} wrap>
+                        <span>
+                          已达批发价：满 {wsTier?.minQty} 件享{' '}
+                          <b>{Number(wsTier?.discountRate ?? 1) * 10} 折</b>，可省{' '}
+                          {formatMoney(wsSave)}
+                        </span>
+                        {wsApplied && discount > 0 ? (
+                          <Button size="small" type="link" onClick={() => setDiscount(0)}>
+                            撤销
+                          </Button>
+                        ) : (
+                          <Button size="small" type="primary" onClick={() => setDiscount(wsSave)}>
+                            一键应用
+                          </Button>
+                        )}
+                      </Space>
+                    }
+                  />
+                ) : null}
+
                 <Row gutter={8}>
                   <Col span={8}>
                     <div className="pos-label">商品金额</div>
@@ -730,26 +935,114 @@ const PosTerminal: React.FC = () => {
                 <div className="pos-label" style={{ marginTop: 8 }}>
                   收款方式
                 </div>
-                <Radio.Group
-                  value={payMethod}
-                  onChange={(e) => {
-                    const next = e.target.value as PosPayMethod;
-                    setPayMethod(next);
-                    // 一选挂账就弹授权：把「要先授权」这件事提前，
-                    // 而不是等到点收款才被拦，节拍上少一次挫败
-                    if (next === 'CREDIT') setCreditAuthOpen(true);
-                  }}
-                  optionType="button"
-                  buttonStyle="solid"
-                  options={PAY_OPTIONS.map((o) => ({
-                    ...o,
-                    // 未配置商户号的在线渠道直接置灰：让收银员一眼看出"这个收不了"，
-                    // 而不是点了才弹报错（收款方式配置在「店铺管理 → 收款设置」）
-                    disabled:
-                      (o.value === 'WECHAT' && !channels?.WECHAT_PAY) ||
-                      (o.value === 'ALIPAY' && !channels?.ALIPAY),
-                  }))}
-                />
+                {comboMode ? (
+                  <div className="pos-combo">
+                    {payRows.map((row, i) => (
+                      <Space.Compact key={`${row.payMethod}-${i}`} style={{ width: '100%', marginBottom: 6 }}>
+                        <Select<PosPayMethod>
+                          style={{ width: 128 }}
+                          value={row.payMethod}
+                          options={COMBO_OPTIONS.map((o) => ({
+                            ...o,
+                            // 已被其他行占用的方式不再出现，重复方式后端会拒
+                            disabled: payRows.some((r, j) => j !== i && r.payMethod === o.value),
+                          }))}
+                          onChange={(v) =>
+                            setPayRows((prev) => prev.map((r, j) => (j === i ? { ...r, payMethod: v } : r)))
+                          }
+                        />
+                        <InputNumber
+                          value={row.amount || undefined}
+                          min={0}
+                          precision={2}
+                          placeholder="金额"
+                          style={{ flex: 1 }}
+                          onChange={(v) =>
+                            setPayRows((prev) =>
+                              prev.map((r, j) => (j === i ? { ...r, amount: Number(v) || 0 } : r)),
+                            )
+                          }
+                        />
+                        <Button
+                          icon={<DeleteOutlined />}
+                          onClick={() => setPayRows((prev) => prev.filter((_, j) => j !== i))}
+                        />
+                      </Space.Compact>
+                    ))}
+                    <Space size={8} wrap>
+                      <Button
+                        size="small"
+                        icon={<PlusOutlined />}
+                        disabled={payRows.length >= 4}
+                        onClick={() =>
+                          setPayRows((prev) => {
+                            const used = new Set(prev.map((r) => r.payMethod));
+                            const next = COMBO_OPTIONS.find((o) => !used.has(o.value))?.value ?? 'CASH';
+                            return [...prev, { payMethod: next, amount: 0 }];
+                          })
+                        }
+                      >
+                        加一种收款方式
+                      </Button>
+                      <Button
+                        size="small"
+                        type="text"
+                        onClick={() => {
+                          setComboMode(false);
+                          setPayRows([]);
+                        }}
+                      >
+                        返回单一收款
+                      </Button>
+                    </Space>
+                    <div className="pos-combo__rest">
+                      已分配 <b>{formatMoney(comboAssigned)}</b> · 剩余{' '}
+                      <b style={{ color: comboRemaining === 0 ? 'var(--color-success, #389e0d)' : 'var(--color-error, #cf1322)' }}>
+                        {formatMoney(comboRemaining)}
+                      </b>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Radio.Group
+                      value={payMethod}
+                      onChange={(e) => {
+                        const next = e.target.value as PosPayMethod;
+                        setPayMethod(next);
+                        // 一选挂账就弹授权：把「要先授权」这件事提前，
+                        // 而不是等到点收款才被拦，节拍上少一次挫败
+                        if (next === 'CREDIT') setCreditAuthOpen(true);
+                      }}
+                      optionType="button"
+                      buttonStyle="solid"
+                      options={PAY_OPTIONS.map((o) => ({
+                        ...o,
+                        // 未配置商户号的在线渠道直接置灰：让收银员一眼看出"这个收不了"，
+                        // 而不是点了才弹报错（收款方式配置在「店铺管理 → 收款设置」）
+                        disabled:
+                          (o.value === 'WECHAT' && !channels?.WECHAT_PAY) ||
+                          (o.value === 'ALIPAY' && !channels?.ALIPAY),
+                      }))}
+                    />
+                    <div>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        style={{ paddingLeft: 0, marginTop: 4 }}
+                        onClick={() => {
+                          // 微信/支付宝进不了组合（在线通道一笔单一个金额），默认换成现金行
+                          const first: PosPayMethod =
+                            payMethod === 'WECHAT' || payMethod === 'ALIPAY' ? 'CASH' : payMethod;
+                          setPayRows([{ payMethod: first, amount: 0 }]);
+                          setComboMode(true);
+                        }}
+                      >
+                        组合收款（多种方式混收，如现金+刷卡）
+                      </Button>
+                    </div>
+                  </>
+                )}
                 {payMethod === 'WECHAT' || payMethod === 'ALIPAY' ? (
                   <Alert
                     style={{ marginTop: 8 }}
@@ -759,7 +1052,7 @@ const PosTerminal: React.FC = () => {
                   />
                 ) : null}
 
-                {payMethod === 'CREDIT' ? (
+                {payMethod === 'CREDIT' || comboHasCredit ? (
                   <Alert
                     style={{ marginTop: 8 }}
                     type="warning"
@@ -928,14 +1221,27 @@ const PosTerminal: React.FC = () => {
                   </Button>
                 </Space.Compact>
 
+                <div className="pos-cats">
+                  {categories.map((c) => (
+                    <button
+                      type="button"
+                      key={c}
+                      className={'pos-cat' + (activeCat === c ? ' pos-cat--on' : '')}
+                      onClick={() => setActiveCat(c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="pos-results pos-grid">
-                  {results.length === 0 ? (
+                  {shownSkus.length === 0 ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description={searching ? '查询中…' : '输入后回车查询，或直接扫码'}
+                      description={searching ? '查询中…' : activeCat === '全部' ? '输入后回车查询，或直接扫码' : '该分类暂无在售商品'}
                     />
                   ) : (
-                    results.map((sku) => (
+                    shownSkus.map((sku) => (
                       <button
                         type="button"
                         key={sku.skuId}
@@ -1025,7 +1331,74 @@ const PosTerminal: React.FC = () => {
             </Space>
           </Modal>
 
-          {/* 挂账授权：不到账就能出单，必须有人签字，否则资损口子敞开 */}
+          {/* 批发阶梯价设置：满 N 件整单打 X 折，覆盖式单档配置 */}
+          <Modal
+            open={wsOpen}
+            title="批发阶梯价设置"
+            okText="保存"
+            cancelText="取消"
+            confirmLoading={wsSaving}
+            onCancel={() => setWsOpen(false)}
+            onOk={async () => {
+              if (wsDraft.minQty < 2) {
+                message.warning('批发件数门槛至少 2 件');
+                return;
+              }
+              if (wsDraft.discountRate <= 0 || wsDraft.discountRate > 1) {
+                message.warning('折扣率请在 0 ~ 1 之间（0.90 = 九折）');
+                return;
+              }
+              setWsSaving(true);
+              try {
+                const saved = await posApi.saveWholesaleTier(wsDraft);
+                setWsTier(saved);
+                setWsOpen(false);
+                message.success(saved.enabled ? '批发价已启用' : '批发价已停用');
+              } catch (e) {
+                message.error(e instanceof Error ? e.message : '保存失败');
+              } finally {
+                setWsSaving(false);
+              }
+            }}
+            width={440}
+          >
+            <Space direction="vertical" style={{ width: '100%' }} size={12}>
+              <div>
+                <div className="pos-label">件数门槛（满多少件触发）</div>
+                <InputNumber
+                  min={2}
+                  precision={0}
+                  style={{ width: '100%' }}
+                  value={wsDraft.minQty || undefined}
+                  onChange={(v) => setWsDraft((d) => ({ ...d, minQty: Number(v) || 0 }))}
+                />
+              </div>
+              <div>
+                <div className="pos-label">折扣率（0.90 = 九折）</div>
+                <InputNumber
+                  min={0.01}
+                  max={1}
+                  step={0.05}
+                  precision={2}
+                  style={{ width: '100%' }}
+                  value={wsDraft.discountRate}
+                  onChange={(v) => setWsDraft((d) => ({ ...d, discountRate: Number(v) || 0 }))}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text type="secondary">启用后，件数达标会在本单自动提示并应用</Text>
+                <Switch
+                  checked={wsDraft.enabled}
+                  onChange={(v) => setWsDraft((d) => ({ ...d, enabled: v }))}
+                />
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                批发价以「整单折扣」落地，不改动逐行单价；与会员折扣叠加时以后填的为准。
+              </Text>
+            </Space>
+          </Modal>
+
+          {/* 挂账授权：不到账也能出单，必须有人签字，否则资损口子敞开 */}
           <Modal
             open={creditAuthOpen}
             title="挂账授权"

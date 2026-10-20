@@ -5,8 +5,12 @@ import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosSaleItem;
+import com.fashion.supplychain.pos.entity.PosSalePayment;
+import com.fashion.supplychain.pos.entity.PosWholesaleTier;
 import com.fashion.supplychain.pos.mapper.PosSaleItemMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.pos.mapper.PosSalePaymentMapper;
+import com.fashion.supplychain.pos.mapper.PosWholesaleTierMapper;
 import com.fashion.supplychain.ticket.TicketTypes;
 import com.fashion.supplychain.ticket.orchestration.TicketOrchestrator;
 import com.fashion.supplychain.warehouse.constant.OutstockTypeConstants;
@@ -41,6 +45,8 @@ public class PosSaleWriteService {
 
     private final PosSaleMapper saleMapper;
     private final PosSaleItemMapper saleItemMapper;
+    private final PosSalePaymentMapper salePaymentMapper;
+    private final PosWholesaleTierMapper wholesaleTierMapper;
     private final FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
     private final ReceivableOrchestrator receivableOrchestrator;
     private final TicketOrchestrator ticketOrchestrator;
@@ -54,10 +60,29 @@ public class PosSaleWriteService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Long createSale(PosSale sale, List<PosSaleItem> items) {
+        return createSale(sale, items, List.of());
+    }
+
+    /**
+     * 落销售单 + 明细 + 支付明细（**不出库**）。
+     *
+     * <p>支付明细每种方式一行（单方式收款也落一行），
+     * 「按方式汇总 / 交班对账」的金额真相源是这张表，不是 sale.pay_method。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Long createSale(PosSale sale, List<PosSaleItem> items, List<PosSalePayment> payments) {
         saleMapper.insert(sale);
         for (PosSaleItem it : items) {
             it.setSaleId(sale.getId());
             saleItemMapper.insert(it);
+        }
+        for (PosSalePayment p : payments) {
+            p.setTenantId(sale.getTenantId());
+            p.setSaleId(sale.getId());
+            if (p.getCreateTime() == null) {
+                p.setCreateTime(LocalDateTime.now());
+            }
+            salePaymentMapper.insert(p);
         }
         return sale.getId();
     }
@@ -73,6 +98,22 @@ public class PosSaleWriteService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> settle(Long saleId, String payStatus, String channelTradeNo) {
+        return settle(saleId, payStatus, channelTradeNo, null);
+    }
+
+    /**
+     * 结算：出库 + （挂账）生成应收 + 收款状态落定。
+     *
+     * <p><b>幂等</b>：只有仍处于 {@code PAYING} 的单才会真正执行出库。
+     * 重复回调、回调与轮询同时命中，都只会出一次库 —— 重复出库等于凭空发货。
+     *
+     * @param payStatus       PAID（已收款）/ UNPAID（挂账未收）
+     * @param channelTradeNo  渠道交易号（现金/挂账传 null）
+     * @param creditAmount    挂账部分金额（组合支付部分挂账时传；null = 整单挂账按 totalAmount）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> settle(Long saleId, String payStatus, String channelTradeNo,
+                                      java.math.BigDecimal creditAmount) {
         PosSale sale = saleMapper.selectById(saleId);
         if (sale == null) {
             throw new IllegalStateException("销售单不存在：" + saleId);
@@ -114,14 +155,21 @@ public class PosSaleWriteService {
             }
         }
 
-        // 只有挂账才生成应收：当场收款生成应收 = 同一笔钱在「已收」与「应收未收」里各记一次
+        // 只有挂账才生成应收：当场收款生成应收 = 同一笔钱在「已收」与「应收未收」里各记一次。
+        // 组合支付部分挂账：应收金额 = 挂账那部分（creditAmount），其余是当场收到的钱。
         String receivableId = null;
-        if ("UNPAID".equals(payStatus) && "CREDIT".equals(sale.getPayMethod())) {
+        java.math.BigDecimal receivableAmount = creditAmount != null ? creditAmount
+                : ("UNPAID".equals(payStatus) && "CREDIT".equals(sale.getPayMethod())
+                        ? sale.getTotalAmount() : null);
+        if ("UNPAID".equals(payStatus) && receivableAmount != null
+                && receivableAmount.signum() > 0) {
             Receivable receivable = new Receivable();
             receivable.setCustomerId(sale.getCustomerId());
             receivable.setCustomerName(sale.getCustomerName());
-            receivable.setAmount(sale.getTotalAmount());
-            receivable.setDescription("收银台销售单 " + sale.getSaleNo());
+            receivable.setAmount(receivableAmount);
+            receivable.setDescription("收银台销售单 " + sale.getSaleNo()
+                    + (receivableAmount.compareTo(sale.getTotalAmount()) != 0
+                            ? "（组合支付挂账部分）" : ""));
             Receivable saved = receivableOrchestrator.create(receivable);
             receivableId = saved.getId();
         }
@@ -175,6 +223,16 @@ public class PosSaleWriteService {
         saleMapper.updateById(patch);
         log.info("[POS] 单据已取消 saleNo={} 原因={}", sale.getSaleNo(), reason);
         return true;
+    }
+
+    /**
+     * 保存批发阶梯价配置（租户级单条：先清后插，保证只有一个生效档位）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void saveWholesaleTier(PosWholesaleTier tier) {
+        wholesaleTierMapper.delete(new LambdaQueryWrapper<PosWholesaleTier>()
+                .eq(PosWholesaleTier::getTenantId, tier.getTenantId()));
+        wholesaleTierMapper.insert(tier);
     }
 
     private static String appendRemark(String old, String add) {

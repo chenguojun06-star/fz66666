@@ -103,9 +103,10 @@ public class PosController {
      * 扫码 / 关键字找货。
      *
      * <p>扫码枪就是键盘：输入条码或 SKU 编码后回车。精确命中的排最前。
+     * keyword 为空 = 浏览模式：不输关键词也出商品宫格（分类页签点选用）。
      */
     @GetMapping("/skus")
-    public Result<?> searchSkus(@RequestParam String keyword,
+    public Result<?> searchSkus(@RequestParam(required = false, defaultValue = "") String keyword,
                                @RequestParam(defaultValue = "30") int limit) {
         return Result.success(posSaleOrchestrator.searchSkus(keyword, limit));
     }
@@ -114,6 +115,22 @@ public class PosController {
     @GetMapping("/customer")
     public Result<?> customer(@RequestParam String phone) {
         return Result.success(posSaleOrchestrator.customer(phone));
+    }
+
+    /** 批发阶梯价配置（满 N 件打 X 折；未配置返回 enabled=false 默认值） */
+    @GetMapping("/wholesale-tier")
+    public Result<?> wholesaleTier() {
+        return Result.success(posSaleOrchestrator.wholesaleTier());
+    }
+
+    /** 保存批发阶梯价配置（body: {minQty, discountRate, enabled}） */
+    @PostMapping("/wholesale-tier")
+    public Result<?> saveWholesaleTier(@RequestBody Map<String, Object> body) {
+        try {
+            return Result.success(posSaleOrchestrator.saveWholesaleTier(body));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
     }
 
     /**

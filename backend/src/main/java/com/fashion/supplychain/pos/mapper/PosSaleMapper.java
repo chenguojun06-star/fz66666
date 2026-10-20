@@ -20,16 +20,29 @@ public interface PosSaleMapper extends BaseMapper<PosSale> {
     /**
      * 今日按收款方式汇总（交班对账用）。
      *
+     * <p>金额真相源是**支付明细表**（t_pos_sale_payment）：组合支付（现金500+微信300）
+     * 要按明细拆到各方式里，只看 sale.pay_method（主方式）会把 500 现金记成 800 现金。
+     * 历史单没有明细行，回退到 sale.pay_method 整单口径（UNION ALL 兜底段）。
+     *
      * <p>只统计**钱已到位**的单（PAID 已收款 / UNPAID 挂账），
      * 排除 PAYING（顾客还没付）与 CANCELLED（作废）——
      * 交班时收银员要拿这个数去数钱，把待支付也算进去会对不上账。
      */
-    @Select("SELECT pay_method AS payMethod, pay_status AS payStatus, "
-            + "       COUNT(*) AS saleCount, COALESCE(SUM(total_amount), 0) AS amount "
-            + "FROM t_pos_sale "
-            + "WHERE tenant_id = #{tenantId} AND status = 'NORMAL' AND DATE(create_time) = CURDATE() "
-            + "  AND pay_status IN ('PAID', 'UNPAID') "
-            + "GROUP BY pay_method, pay_status "
+    @Select("SELECT m.payMethod AS payMethod, m.payStatus AS payStatus, "
+            + "       COUNT(*) AS saleCount, COALESCE(SUM(m.amount), 0) AS amount "
+            + "FROM ( "
+            + "  SELECT p.pay_method AS payMethod, s.pay_status AS payStatus, p.amount AS amount "
+            + "  FROM t_pos_sale_payment p JOIN t_pos_sale s ON s.id = p.sale_id "
+            + "  WHERE s.tenant_id = #{tenantId} AND s.status = 'NORMAL' "
+            + "    AND DATE(s.create_time) = CURDATE() AND s.pay_status IN ('PAID', 'UNPAID') "
+            + "  UNION ALL "
+            + "  SELECT s.pay_method, s.pay_status, s.total_amount "
+            + "  FROM t_pos_sale s "
+            + "  WHERE s.tenant_id = #{tenantId} AND s.status = 'NORMAL' "
+            + "    AND DATE(s.create_time) = CURDATE() AND s.pay_status IN ('PAID', 'UNPAID') "
+            + "    AND NOT EXISTS (SELECT 1 FROM t_pos_sale_payment p WHERE p.sale_id = s.id) "
+            + ") m "
+            + "GROUP BY m.payMethod, m.payStatus "
             + "ORDER BY amount DESC")
     List<Map<String, Object>> todayByPayMethod(@Param("tenantId") Long tenantId);
 

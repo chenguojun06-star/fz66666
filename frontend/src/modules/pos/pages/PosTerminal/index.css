@@ -353,3 +353,98 @@
   border: 1px solid #ffe7ba;
   border-radius: 8px;
 }
+
+/* ── 分类页签（商品宫格上方，点分类过滤，不用每次敲搜索词） ── */
+.pos-cats {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0 4px;
+  scrollbar-width: none;
+}
+
+.pos-cats::-webkit-scrollbar {
+  display: none;
+}
+
+.pos-cat {
+  flex: 0 0 auto;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 3px 14px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #333333;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.pos-cat:hover {
+  border-color: var(--color-primary, #1677ff);
+  color: var(--color-primary, #1677ff);
+}
+
+.pos-cat--on {
+  background: var(--color-primary, #1677ff);
+  border-color: var(--color-primary, #1677ff);
+  color: #ffffff;
+}
+
+/* ── 购物车行内 ± 数量步进 ── */
+.pos-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pos-qty__btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+  color: #333333;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pos-qty__btn:hover:not(:disabled) {
+  border-color: var(--color-primary, #1677ff);
+  color: var(--color-primary, #1677ff);
+}
+
+.pos-qty__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pos-qty__num {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 删除按钮加大：误触是退货的根源，可点面积要够 */
+.pos-del {
+  width: 32px !important;
+  height: 32px;
+}
+
+/* ── 组合收款编辑器 ── */
+.pos-combo {
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 4px;
+}
+
+.pos-combo__rest {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666666;
+}
