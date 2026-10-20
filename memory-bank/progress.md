@@ -950,6 +950,7 @@
 - [x] P1-2 空壳票漏洞修复：惰性补建前校验来源单据归属租户（findByBiz public + sourceExists + Orchestrator 校验）
 - [x] 冒烟 8 项全绿：POS 开单→建票→H5 读取→签收→幂等→截断→跨租户→伪造 token（明细 decisionLog D-828）
 - [x] 收尾核实：mcp_readonly 重建 / db-query-mcp INTO 误报修复（5/5 回归）/ H5 浏览器验收 5/5 / 线上 autodeploy 机制确认（P1-2 自动上线）
+- [x] P1-2 回归修复：SHOP_ORDER/OUTSTOCK UUID 主键被 parseLong 误杀全量 400，按类型区分 ID 解析，本地 5/5 冒烟通过（19218e667 已推送）
 - [ ] 待用户：真机扫码验收；MCP 面板启用 6 件套 + MCP_DB_PASSWORD=changeme；线上账号 POS 开单验收 P1-2 生效
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md

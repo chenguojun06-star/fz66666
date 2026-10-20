@@ -3928,6 +3928,9 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **P1-2 空壳票漏洞（冒烟实测发现并修复）**：登录态 `GET /api/ticket?sourceBizType=POS_SALE&sourceBizId=1` 惰性补建**不校验来源单据归属**——任意租户登录用户对任意 sourceBizId 都能建出带真实 signToken 的空壳小票（脏数据入库、可被扫码访问）。修复：`TicketService.selectByBiz` 改 public `findByBiz` + `TicketAssembler.sourceExists(tenantId, type, id)`（三来源 selectCount 带 tenant_id）+ `TicketOrchestrator.getByBiz` 补建前校验，不通过抛「来源单据不存在或不属于当前租户」。回归：跨租户 400 拦截 ✅、本租户正常 ✅、脏数据已清理。
 
+**P1-2 回归修复（2026-10-20 晚，线上用户实测反馈）**：修复上线后 SHOP_ORDER 取票全量 400「来源单据不存在或不属于当前租户」——`sourceExists` 里的 `parseLongOrNull(sourceBizId)` 对 UUID 主键解析为 null 直接判"不存在"。**三种来源主键类型不一致**：PosSale 是 `Long`（IdType.AUTO），ShopOrder / ProductOutstock 都是 `String`（IdType.ASSIGN_UUID）——冒烟只测了 POS（数字 ID），SHOP_ORDER/OUTSTOCK 两条 UUID 路径被一刀切误杀。修复：按类型区分 ID 解析（POS_SALE 保留数字解析，SHOP_ORDER/OUTSTOCK 用字符串直查）。本地 5/5 冒烟：真实 UUID 建票 200 ✅ / 不存在 UUID 400 ✅ / 跨租户 400 ✅ / POS_SALE 数字 ID 回归 200 ✅ / OUTSTOCK 真实出库单 UUID 200 ✅。已推送 19218e667，线上 autodeploy 自动上线。
+**教训**：① 修"存在性校验"这类横切逻辑时，必须先核对**所有分支的数据类型**（三来源主键类型不一致是既有事实，assemble 侧早就按字符串查了，只有新加的 sourceExists 踩坑）；② 冒烟覆盖要按**代码分支**而非按**来源类型想当然**——测了 POS 不等于测了 SHOP_ORDER。
+
 **冒烟清单（全绿）**：伪造 token 拒绝 ✅ / POS 开单（CASH 36.86 + WECHAT）自动建票+联动出库单 ✅ / 登录态取票聚合+手机号掩码 `138****8888` ✅ / H5 公开读取免登录 ✅ / 签收首签锁定幂等（已签收不覆盖，防篡改）✅ / 首签 80 字符截断 64 落库 ✅ / 跨租户隔离 ✅ / H5 静态页 200 ✅。测试手法：本地 dev 库把 lilb 密码恢复为文档约定的 123456（复制 admin 的 BCrypt 哈希）。
 
 **MCP 核实结论（用户批准记档）**：
