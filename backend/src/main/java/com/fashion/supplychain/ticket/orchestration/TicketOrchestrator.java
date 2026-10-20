@@ -44,8 +44,18 @@ public class TicketOrchestrator {
         return ticketService.signTicket(token, signedBy);
     }
 
-    /** 登录态按来源单据取小票（惰性补建，兼容历史单据），并聚合数据。 */
+    /**
+     * 登录态按来源单据取小票（惰性补建，兼容历史单据），并聚合数据。
+     *
+     * <p>P1-2（2026-10-20 冒烟实测）：补建前必须校验来源单据存在且归属本租户——
+     * 否则任意登录用户可对不存在的 sourceBizId 建出空壳小票（带真实 signToken，
+     * 脏数据入库且可被扫码访问）。
+     */
     public TicketData getByBiz(Long tenantId, String sourceBizType, String sourceBizId, String sourceBizNo) {
+        if (ticketService.findByBiz(tenantId, sourceBizType, sourceBizId) == null
+                && !ticketAssembler.sourceExists(tenantId, sourceBizType, sourceBizId)) {
+            throw new IllegalArgumentException("来源单据不存在或不属于当前租户: " + sourceBizType + "#" + sourceBizId);
+        }
         SalesTicket ticket = ticketService.ensureTicket(tenantId, sourceBizType, sourceBizId, sourceBizNo);
         return ticketAssembler.assemble(ticket);
     }

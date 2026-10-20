@@ -47,7 +47,7 @@ public class TicketService {
      * 并发兜底靠 uk_ticket_biz 唯一键，撞键后回读已有行。
      */
     public SalesTicket ensureTicket(Long tenantId, String sourceBizType, String sourceBizId, String sourceBizNo) {
-        SalesTicket existing = selectByBiz(tenantId, sourceBizType, sourceBizId);
+        SalesTicket existing = findByBiz(tenantId, sourceBizType, sourceBizId);
         if (existing != null) {
             return existing;
         }
@@ -67,7 +67,7 @@ public class TicketService {
                 ticketMapper.insert(t);
                 return t;
             } catch (DuplicateKeyException e) {
-                existing = selectByBiz(tenantId, sourceBizType, sourceBizId);
+                existing = findByBiz(tenantId, sourceBizType, sourceBizId);
                 if (existing != null) {
                     return existing;
                 }
@@ -167,7 +167,11 @@ public class TicketService {
         return ticketMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize), w);
     }
 
-    private SalesTicket selectByBiz(Long tenantId, String sourceBizType, String sourceBizId) {
+    /**
+     * 按来源单据查小票（登录态惰性补建前先查它：命中即免建票；
+     * 未命中时调用方必须先校验来源单据归属，防止给不存在的单据建空壳票）。
+     */
+    public SalesTicket findByBiz(Long tenantId, String sourceBizType, String sourceBizId) {
         return ticketMapper.selectOne(new LambdaQueryWrapper<SalesTicket>()
                 .eq(SalesTicket::getTenantId, tenantId)
                 .eq(SalesTicket::getSourceBizType, sourceBizType)

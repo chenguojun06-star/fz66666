@@ -58,6 +58,27 @@ public class TicketAssembler {
     private final StyleInfoMapper styleInfoMapper;
     private final ReceivableMapper receivableMapper;
 
+    /**
+     * 来源单据存在性校验（建票前调用，P1-2）：登录态惰性补建入口
+     * 必须先确认来源单据真实存在且归属该租户，否则任意登录用户可对
+     * 任意 sourceBizId 建出空壳小票（冒烟实测踩中）。未知类型返回 false。
+     */
+    public boolean sourceExists(Long tenantId, String sourceBizType, String sourceBizId) {
+        Long id = parseLongOrNull(sourceBizId);
+        if (id == null) {
+            return false;
+        }
+        return switch (sourceBizType) {
+            case TicketTypes.POS_SALE -> posSaleMapper.selectCount(new LambdaQueryWrapper<PosSale>()
+                    .eq(PosSale::getId, id).eq(PosSale::getTenantId, tenantId)) > 0;
+            case TicketTypes.SHOP_ORDER -> shopOrderMapper.selectCount(new LambdaQueryWrapper<ShopOrder>()
+                    .eq(ShopOrder::getId, id).eq(ShopOrder::getTenantId, tenantId)) > 0;
+            case TicketTypes.OUTSTOCK -> productOutstockMapper.selectCount(new LambdaQueryWrapper<ProductOutstock>()
+                    .eq(ProductOutstock::getId, id).eq(ProductOutstock::getTenantId, tenantId)) > 0;
+            default -> false;
+        };
+    }
+
     public TicketData assemble(SalesTicket ticket) {
         TicketData data = new TicketData();
         data.setTicketNo(ticket.getTicketNo());
