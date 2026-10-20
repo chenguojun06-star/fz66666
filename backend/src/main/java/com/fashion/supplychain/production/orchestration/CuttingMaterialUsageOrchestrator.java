@@ -155,6 +155,7 @@ public class CuttingMaterialUsageOrchestrator {
      * 查询某裁剪任务的用料台账（含汇总与任务上下文）。
      */
     public Map<String, Object> listByTask(String cuttingTaskId) {
+        TenantAssert.assertTenantContext();
         Map<String, Object> result = new HashMap<>();
         if (!StringUtils.hasText(cuttingTaskId)) {
             result.put("rows", new ArrayList<>());
@@ -637,6 +638,7 @@ public class CuttingMaterialUsageOrchestrator {
      * 裁剪计划 → 裁剪实际消耗 → 余料 → 已回库。
      */
     public Map<String, Object> chainSummary(String orderNo, String materialCode) {
+        TenantAssert.assertTenantContext();
         Map<String, Object> result = new HashMap<>();
         if (!StringUtils.hasText(orderNo)) {
             throw new IllegalArgumentException("订单号不能为空");
@@ -699,6 +701,9 @@ public class CuttingMaterialUsageOrchestrator {
     // ==================== 内部工具 ====================
 
     private CuttingTask requireTask(String cuttingTaskId) {
+        // 租户隔离加固：无上下文一律拒绝（项目口诀「无 tenant_id，不执行 SQL」）。
+        // 查询若用条件式 .eq(tenantId != null, ...)，tenantId 为 null 时等于跨租户可见。
+        TenantAssert.assertTenantContext();
         if (!StringUtils.hasText(cuttingTaskId)) {
             throw new IllegalArgumentException("裁剪任务ID不能为空");
         }
