@@ -1874,6 +1874,7 @@ sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 - **启动铁律**：本地后端端口 **8088**、必须带 `DB_PASSWORD=changeme`、启动日志核对 `Successfully applied N migrations`
 - **P1-2 修复**：登录态惰性补建前校验来源单据归属租户（实测任意用户可对任意 sourceBizId 建空壳票）；改 TicketService.findByBiz public + TicketAssembler.sourceExists + Orchestrator 校验
 - **冒烟 8 项全绿**：伪造 token 拒绝 / POS 开单自动建票+出库联动 / 掩码 138\*\*\*\*8888 / H5 免登录读取 / 首签锁定幂等 / 80→64 截断 / 跨租户拦截 / H5 静态页 200（明细见 decisionLog D-828）
-- **待办**：① H5 真机扫码验收 ② db-query-mcp 的 mcp_readonly 账号重建/改密 ③ 自研 6 件套 MCP 在面板确认启用后重启会话（市场 11 个候选已核实全部不装，结论记 D-828）
+- **核实收尾（2026-10-20 晚）**：① mcp_readonly 账号已重建（changeme，只读 328 表验证通过）② H5 浏览器验收 5/5 PASS（渲染/console 无错/签收交互/落库 SIGNED；signed_by 落 prompt 确认值=默认客户名，符合"可留空"设计非 bug）③ db-query-mcp INTO 误报已修——node-sql-parser v5 对普通 SELECT 返回假阳性 `into={position:null}`，改为按 `keyword 非空 || expr 数组非空` 判定，5 用例回归全过（MCP 重启后生效）④ 线上为 autodeploy cron 每 2 分钟拉 main 自动部署，P1-2 已推送将自动上线（无线上登录账号未直接验证）
+- **待办（需用户）**：① 真机扫码验收 H5 ② Trae MCP 面板启用自研 6 件套 + 配 `MCP_DB_PASSWORD=changeme` 后重启会话（市场 11 个候选已核实全部不装，结论记 D-828）③ 用线上账号 POS 开单验收小票，顺带确认 P1-2 已上线（对不存在单据 ID 取票应报「来源单据不存在或不属于当前租户」而非建空壳票）
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/activeContext-202608.md
