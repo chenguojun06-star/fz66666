@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, Button, InputNumber, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
-import { CopyOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Button, InputNumber, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
+import { CopyOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { EditableSku } from '../types';
 import { parseSpreadsheetText, applySpreadsheetRows } from '../spreadsheetPaste';
@@ -153,13 +153,12 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
       {/* D-513：「手工改库存不走台账」的说明已上提到分区副标题；
           这里只保留「异常态」提醒（有 SKU 没售价 → 顾客无法下单），异常才用 Alert 强调 */}
       {noPrice > 0 ? (
-        <Alert
-          type="info"
-          showIcon
-          className="shop-listing__alert"
-          message={`有 ${noPrice} 个 SKU 没有售价`}
-          description="没有售价的 SKU 在店铺里显示 ¥—，并且顾客无法下单。请先补齐售价。"
-        />
+        <Tooltip title="没有售价的 SKU 在店铺里显示 ¥—，并且顾客无法下单。请先补齐售价。">
+          <div className="shop-listing__inline-warn">
+            <InfoCircleOutlined />
+            有 {noPrice} 个 SKU 没有售价
+          </div>
+        </Tooltip>
       ) : null}
 
       <Space size={8} wrap style={{ marginBottom: 8 }}>

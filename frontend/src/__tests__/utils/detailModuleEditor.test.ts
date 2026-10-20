@@ -45,16 +45,19 @@ describe('模块与内容合一（D-785）', () => {
     expect(s).toContain('shop-module-item-extra');
   });
 
-  it('D-800：每个模块都要有标题与内容，不能只有标题没有编辑区', () => {
+  it('只有存在编辑器的模块才渲染内容区，没有编辑器的模块不占空白', () => {
     const s = readEditor();
-    // 说明文字在内容区里（收起态不存在了，说明必须始终可读）
-    expect(s).toContain('shop-module__desc');
+    expect(s).toContain('shop-module-item-body');
+    expect(s).toContain('{Editor ? (');
   });
 
-  it('没有输入框的模块必须说明内容来自哪里，不能留空白让人以为系统坏了', () => {
+  it('说明统一收进标题旁的感叹号图标，悬停或点击查看，不再整块铺在页面上', () => {
     const s = readEditor();
-    expect(s).toContain("meta?.source ?? '这个模块不需要填写内容'");
-    expect(s).toContain('所以这里没有输入框');
+    expect(s).toContain('shop-module__hint');
+    expect(s).toContain("trigger={['hover', 'click']}");
+    expect(s).toContain('{meta?.source ? <div>{meta.source}</div> : null}');
+    expect(s).not.toContain('shop-module__no-editor');
+    expect(s).not.toContain('所以这里没有输入框');
   });
 
   it('每个模块都要有一句「顾客端看到什么」的说明', () => {

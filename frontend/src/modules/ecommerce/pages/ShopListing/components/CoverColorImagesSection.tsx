@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Space, Tag, Typography } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import { COVER_RECOMMEND_SIZE_PX } from '../coverImageRules';
@@ -266,7 +267,10 @@ const CoverColorImagesSection: React.FC<Props> = ({
       ) : null}
 
       {analyzing ? (
-        <Alert type="info" showIcon className="shop-listing__alert" title="正在检测主图规范…" />
+        <div className="shop-listing__analyzing">
+          <LoadingOutlined />
+          正在检测主图规范…
+        </div>
       ) : null}
 
     </div>

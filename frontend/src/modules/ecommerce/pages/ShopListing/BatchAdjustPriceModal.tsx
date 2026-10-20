@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Alert, Button, Divider, InputNumber, Modal, Radio, Space, Table, Tag, Typography,
+  Alert, Button, Divider, InputNumber, Modal, Radio, Space, Table, Tag, Tooltip, Typography,
 } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import shopAdminApi, { type BatchPricePreview, type BatchPriceItem } from '@/services/shop/shopApi';
 
 const { Text } = Typography;
@@ -133,7 +133,14 @@ export function BatchAdjustPriceModal({ open, styleIds, styleNoOf, onCancel, onD
   return (
     <Modal
       open={open}
-      title={`批量调价（已选 ${styleIds.length} 款）`}
+      title={
+        <span>
+          批量调价（已选 {styleIds.length} 款）
+          <Tooltip title="批量调价直接改动售价，请先试算确认影响。试算只读不落库，会逐款列出调前/调后售价与毛利变化，并标出将转为亏损的款式。">
+            <InfoCircleOutlined className="shop-edit__inline-hint" style={{ marginLeft: 8 }} aria-label="说明" />
+          </Tooltip>
+        </span>
+      }
       onCancel={() => { reset(); onCancel(); }}
       width={900}
       footer={[
@@ -150,13 +157,6 @@ export function BatchAdjustPriceModal({ open, styleIds, styleNoOf, onCancel, onD
       ]}
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Alert
-          type="info"
-          showIcon
-          message="批量调价直接改动售价，请先试算确认影响"
-          description="试算只读不落库，会逐款列出调前/调后售价与毛利变化，并标出将转为亏损的款式。"
-        />
-
         <Space wrap>
           <Radio.Group
             value={mode}

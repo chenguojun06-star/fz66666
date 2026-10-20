@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { Button, Space, Spin, Switch, Tag, Tooltip, Typography } from 'antd';
 import {
-  ArrowDownOutlined, ArrowUpOutlined, HolderOutlined,
+  ArrowDownOutlined, ArrowUpOutlined, ExclamationCircleOutlined, HolderOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
@@ -210,6 +210,19 @@ export function DetailModuleEditor({
               16 个模块各带说明会把这块撑出一屏；说明文字改为展开后再显示。 */}
           <Space size={6} wrap style={{ flex: 1, minWidth: 0 }}>
             <Text strong>{m.defaultTitle}</Text>
+            {meta?.desc || meta?.source ? (
+              <Tooltip
+                trigger={['hover', 'click']}
+                title={
+                  <div style={{ maxWidth: 320, lineHeight: 1.7 }}>
+                    {meta?.desc ? <div>{meta.desc}</div> : null}
+                    {meta?.source ? <div>{meta.source}</div> : null}
+                  </div>
+                }
+              >
+                <ExclamationCircleOutlined className="shop-module__hint" aria-label="说明" />
+              </Tooltip>
+            ) : null}
             {!m.canHide ? <Tag color="blue">必需</Tag> : null}
             {Editor ? (
               <Tag color={hint && !hint.startsWith('未') && !hint.includes('0/') ? 'green' : 'default'}>
@@ -245,26 +258,12 @@ export function DetailModuleEditor({
           />
         </Space>
       ),
-      children: Editor ? (
-        <div>
-          {/* D-800：说明文字移到展开区内，收起时不再每行占一行 */}
-          <div className="shop-module__desc" style={{ marginBottom: 6 }}>{meta?.desc}</div>
-          <Editor ctx={ctx} />
-        </div>
-      ) : (
-        <Alert
-          type="info"
-          showIcon
-          message={meta?.source ?? '这个模块不需要填写内容'}
-          description="所以这里没有输入框 —— 内容来自上面的数据，商家只需用开关决定要不要展示。"
-        />
-      ),
     };
   });
 
   return (
     <div className="shop-edit__block">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
         <Button
           size="small"
           disabled={loading || savingKey !== null}
@@ -277,13 +276,6 @@ export function DetailModuleEditor({
           恢复默认顺序
         </Button>
       </div>
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 10 }}
-        message="开关、顺序、内容都在这一块里"
-        description="顾客端详情页按这里的顺序从上到下展示；勾选＝显示，点开关即时生效。没有内容的模块会自动跳过，所以留空也不会出现空白标题。"
-      />
       {/* D-800：取消折叠，全部平铺。
           用户明确要求「不要折叠了，就是标题与内容编辑区，工工整整的那种」。
           Collapse 每行都要点开才能看到内容，改一次东西要点两次；
@@ -298,9 +290,11 @@ export function DetailModuleEditor({
                 <span className="shop-module-item-name">{it.label}</span>
                 <span className="shop-module-item-extra">{it.extra}</span>
               </div>
-              <div className="shop-module-item-body">
-                {Editor ? <Editor ctx={ctx} /> : it.children}
-              </div>
+              {Editor ? (
+                <div className="shop-module-item-body">
+                  <Editor ctx={ctx} />
+                </div>
+              ) : null}
             </div>
           );
         })}

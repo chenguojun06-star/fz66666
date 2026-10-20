@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Space, Spin, Switch, Tag, Typography } from 'antd';
+import { Button, Space, Spin, Switch, Tag, Tooltip, Typography } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import CustomerPreview from './CustomerPreview';
 import ListingSetupChecklist from './ListingSetupChecklist';
@@ -60,13 +61,22 @@ interface Props {
  * 现在去掉所有装饰，只靠留白和分隔线区分区块。
  */
 const Section: React.FC<{
-  title: string;
+  title: React.ReactNode;
   desc?: React.ReactNode;
   children: React.ReactNode;
 }> = ({ title, desc, children }) => (
   <section className="shop-edit__block">
-    <h3 className="shop-edit__block-heading">{title}</h3>
-    {desc ? <div className="shop-edit__block-note">{desc}</div> : null}
+    <h3 className="shop-edit__block-heading">
+      {title}
+      {desc ? (
+        <Tooltip
+          trigger={['hover', 'click']}
+          title={<div style={{ maxWidth: 340, lineHeight: 1.7 }}>{desc}</div>}
+        >
+          <ExclamationCircleOutlined className="shop-edit__inline-hint" aria-label="说明" />
+        </Tooltip>
+      ) : null}
+    </h3>
     {children}
   </section>
 );
@@ -406,7 +416,7 @@ const ListingEditDrawer: React.FC<Props> = ({
 
             <Section
               title="主图"
-              desc="店铺列表卡片和详情页兜底大图都用它。合规体检只提示、不拦截上传。各颜色的大图在下面「详情页内容 → 颜色选择」里配。"
+              desc="店铺列表卡片和详情页兜底大图都用它。各颜色的大图在下面「详情页内容 → 颜色选择」里配。图片不做上传限制：合规体检只是提示，不会拦住上传，也不会阻止上架。"
             >
               <div className="shop-edit__form">
                 <CoverColorImagesSection
@@ -433,7 +443,7 @@ const ListingEditDrawer: React.FC<Props> = ({
 
             <Section
               title="详情页内容"
-              desc="顾客端详情页由下面这些模块组成。勾选＝展示，开关点一下即生效。没有内容的模块会自动跳过。"
+              desc="开关、顺序、内容都在这一块里。顾客端详情页按这里的顺序从上到下展示；勾选＝显示，点开关即时生效。没有内容的模块会自动跳过，所以留空也不会出现空白标题。"
             >
               <div className="shop-edit__form">
                 <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
@@ -462,13 +472,6 @@ const ListingEditDrawer: React.FC<Props> = ({
             </div>
           </div>
 
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginTop: 12 }}
-            message="图片不做上传限制"
-            description="主图的合规体检只是提示：告诉你这样传平台可能不给推荐，但不会拦住上传，也不会阻止上架。"
-          />
         </>
       )}
     </SideDrawer>

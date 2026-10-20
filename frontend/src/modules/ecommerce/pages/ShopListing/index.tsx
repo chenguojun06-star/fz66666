@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Input, Segmented, Space, Tag, Typography } from 'antd';
-import { DollarOutlined, ExportOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
+import { DollarOutlined, ExportOutlined, InfoCircleOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
@@ -135,6 +135,19 @@ const ShopListing: React.FC = () => {
           <div className="shop-listing__title">
             <ShopOutlined />
             <span>商品上架管理</span>
+            <Tooltip
+              placement="bottomLeft"
+              title={
+                <div style={{ maxWidth: 380, lineHeight: 1.8 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>怎么上架 / 怎么改商品</div>
+                  <div>① 找到款式 → 点右侧「上架」，顾客立刻能看到；</div>
+                  <div>② 点「改图与数据」改主图、每个颜色的图、SKU 售价与库存。</div>
+                  <div>价格显示 ¥— 说明该 SKU 没维护售价，顾客无法下单。</div>
+                </div>
+              }
+            >
+              <InfoCircleOutlined className="shop-listing__title-hint" aria-label="怎么上架 / 怎么改商品" />
+            </Tooltip>
             <Tag color="orange">已上架 {listedCount} 款</Tag>
           </div>
           <Text type="secondary" className="shop-listing__desc">
@@ -148,14 +161,6 @@ const ShopListing: React.FC = () => {
           </Button>
         </Space>
       </div>
-
-      <Alert
-        type="info"
-        showIcon
-        className="shop-listing__alert"
-        message="怎么上架 / 怎么改商品"
-        description="① 找到款式 → 点右侧「上架」，顾客立刻能看到；② 点「改图与数据」改主图、每个颜色的图、SKU 售价与库存。价格显示 ¥— 说明该 SKU 没维护售价，顾客无法下单。"
-      />
 
       <Card>
         <div className="shop-listing__toolbar">

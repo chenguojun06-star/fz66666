@@ -103,27 +103,28 @@ describe('详情页模块编辑器（service 裸数据契约 + 内容合一）',
     await waitFor(() => expect(screen.getByText('顶部轮播回落图')).toBeTruthy());
   });
 
-  it('没有内容的模块要说清来源，而不是留一个空输入框', async () => {
+  it('没有内容的模块把来源放进标题旁的图标，点击后可见，不占页面空白', async () => {
     mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
     mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('尺码选择')).toBeTruthy());
-    // 无内容的模块默认折叠，展开后才看到来源说明
-    fireEvent.click(screen.getByText('尺码选择'));
+    // 说明统一收进标题旁的感叹号图标（悬停/点击查看）
+    const hints = screen.getAllByLabelText('说明');
+    fireEvent.click(hints[3]);
     await waitFor(() => expect(screen.getByText('尺码名来自 SKU，不用在这里填。')).toBeTruthy());
   });
 
-  it('每个模块都要有一句顾客端说明，避免商家猜开关作用（D-800：说明移入展开区）', async () => {
+  it('每个模块的顾客端说明都可在标题旁悬停查看，且不铺满页面', async () => {
     mockApi.layoutModules.mockResolvedValue(DEF_MODULES);
     mockApi.getStyleLayout.mockResolvedValue([]);
     render(<DetailModuleEditor styleId={147} ctx={ctx()} />);
     await waitFor(() => expect(screen.getByText('价格与库存')).toBeTruthy());
-    // D-800 起模块改为平铺（不再折叠），说明文字始终可见 —— 直接断言。
-    // D-808：展开区里必须说清真实优先级 —— D-801 之后「设了主图就以主图为准」，
+    // D-808：说明必须说清真实优先级 —— D-801 之后「设了主图就以主图为准」，
     // 原文案「这里配的图会盖过主图」已经不成立，留在页面上是在骗运营
     // （他们会改半天看不到任何变化）。
-    expect(screen.getByText(/只有没设主图时/)).toBeTruthy();
-    // 平铺结构：每个模块都有自己的内容区
+    fireEvent.click(screen.getAllByLabelText('说明')[0]);
+    await waitFor(() => expect(screen.getByText(/只有没设主图时/)).toBeTruthy());
+    // 有编辑器的模块才渲染内容区；无编辑器的模块不铺说明块
     expect(document.querySelectorAll('.shop-module-item-body').length).toBeGreaterThan(0);
   });
 });
