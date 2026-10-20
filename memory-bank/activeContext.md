@@ -1876,6 +1876,7 @@ sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 - **冒烟 8 项全绿**：伪造 token 拒绝 / POS 开单自动建票+出库联动 / 掩码 138\*\*\*\*8888 / H5 免登录读取 / 首签锁定幂等 / 80→64 截断 / 跨租户拦截 / H5 静态页 200（明细见 decisionLog D-828）
 - **核实收尾（2026-10-20 晚）**：① mcp_readonly 账号已重建（changeme，只读 328 表验证通过）② H5 浏览器验收 5/5 PASS（渲染/console 无错/签收交互/落库 SIGNED；signed_by 落 prompt 确认值=默认客户名，符合"可留空"设计非 bug）③ db-query-mcp INTO 误报已修——node-sql-parser v5 对普通 SELECT 返回假阳性 `into={position:null}`，改为按 `keyword 非空 || expr 数组非空` 判定，5 用例回归全过（MCP 重启后生效）④ 线上为 autodeploy cron 每 2 分钟拉 main 自动部署，P1-2 已推送将自动上线（无线上登录账号未直接验证）
 - **P1-2 回归修复（2026-10-20 晚，线上实测反馈）**：SHOP_ORDER 取票全量 400——sourceExists 的 parseLongOrNull 误杀 UUID 主键（ShopOrder/ProductOutstock 均 ASSIGN_UUID，仅 PosSale 是 Long）。已改按类型区分解析，本地 5/5 冒烟通过（真实UUID建票/不存在拒绝/跨租户拦截/POS回归/OUTSTOCK真实单），推送 19218e667，线上自动部署（明细 decisionLog D-828）
+- **D-829 店铺订单可视闭环（2026-10-20 深夜）**：① 打印发货单全量打不出根因=async 拉明细后才 window.open 脱离用户手势被 Chrome 拦截，改为点击同步栈先开窗再写入 ② 订单列表加款式图+商品列（orders 接口带 firstItems 首件摘要，前端复用 useStyleCoverImages）③ 详情明细加款式图列+签收状态行（orders/detail 只读查 t_sales_ticket 带 signInfo，不走取票接口避免惰性建票）④ 移除店铺管理冗余「商品上架」tab。本地接口级验证通过，推送 016837b71（门禁 11/11）。收银台扫码闭环确认已有（扫码枪回车加购→收款→出库→电子小票）
 - **待办（需用户）**：① 真机扫码验收 H5 ② Trae MCP 面板启用自研 6 件套 + 配 `MCP_DB_PASSWORD=changeme` 后重启会话（市场 11 个候选已核实全部不装，结论记 D-828）③ 用线上账号 POS 开单验收小票，顺带确认 P1-2 已上线（对不存在单据 ID 取票应报「来源单据不存在或不属于当前租户」而非建空壳票）
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/activeContext-202608.md
