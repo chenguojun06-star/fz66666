@@ -38,6 +38,7 @@ import {
 import { message } from '@/utils/antdStatic';
 import { Segmented } from 'antd';
 import { formatMoney } from '@/utils/format';
+import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import posApi from '@/services/pos/posApi';
 import type {
   PosChannelReadiness,
@@ -231,18 +232,25 @@ const PosTerminal: React.FC = () => {
     [received, totalAmount],
   );
 
-  /* ── 分类页签 ── */
+  /* ── 分类页签 ──
+     category 存的是编码（SKIRT/DRESS…），页签要给人看，
+     走系统标准映射（utils/styleCategory.ts，款式资料同一套）翻译成中文；
+     映射没有的（如手工录的「上衣」）原样展示。 */
+  const categoryLabel = React.useMemo(() => {
+    const map = new Map(CATEGORY_CODE_OPTIONS.map((o) => [o.value, o.label]));
+    return (code: string) => map.get(code) ?? code;
+  }, []);
   const categories = React.useMemo(() => {
     const set = new Set<string>();
-    results.forEach((r) => set.add(r.category?.trim() || '未分类'));
+    results.forEach((r) => set.add(categoryLabel(r.category?.trim() || '未分类')));
     return ['全部', ...Array.from(set)];
-  }, [results]);
+  }, [results, categoryLabel]);
   const shownSkus = React.useMemo(
     () =>
       activeCat === '全部'
         ? results
-        : results.filter((r) => (r.category?.trim() || '未分类') === activeCat),
-    [results, activeCat],
+        : results.filter((r) => categoryLabel(r.category?.trim() || '未分类') === activeCat),
+    [results, activeCat, categoryLabel],
   );
 
   /* ── 批发阶梯价：件数达标自动提示/应用 ── */
@@ -1249,7 +1257,8 @@ const PosTerminal: React.FC = () => {
                         onClick={() => addLine(sku)}
                       >
                         <div className="pos-sku__thumb">
-                          <StyleImageCell skuCode={sku.skuCode ?? undefined} imageMap={imageMap} />
+                          {/* fill：铺满 1:1 图区（44px 表格缩略图在宫格里太小，认不出款） */}
+                          <StyleImageCell skuCode={sku.skuCode ?? undefined} imageMap={imageMap} fill />
                         </div>
                         <div className="pos-sku__name">{sku.styleName || sku.styleNo || '未命名'}</div>
                         <div className="pos-sku__spec">

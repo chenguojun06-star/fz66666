@@ -29,6 +29,12 @@ export interface StyleImageCellProps {
   size?: number;
   /** 是否禁用预览，默认 false */
   preview?: boolean;
+  /**
+   * 铺满父容器模式（商品宫格等大图场景）：
+   * 图片 100%×100% + cover 裁剪，不再用固定像素小缩略图。
+   * 表格单元格场景继续用默认 size=44。
+   */
+  fill?: boolean;
 }
 
 const StyleImageCell: React.FC<StyleImageCellProps> = ({
@@ -37,6 +43,7 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
   imageMap,
   size = 44,
   preview = true,
+  fill = false,
 }) => {
   const key1 = (styleNo || '').trim();
   const key2 = (skuCode || '').trim();
@@ -46,10 +53,10 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
     return (
       <Image
         src={getFullAuthedFileUrl(imgUrl)}
-        width={size}
-        height={size}
-        style={{ objectFit: 'cover', borderRadius: 4 }}
-        preview={preview ? { cover: <EyeOutlined style={{ fontSize: 13 }} /> } : false}
+        width={fill ? '100%' : size}
+        height={fill ? '100%' : size}
+        style={{ objectFit: 'cover', borderRadius: fill ? 8 : 4, display: 'block' }}
+        preview={preview ? { cover: <EyeOutlined style={{ fontSize: fill ? 18 : 13 }} /> } : false}
       />
     );
   }
@@ -57,10 +64,10 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
   return (
     <div
       style={{
-        width: size,
-        height: size,
+        width: fill ? '100%' : size,
+        height: fill ? '100%' : size,
         background: 'var(--color-bg-subtle)',
-        borderRadius: 4,
+        borderRadius: fill ? 8 : 4,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
