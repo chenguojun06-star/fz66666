@@ -62,19 +62,26 @@ public class TicketAssembler {
      * 来源单据存在性校验（建票前调用，P1-2）：登录态惰性补建入口
      * 必须先确认来源单据真实存在且归属该租户，否则任意登录用户可对
      * 任意 sourceBizId 建出空壳小票（冒烟实测踩中）。未知类型返回 false。
+     * <p>P1-2 回归修复（2026-10-20 线上反馈）：SHOP_ORDER / OUTSTOCK 主键是
+     * ASSIGN_UUID 字符串，不能用 parseLongOrNull（会误杀全部 UUID 单据报 400）；
+     * 仅 POS_SALE 是 Long 自增主键，需要数字解析。
      */
     public boolean sourceExists(Long tenantId, String sourceBizType, String sourceBizId) {
-        Long id = parseLongOrNull(sourceBizId);
-        if (id == null) {
+        boolean idValid = switch (sourceBizType) {
+            case TicketTypes.POS_SALE -> parseLongOrNull(sourceBizId) != null;
+            case TicketTypes.SHOP_ORDER, TicketTypes.OUTSTOCK -> StringUtils.hasText(sourceBizId);
+            default -> false;
+        };
+        if (!idValid) {
             return false;
         }
         return switch (sourceBizType) {
             case TicketTypes.POS_SALE -> posSaleMapper.selectCount(new LambdaQueryWrapper<PosSale>()
-                    .eq(PosSale::getId, id).eq(PosSale::getTenantId, tenantId)) > 0;
+                    .eq(PosSale::getId, Long.valueOf(sourceBizId.trim())).eq(PosSale::getTenantId, tenantId)) > 0;
             case TicketTypes.SHOP_ORDER -> shopOrderMapper.selectCount(new LambdaQueryWrapper<ShopOrder>()
-                    .eq(ShopOrder::getId, id).eq(ShopOrder::getTenantId, tenantId)) > 0;
+                    .eq(ShopOrder::getId, sourceBizId).eq(ShopOrder::getTenantId, tenantId)) > 0;
             case TicketTypes.OUTSTOCK -> productOutstockMapper.selectCount(new LambdaQueryWrapper<ProductOutstock>()
-                    .eq(ProductOutstock::getId, id).eq(ProductOutstock::getTenantId, tenantId)) > 0;
+                    .eq(ProductOutstock::getId, sourceBizId).eq(ProductOutstock::getTenantId, tenantId)) > 0;
             default -> false;
         };
     }
