@@ -1491,7 +1491,7 @@ const ShopManage: React.FC = () => {
       {/* D-513：订单详情 */}
       <Drawer
         title="订单详情"
-        width="min(760px, 94vw)"
+        width="85%"
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         destroyOnHidden
