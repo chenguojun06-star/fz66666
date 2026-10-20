@@ -1868,4 +1868,12 @@ WXML 表达式方法调用扫描 0；残留引用扫描仅剩注释。
 自检 205 项全通过。**剩余低优先**：扫码/样衣/质检的仓库 chip（仓区通常 <10 个，chip 直观，可不动）、
 sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 
+## ✅ D-809/D-828 电子小票端到端冒烟全绿 + P1-2 修复（2026-10-20）
+
+- **本地环境修复**：MySQL 容器重建（保卷）→ 发现并修复 **Flyway 迁移链静默断裂**（V202612080001 版本号倒挂先于建表脚本执行被 FlywayRepairConfig 吞掉，本地库 9/27 后 38 个迁移全没跑）→ 手动补建 3 张 shop 表解锁，一次补完 38 个版本（t_sales_ticket/t_pos_sale 等全就位）
+- **启动铁律**：本地后端端口 **8088**、必须带 `DB_PASSWORD=changeme`、启动日志核对 `Successfully applied N migrations`
+- **P1-2 修复**：登录态惰性补建前校验来源单据归属租户（实测任意用户可对任意 sourceBizId 建空壳票）；改 TicketService.findByBiz public + TicketAssembler.sourceExists + Orchestrator 校验
+- **冒烟 8 项全绿**：伪造 token 拒绝 / POS 开单自动建票+出库联动 / 掩码 138\*\*\*\*8888 / H5 免登录读取 / 首签锁定幂等 / 80→64 截断 / 跨租户拦截 / H5 静态页 200（明细见 decisionLog D-828）
+- **待办**：① H5 真机扫码验收 ② db-query-mcp 的 mcp_readonly 账号重建/改密 ③ 自研 6 件套 MCP 在面板确认启用后重启会话（市场 11 个候选已核实全部不装，结论记 D-828）
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/activeContext-202608.md

@@ -3913,3 +3913,25 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **纪律**：多会话并行时，取号后立即落 commit（不要长时间暂存不提交）；
 提交只用显式文件列表，禁止 `git add -A`（本次事故直接原因）。
+
+## D-828 电子小票端到端冒烟全绿 + P1-2 空壳票漏洞修复 + 本地环境修复链（2026-10-20）
+
+**背景**：D-809 代码完成后因本地 MySQL/Docker 损坏一直未能冒烟。本会话完成环境修复 + 全链路冒烟，并实测揪出一个真漏洞。
+
+**环境修复链（3 层根因逐层剥开）**：
+1. Docker 容器 `fashion-mysql-simple` 反复重启失败（`Invalid pid in unix socket lock file`）→ 删容器保数据卷重建（`docker run -d --name fashion-mysql --restart always -p 3308:3306 -v mysql-fashion-data:/var/lib/mysql ...`）恢复
+2. **Flyway 迁移链静默断裂**：本地库自 2026-09-27 起就没成功迁移过——out-of-order 补录批跑到 `V202612080001__add_shop_service_promise_flags.sql`（ALTER t_shop_config）时，建表脚本 `V202710070001__create_shop_tables.sql` 还没跑（版本号倒挂：2026* < 2027*），ALTER 报 `Table doesn't exist`；自定义 `FlywayRepairConfig` 吞掉失败让应用照常启动（Tomcat 正常监听，完全无感知）→ **后续全部 202710\* 迁移（含 t_sales_ticket、t_pos_sale 等 38 个）一个都没跑**
+   - 修复：手动执行幂等的 V202710070001（CREATE TABLE IF NOT EXISTS）解锁，重启后 Flyway 一次跑完 38 个版本
+   - **教训**：迁移链断裂被 FlywayRepairConfig 静默吞掉，应用照常起 = 编译通过≠迁移成功。新增迁移后必须核对日志 `Successfully applied N migrations` 或直接查表存在；版本号倒挂（后加的 ALTER 用了比建表脚本更小的版本号）是本次链断的直接原因
+3. 后端启动**必须带 `DB_PASSWORD=changeme`**（application.yml 默认空密码）；首次是带 env 起的，重启丢了 → `Access denied (using password: NO)` + 连接池超时 + FlywayDirtyVersionCleaner 误报"history 表不存在（首次部署）"
+4. 杀进程踩坑：`ps -eo pid,command | awk '{print $2}'` 取的是命令不是 PID（`$1` 才是）→ kill 无效旧实例继续占 8088，新实例 bind 失败；且两实例共写同一日志文件互相穿插，排查时差点误判。杀 spring-boot:run 要 TERM→等优雅停机→仍不退再 INT→KILL
+
+**P1-2 空壳票漏洞（冒烟实测发现并修复）**：登录态 `GET /api/ticket?sourceBizType=POS_SALE&sourceBizId=1` 惰性补建**不校验来源单据归属**——任意租户登录用户对任意 sourceBizId 都能建出带真实 signToken 的空壳小票（脏数据入库、可被扫码访问）。修复：`TicketService.selectByBiz` 改 public `findByBiz` + `TicketAssembler.sourceExists(tenantId, type, id)`（三来源 selectCount 带 tenant_id）+ `TicketOrchestrator.getByBiz` 补建前校验，不通过抛「来源单据不存在或不属于当前租户」。回归：跨租户 400 拦截 ✅、本租户正常 ✅、脏数据已清理。
+
+**冒烟清单（全绿）**：伪造 token 拒绝 ✅ / POS 开单（CASH 36.86 + WECHAT）自动建票+联动出库单 ✅ / 登录态取票聚合+手机号掩码 `138****8888` ✅ / H5 公开读取免登录 ✅ / 签收首签锁定幂等（已签收不覆盖，防篡改）✅ / 首签 80 字符截断 64 落库 ✅ / 跨租户隔离 ✅ / H5 静态页 200 ✅。测试手法：本地 dev 库把 lilb 密码恢复为文档约定的 123456（复制 admin 的 BCrypt 哈希）。
+
+**MCP 核实结论（用户批准记档）**：
+- 插件市场 11 个候选 MCP 逐项核实**全部不需要安装**（与自研 6 件套重复/冲突/无关，装了反而稀释工具预算）
+- 真实缺口：自研 6 件套（db-query/flyway/test-runner/memory-bank/change-impact/anti-pattern + Serena）配置与依赖齐备（`.trae/mcp.json`）但本会话仅 db-query-mcp 挂载 → 需用户在 Trae MCP 面板确认启用后重启会话
+- **db-query-mcp 实测故障**：`mcp_readonly` 账号在容器重建后连接被拒（`Access denied ... using password: YES`，密码对不上），`MCP_DB_PASSWORD` 也未设置 → 待办：重建 mcp_readonly 账号或重配密码；另有对系统表 SQL 的 "SELECT INTO" 误报拒查
+- 本会话全程按 P0 #23 降级规则用原生命令（mvn compile / docker exec mysql）并逐次告知

@@ -945,4 +945,10 @@
 - [x] 验证：mvn compile 0 错误 + tsc 0 错误 + check-entity-flyway 通过
 - [ ] 待用户确认后提交；待用户在工厂管理页填 7 家真实日产能
 
+## 2026-10-20 D-809/D-828 电子小票端到端冒烟 + P1-2 修复（本会话完成）
+- [x] 本地环境修复：MySQL 容器重建 + Flyway 迁移链断裂根治（版本号倒挂，手动补建 shop 表解锁，38 个迁移补完）
+- [x] P1-2 空壳票漏洞修复：惰性补建前校验来源单据归属租户（findByBiz public + sourceExists + Orchestrator 校验）
+- [x] 冒烟 8 项全绿：POS 开单→建票→H5 读取→签收→幂等→截断→跨租户→伪造 token（明细 decisionLog D-828）
+- [ ] H5 真机扫码验收；mcp_readonly 账号重建；自研 MCP 面板启用
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md
