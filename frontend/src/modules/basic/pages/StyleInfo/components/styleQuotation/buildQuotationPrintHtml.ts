@@ -53,6 +53,25 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
     actualProfitRate,
   } = params;
 
+  // D-345 版面自适应：内容越多字号/行距/内边距越小，避免挤爆换页后行列错位
+  //
+  // ⚠️ 这四行必须放在下面各行构建之前（P0，2026-10-20 修）：
+  // processRows 的 .map() 是**立即执行**的，回调里用了 `FS_SMALL - 1`
+  // 渲染「工序名 (阶段)」。若把声明放在 map 之后，回调执行时 FS_SMALL
+  // 还处在 TDZ（暂时性死区）→ 运行时抛
+  // `ReferenceError: Cannot access 'FS_SMALL' before initialization`，
+  // 整张报价单打印直接白屏，控制台只能看到压缩后的 `Cannot access 'y'`。
+  //
+  // 这个错误 TypeScript 不报（闭包里引用后声明的 const 是合法模式），
+  // 所以从 2026-09-10 引入后一直潜伏，直到某款的工序同时有
+  // progressStage 和 processName 才触发。
+  const totalRows = bomList.length + processList.length + secondaryProcessList.length;
+  const dense = totalRows > 24 ? 3 : totalRows > 12 ? 2 : totalRows > 6 ? 1 : 0;
+  const FS = [12.5, 11.5, 10.5, 9.5][dense];       // 正文字号 px
+  const FS_SMALL = [11, 10, 9.5, 8.5][dense];      // 表内字号 px
+  const CELL_PAD = ['5px 8px', '4px 6px', '3px 5px', '2px 4px'][dense];
+  const ROW_LH = [1.6, 1.5, 1.4, 1.3][dense];
+
   // 物料明细行（列与页面 QuotationBomSection 一致）
   const bomRows =
     bomList.length > 0
@@ -126,14 +145,6 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
           })
           .join('')
       : '';
-
-  // D-345 版面自适应：内容越多字号/行距/内边距越小，避免挤爆换页后行列错位
-  const totalRows = bomList.length + processList.length + secondaryProcessList.length;
-  const dense = totalRows > 24 ? 3 : totalRows > 12 ? 2 : totalRows > 6 ? 1 : 0;
-  const FS = [12.5, 11.5, 10.5, 9.5][dense];       // 正文字号 px
-  const FS_SMALL = [11, 10, 9.5, 8.5][dense];      // 表内字号 px
-  const CELL_PAD = ['5px 8px', '4px 6px', '3px 5px', '2px 4px'][dense];
-  const ROW_LH = [1.6, 1.5, 1.4, 1.3][dense];
 
   const now = new Date();
   const printDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
