@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.pos.entity.SalesTicket;
 import com.fashion.supplychain.shop.entity.ShopConfig;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.entity.ShopOrderItem;
@@ -64,6 +65,10 @@ public class ShopAdminOrchestrator {
 
     @Autowired
     private ShopOrderItemMapper shopOrderItemMapper;
+
+    /** 订单列表/详情带出电子小票签收状态（只读查询，不触发建票） */
+    @Autowired
+    private com.fashion.supplychain.pos.mapper.SalesTicketMapper salesTicketMapper;
 
     /** P2：商家查看自己店铺的商品评价（租户隔离由拦截器 + 显式 tenant_id 双重保证） */
     @Autowired
@@ -579,14 +584,25 @@ public class ShopAdminOrchestrator {
         return resp;
     }
 
-    /** 店铺订单分页（含买家联系方式与挂账状态） */
-    public Page<ShopOrder> orders(Map<String, Object> params) {
+    /**
+     * 店铺订单分页（含买家联系方式与挂账状态）。
+     *
+     * <p>除了订单头分页，还批量带出两组摘要，列表一屏可读（此前全是文字，
+     * 用户反馈"全部没有款号款式图，看着就是懵的"）：
+     * <ul>
+     *   <li>{@code firstItems}：每单首件商品摘要（skuCode/款号/色码），
+     *       前端据此解析款式图列（与收银台/电商订单同一套 useStyleCoverImages）；</li>
+     *   <li>{@code signInfos}：电子小票签收状态（只读查 t_sales_ticket，
+     *       <b>不走取票接口</b>——那会惰性建票，只读展示绝不能产生写副作用）。</li>
+     * </ul>
+     */
+    public Map<String, Object> orders(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
         int page = parseInt(params.get("page"), 1);
         int pageSize = parseInt(params.get("pageSize"), 20);
         String status = (String) params.get("status");
         String keyword = (String) params.get("keyword");
-        return shopOrderMapper.selectPage(new Page<>(page, pageSize),
+        Page<ShopOrder> result = shopOrderMapper.selectPage(new Page<>(page, pageSize),
                 new LambdaQueryWrapper<ShopOrder>()
                         .eq(ShopOrder::getTenantId, tenantId)
                         .eq(ShopOrder::getDeleteFlag, 0)
@@ -596,6 +612,67 @@ public class ShopAdminOrchestrator {
                                 .or().like(ShopOrder::getPhone, keyword)
                                 .or().like(ShopOrder::getCustomerName, keyword))
                         .orderByDesc(ShopOrder::getCreateTime));
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("records", result.getRecords());
+        resp.put("total", result.getTotal());
+        resp.put("current", result.getCurrent());
+        resp.put("pages", result.getPages());
+        resp.put("firstItems", firstItemBriefs(result.getRecords(), tenantId));
+        resp.put("signInfos", signBriefs(result.getRecords(), tenantId));
+        return resp;
+    }
+
+    /** 每单首件商品摘要（key=orderId）：列表「商品」列数据源 */
+    private Map<String, Map<String, Object>> firstItemBriefs(List<ShopOrder> orders, Long tenantId) {
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        if (orders == null || orders.isEmpty()) {
+            return result;
+        }
+        List<String> orderIds = orders.stream().map(ShopOrder::getId).collect(Collectors.toList());
+        List<ShopOrderItem> items = shopOrderItemMapper.selectList(
+                new LambdaQueryWrapper<ShopOrderItem>()
+                        .in(ShopOrderItem::getOrderId, orderIds)
+                        .eq(ShopOrderItem::getTenantId, tenantId)
+                        .orderByAsc(ShopOrderItem::getId));
+        for (ShopOrderItem it : items) {
+            if (result.containsKey(it.getOrderId())) {
+                continue;
+            }
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("skuCode", it.getSkuCode());
+            r.put("styleNo", it.getStyleNo());
+            r.put("styleName", it.getStyleName());
+            r.put("color", it.getColor());
+            r.put("size", it.getSize());
+            r.put("quantity", it.getQuantity());
+            result.put(it.getOrderId(), r);
+        }
+        return result;
+    }
+
+    /** 每单电子小票签收状态（key=orderId，只读，不建票） */
+    private Map<String, Map<String, Object>> signBriefs(List<ShopOrder> orders, Long tenantId) {
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        if (orders == null || orders.isEmpty()) {
+            return result;
+        }
+        List<String> orderIds = orders.stream().map(ShopOrder::getId).collect(Collectors.toList());
+        List<SalesTicket> tickets = salesTicketMapper.selectList(
+                new LambdaQueryWrapper<SalesTicket>()
+                        .select(SalesTicket::getSourceBizId, SalesTicket::getStatus,
+                                SalesTicket::getSignedTime, SalesTicket::getSignedBy)
+                        .eq(SalesTicket::getTenantId, tenantId)
+                        .eq(SalesTicket::getSourceBizType, "SHOP_ORDER")
+                        .in(SalesTicket::getSourceBizId, orderIds));
+        for (SalesTicket t : tickets) {
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("status", t.getStatus());
+            r.put("signedTime", t.getSignedTime());
+            r.put("signedBy", t.getSignedBy());
+            result.put(t.getSourceBizId(), r);
+        }
+        return result;
     }
 
     /**
@@ -676,6 +753,22 @@ public class ShopAdminOrchestrator {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("order", order);
         data.put("items", itemRows);
+        // 签收状态：只读查票（不走取票接口，避免惰性建票的写副作用）
+        List<SalesTicket> tickets = salesTicketMapper.selectList(
+                new LambdaQueryWrapper<SalesTicket>()
+                        .select(SalesTicket::getStatus, SalesTicket::getSignedTime, SalesTicket::getSignedBy)
+                        .eq(SalesTicket::getTenantId, UserContext.tenantId())
+                        .eq(SalesTicket::getSourceBizType, "SHOP_ORDER")
+                        .eq(SalesTicket::getSourceBizId, order.getId())
+                        .last("LIMIT 1"));
+        if (!tickets.isEmpty()) {
+            SalesTicket t = tickets.get(0);
+            Map<String, Object> sign = new LinkedHashMap<>();
+            sign.put("status", t.getStatus());
+            sign.put("signedTime", t.getSignedTime());
+            sign.put("signedBy", t.getSignedBy());
+            data.put("signInfo", sign);
+        }
         return data;
     }
 

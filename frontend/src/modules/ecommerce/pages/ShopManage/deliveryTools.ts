@@ -91,6 +91,10 @@ export async function exportShopOrders(
  * <p>用浏览器原生打印窗口而不是转 PDF：
  * 快递员手上通常就是一台打印机，「直接打印」比「先存 PDF 再打开」少两步。
  *
+ * <p>`win` 由调用方在**点击手势的同步栈里先开好**再传入：
+ * 明细是异步拉的，等 await 完再 window.open 会被 Chrome 一律按弹窗拦截（线上实测全量打不出）。
+ * 传 null/缺省时退回内部开窗（兼容旧调用与测试）。
+ *
  * <p>刻意包含：收货信息 + 商品明细 + 快递信息 + 店铺信息。
  * 少任何一项仓库都要回头翻系统，实际用起来就会退回手写。
  */
@@ -98,14 +102,15 @@ export function printDeliveryNotes(
   orders: ShopOrder[],
   itemsByOrderId: Record<string, Array<{ styleNo?: string; styleName?: string; color?: string; size?: string; quantity?: number }>>,
   shopName: string,
+  win?: Window | null,
 ): number {
   const picked = orders.filter((o) => o.status !== 'CANCELLED');
   if (!picked.length) {
     throw new Error('没有可打印的订单（已取消的订单不打印）');
   }
 
-  const win = window.open('', '_blank', 'width=800,height=900');
-  if (!win) {
+  const target = win ?? window.open('', '_blank', 'width=800,height=900');
+  if (!target) {
     throw new Error('打印窗口被浏览器拦截，请允许弹出窗口后重试');
   }
 
@@ -149,7 +154,7 @@ export function printDeliveryNotes(
       </section>`;
   }).join('');
 
-  win.document.write(`<!doctype html>
+  target.document.write(`<!doctype html>
 <html lang="zh"><head><meta charset="utf-8">
 <title>发货单 ${esc(shopName || '')}</title>
 <style>
@@ -172,9 +177,9 @@ export function printDeliveryNotes(
   .sign { color:#444; }
 </style></head>
 <body>${blocks}</body></html>`);
-  win.document.close();
-  win.focus();
+  target.document.close();
+  target.focus();
   // 等布局完成再调打印，避免首屏未渲染完就打印
-  win.setTimeout(() => win.print(), 200);
+  target.setTimeout(() => target.print(), 200);
   return picked.length;
 }

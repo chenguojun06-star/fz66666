@@ -113,10 +113,28 @@ export interface ShopOrderItem {
   amount?: number | null;
 }
 
+/** 订单首件商品摘要（列表「商品」列数据源，后端 orders.firstItems） */
+export interface ShopOrderFirstItem {
+  skuCode?: string | null;
+  styleNo?: string | null;
+  styleName?: string | null;
+  color?: string | null;
+  size?: string | null;
+  quantity?: number | null;
+}
+
+/** 电子小票签收状态（orders.signInfos / orderDetail.signInfo，只读） */
+export interface ShopOrderSignInfo {
+  status?: string | null;
+  signedTime?: string | null;
+  signedBy?: string | null;
+}
+
 /** 订单详情（订单头 + 明细） */
 export interface ShopOrderDetail {
   order: ShopOrder;
   items: ShopOrderItem[];
+  signInfo?: ShopOrderSignInfo | null;
 }
 
 /** 订单概览统计 */
@@ -126,6 +144,18 @@ export interface ShopOrderStats {
   todayAmount: number;
   totalOrders: number;
   totalAmount: number;
+}
+
+/** 店铺订单分页响应（分页 + 列表辅助摘要） */
+export interface ShopOrderPage {
+  records: ShopOrder[];
+  total: number;
+  current: number;
+  pages: number;
+  /** orderId → 首件商品摘要（款式图/款号列数据源） */
+  firstItems?: Record<string, ShopOrderFirstItem>;
+  /** orderId → 电子小票签收状态 */
+  signInfos?: Record<string, ShopOrderSignInfo>;
 }
 
 /** 批量发货结果 */
@@ -280,9 +310,9 @@ export const shopAdminApi = {
     );
   },
 
-  /** 店铺订单分页 */
-  orders: async (params: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<{ records: ShopOrder[]; total: number; current: number; pages: number }> =>
-    unwrapApiData<{ records: ShopOrder[]; total: number; current: number; pages: number }>(
+  /** 店铺订单分页（含每单首件商品摘要 firstItems 与电子小票签收状态 signInfos） */
+  orders: async (params: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<ShopOrderPage> =>
+    unwrapApiData<ShopOrderPage>(
       await api.post('/shop/admin/orders', params),
       '加载店铺订单失败',
     ),

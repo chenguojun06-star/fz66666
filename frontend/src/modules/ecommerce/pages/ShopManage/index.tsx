@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Result, Row, Segmented, Space, Spin, Statistic, Switch, Table, Tag, Tooltip, Typography } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { Alert, Button, Card, Col, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Row, Segmented, Space, Spin, Statistic, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import {
   CopyOutlined,
   ExportOutlined,
@@ -10,12 +9,13 @@ import {
   ProfileOutlined,
   ReloadOutlined,
   ShopOutlined,
-  ShoppingOutlined,
   MobileOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import TicketModal from '@/components/common/TicketModal';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import useStyleCoverImages from '@/hooks/useStyleCoverImages';
 import PaymentSettingsTab from './components/PaymentSettingsTab';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi from '@/services/shop/shopApi';
@@ -24,7 +24,9 @@ import type {
   ShopConfig,
   ShopOrder,
   ShopOrderDetail,
+  ShopOrderFirstItem,
   ShopOrderItem,
+  ShopOrderSignInfo,
   ShopOrderStats,
   ShopReviewRow,
   ShopReviewSummary,
@@ -58,12 +60,12 @@ const AFTER_SALE_TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * D-763：店铺管理——配置（名称/公告/打烊）/ 商品上架引导 / 店铺订单。
+ * D-763：店铺管理——配置（名称/公告/打烊）/ 店铺订单 / 评价 / 看板 / 收款。
+ * 商品上架已在「商品上架管理」独立页（本页原「商品上架」引导 tab 已移除）。
  * 店铺门面：/shop/index.html?s={slug}（游客免登录，淘宝风格手机端页面）。
  */
 const ShopManage: React.FC = () => {
   const [tab, setTab] = useState<string>('config');
-  const navigate = useNavigate();
   // 配置
   const [config, setConfig] = useState<ShopConfig | null>(null);
   const [shopName, setShopName] = useState('');
@@ -92,6 +94,12 @@ const ShopManage: React.FC = () => {
   const [orderStatus, setOrderStatus] = useState<string>('');
   const [orderKw, setOrderKw] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
+  /** 每单首件商品摘要（orderId→brief，列表「款式图/商品」列） */
+  const [firstItems, setFirstItems] = useState<Record<string, ShopOrderFirstItem>>({});
+  /** 每单电子小票签收状态（orderId→sign） */
+  const [signInfos, setSignInfos] = useState<Record<string, ShopOrderSignInfo>>({});
+  /** 列表/详情款式图解析（与收银台、电商订单同一套权威解析） */
+  const { imageMap, fetchBySkuCodes } = useStyleCoverImages();
 
   // 发货弹窗（D-513：此前订单无任何发货入口，待发货订单永远发不出去）
   const [shipTarget, setShipTarget] = useState<ShopOrder | null>(null);
@@ -182,12 +190,22 @@ const ShopManage: React.FC = () => {
       setOrders(data.records ?? []);
       setOrderTotal(data.total ?? 0);
       setOrderPage(p);
+      setFirstItems(data.firstItems ?? {});
+      setSignInfos(data.signInfos ?? {});
     } catch {
       setOrders([]);
     } finally {
       setOrderLoading(false);
     }
   }, [orderStatus, orderKw, orderPageSize]);
+
+  /** 列表有数据后批量解析首件款式图（后端权威解析，不做字符串猜测） */
+  useEffect(() => {
+    const codes = (orders ?? [])
+      .map((o) => firstItems[o.id]?.skuCode)
+      .filter(Boolean) as string[];
+    if (codes.length > 0) void fetchBySkuCodes(codes);
+  }, [orders, firstItems, fetchBySkuCodes]);
 
   /** D-513：订单概览统计（待发货 / 今日 / 累计） */
   const fetchStats = useCallback(async () => {
@@ -330,7 +348,11 @@ const ShopManage: React.FC = () => {
     setDetailLoading(true);
     setDetailData(null);
     try {
-      setDetailData(await shopAdminApi.orderDetail(order.id));
+      const d = await shopAdminApi.orderDetail(order.id);
+      setDetailData(d);
+      // 明细款式图解析（同列表一套权威解析，不做字符串猜测）
+      const codes = (d.items ?? []).map((it) => it.skuCode).filter(Boolean) as string[];
+      if (codes.length > 0) void fetchBySkuCodes(codes);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '加载订单详情失败');
     } finally {
@@ -391,6 +413,13 @@ const ShopManage: React.FC = () => {
       message.warning('没有可打印的订单');
       return;
     }
+    // 必须在点击手势的同步栈里先开窗：下面拉明细是异步的，
+    // 等 await 完再 window.open 会脱离用户手势上下文，被 Chrome 一律按弹窗拦截（线上实测全量打不出）
+    const printWin = window.open('', '_blank', 'width=800,height=900');
+    if (!printWin) {
+      message.error('打印窗口被浏览器拦截，请允许本站弹出窗口后重试');
+      return;
+    }
     const modal = message.loading('正在准备发货单…', 0);
     try {
       const itemsByOrderId: Record<string, Array<Record<string, unknown>>> = {};
@@ -412,11 +441,12 @@ const ShopManage: React.FC = () => {
           itemsByOrderId[id] = items as never;
         }
       }
-      const n = printDeliveryNotes(picked, itemsByOrderId, shopName);
+      const n = printDeliveryNotes(picked, itemsByOrderId, shopName, printWin);
       modal();
       message.success(`已生成 ${n} 张发货单`);
     } catch (e: unknown) {
       modal();
+      printWin.close();
       message.error(e instanceof Error ? e.message : '打印失败');
     }
   };
@@ -547,6 +577,41 @@ const ShopManage: React.FC = () => {
   ];
 
   const orderColumns: ColumnsType<ShopOrder> = [
+    styleImageColumn<ShopOrder>({
+      imageMap,
+      // 列表行本身没有 skuCode，从后端带出的首件摘要里取
+      skuCode: (r) => firstItems[r.id]?.skuCode,
+      width: 68,
+    }),
+    {
+      title: '商品',
+      width: 180,
+      render: (_, r) => {
+        const f = firstItems[r.id];
+        if (!f) return <Text type="secondary">-</Text>;
+        const spec = [f.color, f.size].filter(Boolean).join(' / ');
+        return (
+          <div>
+            <Text strong style={{ fontSize: 13, fontFamily: 'monospace' }}>
+              {f.styleNo || f.skuCode || '-'}
+            </Text>
+            {f.styleName ? (
+              <div className="u-fs-12" style={{ color: 'var(--color-text-muted)' }}>
+                {f.styleName}
+              </div>
+            ) : null}
+            {spec ? (
+              <div className="u-fs-12" style={{ color: 'var(--color-text-muted)' }}>{spec}</div>
+            ) : null}
+            {(r.itemCount ?? 0) > 1 ? (
+              <div className="u-fs-12" style={{ color: 'var(--color-text-muted)' }}>
+                等 {r.itemCount} 件商品
+              </div>
+            ) : null}
+          </div>
+        );
+      },
+    },
     { title: '订单号', dataIndex: 'orderNo', width: 175, render: (v: string) => <Text copyable={{ text: v }}>{v}</Text> },
     { title: '收货人', dataIndex: 'customerName', width: 110 },
     { title: '电话', dataIndex: 'phone', width: 125 },
@@ -562,10 +627,12 @@ const ShopManage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 140,
+      width: 150,
       render: (v: string, r: ShopOrder) => (
         <Space size={4} wrap>
           <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label ?? v}</Tag>
+          {/* 电子小票买家扫码签收后在此可视化（首签锁定，SIGNED 即已签收） */}
+          {signInfos[r.id]?.status === 'SIGNED' ? <Tag color="cyan">已签收</Tag> : null}
           {r.afterSaleStatus && r.afterSaleStatus !== 'NONE' ? (
             <Tag color={AFTER_SALE_STATUS_MAP[r.afterSaleStatus]?.color}>
               {AFTER_SALE_STATUS_MAP[r.afterSaleStatus]?.label ?? r.afterSaleStatus}
@@ -683,7 +750,6 @@ const ShopManage: React.FC = () => {
         onChange={handleTabChange}
         options={[
           { value: 'config', label: '店铺配置' },
-          { value: 'listing', label: '商品上架' },
           { value: 'orders', label: '店铺订单' },
           { value: 'reviews', label: '商品评价' },
           { value: 'dashboard', label: '数据看板' },
@@ -884,24 +950,8 @@ const ShopManage: React.FC = () => {
         </div>
       )}
 
-      {tab === 'listing' && (
-        <Card>
-          {/* D-800：本页原有一份「商品上架」退化列表（仅 5 列，无售价/库存/毛利/体检），
-              与「商品上架管理」页功能重叠且更差 —— 运营走错入口就什么都干不了。
-              按业界惯例（Medusa「浏览归浏览、编辑归编辑」）收敛为单一入口：
-              本 tab 只做引导跳转，功能全部在商品上架管理页。 */}
-          <Result
-            icon={<ShoppingOutlined style={{ color: 'var(--color-primary)' }} />}
-            title="商品上架管理已独立成页"
-            subTitle="这里提供售价、可售库存、毛利、刊登体检、批量调价与详情页编辑，上架流程请前往商品上架管理页。"
-            extra={(
-              <Button type="primary" onClick={() => navigate('/ecommerce/shop-listing')}>
-                前往商品上架管理
-              </Button>
-            )}
-          />
-        </Card>
-      )}
+      {/* 「商品上架」tab 已移除（D-800 独立成页后又留引导卡是重复入口，
+          用户实测反馈冗余）：上架/调价/库存全部在「商品上架管理」独立页。 */}
 
       {tab === 'orders' && (
         <Card>
@@ -1498,10 +1548,11 @@ const ShopManage: React.FC = () => {
                 pagination={false}
                 dataSource={detailData.items}
                 columns={[
+                  styleImageColumn<ShopOrderItem>({ imageMap, skuCode: (r) => r.skuCode, width: 68 }),
                   { title: '款号', dataIndex: 'styleNo', width: 110 },
                   { title: '款名', dataIndex: 'styleName', ellipsis: true },
                   { title: '颜色', dataIndex: 'color', width: 80 },
-                  { title: '尺码', dataIndex: 'size', width: 70 },
+                  { title: '尺码', dataIndex: 'size', width: 110 },
                   {
                     title: '单价', dataIndex: 'unitPrice', width: 90, align: 'right',
                     render: (v: number) => `¥${Number(v ?? 0).toFixed(2)}`,
@@ -1529,6 +1580,22 @@ const ShopManage: React.FC = () => {
               <Descriptions.Item label="快递单号">{detailData.order.expressNo || '-'}</Descriptions.Item>
               <Descriptions.Item label="发货时间">
                 {(detailData.order.shipTime || '').replace('T', ' ').slice(0, 19) || '-'}
+              </Descriptions.Item>
+              {/* 闭环最后一环：买家扫码签收（电子小票 SIGNED，只读展示） */}
+              <Descriptions.Item label="签收状态">
+                {detailData.signInfo?.status === 'SIGNED' ? (
+                  <Space size={6} wrap>
+                    <Tag color="cyan">买家已签收</Tag>
+                    <Text type="secondary" className="u-fs-12">
+                      {detailData.signInfo.signedBy ? `${detailData.signInfo.signedBy} · ` : ''}
+                      {(detailData.signInfo.signedTime || '').replace('T', ' ').slice(0, 19)}
+                    </Text>
+                  </Space>
+                ) : detailData.order.status === 'SHIPPED' ? (
+                  <Text type="secondary">待买家扫码签收（小票二维码）</Text>
+                ) : (
+                  '-'
+                )}
               </Descriptions.Item>
               {detailData.order.cancelTime ? (
                 <>
