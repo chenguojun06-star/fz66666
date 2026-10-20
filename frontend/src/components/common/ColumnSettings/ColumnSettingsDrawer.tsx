@@ -86,6 +86,25 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
   }, [presets, columnOptions, visibleColumns]);
 
   /** 分组渲染：有 groups 按组、未分组项进"其他"；无 groups 平铺 */
+  const renderOneCheckbox = (c: ColumnOption) => (
+    <Checkbox key={c.key} value={c.key} style={{ marginInlineStart: 0 }}>
+      {c.label}
+      {c.key.startsWith('ext_') && (
+        <Tag style={{ marginInlineStart: 6, fontSize: 12, lineHeight: '16px', padding: '0 4px' }}>自定义</Tag>
+      )}
+    </Checkbox>
+  );
+
+  const applyCheckedChange = (checkedKeys: string[]) => {
+    const set = new Set(checkedKeys);
+    // 只触发实际变更的列，避免一次勾选对全部列发起批量保存请求（撞唯一键 409）
+    columnOptions.forEach((c) => {
+      const current = visibleColumns[c.key] !== false;
+      const next = set.has(c.key);
+      if (current !== next) onToggle(c.key, next);
+    });
+  };
+
   const renderOptions = () => {
     if (!groups?.length) {
       return (
@@ -139,25 +158,6 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
         </div>
       </Checkbox.Group>
     );
-  };
-
-  const renderOneCheckbox = (c: ColumnOption) => (
-    <Checkbox key={c.key} value={c.key} style={{ marginInlineStart: 0 }}>
-      {c.label}
-      {c.key.startsWith('ext_') && (
-        <Tag style={{ marginInlineStart: 6, fontSize: 12, lineHeight: '16px', padding: '0 4px' }}>自定义</Tag>
-      )}
-    </Checkbox>
-  );
-
-  const applyCheckedChange = (checkedKeys: string[]) => {
-    const set = new Set(checkedKeys);
-    // 只触发实际变更的列，避免一次勾选对全部列发起批量保存请求（撞唯一键 409）
-    columnOptions.forEach((c) => {
-      const current = visibleColumns[c.key] !== false;
-      const next = set.has(c.key);
-      if (current !== next) onToggle(c.key, next);
-    });
   };
 
   return (
