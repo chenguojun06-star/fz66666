@@ -35,6 +35,53 @@ class TenantInterceptorTest {
         UserContext.set(ctx);
     }
 
+    /**
+     * 线上事故回归（2026-10-21）：/api/pos/today 500，
+     * `Unknown column 'tenant_id' in 'where clause'`。
+     *
+     * todayByPayMethod 是 UNION ALL + 派生表，两个子查询内部都已
+     * `s.tenant_id = #{tenantId}`，拦截器却又在最外层 `) m` 后拼了
+     * `WHERE tenant_id = 2` —— 派生表 m 没这一列 → 整条 SQL 语法错误。
+     */
+    @Test
+    @DisplayName("派生表（UNION ALL 子查询）不得再拼 tenant_id —— pos/today 500 回归")
+    void addWhereCondition_derivedTable_skipsAppending() throws SQLException {
+        String sql = "SELECT m.payMethod AS payMethod, COUNT(*) AS saleCount FROM ( "
+                + "SELECT p.pay_method AS payMethod FROM t_pos_sale_payment p JOIN t_pos_sale s ON s.id = p.sale_id "
+                + "WHERE s.tenant_id = 2 AND s.status = 'NORMAL' "
+                + "UNION ALL "
+                + "SELECT s.pay_method FROM t_pos_sale s WHERE s.tenant_id = 2 AND s.status = 'NORMAL' "
+                + ") m GROUP BY m.payMethod ORDER BY saleCount DESC";
+        String result = invokeAddWhereCondition(sql, 2L, false);
+        assertEquals(sql, result, "最外层 FROM 派生表时应原样返回，不得在最外层拼 tenant_id");
+        assertFalse(result.contains(") m WHERE"), "不得出现拼在派生表后面的 WHERE（那正是线上报错形态）");
+    }
+
+    @Test
+    @DisplayName("SQL 已自带 tenant_id = 本租户 过滤时，不重复拼接")
+    void addWhereCondition_alreadyFiltered_noDuplicateAppend() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM t_pos_sale WHERE tenant_id = 7 AND status = 'NORMAL'";
+        String result = invokeAddWhereCondition(sql, 7L, false);
+        assertEquals(sql, result, "作者已显式过滤租户时不应再拼一次");
+    }
+
+    @Test
+    @DisplayName("SQL 自带的是别的租户值，仍然要拼（防绕过隔离）")
+    void addWhereCondition_filteredWithOtherTenant_stillAppends() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM t_pos_sale WHERE tenant_id = 999";
+        String result = invokeAddWhereCondition(sql, 7L, false);
+        assertTrue(result.contains("tenant_id = 7"), "原 SQL 用别的租户值过滤时，本拦截器仍须补上本租户条件");
+    }
+
+    @Test
+    @DisplayName("普通表仍然照旧追加（守护不过度放宽）")
+    void addWhereCondition_normalTable_stillAppends() throws SQLException {
+        String sql = "SELECT * FROM t_pos_sale WHERE status = 'NORMAL'";
+        String result = invokeAddWhereCondition(sql, 3L, false);
+        assertTrue(result.contains("tenant_id = 3"), "普通表查询必须继续追加租户条件");
+        assertFalse(result.contains("tenant_id = 999"), "不应出现无关租户值");
+    }
+
     @Test
     @DisplayName("addWhereCondition - 普通表追加 tenant_id 条件")
     void addWhereCondition_normalTable_appendsTenantFilter() throws SQLException {

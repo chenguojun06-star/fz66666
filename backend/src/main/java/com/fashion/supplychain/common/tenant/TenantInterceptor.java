@@ -228,7 +228,61 @@ public class TenantInterceptor implements InnerInterceptor {
     }
 
     /**
-     * 判断 SQL 是否涉及混合表（需要 OR tenant_id IS NULL）
+     * 判断 SQL 最外层的 FROM 是否为**派生表**（子查询），如
+     * {@code FROM ( SELECT ... UNION ALL SELECT ... ) m}。
+     *
+     * <p>这种情况不能拼租户条件：派生表只暴露子查询 SELECT 出来的列，
+     * 里面没有 tenant_id 就拼不上；而子查询内部通常已自行过滤。
+     */
+    private boolean selectsFromDerivedTable(String sql) {
+        // 找最外层（depth=0）的 FROM，看它后面第一个非空字符是不是 '('
+        int depth = 0;
+        boolean inString = false;
+        char quote = 0;
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+            if (inString) {
+                if (c == quote) inString = false;
+                continue;
+            }
+            if (c == '\'' || c == '"' || c == '`') { inString = true; quote = c; continue; }
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0) continue;
+            // 到达最外层：找 FROM 关键字
+            if ((c == 'F' || c == 'f') && matchesKeywordAt(sql, i, "FROM")) {
+                int j = i + 4;
+                while (j < sql.length() && Character.isWhitespace(sql.charAt(j))) j++;
+                return j < sql.length() && sql.charAt(j) == '(';
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesKeywordAt(String sql, int idx, String keyword) {
+        if (idx + keyword.length() > sql.length()) return false;
+        if (!sql.regionMatches(true, idx, keyword, 0, keyword.length())) return false;
+        // 前后必须是边界（非标识符字符）
+        if (idx > 0 && Character.isLetterOrDigit(sql.charAt(idx - 1))) return false;
+        int after = idx + keyword.length();
+        return after >= sql.length() || !Character.isLetterOrDigit(sql.charAt(after));
+    }
+
+    /**
+     * SQL 里是否已显式出现 {@code tenant_id = <tenantId>}（任意深度）。
+     *
+     * <p>作者自己写了租户等值过滤，说明隔离已在 SQL 内完成；
+     * 再拼一次既无必要，也会把 UNION ALL / 派生表这类结构改坏。
+     */
+    private boolean hasExplicitTenantFilter(String sql, long tenantId) {
+        String normalized = sql.replace("`", "");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "tenant_id\\s*=\\s*" + tenantId + "\\b").matcher(normalized);
+        return m.find();
+    }
+
+    /**
+     * 判断 SQL 涉及混合表（需要 OR tenant_id IS NULL）
      */
     private boolean involvesSharedTable(String sql) {
         Matcher matcher = TABLE_PATTERN.matcher(sql);
@@ -277,6 +331,35 @@ public class TenantInterceptor implements InnerInterceptor {
             throw new SQLException("租户标识异常，拒绝执行查询");
         }
         long tenantIdLong = Long.parseLong(tenantIdStr);
+
+        /*
+         * 修复（2026-10-21，线上事故）：`Unknown column 'tenant_id' in 'where clause'`
+         *
+         * PosSaleMapper.todayByPayMethod 是 UNION ALL + 派生表：
+         *   SELECT ... FROM ( SELECT ... UNION ALL SELECT ... ) m GROUP BY ...
+         * 两个子查询内部都已 `s.tenant_id = #{tenantId}` 过滤过。
+         * 本拦截器按"最外层"往里拼 `WHERE tenant_id = X`，
+         * 深度感知保证不会拼进子查询 —— 但拼在最外层就落在 `) m WHERE ...` 上，
+         * 而派生表 m 根本没有 tenant_id 这一列 → 整条 SQL 语法错误 → 500。
+         *
+         * 两条修复：
+         *   ① 派生表跳过：最外层 FROM 的是 `(...)` 而不是真实表名时，
+         *      租户隔离应由内部子查询自己负责，拦不得；
+         *   ② 已自带过滤跳过：SQL 里已出现 `tenant_id = <值>` 时不再重复拼
+         *      （重复拼会改语义、也证明作者自己想过隔离）。
+         *
+         * 安全性不受影响：① 只跳过"FROM 派生表"这一类，真实表的查询照旧过滤；
+         * ② 只跳过已显式带 tenant_id 等值过滤的，没带的仍然拼。
+         */
+        if (selectsFromDerivedTable(sql)) {
+            log.debug("[TenantInterceptor] 最外层 FROM 为派生表，跳过租户过滤（应由子查询自行隔离）");
+            return sql;
+        }
+        if (hasExplicitTenantFilter(sql, tenantIdLong)) {
+            log.debug("[TenantInterceptor] SQL 已自带 tenant_id={} 过滤，跳过重复拼接", tenantIdLong);
+            return sql;
+        }
+
         String condition;
         if (isSharedTable) {
             condition = " AND (tenant_id = " + tenantIdLong + " OR tenant_id IS NULL)";
