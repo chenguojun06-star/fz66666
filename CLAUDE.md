@@ -323,6 +323,14 @@ Note: **三端测试源码均已入库，无一端被排除**。历史教训：�
     再用候选号跑 `python3 scripts/check-d-number.py <号>` 确认未占用，两个都干净才落
     commit message。历史撞号 6 次（D-362/618/667/702/808 双用、D-785 未取号即被引用）
     全是事故——撞号会让 memory-bank 的 progress/decisionLog 条目互相覆盖。
+13. **改方法签名/接口契约 = 同一提交必须同步改测试**：任何 fix/refactor 改动 public
+    方法签名、接口入参/出参结构、DTO 字段时， commit 必须包含对应测试类的同步修改，
+    不允许「先改签、测试下轮补」。2026-10-21 事故：D-817 组合收款改签后 4 个测试类
+    （PosSale/PosShift 等）没跟上，CI 连红 **15 个 run 一整天**无人处理——红叉只在
+    GitHub 页面没人看，而 autodeploy 独立于 CI，红提交照常上生产。
+    配套机制：`notify` job 已扩为 5 个 job 全查（此前漏 quality-gate/frontend-lint，
+    它们红时整体显示"全绿"——假绿）；配置 `NOTIFY_WEBHOOK` secret（企业微信群机器人/
+    Server 酱）后失败主动推送（`scripts/notify-ci.sh`）。
 
 ### CI 门禁里「真实踩过的坑」清单
 

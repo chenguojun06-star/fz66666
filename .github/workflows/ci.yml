@@ -415,26 +415,42 @@ jobs:
   notify:
     name: 通知结果
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build, miniprogram-test]
+    # ★ D-828 补缺（2026-10-21 盘点发现）：needs 原先只有 3 个 job，
+    #   quality-gate / frontend-lint 红时本 job 竟显示"全绿"——假绿比红更危险。
+    #   今天真实事故：4 个测试类红了一整天 15 个 run 无人处理。
+    needs: [quality-gate, backend-test, frontend-lint, frontend-build, miniprogram-test]
     if: always()
 
     steps:
+    - name: 检出代码（notify-ci.sh 用）
+      uses: actions/checkout@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
     - name: 检查整体结果
       run: |
+        QG="${{ needs.quality-gate.result }}"
         BACKEND="${{ needs.backend-test.result }}"
+        FLINT="${{ needs.frontend-lint.result }}"
         FRONTEND="${{ needs.frontend-build.result }}"
         MINIPROGRAM="${{ needs.miniprogram-test.result }}"
 
+        echo "质量门禁: $QG"
         echo "后端测试: $BACKEND"
+        echo "前端lint: $FLINT"
         echo "前端构建: $FRONTEND"
         echo "小程序测试: $MINIPROGRAM"
 
         # ★ 2026-08-20 事故教训：CI 红了没人看 → 云端跑旧代码 → 用户当测试员
         # 任何环节失败都让整个 workflow 显示红叉，强迫推送者确认
+        # ★ D-828：5 个 job 全查（此前漏 quality-gate/frontend-lint，假绿）
         FAILED=0
-        for R in "$BACKEND" "$FRONTEND" "$MINIPROGRAM"; do
+        for PAIR in "质量门禁:$QG" "后端测试:$BACKEND" "前端lint:$FLINT" "前端构建:$FRONTEND" "小程序测试:$MINIPROGRAM"; do
+          NAME="${PAIR%%:*}"
+          R="${PAIR##*:}"
           if [[ "$R" == "failure" || "$R" == "cancelled" ]]; then
             FAILED=1
+            echo "FAILED_JOB=$NAME"
           fi
         done
 
@@ -443,11 +459,29 @@ jobs:
           echo "╔══════════════════════════════════════════════╗"
           echo "║  ❌ 流水线存在失败环节 — 云端可能不是最新代码  ║"
           echo "╠══════════════════════════════════════════════╣"
-          echo "║  后端编译失败     → 生产不更新 → 旧代码       ║"
+          echo "║  质量门禁失败     → 门控空转 → 腐烂静默发生   ║"
+          echo "║  后端测试失败     → 带病上线风险              ║"
+          echo "║  前端lint失败     → 类型/规范债务累积         ║"
           echo "║  前端构建失败     → 生产不更新 → 旧代码       ║"
           echo "║  小程序测试失败   → 门控空转 → 腐烂静默发生   ║"
+          echo "║  ⚠️ autodeploy 不看 CI：红提交也会上生产      ║"
           echo "║  请到 Actions 页面查看失败详情并修复后重推     ║"
           echo "╚══════════════════════════════════════════════╝"
           exit 1
         fi
         echo "✅ 流水线全绿，云端已是最新版本"
+
+    # ★ D-828：主动推送失败通知（2026-10-21 事故：红叉只在 GitHub 页面，
+    #   连红 15 个 run 一整天无人处理）。配置 NOTIFY_WEBHOOK secret 后生效；
+    #   未配置时 notify-ci.sh 静默 no-op，不挡 CI。
+    - name: 推送失败通知（企业微信/Server酱，需 NOTIFY_WEBHOOK secret）
+      if: failure()
+      env:
+        CI_NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+      run: |
+        bash scripts/notify-ci.sh "❌ **CI 流水线失败**（服装66666）
+        分支：\`${{ github.ref_name }}\`
+        提交：\`${GITHUB_SHA:0:9}\` —— ${{ github.event.head_commit.message }}
+        查看：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        ⚠️ 提醒：autodeploy 独立于 CI，红色提交也会部署上生产，请尽快修复后重推"
+
