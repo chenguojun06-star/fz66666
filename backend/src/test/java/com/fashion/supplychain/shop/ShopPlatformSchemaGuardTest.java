@@ -337,10 +337,15 @@ class ShopPlatformSchemaGuardTest {
         assertThat(write)
                 .as("出库复用既有 freeOutbound —— 库存与台账口径必须与店铺订单一致")
                 .contains("finishedWarehouseOperationOrchestrator.freeOutbound(params)");
+        // D-817 组合收款：应收生成从 orchestrator 下沉到 settle，判定口径也升级 ——
+        // 不再看"整单是不是 CREDIT"，而是看"有没有挂账部分"（组合里含挂账行也要记应收）。
+        assertThat(write)
+                .as("挂账才生成应收（当场收款生成应收 = 同一笔钱在「已收」与「应收未收」里各记一次）")
+                .contains("只有挂账才生成应收");
+        assertThat(write)
+                .as("组合支付部分挂账时应收 = 挂账那部分，不是整单金额")
+                .contains("creditAmount != null ? creditAmount");
         String orc = read("pos/orchestration/PosSaleOrchestrator.java");
-        assertThat(orc)
-                .as("挂账才生成应收（当场收款生成应收 = 同一笔钱记两次）")
-                .contains("if (PAY_CREDIT.equals(payMethod)) {");
         assertThat(orc)
                 .as("挂账必须有手机号（应收单的 customer_id 不能为空）")
                 .contains("挂账需要填写客户手机号");

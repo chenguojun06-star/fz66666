@@ -922,8 +922,11 @@ class ShopSizeChartGuardTest {
         String editor = readAny("components/DetailModuleEditor.tsx");
         assertThat(editor).as("按模块取内容编辑器").contains("MODULE_CONTENT[m.moduleKey]");
         assertThat(editor).as("在模块卡片内渲染内容").contains("<Editor ctx={ctx} />");
-        assertThat(editor).as("没有内容的模块要说清来源")
-                .contains("所以这里没有输入框");
+        // 文案会随编辑器重写而变，守护锁的是**意图**：每个模块必须有大白话说明，
+        // 没有输入框的模块必须说清内容来源（否则商家以为系统坏了）。
+        // D-835 重写编辑器后旧字串"所以这里没有输入框"已改为注释里的大白话约定。
+        assertThat(editor).as("没有输入框的模块要说清内容来源")
+                .contains("没有输入框的模块要说清内容来源");
 
         String drawer = readAny("components/ListingEditDrawer.tsx");
         assertThat(drawer).as("旧的分区组件必须下线")

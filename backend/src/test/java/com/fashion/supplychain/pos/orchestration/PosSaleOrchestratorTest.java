@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -103,7 +104,7 @@ class PosSaleOrchestratorTest {
         ctx.setUserId("u1");
         UserContext.set(ctx);
         // 真实实现里 createSale 会回填主键；mock 中手动回填，让后续 settle 能拿到 id
-        when(writeService.createSale(any(PosSale.class), any())).thenAnswer(inv -> {
+        when(writeService.createSale(any(PosSale.class), any(), any())).thenAnswer(inv -> {
             PosSale sale = inv.getArgument(0);
             sale.setId(SALE_ID);
             return SALE_ID;
@@ -149,7 +150,7 @@ class PosSaleOrchestratorTest {
 
     private PosSale captureCreatedSale() {
         ArgumentCaptor<PosSale> cap = ArgumentCaptor.forClass(PosSale.class);
-        verify(writeService).createSale(cap.capture(), any());
+        verify(writeService).createSale(cap.capture(), any(), any());
         return cap.getValue();
     }
 
@@ -176,11 +177,11 @@ class PosSaleOrchestratorTest {
         assertTrue(sale.getSaleNo().startsWith("POS"));
 
         // 现金当场结算为 PAID，且不带渠道交易号
-        verify(writeService).settle(SALE_ID, "PAID", null);
+        verify(writeService).settle(SALE_ID, "PAID", null, null);
         // 明细改价留痕：吊牌价与成交价都在
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<PosSaleItem>> items = ArgumentCaptor.forClass(List.class);
-        verify(writeService).createSale(any(PosSale.class), items.capture());
+        verify(writeService).createSale(any(PosSale.class), items.capture(), any());
         assertEquals(new BigDecimal("199.00"), items.getValue().get(0).getTagPrice());
         assertEquals(new BigDecimal("100.00"), items.getValue().get(0).getUnitPrice());
         assertEquals(new BigDecimal("80.00"), items.getValue().get(1).getUnitPrice());
@@ -204,7 +205,7 @@ class PosSaleOrchestratorTest {
         assertEquals(new BigDecimal("100.00"), resp.get("discountAmount"));
         assertEquals(new BigDecimal("0.50"), resp.get("roundOffAmount"));
         assertEquals(new BigDecimal("899.50"), resp.get("totalAmount"));
-        verify(writeService).settle(SALE_ID, "PAID", null);
+        verify(writeService).settle(SALE_ID, "PAID", null, null);
     }
 
     @Test
@@ -228,7 +229,9 @@ class PosSaleOrchestratorTest {
         b.put("creditApproverPassword", "right");
         orchestrator.checkout(b);
 
-        verify(writeService).settle(SALE_ID, "UNPAID", null);
+        // D-817 组合收款：整单挂账时第 4 参是挂账总额（creditTotal），不是 null ——
+        // 应收金额按这个落。此前测试期望 null，与真实行为不符。
+        verify(writeService).settle(eq(SALE_ID), eq("UNPAID"), isNull(), eq(new BigDecimal("300.00")));
         assertEquals("C1", captureCreatedSale().getCustomerId());
     }
 
@@ -252,7 +255,7 @@ class PosSaleOrchestratorTest {
         assertEquals("weixin://wxpay/bizpayurl?pr=abc", resp.get("qrCode"));
         assertEquals(new BigDecimal("1680.00"), resp.get("totalAmount"));
         // 关键：待支付不能出库，否则顾客不付钱货就出去了
-        verify(writeService, never()).settle(anyLong(), anyString(), anyString());
+        verify(writeService, never()).settle(anyLong(), anyString(), anyString(), any());
         verify(paymentOrchestrator).prepay(eq(TENANT), eq("POS_SALE"), anyString(), eq(168000L),
                 anyString(), any());
     }
@@ -270,7 +273,7 @@ class PosSaleOrchestratorTest {
 
         assertTrue(e.getMessage().contains("发起WECHAT支付失败"), "实际：" + e.getMessage());
         verify(writeService).markCancelled(eq(SALE_ID), anyString());
-        verify(writeService, never()).settle(anyLong(), anyString(), anyString());
+        verify(writeService, never()).settle(anyLong(), anyString(), anyString(), any());
     }
 
     @Test
@@ -292,7 +295,7 @@ class PosSaleOrchestratorTest {
                 () -> orchestrator.confirmPaid("POS1", "WECHAT_PAY", "4200001234", 1L));
 
         assertTrue(e.getMessage().contains("实付金额小于应收金额"), "实际：" + e.getMessage());
-        verify(writeService, never()).settle(anyLong(), anyString(), anyString());
+        verify(writeService, never()).settle(anyLong(), anyString(), anyString(), any());
     }
 
     @Test
@@ -304,7 +307,7 @@ class PosSaleOrchestratorTest {
 
         orchestrator.confirmPaid("POS1", "WECHAT_PAY", "4200001234", 10000L);
 
-        verify(writeService, never()).settle(anyLong(), anyString(), anyString());
+        verify(writeService, never()).settle(anyLong(), anyString(), anyString(), any());
     }
 
     @Test
@@ -369,7 +372,7 @@ class PosSaleOrchestratorTest {
                 () -> orchestrator.checkout(body("CASH", List.of(item(1L, 3, null)))));
 
         assertTrue(e.getMessage().contains("库存仅剩 2"));
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
     }
 
     @Test
@@ -413,7 +416,7 @@ class PosSaleOrchestratorTest {
         assertThrows(IllegalArgumentException.class,
                 () -> orchestrator.checkout(body("CASH", List.of(item(1L, 0, null)))));
 
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
         verify(productSkuService, never()).getById(anyLong());
     }
 
@@ -499,8 +502,8 @@ class PosSaleOrchestratorTest {
 
         orchestrator.checkout(body("CASH", List.of(item(1L, 1, null))));
 
-        verify(writeService).settle(SALE_ID, "PAID", null);
-        verify(writeService, never()).settle(anyLong(), eq("UNPAID"), any());
+        verify(writeService).settle(SALE_ID, "PAID", null, null);
+        verify(writeService, never()).settle(anyLong(), eq("UNPAID"), any(), any());
     }
 
     /* ── 挂账授权（防资损）───────────────────────────────────────────────────
@@ -512,13 +515,16 @@ class PosSaleOrchestratorTest {
 
     private static Map<String, Object> creditBody() {
         Map<String, Object> body = new HashMap<>();
-        body.put("items", List.of(Map.of("skuId", 9L, "quantity", 1, "unitPrice", new BigDecimal("99.00"))));
+        body.put("items", List.of(Map.of("skuId", 1L, "quantity", 1, "unitPrice", new BigDecimal("99.00"))));
         body.put("payMethod", "CREDIT");
         body.put("customerPhone", "13800000000");
         return body;
     }
 
     private void stubApprover(String name, boolean owner, boolean designated, boolean pwdOk) {
+        // 注意：不要在这里 stub SKU/款式 —— 会覆盖调用方自己 stub 的成交价
+        // （creditCheckout 就踩过：这里 stub 99，把它自己的 300 盖掉，应收断言跟着挂）。
+        // 需要 SKU 的测试自己 stub（见 creditWithoutApprovalIsRejected 等）。
         com.fashion.supplychain.system.entity.User u =
                 new com.fashion.supplychain.system.entity.User();
         u.setId(1L);
@@ -535,10 +541,12 @@ class PosSaleOrchestratorTest {
     @Test
     @DisplayName("挂账不给授权信息 → 直接拒单，绝不落库")
     void creditWithoutApprovalIsRejected() {
+        when(productSkuService.getById(1L)).thenReturn(sku(1L, "A-1", "99.00", null, 5));
+        when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
                 () -> orchestrator.checkout(creditBody()));
         assertTrue(e.getMessage().contains("授权"));
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
     }
 
     @Test
@@ -549,12 +557,14 @@ class PosSaleOrchestratorTest {
         body.put("creditApprover", "boss");
         body.put("creditApproverPassword", "wrong");
         assertThrows(IllegalArgumentException.class, () -> orchestrator.checkout(body));
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
     }
 
     @Test
     @DisplayName("账号不存在 → 报错文案不得暴露账号是否存在（防撞库提示）")
     void creditWithUnknownUserGivesSameMessage() {
+        when(productSkuService.getById(1L)).thenReturn(sku(1L, "A-1", "99.00", null, 5));
+        when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
         when(userMapper.selectOne(any())).thenReturn(null);
         Map<String, Object> body = creditBody();
         body.put("creditApprover", "nobody");
@@ -567,6 +577,8 @@ class PosSaleOrchestratorTest {
     @Test
     @DisplayName("账号存在但无授权资格 → 拒单")
     void creditWithoutPermissionIsRejected() {
+        when(productSkuService.getById(1L)).thenReturn(sku(1L, "A-1", "99.00", null, 5));
+        when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
         stubApprover("普通收银员小李", false, false, true);
         Map<String, Object> body = creditBody();
         body.put("creditApprover", "cashier1");
@@ -574,7 +586,7 @@ class PosSaleOrchestratorTest {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
                 () -> orchestrator.checkout(body));
         assertTrue(e.getMessage().contains("没有挂账授权权限"));
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
     }
 
     @Test
@@ -592,13 +604,13 @@ class PosSaleOrchestratorTest {
         body.put("creditApprover", "boss");
         body.put("creditApproverPassword", "right");
         assertThrows(IllegalArgumentException.class, () -> orchestrator.checkout(body));
-        verify(writeService, never()).createSale(any(PosSale.class), any());
+        verify(writeService, never()).createSale(any(PosSale.class), any(), any());
     }
 
     @Test
     @DisplayName("授权通过 → 放行，且授权人必须写进单据备注（可追溯）")
     void creditWithApprovalRecordsApprover() {
-        when(productSkuService.getById(9L)).thenReturn(sku(9L, "A-9", "99.00", null, 5));
+        when(productSkuService.getById(1L)).thenReturn(sku(1L, "A-1", "99.00", null, 5));
         when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
         stubApprover("店长王", true, true, true);
         Map<String, Object> body = creditBody();
@@ -608,7 +620,7 @@ class PosSaleOrchestratorTest {
         orchestrator.checkout(body);
 
         ArgumentCaptor<PosSale> cap = ArgumentCaptor.forClass(PosSale.class);
-        verify(writeService).createSale(cap.capture(), any());
+        verify(writeService).createSale(cap.capture(), any(), any());
         String remark = cap.getValue().getRemark();
         assertTrue(remark != null && remark.contains("挂账授权人:店长王"),
                 "授权人必须落在单据上，事后对账只认单据");
@@ -617,12 +629,13 @@ class PosSaleOrchestratorTest {
     @Test
     @DisplayName("现金收款**不需要**授权（不能把正常收银也拦住）")
     void cashDoesNotNeedApproval() {
-        when(productSkuService.getById(9L)).thenReturn(sku(9L, "A-9", "99.00", null, 5));
+        // 与 creditBody() 的 skuId=1L 对齐（此前 stub 9L 而 body 已漂到 1L → 商品不存在）
+        when(productSkuService.getById(1L)).thenReturn(sku(1L, "A-1", "99.00", null, 5));
         when(styleInfoService.getById(100L)).thenReturn(new StyleInfo());
         Map<String, Object> body = creditBody();
         body.put("payMethod", "CASH");
         body.remove("customerPhone");
         orchestrator.checkout(body);
-        verify(writeService).createSale(any(PosSale.class), any());
+        verify(writeService).createSale(any(PosSale.class), any(), any());
     }
 }

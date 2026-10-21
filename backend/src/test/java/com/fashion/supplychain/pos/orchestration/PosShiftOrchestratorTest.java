@@ -8,6 +8,7 @@ import com.fashion.supplychain.pos.entity.PosSale;
 import com.fashion.supplychain.pos.entity.PosShift;
 import com.fashion.supplychain.pos.mapper.PosReturnMapper;
 import com.fashion.supplychain.pos.mapper.PosSaleMapper;
+import com.fashion.supplychain.pos.mapper.PosSalePaymentMapper;
 import com.fashion.supplychain.pos.mapper.PosShiftMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.AfterEach;
@@ -44,6 +45,13 @@ class PosShiftOrchestratorTest {
     private PosSaleMapper saleMapper;
     @Mock
     private PosReturnMapper returnMapper;
+    /**
+     * D-817 交班实时统计新增的依赖（组合收款明细按支付行进钱箱）。
+     * 存量红：orchestrator 加了 @Autowired 但测试没补 mock → NPE，
+     * 与「createSale 扩 3 参」同属一批签不同步。
+     */
+    @Mock
+    private PosSalePaymentMapper salePaymentMapper;
 
     @InjectMocks
     private PosShiftOrchestrator svc;
