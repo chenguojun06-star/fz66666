@@ -896,6 +896,15 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-21 详情长图编辑器升级竞品三栏方案（D-834：左列表 X 删除 / 中画布点选 / 右属性面板）
+
+- [x] **用户需求**（附竞品截图）：「我要长图文边编辑也做成这样，用一套方案」——把 D-832 两栏升级为竞品「批量编辑图片」同款三栏：左列表（缩略图 + X 直接删除 + 拖拽排序）、中画布（堆叠预览 + 点选高亮）、右属性面板（选中块操作集中于此）
+- [x] **右侧属性面板** `.deic__props`（260px）：图片块 = 替换图片（`replaceImage` 原位换图不动其他块）/ 查看大图 / 给这张图加说明 / 删除这张图片；文字块 = 图注开关 / 删除这段文字；空态提示「还没有选中内容块」；画布块内旧按钮全部移除（item-bar 只留「在右侧面板操作此块」提示）
+- [x] **rail X 删除**：列表项悬停显形 X（Popconfirm「删除第 N 块」），不必先跳转再找删除；`remove()` 加选中钳制（删末尾回落到最后一块）
+- [x] **关键踩坑 ×3**：① 画布块 onClick 加 `guard 防重复滚动`；② **jumpTo 必须 rAF 延迟**——添加新块后 `itemRefs.current[i]` 在 React 提交前是 undefined，scrollIntoView 静默跳过，且 list.length 变化触发的 scroll spy 重算会把裸 setActiveIdx 覆盖回视口顶部块（浏览器实测发现：上传图片后面板没切到新块），rAF 推迟到提交后选中+滚动才正确；③ **antd 图标按钮 aria-label 必须**——icon+text 按钮可访问名是「eye查看大图」拼接，测试 `name:'查看大图'` 找不到，旧版画布按钮本就带 aria-label，新面板按钮漏了补齐
+- [x] **测试**：26/26 全过（改 4 个受影响用例：操作按钮需先选中块再断言；新增 rail X 删除/替换图片入口/面板空态/画布点选同步 4 个用例）；tsc 0 错（test-runner-mcp 未挂载按 P0 #23 降级）；浏览器全链路实测（模板插入 → 图片上传自动选中新块面板切「图片操作」→ rail 点选切换面板 → X 删除）；测试误操作上架的 2 个本地款已下架恢复
+- [x] **jsdom 测试技巧**：SideDrawer portal 渲染在 body，rail 查询用 `document.body.querySelector` 而非 render container；noop onChange 下列表不会真变短，第二次删除前要按原列表选中
+
 ### 2026-10-21 修复店铺商品局部保存 400「请输入款号」（D-833：校验顺序 bug + 品牌示例文案）
 
 - [x] **根因**：`StyleInfoOrchestrator.update()` 把 `validateStyleInfo` 写在 D-225「回落库中已有值」**之前**——局部保存（改主图/改价连带）只带 `{id, 个别字段}`，styleNo 尚未回落就先校验，必抛「请输入款号」→ 400。**连锁后果**：前端 `useListingEditor.save()` 串行链（stylePatch → 颜色图 → batchSaveSku）第一步 400 即中断，后续 SKU 改价库存全部不提交 → 用户看到「改价待保存但不生效」「看不到更新」。D-225 的回落代码形同虚设

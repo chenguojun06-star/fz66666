@@ -155,6 +155,20 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
   const txtCount = list.length - imgCount;
   const captionCount = list.filter((b) => b.type === 'text' && b.caption).length;
 
+  /** D-832/D-834：选中某块并让编辑区平滑滚到对应位置。
+   *  添加新块后也走这里 —— list.length 变化会触发滚动高亮重算，裸 setActiveIdx
+   *  会被重算覆盖回视口顶部块；且新块刚入列时 itemRefs 还没提交，必须 rAF 推迟到
+   *  React 提交后再选中 + 滚动，滚动高亮才会落到目标块。 */
+  const jumpTo = useCallback((i: number) => {
+    const go = () => {
+      setActiveIdx(i);
+      // jsdom 未实现 scrollIntoView，可选链静默跳过；测试里可 mock 后断言
+      itemRefs.current[i]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+    else go();
+  }, []);
+
   /** 只提示不拦截：传满 20 块才被拦等于让运营白传一遍（D-778 既定约定） */
   const checkSize = useCallback(async (file: File) => {
     try {
@@ -208,16 +222,24 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
           if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
           added.push({ type: 'image', url: res.data });
         }
-        if (added.length) onChange([...list, ...added]);
+        if (added.length) {
+          onChange([...list, ...added]);
+          // 用 jumpTo 而不是裸 setActiveIdx：list.length 变化会触发滚动高亮重算，
+          // 裸设选中会被重算覆盖回视口顶部块；jumpTo 同时滚动画布到新块，高亮自然落到目标
+          jumpTo(list.length);
+        }
       } catch (e: unknown) {
         // 已成功的部分照常保留：整批回滚等于让运营重传
-        if (added.length) onChange([...list, ...added]);
+        if (added.length) {
+          onChange([...list, ...added]);
+          jumpTo(list.length);
+        }
         message.error(e instanceof Error ? e.message : '上传失败');
       } finally {
         setUploading(false);
       }
     },
-    [remain, list, onChange, checkSize],
+    [remain, list, onChange, checkSize, jumpTo],
   );
 
   const move = useCallback(
@@ -234,16 +256,11 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
   const remove = useCallback(
     (index: number) => {
       onChange(list.filter((_, i) => i !== index));
+      // 删除后选中项落到被删位置（删末尾则选中新的最后一块；删空归 0，面板显示空态提示）
+      setActiveIdx(Math.max(0, Math.min(index, list.length - 2)));
     },
     [list, onChange],
   );
-
-  /** D-832：点击缩略图 → 编辑区平滑滚到对应块，大图直接看到目标位置 */
-  const jumpTo = useCallback((i: number) => {
-    setActiveIdx(i);
-    // jsdom 未实现 scrollIntoView，可选链静默跳过；测试里可 mock 后断言
-    itemRefs.current[i]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   // D-832：滚动高亮同步 —— 编辑区滚到哪块，左侧缩略图就亮到哪块（rAF 节流）
   useEffect(() => {
@@ -326,8 +343,9 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
       const next = [...list];
       next.splice(index + 1, 0, { type: 'text', content: '', caption: true });
       onChange(next);
+      jumpTo(index + 1);
     },
-    [remain, list, onChange],
+    [remain, list, onChange, jumpTo],
   );
 
   const toggleCaption = useCallback(
@@ -340,13 +358,46 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     [list, onChange],
   );
 
+  /** D-834：替换选中块的图片 —— 原位换图，不动其他块的位置与顺序 */
+  const replaceImage = useCallback(
+    async (index: number, file: File) => {
+      if (!/^image\/(png|jpeg)$/.test(file.type)) {
+        message.warning('只支持 png / jpg 格式的图片');
+        return;
+      }
+      await checkSize(file);
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.post<{ code: number; data: string; message?: string }>(
+          '/common/upload',
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
+        const next = [...list];
+        const cur = next[index];
+        if (cur.type === 'image') next[index] = { ...cur, url: res.data };
+        onChange(next);
+        message.success('已替换图片');
+      } catch (e: unknown) {
+        message.error(e instanceof Error ? e.message : '上传失败');
+      } finally {
+        setUploading(false);
+      }
+    },
+    [list, onChange, checkSize],
+  );
+
   const addText = useCallback(() => {
     if (remain <= 0) {
       message.warning(`详情描述最多 ${MAX_BLOCKS} 个内容块，已达上限`);
       return;
     }
     onChange([...list, { type: 'text', content: '' }]);
-  }, [remain, list, onChange]);
+    jumpTo(list.length);
+  }, [remain, list, onChange, jumpTo]);
 
   /** D-831：插入专业文案模板段落（插入后仍可自由编辑） */
   const insertTemplate = useCallback(
@@ -358,9 +409,10 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
         return;
       }
       onChange([...list, { type: 'text', content: tpl.html }]);
+      jumpTo(list.length);
       message.success(`已插入「${tpl.label}」模板，内容可直接修改`);
     },
-    [remain, list, onChange],
+    [remain, list, onChange, jumpTo],
   );
 
   const templateMenu: MenuProps = {
@@ -378,6 +430,9 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     },
     [list, onChange],
   );
+
+  // D-834：右侧属性面板的选中块（activeIdx 短暂越界时兜底到最后一块）
+  const sel = list.length ? list[Math.min(activeIdx, list.length - 1)] : undefined;
 
   return (
     <>
@@ -500,6 +555,25 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                             />
                           </Tooltip>
                         </span>
+                        {/* D-834：对齐竞品 —— 缩略图直接带删除 X，不必先跳转再找删除 */}
+                        <Popconfirm
+                          title={`删除第 ${i + 1} 块`}
+                          description="删除后不可恢复，确定吗？"
+                          okText="删除"
+                          cancelText="取消"
+                          okButtonProps={{ danger: true }}
+                          onConfirm={() => remove(i)}
+                        >
+                          <Button
+                            size="small"
+                            type="text"
+                            danger
+                            className="deic-rail__x"
+                            aria-label={`删除第 ${i + 1} 块`}
+                            icon={<DeleteOutlined />}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </Popconfirm>
                       </div>
                       {b.type === 'image' ? (
                         <img className="deic-rail__thumb" src={b.url} alt={`第 ${i + 1} 块缩略图`} />
@@ -538,6 +612,10 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                   itemRefs.current[i] = el;
                 }}
                 className={`deic__item${activeIdx === i ? ' is-active' : ''}`}
+                onClick={() => {
+                  // 已选中的块再点不重复滚动（编辑文字时点进输入框不会把画布拽走）
+                  if (activeIdx !== i) jumpTo(i);
+                }}
               >
                 <div className="deic__item-bar">
                   <Space size={8}>
@@ -551,48 +629,10 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                     )}
                     {i === 0 && <Tag color="orange">详情页第一屏</Tag>}
                   </Space>
-                  <Space size={4}>
-                    {/* D-832：上下箭头移除 —— 排序改由左侧缩略图栏拖拽完成，
-                        悬停缩略图还有小箭头兜底；画布工具条只留内容操作 */}
-                    {b.type === 'image' && (
-                      <Tooltip title="给这张图加说明">
-                        <Button
-                          size="middle"
-                          type="text"
-                          aria-label="给这张图加说明"
-                          icon={<CommentOutlined />}
-                          disabled={remain <= 0}
-                          onClick={() => addCaptionFor(i)}
-                        />
-                      </Tooltip>
-                    )}
-                    {b.type === 'image' && (
-                      <Tooltip title="查看大图">
-                        <Button
-                          size="middle"
-                          type="text"
-                          aria-label="查看大图"
-                          icon={<EyeOutlined />}
-                          onClick={() => setPreview(b.url)}
-                        />
-                      </Tooltip>
-                    )}
-                    <Popconfirm
-                      title={b.type === 'image' ? '删除这张图片' : '删除这段文字'}
-                      okText="删除"
-                      cancelText="取消"
-                      okButtonProps={{ danger: true }}
-                      onConfirm={() => remove(i)}
-                    >
-                      <Button
-                        size="middle"
-                        type="text"
-                        danger
-                        aria-label={b.type === 'image' ? '删除这张图片' : '删除这段文字'}
-                        icon={<DeleteOutlined />}
-                      />
-                    </Popconfirm>
-                  </Space>
+                  {/* D-834：操作全部集中到右侧属性面板（对齐竞品三栏方案），画布只管内容与布局 */}
+                  <Text type="secondary" className="deic__item-bar-tip">
+                    在右侧面板操作此块
+                  </Text>
                 </div>
 
                 {b.type === 'image' ? (
@@ -602,16 +642,6 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                     <Paragraph type="secondary" className="deic__text-hint">
                       这段文字会显示在顾客端第 {i + 1} 块的位置，夹在图片之间
                     </Paragraph>
-                    <div className="deic__text-actions">
-                      <Switch
-                        size="small"
-                        checked={!!b.caption}
-                        onChange={() => toggleCaption(i)}
-                      />
-                      <Text type="secondary" className="deic__text-hint">
-                        作为上一张图的说明（紧贴图片显示，不单独占一段）
-                      </Text>
-                    </div>
                     <RichTextField
                       value={b.content}
                       onChange={(html) => updateText(i, html)}
@@ -656,6 +686,109 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
               </div>
             </div>
             </div>
+
+            {/* D-834：右侧属性面板 —— 选中块的操作集中在这里（对齐竞品「左列表 / 中画布 / 右属性」三栏方案） */}
+            <aside className="deic__props" aria-label="选中内容块操作面板">
+              <div className="deic-props__head">
+                {sel ? (sel.type === 'image' ? '图片操作' : '文字设置') : '属性面板'}
+              </div>
+              {!sel ? (
+                <div className="deic-props__empty">
+                  <InboxOutlined />
+                  <div>还没有选中内容块</div>
+                  <Text type="secondary">
+                    在左侧点选内容块，或点击画布中的任意块，这里会显示该块的操作
+                  </Text>
+                </div>
+              ) : sel.type === 'image' ? (
+                <>
+                  <div className="deic-props__sec">
+                    <img
+                      className="deic-props__preview"
+                      src={sel.url}
+                      alt="选中块预览"
+                      onClick={() => setPreview(sel.url)}
+                    />
+                  </div>
+                  <div className="deic-props__sec">
+                    <Tag color="blue">第 {Math.min(activeIdx, list.length - 1) + 1} 块</Tag>
+                    {activeIdx === 0 && <Tag color="orange">详情页第一屏</Tag>}
+                  </div>
+                  <div className="deic-props__btns">
+                    <Upload
+                      accept="image/png,image/jpeg"
+                      showUploadList={false}
+                      beforeUpload={(file) => {
+                        replaceImage(Math.min(activeIdx, list.length - 1), file);
+                        return false;
+                      }}
+                      disabled={uploading}
+                    >
+                      <Button icon={<PictureOutlined />} block loading={uploading} aria-label="替换图片">
+                        替换图片
+                      </Button>
+                    </Upload>
+                    <Button icon={<EyeOutlined />} block aria-label="查看大图" onClick={() => setPreview(sel.url)}>
+                      查看大图
+                    </Button>
+                    <Button
+                      icon={<CommentOutlined />}
+                      block
+                      aria-label="给这张图加说明"
+                      disabled={remain <= 0}
+                      onClick={() => addCaptionFor(Math.min(activeIdx, list.length - 1))}
+                    >
+                      给这张图加说明
+                    </Button>
+                    <Popconfirm
+                      title="删除这张图片"
+                      okText="删除"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => remove(Math.min(activeIdx, list.length - 1))}
+                    >
+                      <Button icon={<DeleteOutlined />} danger block aria-label="删除这张图片">
+                        删除这张图片
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                  <div className="deic-props__tip">
+                    替换图片保持原位置不变，不影响其他块的顺序；规格建议宽 {MIN_W}–{MAX_W}px、高 ≤{MAX_H}px。
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="deic-props__sec">
+                    <Tag color="blue">第 {Math.min(activeIdx, list.length - 1) + 1} 块</Tag>
+                    {sel.caption ? <Tag color="gold">图注</Tag> : <Tag color="purple">文字</Tag>}
+                  </div>
+                  <div className="deic-props__btns">
+                    <div className="deic-props__row">
+                      <Switch
+                        size="small"
+                        checked={!!sel.caption}
+                        onChange={() => toggleCaption(Math.min(activeIdx, list.length - 1))}
+                      />
+                      <Text type="secondary" className="deic-props__row-hint">
+                        作为上一张图的说明（紧贴图片显示，不单独占一段）
+                      </Text>
+                    </div>
+                    <Popconfirm
+                      title="删除这段文字"
+                      okText="删除"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => remove(Math.min(activeIdx, list.length - 1))}
+                    >
+                      <Button icon={<DeleteOutlined />} danger block aria-label="删除这段文字">
+                        删除这段文字
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                  <div className="deic-props__tip">文字内容直接在中间画布里编辑，右侧管理它的属性。</div>
+                </>
+              )}
+            </aside>
           </div>
         </div>
       </SideDrawer>

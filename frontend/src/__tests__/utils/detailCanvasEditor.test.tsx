@@ -70,11 +70,15 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     expect(downs[downs.length - 1].disabled).toBe(true);
   });
 
-  it('文字块不提供「查看大图」，图片块才有', () => {
+  it('D-834：操作收进右侧面板 —— 选中图片块才有「查看大图」，文字块没有', () => {
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
 
-    // 2 张图 → 2 个查看大图；文字块没有
-    expect(screen.getAllByRole('button', { name: '查看大图' })).toHaveLength(2);
+    // 面板只显示当前选中块的操作：选中第 2 块（文字）→ 没有查看大图
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 2 块' }));
+    expect(screen.queryByRole('button', { name: '查看大图' })).toBeNull();
+    // 切回图片块 → 恰好 1 个查看大图（不再像旧版每张图各挂一个）
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 1 块' }));
+    expect(screen.getAllByRole('button', { name: '查看大图' })).toHaveLength(1);
   });
 
   // 这个用例会渲染 ResizableModal 92vw 大弹窗 + 两次 antd Popconfirm，
@@ -84,7 +88,9 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     const onChange = vi.fn();
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
 
-    fireEvent.click(screen.getAllByRole('button', { name: '删除这张图片' })[0]);
+    // D-834：删除操作收进右侧属性面板 —— 先选中第 1 块（图片 a）再操作
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 1 块' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除这张图片' }));
     // Popconfirm 有入场动画，全量跑时机器负载高，默认 1s 等待会偶发超时 ——
     // 这类 flaky 必须治（重跑蒙混等于把门控交给运气），不是加 sleep。
     fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }, { timeout: 8000 }));
@@ -94,6 +100,8 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     ]);
 
     onChange.mockClear();
+    // onChange 是 noop mock，列表不会真变短 —— 文字块仍是第 2 块，重新选中它
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 2 块' }));
     fireEvent.click(screen.getByRole('button', { name: '删除这段文字' }));
     fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }, { timeout: 8000 }));
     expect(onChange).toHaveBeenLastCalledWith([
@@ -150,8 +158,9 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     const onChange = vi.fn();
     render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
 
-    // 给第 1 张图（图块在 index 0）加说明
-    fireEvent.click(screen.getAllByRole('button', { name: '给这张图加说明' })[0]);
+    // D-834：按钮在右侧属性面板 —— 先选中第 1 块（图片 a）再点
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 1 块' }));
+    fireEvent.click(screen.getByRole('button', { name: '给这张图加说明' }));
 
     expect(onChange).toHaveBeenCalledWith([
       { type: 'image', url: 'a.jpg' },
@@ -188,6 +197,8 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     const onChange = vi.fn();
     render(<DetailCanvasEditor open blocks={withCaption} onChange={onChange} onClose={() => {}} />);
 
+    // D-834：图注开关移到右侧属性面板 —— 先选中第 2 块（文字）再切换
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 2 块' }));
     fireEvent.click(screen.getByRole('switch'));
 
     expect(onChange).toHaveBeenCalledWith([
@@ -307,5 +318,49 @@ describe('详情描述画布 · 添加文字段落真实可见（D-831）', () =
     fireEvent.click(await screen.findByRole('menuitem', { name: '洗涤与保养' }, { timeout: 5000 }));
     const box = await screen.findByRole('textbox', { name: '第 1 块文字' }, { timeout: 5000 });
     expect(box.innerHTML).toContain('洗涤与保养');
+  });
+});
+
+/**
+ * D-834：右侧属性面板 —— 对齐竞品「左列表 / 中画布 / 右属性」三栏方案。
+ * 画布只管内容与布局，选中块的操作（替换图片/查看大图/加说明/删除/图注开关）
+ * 全部集中到右侧面板；左侧缩略图直接带删除 X，不必先跳转再找删除。
+ */
+describe('详情描述画布 · 右侧属性面板（D-834）', () => {
+  it('空详情：属性面板显示空态引导，而不是一片空白', () => {
+    render(<DetailCanvasEditor open blocks={[]} onChange={() => {}} onClose={() => {}} />);
+
+    expect(screen.getByText('还没有选中内容块')).toBeTruthy();
+  });
+
+  it('缩略图直接带删除 X：点「删除第 3 块」确认后真删，不动其他块', async () => {
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '删除第 3 块' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^删\s*除$/ }, { timeout: 8000 }));
+    expect(onChange).toHaveBeenLastCalledWith([
+      { type: 'image', url: 'a.jpg' },
+      { type: 'text', content: '卖点：透气' },
+    ]);
+  }, 20000);
+
+  it('图片块面板提供「替换图片」入口（原位换图，不动其他块顺序）', () => {
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '跳到第 1 块' }));
+    expect(screen.getByRole('button', { name: /替换图片/ })).toBeTruthy();
+  });
+
+  it('点击画布中的块 → 选中态同步到左侧缩略图栏', () => {
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByAltText('第 1 块的图片'));
+    // SideDrawer 渲染在 portal（document.body）里，rail 不在 render container 下，
+    // 必须从 body 查询
+    const active = document.body.querySelector('.deic-rail__item.is-active');
+    expect(active).toBeTruthy();
+    // 高亮的正是第 1 块的缩略项（包含其缩略图）
+    expect(active?.contains(screen.getByAltText('第 1 块缩略图'))).toBe(true);
   });
 });
