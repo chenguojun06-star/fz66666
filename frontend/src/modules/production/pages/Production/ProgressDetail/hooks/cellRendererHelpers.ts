@@ -6,19 +6,22 @@ import { ProductionOrder } from '@/types/production';
 export function calcHealthScore(record: ProductionOrder): { score: number; level: 'good'|'warn'|'danger' } {
   const prog = record.productionProgress ?? 0;
   let score = Math.round(prog * 0.40);
+  // D-837：交期缺失不再加分——原逻辑无交期 +20，比「3天内」档（+8）还高，
+  // 等于「没填交期的订单比交期緊的还健康」，反直觉且误导球色。
+  // 缺失数据的正确处理：不因该项加分（进度分仍在），让球色反映「信息不足」而非「健康」。
   if (record.expectedShipDate) {
     const days = dayjs(record.expectedShipDate as string).diff(dayjs(), 'day');
     if (days > 14)     score += 35;
     else if (days > 7) score += 26;
     else if (days > 3) score += 16;
     else if (days > 0) score += 8;
-  } else {
-    score += 20;
   }
   const proc = isDirectCuttingOrder(record as any)
     ? 100
     : ((record as any).procurementCompletionRate ?? null);
-  score += proc != null ? Math.round(proc * 0.25) : 18;
+  // D-837：采购率缺失同样不加分——原逻辑 null 按 ≈72%（+18）计，
+  // 「没数据」被显示成「良好」，数据缺失反而抬高健康分。
+  score += proc != null ? Math.round(proc * 0.25) : 0;
   score = Math.max(0, Math.min(100, score));
   return { score, level: score >= 75 ? 'good' : score >= 50 ? 'warn' : 'danger' };
 }

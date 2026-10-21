@@ -614,6 +614,12 @@ public class OrderFlowStageFillHelper {
      *   <li>车缝/质检/入库时间 → 由前端逐单加载扫码记录后自行计算，后端无需填充</li>
      * </ul>
      * 调用时机：queryPage() 在 fillCuttingSummary / fillStockSummary 完成后调用本方法。
+     *
+     * ⚠️⚠️ D-837 警示（防复活）：本方法当前**全库无调用方**，且其轻量路径不填
+     * carSewingStartTime/ironingStartTime/warehousingStartTime 等节点开始时间——
+     * 一旦被接到订单列表/详情链路，前端 getNodeStartTime（D-833 口径修复依赖这些
+     * 瞬态字段）将拿到 undefined，「实际X天」退回 createTime 兜底 → D-833 类口径
+     * bug 复现。要用请先补齐节点 startTime 填充，或直接删掉本方法。
      */
     public void fillCompletionRatesLight(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) return;

@@ -57,9 +57,12 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 
   const actualDaysText = (() => {
     if (!stageEndTime || !hint) return '';
-    const start = stageStartTime || (record.createTime as string | null);
-    if (!start) return '';
-    return `实际${calculateActualDuration(start, stageEndTime)}`;
+    // D-837：无真实节点开始时间时不再用 createTime 兜底——那算的是
+    // 「下单→本节点完成」总时长（把前面所有环节算进本节点），与「实际」语义不符
+    // （D-833 病根：兜底本身即隐患，新增调用点漏传就复发）。节点确实没开始过
+    // （无扫码记录）时，不展示比展示虚假数字好。
+    if (!stageStartTime) return '';
+    return `实际${calculateActualDuration(stageStartTime, stageEndTime)}`;
   })();
 
   const gapInfo = useMemo(() => {

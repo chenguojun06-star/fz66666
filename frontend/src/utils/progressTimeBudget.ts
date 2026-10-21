@@ -166,9 +166,13 @@ export function computeStageBudgetHint(params: {
         : Math.max(1, Math.round(totalDays * config.ratio)));
 
   if (stageEndTime) {
-    const actualDays = dayjs(stageEndTime).diff(
-      stageStartTime ? dayjs(stageStartTime) : create, 'day'
-    );
+    // D-837：无真实开始时间时不能拿 createTime 兜底算「超X天」——那等于把
+    // 下单排队时间算进本环节（D-833 同族）。没有起止就无法判定超期，
+    // 显示「已完成」比虚报「超X天」诚实。
+    if (!stageStartTime) {
+      return { text: `预算${budgetDays}天 · 已完成`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
+    }
+    const actualDays = dayjs(stageEndTime).diff(dayjs(stageStartTime), 'day');
     if (actualDays <= budgetDays) {
       return { text: `预算${budgetDays}天 · 准时`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
     }

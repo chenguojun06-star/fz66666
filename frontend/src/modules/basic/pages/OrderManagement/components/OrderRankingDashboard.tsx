@@ -161,9 +161,11 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
         <TrophyOutlined className="ranking-icon" />
         <span className="ranking-title">下单排行 TOP{topCount}</span>
         <div className="ranking-stats">
-          <span>累计: <b>{stats?.totalOrders || 0}</b></span>
-          <span>今日: <b>{stats?.todayOrders || 0}</b></span>
-          <span>本周: <b>{stats?.weekOrders || 0}</b></span>
+          {/* D-837：口径明示——累计=下单次数，今日/本周=有下单的款数（后端为款级聚合，
+              无订单级时间分布，硬凑订单数会高估；宁可文案说清也不做口径混用） */}
+          <span>累计: <b>{stats?.totalOrders || 0}</b> 单</span>
+          <span>今日: <b>{stats?.todayOrders || 0}</b> 款</span>
+          <span>本周: <b>{stats?.weekOrders || 0}</b> 款</span>
         </div>
       </div>
 

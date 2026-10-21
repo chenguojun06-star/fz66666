@@ -207,9 +207,21 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
   }, [isCompleted, daysLeft, prog]);
 
   /* 速度：取单工序最大件数 / 开工天数
-   * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高 */
+   * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高
+   * D-837：elapsed 基准必须是「订单真实动起来的时刻」——曾用 createTime（下单时间），
+   * 下单后排队 N 天才开工的单会把排队时间算进生产速度 → speed 系统性虚低 →
+   * todayTask「超产能」误报（与 D-833 同族：注释写"开工"、代码取下单）。 */
   const speed = useMemo(() => {
-    const orderStart = order.createTime ? dayjs(order.createTime) : null;
+    const startCandidates = [
+      (order as any).procurementStartTime,
+      (order as any).cuttingStartTime,
+      (order as any).orderStartTime,
+    ].filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+    // 取最早的真实开始时间；全无（订单从未动工）才退 createTime（此时分子也恒 0，不影响判定）
+    const earliestStart = startCandidates.length > 0
+      ? startCandidates.sort()[0]
+      : (order.createTime || null);
+    const orderStart = earliestStart ? dayjs(earliestStart) : null;
     const elapsed = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
     const completedQty = Number(order.completedQuantity) || 0;
     // 优先用真实入库完成数
