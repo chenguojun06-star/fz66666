@@ -36,6 +36,8 @@ import {
   TagsOutlined,
   UserOutlined,
   AppstoreOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import { Segmented } from 'antd';
@@ -183,6 +185,29 @@ const PosTerminal: React.FC = () => {
   const searchRef = React.useRef<InputRef>(null);
   // 全屏收银台唯一的「出口」：回后台管理（老板管货/对账用）
   const navigate = useNavigate();
+
+  /* ── 真·全屏切换 ──
+     专业收银机形态：进入后浏览器地址栏/标签页全部隐藏，整屏只剩收银台。
+     必须由用户点击触发（浏览器安全限制），不能自动进入。 */
+  const [isFull, setIsFull] = React.useState(false);
+  React.useEffect(() => {
+    const sync = () => setIsFull(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
+  }, []);
+  const toggleFullscreen = React.useCallback(() => {
+    const root = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    const doc = document as Document & { webkitExitFullscreen?: () => void };
+    if (document.fullscreenElement) {
+      doc.exitFullscreen?.().catch(() => {}) ?? doc.webkitExitFullscreen?.();
+    } else {
+      root.requestFullscreen?.().catch(() => {}) ?? root.webkitRequestFullscreen?.();
+    }
+  }, []);
 
   const loadToday = React.useCallback(async () => {
     try {
@@ -782,8 +807,18 @@ const PosTerminal: React.FC = () => {
             prefix="¥"
             valueStyle={{ color: '#d46b08' }}
           />
-          <Button icon={<AppstoreOutlined />} onClick={() => navigate('/dashboard')}>
+          <Button icon={<AppstoreOutlined />} onClick={() => {
+            // 回后台前先退出全屏，别让后台页面也铺满整屏
+            if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+            navigate('/dashboard');
+          }}>
             返回后台
+          </Button>
+          <Button
+            icon={isFull ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={toggleFullscreen}
+          >
+            {isFull ? '退出全屏' : '全屏'}
           </Button>
           <Button icon={<TagsOutlined />} onClick={() => {
             setWsDraft({
