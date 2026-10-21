@@ -417,6 +417,19 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, sel, curIdx, undo, redo, deleteEl]);
 
+  /* ── Esc 不关闭弹窗（D-836）：编辑器叠在「改图与数据」Drawer 里，Esc 会冒泡给
+        antd Drawer 把整个弹窗关掉。在捕获阶段拦下 Escape（预览 Modal 打开时放行，
+        让 Modal 自己正常关闭），关闭只能走右上角 × 或底部「退出编辑」。 ── */
+  useEffect(() => {
+    if (!open) return;
+    const stopEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || previewOpen) return;
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', stopEsc, true);
+    return () => window.removeEventListener('keydown', stopEsc, true);
+  }, [open, previewOpen]);
+
   if (!open) return null;
 
   const dirty = undoRef.current.length > 0; // histTick 变化触发重渲染以刷新该值
