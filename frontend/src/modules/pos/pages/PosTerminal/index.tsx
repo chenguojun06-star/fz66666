@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -34,6 +35,7 @@ import {
   FieldTimeOutlined,
   TagsOutlined,
   UserOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import { Segmented } from 'antd';
@@ -179,6 +181,8 @@ const PosTerminal: React.FC = () => {
   const wsAutoRef = React.useRef(false);
 
   const searchRef = React.useRef<InputRef>(null);
+  // 全屏收银台唯一的「出口」：回后台管理（老板管货/对账用）
+  const navigate = useNavigate();
 
   const loadToday = React.useCallback(async () => {
     try {
@@ -235,10 +239,12 @@ const PosTerminal: React.FC = () => {
   /* ── 分类页签 ──
      category 存的是编码（SKIRT/DRESS…），页签要给人看，
      走系统标准映射（utils/styleCategory.ts，款式资料同一套）翻译成中文；
-     映射没有的（如手工录的「上衣」）原样展示。 */
+     再兜一层别名表：历史数据里有标准字典之外的编码（如 style_type 来源的
+     SKIRT、手工录入的 upper），也翻成中文，翻不出才原样展示。 */
   const categoryLabel = React.useMemo(() => {
     const map = new Map(CATEGORY_CODE_OPTIONS.map((o) => [o.value, o.label]));
-    return (code: string) => map.get(code) ?? code;
+    const alias: Record<string, string> = { SKIRT: '裙子', UPPER: '上装' };
+    return (code: string) => map.get(code) ?? alias[code.toUpperCase()] ?? code;
   }, []);
   const categories = React.useMemo(() => {
     const set = new Set<string>();
@@ -776,6 +782,9 @@ const PosTerminal: React.FC = () => {
             prefix="¥"
             valueStyle={{ color: '#d46b08' }}
           />
+          <Button icon={<AppstoreOutlined />} onClick={() => navigate('/dashboard')}>
+            返回后台
+          </Button>
           <Button icon={<TagsOutlined />} onClick={() => {
             setWsDraft({
               minQty: Number(wsTier?.minQty ?? 0) || 10,

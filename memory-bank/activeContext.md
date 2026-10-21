@@ -896,6 +896,17 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-21 POS 收银台专业化升级（组合支付/批发阶梯价/分类页签/行内步进）
+
+- [x] **动机**：对标银豹/美团收银专业水准，四项全做：A 分类页签、B 购物车行内±步进+大删除、C 组合支付（现金500+微信300 混收）、D 批发阶梯价（满N件打X折自动提示/应用）
+- [x] **迁移**：`V202710160007__pos_combo_payment_and_wholesale_tier.sql` 建 `t_pos_sale_payment`（每方式一行，金额真相源）+ `t_pos_wholesale_tier`（uk tenant+min_qty，单档覆盖式保存）
+- [x] **结算链路**：`resolvePayments` 逐行校验（合计=应收/在线渠道禁组合/≤6行/不重复）；单方式自动补一行明细（报表口径统一）；组合部分挂账→UNPAID+应收=挂账部分（receivable 备注标「组合支付挂账部分」）；MEMBER_BALANCE 只扣余额行合计
+- [x] **交班对账修正**：`PosSaleMapper.todayByPayMethod` 改按支付明细拆分（UNION ALL 兜底无明细的历史单）；`PosShiftOrchestrator` 统计窗口纳入 UNPAID（挂账单当场已收现金物理进过钱箱，不算必对不平），循环按明细行拆 cash/card/online/credit
+- [x] **顺手修 P1 既有 bug**：`authorizeCredit` 用大写 `ACTIVE` 比对，而 t_user.status 存量全为小写 `active` → 所有账号挂账授权被误判「已停用」，改 `equalsIgnoreCase`
+- [x] **前端**：/skus 空关键词浏览模式（只出有库存货）+ category 字段；宫格上方分类页签；数量列 [− n +] 步进器 + 32px 大删除；「组合收款」行编辑器（已分配/剩余实时提示、加行/返回单收）；批发价达标绿色横幅（自动套用一次可撤销/一键应用）+「批发价」设置弹窗
+- [x] **验证**：mvn compile/test-compile 通过；tsc 0 errors；端到端冒烟 11 项全过（浏览模式/批发价读写/组合 CASH150+CARD50 明细两行/部分挂账应收=80/金额不等拒/在线禁组合/折扣透传 1000-120=880/交班钱箱 30+刷卡20 拆分正确）；browser_use UI 冒烟 5 项 PASS
+- [x] 已提交推送（eca99e45c，pre-push 11 项门禁通过），线上 cron 每 2 分钟自动部署
+
 ### 2026-10-17 电子小票（电子开票）系统全链路贯通（D-809）
 
 - [x] **方案**：`.trae/documents/electronic-ticket-system.md`（参照竞品衣科ecool；电子小票=单据统一电子呈现层+扫码签收凭证，非税务发票）

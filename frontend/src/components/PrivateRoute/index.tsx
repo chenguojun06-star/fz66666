@@ -38,23 +38,32 @@ const PrivateRoute: React.FC = () => {
     return <Navigate to={paths.dashboard} replace />;
   }
 
+  // 收银台独立全屏（对标银豹/美团收银）：收银员作业界面不套后台管理框架，
+  // 没有侧边栏/顶栏就没有误点跳走的入口；「返回后台」由收银台自带按钮提供。
+  // 电子小票列表（/pos/tickets）是后台页面，仍走 Layout。
+  const page = currentPath === paths.pos ? (
+    <Outlet />
+  ) : (
+    <Layout><Outlet /></Layout>
+  );
+
   if (user?.factoryId) {
     const allowed =
       FACTORY_EXACT_PATHS.has(currentPath) ||
       FACTORY_PREFIX_PATHS.some((p) => currentPath === p || currentPath.startsWith(p + '/'));
-    return allowed ? <Layout><Outlet /></Layout> : <Navigate to={paths.productionList} replace />;
+    return allowed ? page : <Navigate to={paths.productionList} replace />;
   }
 
   const required = resolvePermissionCode(location.pathname);
 
   if (required === 'PUBLIC') {
-    return <Layout><Outlet /></Layout>;
+    return page;
   }
 
   const isAdminUser = isAdmin(user);
 
   if (isAdminUser) {
-    return <Layout><Outlet /></Layout>;
+    return page;
   }
 
   if (!required) {
@@ -67,7 +76,7 @@ const PrivateRoute: React.FC = () => {
 
   const hasAny = Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(required));
   if (hasAny) {
-    return <Layout><Outlet /></Layout>;
+    return page;
   }
 
   if (user?.permissions?.includes('MENU_PRODUCTION_LIST')) {
