@@ -179,7 +179,7 @@ const TitleContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
       <Input
         value={content.brand ?? ''}
         onChange={(e) => setContent({ ...content, brand: e.target.value || null })}
-        placeholder="展示在商品标题下方，例如「门里门外」"
+        placeholder="展示在商品标题下方，例如店铺名或品牌名"
         maxLength={32}
         allowClear
       />

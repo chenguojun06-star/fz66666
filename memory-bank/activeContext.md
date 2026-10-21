@@ -896,6 +896,33 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-21 修复店铺商品局部保存 400「请输入款号」（D-833：校验顺序 bug + 品牌示例文案）
+
+- [x] **根因**：`StyleInfoOrchestrator.update()` 把 `validateStyleInfo` 写在 D-225「回落库中已有值」**之前**——局部保存（改主图/改价连带）只带 `{id, 个别字段}`，styleNo 尚未回落就先校验，必抛「请输入款号」→ 400。**连锁后果**：前端 `useListingEditor.save()` 串行链（stylePatch → 颜色图 → batchSaveSku）第一步 400 即中断，后续 SKU 改价库存全部不提交 → 用户看到「改价待保存但不生效」「看不到更新」。D-225 的回落代码形同虚设
+- [x] **修复**：validateStyleInfo 移到回落之后、saveOrUpdateStyle 之前（id 查不到时 ensureNotScrapped 已先抛「款式不存在」，语义更准）；create 路径校验不变
+- [x] **品牌示例文案**：`DetailModuleContent.tsx` 品牌输入框 placeholder「例如「门里门外」」改为「例如店铺名或品牌名」（用户不要这个比喻；线上库里该款 brand 字段已照示例填了「门里门外」，需用户在「标题」模块自行清空改真名——brand 走 content API 不走 PUT /style/info）
+- [x] **验证**：mvn compile 0 错 / tsc 0 错（test-runner-mcp 未挂载，按 P0 #23 降级原生命令）；本地重启后端（**注意：裸 java -cp 启动必须带 `SPRING_PROFILES_ACTIVE=dev`，否则 DB 密码为空连不上**）后浏览器实测：PUT /api/style/info 请求体 `{"id":132,"fabricComposition":"…"}`（无 styleNo）返回 **200**（修复前必 400）；改价 → batch-save 200 → toast「已保存：改价 1 项」→ 待保存清零；价格/字段已恢复原值（面料成分字段残留「回归验证备注」，因 D-225 null=不更新语义 UI 清不掉，本地测试数据无害）
+- [x] 本地库无 BV26Q2B1075A（蚕丝半裙在**线上库**），用户截图报障来自线上环境——修复需推送后由 cron 部署生效
+- [x] 已提交推送，线上 cron 约 2 分钟自动部署，需强制刷新；线上该款保存后改价/主图即正常落库，无需数据迁移
+
+### 2026-10-21 商品上架编辑器对齐竞品交互（D-832：缩略图栏拖拽排序 + 分区导航）
+
+- [x] **详情长图编辑器加左侧缩略图栏**（用户参照竞品截图：「侧边加缩略图，可以直接拖拽排序，上下箭头太难用了」）：`DetailCanvasEditor` 新增 `.deic__body`（flex row）= 左 `.deic__rail`（148px，图片块出缩略图、文字块出去标签纯文本摘要、序号角标 + 类型标签、悬停显形小箭头兜底）+ 右画布；**画布工具条上下箭头已移除**，排序主交互为 HTML5 原生拖拽（drop 语义 = 拖到第 i 项占位置 i，splice(from,1) 后 splice(min(i,next.length),0,moved)），拖完 rAF 里 scrollIntoView 跟随
+- [x] **点击缩略图 → 画布跳转**：`jumpTo` 平滑滚动 + `is-active` 高亮；画布滚动 → 缩略图高亮跟随（scroll spy：rAF 节流 + getBoundingClientRect 比对）。**踩坑**：阈值 140px 太紧，短内容点跳转后目标块 top 过不了线、高亮被 spy 覆盖回前一块，调至 200px 修复
+- [x] **上架编辑抽屉加左侧分区导航**（「商品上架编辑页面也做到这样清清楚楚」）：`ListingEditDrawer` flex 行首插 `.shop-edit__nav`（148px sticky top 128px）= 4 主锚点（上架检查/主图/规格价格库存/详情页内容，Section 加 id）+ `DetailModuleEditor` 新增 `onModules` 上报的 9 个模块子锚点（`shop-mod-{key}`，load/persist 成功后同步顺序）；scroll spy 沿 parentElement 找 computed overflowY 真实滚动容器；`.shop-edit__block`/`.shop-module-item` 加 scroll-margin-top 132/148px 躲 sticky 摘要条
+- [x] **验证**：tsc 0 errors；vitest 48/48（detailCanvasEditor 新增 5 个 D-832 用例：rail 渲染/箭头仅在 rail/点击跳转 mock scrollIntoView/拖拽换序/拖到原位不触发；`getByText('卖点：透气')` 改 getAllByText——rail+画布两处）；浏览器实测（HHY006，租户2）：rail 渲染与文字摘要同步、点击跳转 scrollTop 0→4457、常见问题/主图高亮跟随、DragEvent+DataTransfer 模拟拖拽换序成功、保存「已保存」落库；**注意 DragEvent 模拟三连发必须 await 等 React 提交 dragFrom，同步连发读不到 state**
+- [x] 已提交推送（b5ade73db，pre-push 门禁 4/4 通过），线上 cron 约 2 分钟自动部署，需强制刷新
+
+### 2026-10-21 商品上架编辑体验修复（D-831：侧滑抽屉/文案模板/两个"点了没反应"bug）
+
+- [x] **详情长图编辑器 Modal → 通用 SideDrawer**：`DetailCanvasEditor` 从 ResizableModal 改为公共 `SideDrawer`（width=85%，业务侧滑统一约定），footerExtra 保留说明文案；根节点改 `flex:1, minHeight:0` 自适应
+- [x] **专业文案模板**：新增 6 类服装详情页模板（核心卖点/面料与工艺/版型与尺码建议/模特实拍参考/洗涤与保养/发货与售后），工具条假「页面模板」Select 换成「插入文案模板」Dropdown，空态给模板 chips 一键插入再编辑；HTML 仅用白名单 p/strong/ul/li
+- [x] **修「添加文字段落没反应」**：根因是渲染列表把空内容文字块 filter 掉，新加的空块永远不可见（`b.type === 'image' ? !!b.url : true` 只对图片块判 url）；C 端本就跳过空文字块，放开渲染无副作用
+- [x] **修「尺寸表不能添加部位」**：根因是 `SizeChartEditor.emit()` 在全空值时回传 null（「留空不覆盖 SKU 矩阵」语义）但未同步 `loadedRef`，父组件回传 null 后 effect 误判"外部值变了"重新装载默认列，刚加的列被冲掉；修复为 emit 内同步 `loadedRef.current = next ?? ''`
+- [x] **布局收紧**：`ListingEditDrawer` 左列从 antd Space 改普通 flex 列（Space item 不保证撑满），右列预览定宽 380px sticky；`.deic` max-height 220→140px 偏移、`.shop-edit__form` 上限 1400→1680px，编辑区贴紧手机预览不再大片空白
+- [x] **验证**：tsc 0 errors；vitest 22/22（新增 sizeChartEditor.test.tsx 5 用例 round-trip 复现存量"行值全空 JSON"场景 + detailCanvasEditor 3 个 D-831 渲染级用例）；浏览器实测：85% 抽屉、模板 chip 插入、添加文字段落立即可见、HHY006（租户2 lilb）点 +胸围 → 列出现且保持、M 行填 92 保留（test-runner-mcp 未挂载，按 P0 #23 降级原生命令）
+- [x] 已提交推送（f9b7d9232，pre-push 门禁通过），线上 cron 约 2 分钟自动部署，需强制刷新
+
 ### 2026-10-21 POS 收银台专业化升级（组合支付/批发阶梯价/分类页签/行内步进）
 
 - [x] **动机**：对标银豹/美团收银专业水准，四项全做：A 分类页签、B 购物车行内±步进+大删除、C 组合支付（现金500+微信300 混收）、D 批发阶梯价（满N件打X折自动提示/应用）

@@ -339,7 +339,6 @@ public class StyleInfoOrchestrator {
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         // 同步客户信息到款号冗余字段
         styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
-        validateStyleInfo(styleInfo);
         // D-800：主图组与 cover 保持同步 —— coverGroup[0] 即 cover。
         // C 端列表卡片 / 商品列表缩略图 / 款式图列工厂全都在读 cover，
         // 两边不一致会导致「上传了主图2但列表还是老图」这种查不到原因的错位。
@@ -369,6 +368,10 @@ public class StyleInfoOrchestrator {
                     throw new IllegalArgumentException("款号「" + styleInfo.getStyleNo().trim() + "」已被其他款式使用，请修改款号");
                 }
             }
+            // 必填校验必须在「回落库中已有值」之后执行：局部保存（改主图/改价等）
+            // 只带 id+个别字段，提前校验会误报「请输入款号」并 400，
+            // 中断前端串行保存链导致后续 SKU 改价库存全部不提交（D-225 顺序修正）
+            validateStyleInfo(styleInfo);
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
                 // D-215：款号变更后联动重算该款式所有商品编码（款号-颜色-尺码）
