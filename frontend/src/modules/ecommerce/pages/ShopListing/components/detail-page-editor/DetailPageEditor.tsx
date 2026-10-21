@@ -14,7 +14,7 @@ import { blocksToPages, buildSizeTableData, newPage, settlePageAfterBgLoad } fro
 import { makeSizeTableEl } from './presets';
 import type { DetailBlock } from '../../types';
 import type { EditorElement, EditorPage, PageTemplate } from './types';
-import { uid } from './types';
+import { MAX_PAGES, uid } from './types';
 import './index.css';
 
 /**
@@ -232,12 +232,21 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
   );
 
   /* ── 页面操作 ── */
-  const addPage = useCallback(
-    (url: string) => {
-      const next = [...pagesRef.current, newPage(url)];
-      updatePages(next);
-      setPageIdx(next.length - 1);
+  /** D-836：批量加页（一次选多张图按顺序生成多页），单张也走这里 */
+  const addPages = useCallback(
+    (urls: string[]) => {
+      if (!urls.length) return;
+      const room = MAX_PAGES - pagesRef.current.length;
+      if (room <= 0) {
+        message.warning(`详情描述最多 ${MAX_PAGES} 页，已达上限`);
+        return;
+      }
+      const take = urls.slice(0, room);
+      const start = pagesRef.current.length;
+      updatePages([...pagesRef.current, ...take.map((u) => newPage(u))]);
+      setPageIdx(start); // 落在第一张新加的页上，用户能立刻看到刚导入的图
       setSel(null);
+      if (take.length < urls.length) message.warning(`最多 ${MAX_PAGES} 页，超出部分未添加`);
     },
     [updatePages],
   );
@@ -420,7 +429,9 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
   );
 
   return (
-    <div className="dpe-root" role="dialog" aria-label="详情长图编辑器">
+    <>
+      <div className="dpe-mask" aria-hidden="true" />
+      <div className="dpe-root" role="dialog" aria-label="详情长图编辑器">
       <div className="dpe-topbar">
         <Space size={4}>
           <Button type="text" icon={<UndoOutlined />} disabled={!undoRef.current.length} onClick={undo} aria-label="撤销">撤销</Button>
@@ -444,7 +455,7 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
           onSelectPage={(i) => { setPageIdx(i); setSel(null); }}
           onDeletePage={deletePage}
           onMovePage={movePage}
-          onAddPage={addPage}
+          onAddPages={addPages}
           onAddElements={addElements}
           onInsertSizeTable={insertSizeTable}
           onApplyTemplate={applyTemplate}
@@ -520,7 +531,8 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
           )}
         </div>
       </Modal>
-    </div>
+      </div>
+    </>
   );
 };
 

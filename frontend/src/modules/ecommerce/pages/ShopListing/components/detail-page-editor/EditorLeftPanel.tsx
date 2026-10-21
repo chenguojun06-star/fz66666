@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Popconfirm, Tooltip, Upload, message } from 'antd';
+import { Button, Popconfirm, Tooltip, message } from 'antd';
 import {
   ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, FontSizeOutlined,
   InsertRowBelowOutlined, PlusOutlined, TableOutlined, BgColorsOutlined, DeploymentUnitOutlined,
@@ -23,7 +23,8 @@ export interface EditorLeftPanelProps {
   onSelectPage: (i: number) => void;
   onDeletePage: (i: number) => void;
   onMovePage: (i: number, dir: -1 | 1) => void;
-  onAddPage: (url: string) => void;
+  /** D-836：批量加页 —— 一次选多张图按选择顺序各成一页（单张同样走这里） */
+  onAddPages: (urls: string[]) => void;
   onAddElements: (els: EditorElement[]) => void;
   onInsertSizeTable: () => void;
   onApplyTemplate: (t: PageTemplate) => void;
@@ -42,7 +43,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
 
 const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
   pages, pageIdx, templates,
-  onSelectPage, onDeletePage, onMovePage, onAddPage, onAddElements, onInsertSizeTable, onApplyTemplate, onDeleteTemplate,
+  onSelectPage, onDeletePage, onMovePage, onAddPages, onAddElements, onInsertSizeTable, onApplyTemplate, onDeleteTemplate,
 }) => {
   const [tab, setTab] = React.useState<TabKey>('tpl');
   const [uploading, setUploading] = React.useState(false);
@@ -61,28 +62,41 @@ const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
     onAddElements([el]);
   };
 
-  const doUpload = async (file: File) => {
-    if (pages.length >= MAX_PAGES) {
+  /**
+   * D-836：批量导入 —— 与旧版「批量上传详情图」一致，一次可多选，按选择顺序各成一页。
+   * 用原生 multiple input 而不是 antd Upload：antd 的 beforeUpload 对同批每张图各触发一次，
+   * 批量合并要么 hack 要么丢文件，原生 input 一次拿全且顺序稳定。
+   */
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const doUpload = async (files: File[]) => {
+    if (!files.length) return;
+    const room = MAX_PAGES - pages.length;
+    if (room <= 0) {
       message.warning(`详情描述最多 ${MAX_PAGES} 页，已达上限`);
-      return false;
+      return;
     }
-    if (!/^image\/(png|jpeg)$/.test(file.type)) {
+    const ok = files.filter((f) => /^image\/(png|jpeg)$/.test(f.type));
+    if (!ok.length) {
       message.warning('只支持 png / jpg 格式的图片');
-      return false;
+      return;
     }
+    const take = ok.slice(0, room);
+    if (take.length < ok.length) message.warning(`最多还能加 ${room} 页，已只取前 ${room} 张`);
     setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', fd);
-      if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
-      onAddPage(res.data);
-    } catch (e) {
-      message.warning(e instanceof Error ? e.message : '上传失败');
-    } finally {
-      setUploading(false);
+    const urls: string[] = [];
+    for (const f of take) {
+      try {
+        const fd = new FormData();
+        fd.append('file', f);
+        const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', fd);
+        if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
+        urls.push(res.data);
+      } catch (e) {
+        message.warning(`「${f.name}」上传失败：${e instanceof Error ? e.message : '未知错误'}`);
+      }
     }
-    return false;
+    setUploading(false);
+    if (urls.length) onAddPages(urls);
   };
 
   return (
@@ -195,11 +209,23 @@ const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
       <div className="dpe-left__pages">
         <div className="dpe-left__sec-title dpe-left__sec-title--row">
           <span>页面（{pages.length}/{MAX_PAGES}）</span>
-          <Upload accept="image/png,image/jpeg" showUploadList={false} beforeUpload={doUpload} disabled={uploading}>
-            <Button size="small" icon={<PlusOutlined />} loading={uploading} aria-label="上传新页面底图">
-              加页
-            </Button>
-          </Upload>
+          {/* D-836：批量导入入口 —— multiple 一次多选，选完按顺序批量成页；上传中可中断重复点击 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            multiple
+            hidden
+            aria-label="批量上传页面底图"
+            onChange={(e) => {
+              const fs = Array.from(e.target.files ?? []);
+              e.target.value = '';
+              void doUpload(fs);
+            }}
+          />
+          <Button size="small" icon={<PlusOutlined />} loading={uploading} disabled={uploading} onClick={() => fileInputRef.current?.click()} aria-label="批量加图">
+            批量加图
+          </Button>
         </div>
         <div className="dpe-left__page-list">
           {pages.map((p, i) => (

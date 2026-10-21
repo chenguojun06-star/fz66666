@@ -1,14 +1,34 @@
-/* D-835：详情长图逐页编辑器。画布/页面本身是「作品」，必须纯白底，
-   与主题无关；其余 chrome 全部走 CSS 变量。 */
+/* D-836：D-835 曾按竞品做成全屏，用户明确要求改回「正常侧滑」——
+   与项目其他业务弹窗一致：85% 宽度侧滑抽屉 + 遮罩（移动端 96vw）。
+   画布/页面本身是「作品」，必须纯白底，与主题无关；chrome 全走 CSS 变量。 */
 
-.dpe-root {
+.dpe-mask {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.dpe-root {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 85vw;
+  z-index: 1001;
   display: flex;
   flex-direction: column;
   background: var(--color-bg-layout, #f0f2f5);
   color: var(--color-text, rgba(0, 0, 0, 0.88));
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+  animation: dpe-slide-in 0.22s ease-out;
+}
+@keyframes dpe-slide-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (max-width: 768px) {
+  .dpe-root { width: 96vw; }
 }
 
 /* ── 顶部工具栏 ── */
