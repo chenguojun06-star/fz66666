@@ -277,6 +277,12 @@ export interface PosChannelReadiness {
 
 /** 待支付单信息（二维码已生成，等顾客扫码） */
 export interface PosPayInfo {
+  /**
+   * 销售单ID：支付成功后凭它取电子小票（getByBiz 只按ID主查）。
+   * 此前没存这个字段，扫码支付成功后只有 saleNo、小票取不出来，
+   * 收银员只能等顾客事后扫小票二维码 —— 2026-10-21 统一小票版式时补上。
+   */
+  saleId?: number | null;
   saleNo: string;
   /** 二维码内容（微信 code_url / 支付宝 qr_code），前端渲染成二维码 */
   qrCode?: string | null;

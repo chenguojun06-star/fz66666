@@ -64,9 +64,6 @@ import PosReturnPanel from './PosReturnPanel';
 import PosHoldPanel from './PosHoldPanel';
 import PosShiftPanel from './PosShiftPanel';
 import CashNumpad from './CashNumpad';
-import TicketPrint from './TicketPrint';
-import ticketApi, { type TicketData } from '@/services/ticket/ticketApi';
-import './ticket-print.css';
 import './index.css';
 
 const { Text } = Typography;
@@ -140,7 +137,6 @@ const PosTerminal: React.FC = () => {
   const [memberOpen, setMemberOpen] = React.useState(false);
   const [rechargeAmount, setRechargeAmount] = React.useState(0);
   // 小票打印：开单完成就该打，顾客当场会要；没打成的保留「补打」入口
-  const [printTicket, setPrintTicket] = React.useState<TicketData | null>(null);
   // 挂账授权（防资损）：不到账也能出单的唯一方式，必须有人签字
   const [creditAuthOpen, setCreditAuthOpen] = React.useState(false);
   const [creditAuth, setCreditAuth] = React.useState<{ user: string; pwd: string }>({
@@ -155,13 +151,6 @@ const PosTerminal: React.FC = () => {
    * 开单成功的结算信息：与「小票打印」弹窗合并成一个窗，
    * 不再单独弹「开单成功」——一次收款只弹一个窗，不叠罗汉。
    */
-  const [printSummary, setPrintSummary] = React.useState<{
-    saleNo: string;
-    totalAmount?: number | null;
-    change?: number | null;
-    receivableId?: number | string | null;
-    saleId?: number | string | null;
-  } | null>(null);
   /** 在线收款渠道可用性：未配置的渠道按钮置灰，避免收银员点了才发现报错 */
   const [channels, setChannels] = React.useState<PosChannelReadiness | null>(null);
   /** 待支付单（二维码已生成，等顾客扫码） */
@@ -169,8 +158,24 @@ const PosTerminal: React.FC = () => {
   /** 二维码剩余有效秒数 */
   const [payLeft, setPayLeft] = React.useState(0);
   const [cancelling, setCancelling] = React.useState(false);
-  /** 电子小票弹窗（开单成功 / 今日单据查看） */
-  const [ticket, setTicket] = React.useState<{ id: number; saleNo?: string } | null>(null);
+  /**
+   * 电子小票弹窗（开单成功 / 今日单据查看补打）。
+   *
+   * <p>summary 是「收款成功」摘要（单号/应收/找零/应收提醒）——
+   * 2026-10-21 之前它在另一个 58mm 无二维码小票弹窗（TicketPrint）里，
+   * 于是「今日单据打印」与「电子小票」成了两种版式，顾客要求统一。
+   */
+  const [ticket, setTicket] = React.useState<{
+    id: number;
+    saleNo?: string;
+    summary?: {
+      saleNo: string;
+      totalAmount?: number | null;
+      change?: number | null;
+      receivableId?: number | string | null;
+      saleId?: number | string | null;
+    } | null;
+  } | null>(null);
   /**
    * D-817：收银台内的功能分区。
    * 不拆成独立页面 —— 退货/换货与挂单都发生在结账现场，来回跳页在高峰期就是排队变慢。
@@ -473,24 +478,9 @@ const PosTerminal: React.FC = () => {
     setWsApplied(false);
     wsAutoRef.current = false;
     setActiveCat('全部');
-    setPrintSummary(null);
     void loadGoods();
     searchRef.current?.focus();
   }, [loadGoods]);
-
-  /** 拉小票并打开打印窗；拉不到不阻断开单（小票可以事后补打） */
-  const openPrint = React.useCallback(async (
-    saleId?: string | number | null,
-    saleNo?: string | null,
-  ) => {
-    if (!saleId && !saleNo) return;
-    try {
-      const t = await ticketApi.getByBiz('POS_SALE', String(saleId ?? ''), saleNo ?? undefined);
-      setPrintTicket(t);
-    } catch (e) {
-      message.warning(`小票加载失败，可稍后补打：${e instanceof Error ? e.message : '未知原因'}`);
-    }
-  }, []);
 
   /** 到账语音播报：客人多时收银员盯不过来屏幕，「收款 XXX 元」防止漏单赖账 */
   const speakCash = React.useCallback((n: number) => {
@@ -583,6 +573,7 @@ const PosTerminal: React.FC = () => {
       if (res?.payStatus === 'PAYING' && res.qrCode) {
         // 在线支付：先不结算，把二维码给顾客扫，等渠道确认（回调/轮询）才出库
         setPayInfo({
+          saleId: res.saleId ?? null,
           saleNo: res.saleNo,
           qrCode: res.qrCode,
           totalAmount: Number(res.totalAmount ?? 0),
@@ -592,16 +583,21 @@ const PosTerminal: React.FC = () => {
         void loadToday();
         return;
       }
-      setPrintSummary({
-        saleNo: res.saleNo,
-        totalAmount: Number(res.totalAmount ?? 0),
-        change: changeAmount != null && changeAmount >= 0 ? changeAmount : null,
-        receivableId: res.receivableId ?? null,
-        saleId: res.saleId ?? null,
-      });
       setLines([]);
-      // 当场出小票：专业收银打完小票这一单才算结束，顾客会当场要
-      void openPrint(res.saleId, res.saleNo);
+      // 当场出小票：专业收银打完小票这一单才算结束，顾客会当场要。
+      // 2026-10-21 起：收款摘要与小票预览/打印合并进同一个带二维码的弹窗，
+      // 不再有 58mm 无二维码的第二版式。
+      setTicket({
+        id: Number(res.saleId ?? 0),
+        saleNo: res.saleNo,
+        summary: {
+          saleNo: res.saleNo,
+          totalAmount: Number(res.totalAmount ?? 0),
+          change: changeAmount != null && changeAmount >= 0 ? changeAmount : null,
+          receivableId: res.receivableId ?? null,
+          saleId: res.saleId ?? null,
+        },
+      });
       speakCash(totalAmount);
       setDiscount(0);
       setRoundOff(0);
@@ -644,14 +640,19 @@ const PosTerminal: React.FC = () => {
         if (stopped) return;
         if (st?.paid) {
           setPayInfo(null);
-          setPrintSummary({
+          // 与现金开单同一个弹窗（带二维码版式）；saleId 缺失时退化为 0，
+          // TicketModal 拉不到数据会自己提示，这里不再预拉。
+          setTicket({
+            id: Number(payInfo.saleId ?? 0),
             saleNo: payInfo.saleNo,
-            totalAmount: payInfo.totalAmount,
-            change: null,
-            receivableId: null,
-            saleId: null,
+            summary: {
+              saleNo: payInfo.saleNo,
+              totalAmount: payInfo.totalAmount,
+              change: null,
+              receivableId: null,
+              saleId: payInfo.saleId ?? null,
+            },
           });
-          void openPrint(null, payInfo.saleNo);
           speakCash(payInfo.totalAmount);
           setLines([]);
           setDiscount(0);
@@ -674,7 +675,7 @@ const PosTerminal: React.FC = () => {
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [payInfo, loadToday, openPrint, speakCash]);
+  }, [payInfo, loadToday, speakCash]);
 
   /** 二维码倒计时 */
   React.useEffect(() => {
@@ -1258,9 +1259,9 @@ const PosTerminal: React.FC = () => {
                           type="link"
                           size="small"
                           icon={<ProfileOutlined />}
-                          onClick={() => void openPrint(r.id, r.saleNo)}
+                          onClick={() => setTicket({ id: r.id, saleNo: r.saleNo })}
                         >
-                          打印
+                          小票
                         </Button>
                       ),
                     },
@@ -1383,21 +1384,6 @@ const PosTerminal: React.FC = () => {
             </div>
           </div>
 
-
-          <TicketPrint
-            open={!!printTicket}
-            ticket={printTicket}
-            summary={printSummary}
-            onViewTicket={() => {
-              if (printSummary?.saleId) {
-                setTicket({ id: Number(printSummary.saleId), saleNo: printSummary.saleNo });
-              }
-            }}
-            onClose={() => {
-              setPrintTicket(null);
-              setPrintSummary(null);
-            }}
-          />
 
           {/* 会员充值 */}
           <Modal
@@ -1621,7 +1607,7 @@ const PosTerminal: React.FC = () => {
             ) : null}
           </Modal>
 
-          {/* 开单成功信息已并入「小票打印」弹窗（TicketPrint summary），不再单独弹窗 */}
+          {/* 开单成功信息（单号/应收/找零/应收提醒）已并入 TicketModal，只有一个弹窗 */}
         </>
       )}
 
@@ -1654,6 +1640,7 @@ const PosTerminal: React.FC = () => {
         sourceBizType="POS_SALE"
         sourceBizId={ticket?.id ?? 0}
         sourceBizNo={ticket?.saleNo}
+        summary={ticket?.summary ?? null}
       />
     </div>
   );
