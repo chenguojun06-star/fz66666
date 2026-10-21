@@ -32,6 +32,30 @@ export const CELL_CHIP_STYLE: React.CSSProperties = {
 };
 export const COUNT_TEXT_STYLE: React.CSSProperties = { fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' };
 
+/**
+ * D-832：节点名 → 订单上该节点的真实开始时间字段。
+ * 后端 OrderFlowStageFillHelper 会在订单响应里动态填充这些字段（表里无对应列，
+ * 从扫码/流程记录算出后 set 进订单对象）。不传 stageStartTime 的话，
+ * BudgetDaysEditor 会用 createTime 兜底 —— 「实际X天」就变成「下单→本节点完成」
+ * 的总时长（把前面所有环节都算进本节点），口径名不副实。
+ */
+const NODE_START_TIME_FIELDS: Record<string, string> = {
+  '采购': 'procurementStartTime',
+  '裁剪': 'cuttingStartTime',
+  '二次工艺': 'secondaryProcessStartTime',
+  '车缝': 'carSewingStartTime',
+  '尾部': 'ironingStartTime',
+  '入库': 'warehousingStartTime',
+};
+
+export function getNodeStartTime(record: ProductionOrder, nodeName: string): string | undefined {
+  const field = NODE_START_TIME_FIELDS[nodeName];
+  if (!field) return undefined;
+  const v = (record as unknown as Record<string, unknown>)[field];
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s || undefined;
+}
+
 export function hasSecondaryProcessForOrder(record: ProductionOrder): boolean {
   if ((record as any).hasSecondaryProcess) return true;
   if ((record as any).secondaryProcessStartTime || (record as any).secondaryProcessEndTime) return true;
@@ -127,6 +151,7 @@ export function renderStageProgressCell(
       <BudgetDaysEditor
         record={record}
         nodeName={nodeName}
+        stageStartTime={getNodeStartTime(record, nodeName)}
         stageEndTime={ctx.getStageCompletionTime?.(record, nodeName, percent) || undefined}
         isCompletedOrClosed={isCompletedOrClosed}
         isProcureNode={/采购|物料|备料|辅料|面料/.test(nodeName)}

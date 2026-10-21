@@ -6,6 +6,7 @@ import { getStageBudgetHoursValue } from '@/utils/progressTimeBudget';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import {
   hasSecondaryProcessForOrder,
+  getNodeStartTime,
   renderStageProgressCell,
   PROGRESS_CELL_BASE,
 } from '../riskBadgeRenderers';
@@ -79,6 +80,7 @@ export function buildProgressColumns({
             <BudgetDaysEditor
               record={record}
               nodeName="采购"
+              stageStartTime={getNodeStartTime(record, '采购')}
               stageEndTime={getStageCompletionTime?.(record, '采购', rate || 0) || undefined}
               isCompletedOrClosed={isCompletedOrClosed}
               isProcureNode
