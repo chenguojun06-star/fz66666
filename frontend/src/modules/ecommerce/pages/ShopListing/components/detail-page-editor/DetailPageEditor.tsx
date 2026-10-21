@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import api from '@/utils/api';
 import EditorCanvasStage from './EditorCanvasStage';
 import EditorLeftPanel from './EditorLeftPanel';
+import EditorPagesColumn from './EditorPagesColumn';
 import EditorRightPanel from './EditorRightPanel';
 import PageView from './PageView';
 import { bakePage, needsBake, uploadBlob, type ExportMode } from './exportPages';
@@ -462,17 +463,20 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
 
       <div className="dpe-body">
         <EditorLeftPanel
-          pages={pages}
-          pageIdx={curIdx}
+          pageW={cur?.bgW ?? 750}
           templates={templates}
-          onSelectPage={(i) => { setPageIdx(i); setSel(null); }}
-          onDeletePage={deletePage}
-          onMovePage={movePage}
-          onAddPages={addPages}
           onAddElements={addElements}
           onInsertSizeTable={insertSizeTable}
           onApplyTemplate={applyTemplate}
           onDeleteTemplate={deleteTemplate}
+        />
+        <EditorPagesColumn
+          pages={pages}
+          pageIdx={curIdx}
+          onSelectPage={(i) => { setPageIdx(i); setSel(null); }}
+          onDeletePage={deletePage}
+          onMovePage={movePage}
+          onAddPages={addPages}
         />
         <EditorCanvasStage
           page={cur}

@@ -164,7 +164,7 @@ describe('D-835 编辑器冒烟：布局与交互入口', () => {
 
   it('D-836 批量导入三方式：拖拽 2 张图到页面列表 → 按顺序各成一页', async () => {
     renderEditor([{ type: 'image', url: 'http://x/1.jpg' }, { type: 'image', url: 'http://x/2.jpg' }]);
-    const zone = document.querySelector('.dpe-left__pages') as HTMLElement;
+    const zone = document.querySelector('.dpe-pages-col') as HTMLElement;
     const mk = (n: string) => new File(['x'], n, { type: 'image/png' });
     fireEvent.drop(zone, { dataTransfer: { files: [mk('a.png'), mk('b.png')], types: ['Files'] } });
     await waitFor(() => expect(document.querySelectorAll('.dpe-left__page')).toHaveLength(4));

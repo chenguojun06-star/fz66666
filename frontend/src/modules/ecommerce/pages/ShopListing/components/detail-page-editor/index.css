@@ -152,16 +152,19 @@
 .dpe-left__cta {
   margin-top: 10px;
 }
-.dpe-left__pages {
-  flex: 1;
+/* ── 页面列（第二列，顶到底）：缩略图独立一列，点选与右侧画布同步 ── */
+.dpe-pages-col {
+  flex: none;
+  width: 200px;
   display: flex;
   flex-direction: column;
   padding: 8px 10px 10px;
-  border-top: 1px solid var(--color-border, #d9d9d9);
+  border-right: 1px solid var(--color-border, #d9d9d9);
   min-height: 0;
+  background: var(--color-bg-container, #fff);
 }
 /* D-836：拖拽导入高亮（对齐 ImageUploadBox 的拖拽上传体验） */
-.dpe-left__pages.is-dragover {
+.dpe-pages-col.is-dragover {
   outline: 2px dashed var(--color-primary, #1677ff);
   outline-offset: -2px;
   background: var(--color-primary-bg, rgba(22, 119, 255, 0.06));
