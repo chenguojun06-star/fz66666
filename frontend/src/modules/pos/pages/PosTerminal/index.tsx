@@ -47,7 +47,6 @@ import posApi from '@/services/pos/posApi';
 import type {
   PosChannelReadiness,
   PosRecentSale,
-  PosCheckoutResult,
   PosCustomer,
   PosPayInfo,
   PosMember,
@@ -152,7 +151,17 @@ const PosTerminal: React.FC = () => {
   const [remark, setRemark] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [today, setToday] = React.useState<PosToday | null>(null);
-  const [result, setResult] = React.useState<PosCheckoutResult | null>(null);
+  /**
+   * 开单成功的结算信息：与「小票打印」弹窗合并成一个窗，
+   * 不再单独弹「开单成功」——一次收款只弹一个窗，不叠罗汉。
+   */
+  const [printSummary, setPrintSummary] = React.useState<{
+    saleNo: string;
+    totalAmount?: number | null;
+    change?: number | null;
+    receivableId?: number | string | null;
+    saleId?: number | string | null;
+  } | null>(null);
   /** 在线收款渠道可用性：未配置的渠道按钮置灰，避免收银员点了才发现报错 */
   const [channels, setChannels] = React.useState<PosChannelReadiness | null>(null);
   /** 待支付单（二维码已生成，等顾客扫码） */
@@ -209,11 +218,18 @@ const PosTerminal: React.FC = () => {
     }
   }, []);
 
+  const loadTodayFailRef = React.useRef(false);
   const loadToday = React.useCallback(async () => {
     try {
       setToday(await posApi.today());
-    } catch {
-      // 交班数据拿不到不该影响开单
+      loadTodayFailRef.current = false;
+    } catch (e) {
+      // 之前这里完全静默：接口一挂「今日单据/统计」永远显示 0，收银员还以为没卖出去过。
+      // 改成每次会话只警告一次，既不反复打扰收银，也不再无声无息。
+      if (!loadTodayFailRef.current) {
+        loadTodayFailRef.current = true;
+        message.warning(`今日单据刷新失败：${e instanceof Error ? e.message : '未知原因'}`);
+      }
     }
   }, []);
 
@@ -457,7 +473,7 @@ const PosTerminal: React.FC = () => {
     setWsApplied(false);
     wsAutoRef.current = false;
     setActiveCat('全部');
-    setResult(null);
+    setPrintSummary(null);
     void loadGoods();
     searchRef.current?.focus();
   }, [loadGoods]);
@@ -473,6 +489,24 @@ const PosTerminal: React.FC = () => {
       setPrintTicket(t);
     } catch (e) {
       message.warning(`小票加载失败，可稍后补打：${e instanceof Error ? e.message : '未知原因'}`);
+    }
+  }, []);
+
+  /** 到账语音播报：客人多时收银员盯不过来屏幕，「收款 XXX 元」防止漏单赖账 */
+  const speakCash = React.useCallback((n: number) => {
+    try {
+      const yuan = Math.floor(n);
+      const rest = Math.round(n * 100) - yuan * 100;
+      const text = rest === 0
+        ? `收款${yuan}元`
+        : rest % 10 === 0
+          ? `收款${yuan}元${rest / 10}角`
+          : `收款${yuan}元${Math.floor(rest / 10)}角${rest % 10}分`;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      window.speechSynthesis.speak(u);
+    } catch {
+      // 浏览器不支持语音就不播报，不影响收银
     }
   }, []);
 
@@ -558,10 +592,17 @@ const PosTerminal: React.FC = () => {
         void loadToday();
         return;
       }
-      setResult(res);
+      setPrintSummary({
+        saleNo: res.saleNo,
+        totalAmount: Number(res.totalAmount ?? 0),
+        change: changeAmount != null && changeAmount >= 0 ? changeAmount : null,
+        receivableId: res.receivableId ?? null,
+        saleId: res.saleId ?? null,
+      });
       setLines([]);
       // 当场出小票：专业收银打完小票这一单才算结束，顾客会当场要
       void openPrint(res.saleId, res.saleNo);
+      speakCash(totalAmount);
       setDiscount(0);
       setRoundOff(0);
       setReceived(null);
@@ -579,7 +620,7 @@ const PosTerminal: React.FC = () => {
   }, [
     lines, comboMode, payRows, comboRemaining, comboHasCredit, comboHasBalance,
     payMethod, phone, member, creditAuth, discount, roundOff, customerName, remark,
-    loadToday,
+    totalAmount, changeAmount, speakCash, loadToday,
   ]);
 
   /**
@@ -603,17 +644,15 @@ const PosTerminal: React.FC = () => {
         if (stopped) return;
         if (st?.paid) {
           setPayInfo(null);
-          setResult({
+          setPrintSummary({
             saleNo: payInfo.saleNo,
-            goodsAmount: 0,
-            discountAmount: 0,
-            roundOffAmount: 0,
             totalAmount: payInfo.totalAmount,
-            payMethod: payInfo.payMethod,
-            payStatus: 'PAID',
-            itemCount: 0,
-            outstockNo: st.outstockNo ?? null,
-          } as PosCheckoutResult);
+            change: null,
+            receivableId: null,
+            saleId: null,
+          });
+          void openPrint(null, payInfo.saleNo);
+          speakCash(payInfo.totalAmount);
           setLines([]);
           setDiscount(0);
           setRoundOff(0);
@@ -635,7 +674,7 @@ const PosTerminal: React.FC = () => {
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [payInfo, loadToday]);
+  }, [payInfo, loadToday, openPrint, speakCash]);
 
   /** 二维码倒计时 */
   React.useEffect(() => {
@@ -664,6 +703,24 @@ const PosTerminal: React.FC = () => {
       setCancelling(false);
     }
   }, [payInfo, loadToday]);
+
+  /* ── 收银快捷键：F2 收款、F9 聚焦扫码框 ──
+     专业收银全程手不离键盘/扫码枪，高峰期用鼠标找按钮就是浪费时间 */
+  const submitRef = React.useRef(submit);
+  submitRef.current = submit;
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        void submitRef.current();
+      } else if (e.key === 'F9') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   /* ── 款式图 / 款号（铁律 15）── */
 
@@ -1330,7 +1387,16 @@ const PosTerminal: React.FC = () => {
           <TicketPrint
             open={!!printTicket}
             ticket={printTicket}
-            onClose={() => setPrintTicket(null)}
+            summary={printSummary}
+            onViewTicket={() => {
+              if (printSummary?.saleId) {
+                setTicket({ id: Number(printSummary.saleId), saleNo: printSummary.saleNo });
+              }
+            }}
+            onClose={() => {
+              setPrintTicket(null);
+              setPrintSummary(null);
+            }}
           />
 
           {/* 会员充值 */}
@@ -1555,69 +1621,7 @@ const PosTerminal: React.FC = () => {
             ) : null}
           </Modal>
 
-          <Modal
-            open={!!result}
-            title="开单成功"
-            onOk={resetAll}
-            onCancel={resetAll}
-            okText="继续开单"
-            cancelButtonProps={{ style: { display: 'none' } }}
-          >
-            {result ? (
-              <div>
-                <div className="pos-done__row">
-                  <span>销售单号</span>
-                  <Text copyable>{result.saleNo}</Text>
-                </div>
-                <div className="pos-done__row">
-                  <span>商品金额</span>
-                  <span>{formatMoney(result.goodsAmount)}</span>
-                </div>
-                {Number(result.discountAmount) > 0 ? (
-                  <div className="pos-done__row">
-                    <span>折扣</span>
-                    <span>-{formatMoney(result.discountAmount)}</span>
-                  </div>
-                ) : null}
-                {Number(result.roundOffAmount) > 0 ? (
-                  <div className="pos-done__row">
-                    <span>抹零</span>
-                    <span>-{formatMoney(result.roundOffAmount)}</span>
-                  </div>
-                ) : null}
-                <div className="pos-done__row pos-done__row--total">
-                  <span>应收</span>
-                  <span>{formatMoney(result.totalAmount)}</span>
-                </div>
-                {changeAmount != null && changeAmount >= 0 ? (
-                  <div className="pos-done__row">
-                    <span>找零</span>
-                    <span>{formatMoney(changeAmount)}</span>
-                  </div>
-                ) : null}
-                {result.receivableId ? (
-                  <Alert
-                    style={{ marginTop: 8 }}
-                    type="warning"
-                    showIcon
-                    message="已生成应收单，请在「收付款中心」核销"
-                  />
-                ) : null}
-                {result.saleId ? (
-                  <Button
-                    block
-                    style={{ marginTop: 8 }}
-                    icon={<ProfileOutlined />}
-                    onClick={() => setTicket({ id: Number(result.saleId), saleNo: result.saleNo })}
-                  >
-                    查看电子小票（扫码签收）
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-          </Modal>
-
-          {/* 电子小票：开单成功 / 今日单据均可打开 */}
+          {/* 开单成功信息已并入「小票打印」弹窗（TicketPrint summary），不再单独弹窗 */}
         </>
       )}
 

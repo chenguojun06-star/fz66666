@@ -64,19 +64,6 @@
   font-size: 11px;
 }
 
-/* 打印时只出小票本体，弹窗与按钮一律不打印 */
-@media print {
-  body * {
-    visibility: hidden !important;
-  }
-  .ticket-print,
-  .ticket-print * {
-    visibility: visible !important;
-  }
-  .ticket-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 58mm;
-  }
-}
+/* 打印不再走 window.print() + visibility 方案（隐藏元素仍占高度，
+   会把整页收银台带进打印 → 出 2 张纸、小票被分页劈开）。
+   现在小票写进独立 iframe 文档打印，见 TicketPrint.buildTicketHtml。 */
