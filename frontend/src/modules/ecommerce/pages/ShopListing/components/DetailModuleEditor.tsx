@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Space, Spin, Switch, Tag, Tooltip, Typography } from 'antd';
 import {
   ArrowDownOutlined, ArrowUpOutlined, ExclamationCircleOutlined, HolderOutlined,
@@ -67,14 +67,31 @@ const MODULE_META: Record<string, { desc: string; source?: string }> = {
 export function DetailModuleEditor({
   styleId,
   ctx,
+  onModules,
 }: {
   styleId: number | null;
   ctx: ModuleContentCtx;
+  /** D-832：有编辑器的模块清单变化时上报（供左侧分区导航生成子锚点） */
+  onModules?: (mods: Array<{ key: string; title: string }>) => void;
 }) {
   const [modules, setModules] = useState<ModuleItem[]>([]);
   const [defaultOrder, setDefaultOrder] = useState<ModuleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  // 回调存 ref：load/persist 里通知最新引用，避免因 props 变化重挂 effect
+  const onModulesRef = useRef(onModules);
+  useEffect(() => {
+    onModulesRef.current = onModules;
+  });
+
+  /** 上报「有内容编辑框」的模块（导航只列可编辑的，纯展示模块跳过去也没东西改） */
+  const notifyModules = useCallback((mods: ModuleItem[]) => {
+    onModulesRef.current?.(
+      mods
+        .filter((m) => !!MODULE_CONTENT[m.moduleKey])
+        .map((m) => ({ key: m.moduleKey, title: m.defaultTitle })),
+    );
+  }, []);
 
   const load = useCallback(async () => {
     if (!styleId) return;
@@ -102,6 +119,8 @@ export function DetailModuleEditor({
           (layMap.get(b.moduleKey)?.sortOrder ?? Number.MAX_SAFE_INTEGER),
       );
       setModules(merged);
+      // D-832：加载成功后同步导航子锚点
+      notifyModules(merged);
       // 接口返回的模块定义本身就是后端默认顺序（DEFAULT_MODULES），
       // 存一份用于「恢复默认」，别让商家把顺序改乱后回不去。
       setDefaultOrder(defArr.map((d) => ({
@@ -126,7 +145,7 @@ export function DetailModuleEditor({
     } finally {
       setLoading(false);
     }
-  }, [styleId]);
+  }, [styleId, notifyModules]);
 
   useEffect(() => {
     void load();
@@ -147,6 +166,8 @@ export function DetailModuleEditor({
             sortOrder: i,
           })),
         });
+        // D-832：排序/开关保存成功后同步导航子锚点顺序
+        notifyModules(next);
       } catch (e) {
         setModules(prev);
         message.error(e instanceof Error ? e.message : '保存失败，已恢复原设置');
@@ -154,7 +175,7 @@ export function DetailModuleEditor({
         setSavingKey(null);
       }
     },
-    [styleId, modules],
+    [styleId, modules, notifyModules],
   );
 
   const move = (idx: number, delta: number) => {
@@ -285,7 +306,8 @@ export function DetailModuleEditor({
           const m = modules.find((x) => x.moduleKey === it.key);
           const Editor = m ? MODULE_CONTENT[m.moduleKey] : null;
           return (
-            <div className="shop-module-item" key={it.key}>
+            // D-832：id 供左侧分区导航锚点跳转
+            <div className="shop-module-item" key={it.key} id={`shop-mod-${it.key}`}>
               <div className="shop-module-item-head">
                 <span className="shop-module-item-name">{it.label}</span>
                 <span className="shop-module-item-extra">{it.extra}</span>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Dropdown,
@@ -130,9 +130,19 @@ const TEXT_TEMPLATES: Array<{ key: string; label: string; html: string }> = [
  * 图片块仍然过滤掉没有 url 的坏数据。空文字块在顾客端本来就会被跳过
  * （C 端渲染时 `blk.content` 为空不输出），所以放开渲染没有副作用。
  */
+/** 文字块的缩略摘要：去 HTML 标签取纯文本前 40 字 */
+const textBrief = (html: string) =>
+  (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+
 const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, onChange, onClose }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  // D-832：左侧缩略图栏（对齐竞品编辑器）—— 点击跳转 + 拖拽排序 + 滚动高亮同步
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   // 只剔除没有 url 的图片坏数据；文字块无论有没有内容都保留（否则新建的空段落不可见）
   const list = useMemo(
@@ -227,6 +237,83 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     },
     [list, onChange],
   );
+
+  /** D-832：点击缩略图 → 编辑区平滑滚到对应块，大图直接看到目标位置 */
+  const jumpTo = useCallback((i: number) => {
+    setActiveIdx(i);
+    // jsdom 未实现 scrollIntoView，可选链静默跳过；测试里可 mock 后断言
+    itemRefs.current[i]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  // D-832：滚动高亮同步 —— 编辑区滚到哪块，左侧缩略图就亮到哪块（rAF 节流）
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const base = canvas.getBoundingClientRect().top;
+      let cur = 0;
+      itemRefs.current.forEach((el, i) => {
+        // 200px：元素顶进视口 200px 内即视为「当前」——太小会让短内容点跳转后
+        // 高亮仍停在前一块（滚动量不够、目标块永远过不了线）
+        if (el && el.getBoundingClientRect().top - base <= 200) cur = i;
+      });
+      setActiveIdx(cur);
+    };
+    const onScroll = () => {
+      if (raf) return;
+      // jsdom 可能没有 rAF（未开 pretendToBeVisual），直接同步算
+      if (typeof requestAnimationFrame === 'function') raf = requestAnimationFrame(compute);
+      else compute();
+    };
+    canvas.addEventListener('scroll', onScroll);
+    compute();
+    return () => {
+      canvas.removeEventListener('scroll', onScroll);
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+    };
+  }, [open, list.length]);
+
+  // ── D-832：缩略图拖拽排序（HTML5 原生拖拽，无第三方依赖） ──
+  const onRailDragStart = (e: React.DragEvent, i: number) => {
+    setDragFrom(i);
+    // jsdom 没有 DataTransfer，可选链兜底
+    e.dataTransfer?.setData('text/plain', String(i));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onRailDragOver = (e: React.DragEvent, i: number) => {
+    if (dragFrom === null) return;
+    e.preventDefault();
+    if (dropAt !== i) setDropAt(i);
+  };
+
+  const onRailDrop = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    const from = dragFrom;
+    setDragFrom(null);
+    setDropAt(null);
+    if (from === null || from === i) return;
+    const next = [...list];
+    const [moved] = next.splice(from, 1);
+    // 拖到第 i 项 = 把块放到位置 i（先移除再插入，此时数组长度已减一）
+    const at = Math.min(i, next.length);
+    next.splice(at, 0, moved);
+    onChange(next);
+    setActiveIdx(at);
+    // 等 React 提交后 itemRefs 才指向新位置的元素，rAF 里再滚
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        itemRefs.current[at]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  };
+
+  const endRailDrag = () => {
+    setDragFrom(null);
+    setDropAt(null);
+  };
 
   /** D-810：给某张图加说明 —— 插到该图正下方并标记为图注，
    *  一步完成「图 + 紧贴的说明」，不必手动挪位置再切样式。 */
@@ -348,7 +435,83 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
             </Space>
           </div>
 
-          <div className="deic__canvas">
+          {/* D-832：左侧缩略图栏 + 右侧编辑画布（对齐竞品编辑器布局） */}
+          <div className="deic__body">
+            {list.length > 0 && (
+              <aside className="deic__rail" aria-label="内容块缩略图，可拖拽排序">
+                {list.map((b, i) => {
+                  const cls = [
+                    'deic-rail__item',
+                    activeIdx === i ? 'is-active' : '',
+                    dragFrom === i ? 'is-dragging' : '',
+                    dragFrom !== null && dropAt === i && dragFrom !== i ? 'is-drop-at' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+                  return (
+                    <div
+                      key={`rail-${b.type}-${i}`}
+                      className={cls}
+                      draggable
+                      onDragStart={(e) => onRailDragStart(e, i)}
+                      onDragOver={(e) => onRailDragOver(e, i)}
+                      onDrop={(e) => onRailDrop(e, i)}
+                      onDragEnd={endRailDrag}
+                      onClick={() => jumpTo(i)}
+                      role="button"
+                      aria-label={`跳到第 ${i + 1} 块`}
+                    >
+                      <div className="deic-rail__head">
+                        <span className="deic-rail__no">{i + 1}</span>
+                        {b.type === 'image' ? (
+                          <span className="deic-rail__type">图片</span>
+                        ) : b.caption ? (
+                          <Tag color="gold" className="deic-rail__type">
+                            图注
+                          </Tag>
+                        ) : (
+                          <span className="deic-rail__type">文字</span>
+                        )}
+                        <span className="deic-rail__ops">
+                          <Tooltip title="上移">
+                            <Button
+                              size="small"
+                              type="text"
+                              aria-label="上移"
+                              icon={<ArrowUpOutlined />}
+                              disabled={i === 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                move(i, -1);
+                              }}
+                            />
+                          </Tooltip>
+                          <Tooltip title="下移">
+                            <Button
+                              size="small"
+                              type="text"
+                              aria-label="下移"
+                              icon={<ArrowDownOutlined />}
+                              disabled={i === list.length - 1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                move(i, 1);
+                              }}
+                            />
+                          </Tooltip>
+                        </span>
+                      </div>
+                      {b.type === 'image' ? (
+                        <img className="deic-rail__thumb" src={b.url} alt={`第 ${i + 1} 块缩略图`} />
+                      ) : (
+                        <div className="deic-rail__txt">{textBrief(b.type === 'text' ? b.content : '') || '空文字段落'}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </aside>
+            )}
+            <div className="deic__canvas" ref={canvasRef}>
             {!list.length && (
               <div className="deic__empty">
                 <InboxOutlined />
@@ -369,7 +532,13 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
             )}
 
             {list.map((b, i) => (
-              <div key={`${b.type}-${i}`} className="deic__item">
+              <div
+                key={`${b.type}-${i}`}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
+                className={`deic__item${activeIdx === i ? ' is-active' : ''}`}
+              >
                 <div className="deic__item-bar">
                   <Space size={8}>
                     <Tag color="blue">第 {i + 1} 块</Tag>
@@ -383,26 +552,8 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                     {i === 0 && <Tag color="orange">详情页第一屏</Tag>}
                   </Space>
                   <Space size={4}>
-                    <Tooltip title="上移">
-                      <Button
-                        size="middle"
-                        type="text"
-                        aria-label="上移"
-                        icon={<ArrowUpOutlined />}
-                        disabled={i === 0}
-                        onClick={() => move(i, -1)}
-                      />
-                    </Tooltip>
-                    <Tooltip title="下移">
-                      <Button
-                        size="middle"
-                        type="text"
-                        aria-label="下移"
-                        icon={<ArrowDownOutlined />}
-                        disabled={i === list.length - 1}
-                        onClick={() => move(i, 1)}
-                      />
-                    </Tooltip>
+                    {/* D-832：上下箭头移除 —— 排序改由左侧缩略图栏拖拽完成，
+                        悬停缩略图还有小箭头兜底；画布工具条只留内容操作 */}
                     {b.type === 'image' && (
                       <Tooltip title="给这张图加说明">
                         <Button
@@ -503,6 +654,7 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                 <span className="deic__add-title">添加文字段落</span>
                 <span className="deic__add-hint">图文交错的一段说明</span>
               </div>
+            </div>
             </div>
           </div>
         </div>

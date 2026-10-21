@@ -378,3 +378,63 @@
   font-size: 12.5px;
   color: var(--color-text-tertiary);
 }
+
+/* ── D-832：左侧分区导航（点击跳转 + 滚动高亮，对齐竞品编辑器的层级感） ── */
+.shop-edit__nav {
+  flex: 0 0 148px;
+  position: sticky;
+  top: 128px;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+.shop-edit__nav-title,
+.shop-edit__nav-divider {
+  padding: 0 8px 4px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+.shop-edit__nav-divider {
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border);
+  margin-top: 6px;
+}
+.shop-edit__nav-item {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.shop-edit__nav-item:hover {
+  color: var(--color-primary);
+  background: var(--color-fill-quaternary, rgba(0, 0, 0, 0.02));
+}
+.shop-edit__nav-item.is-active {
+  color: var(--color-primary);
+  font-weight: 500;
+  background: var(--color-primary-bg, rgba(22, 119, 255, 0.08));
+}
+.shop-edit__nav-item--sub {
+  padding-left: 18px;
+  font-size: 12px;
+}
+/* 锚点滚动留白：躲开 sticky 摘要条，跳过去标题不被遮 */
+.shop-edit__block {
+  scroll-margin-top: 132px;
+}
+.shop-module-item {
+  scroll-margin-top: 148px;
+}

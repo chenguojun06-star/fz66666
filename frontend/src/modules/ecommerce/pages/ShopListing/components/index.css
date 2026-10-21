@@ -243,3 +243,102 @@
 .deic__text-actions .deic__text-hint {
   margin-bottom: 0;
 }
+
+/* ── D-832：左侧缩略图栏（对齐竞品编辑器：左缩略图 / 中画布 / 点击跳转 / 拖拽排序） ── */
+.deic__body {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.deic__rail {
+  flex: 0 0 148px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-container);
+}
+.deic-rail__item {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: grab;
+  background: var(--color-bg-container);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.deic-rail__item:hover {
+  border-color: var(--color-primary);
+}
+.deic-rail__item.is-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-bg, rgba(22, 119, 255, 0.12));
+}
+.deic-rail__item.is-dragging {
+  opacity: 0.45;
+}
+.deic-rail__item.is-drop-at {
+  border-color: var(--color-primary);
+  border-style: dashed;
+}
+.deic-rail__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 6px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-fill-tertiary, rgba(0, 0, 0, 0.02));
+  font-size: 11px;
+  line-height: 18px;
+}
+.deic-rail__no {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.deic-rail__type {
+  color: var(--color-text-secondary);
+}
+/* 悬停才完全显形的小箭头（拖拽为主，箭头兜底） */
+.deic-rail__ops {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.deic-rail__item:hover .deic-rail__ops {
+  opacity: 1;
+}
+.deic-rail__ops .ant-btn-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+.deic-rail__thumb {
+  display: block;
+  width: 100%;
+  height: 76px;
+  object-fit: cover;
+  background: var(--color-bg-subtle);
+  pointer-events: none;
+}
+.deic-rail__txt {
+  height: 76px;
+  padding: 6px 8px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text);
+  pointer-events: none;
+}
+/* 画布当前块高亮 + 锚点滚动留白 */
+.deic__item {
+  scroll-margin-top: 12px;
+}
+.deic__item.is-active {
+  border-color: var(--color-primary);
+}

@@ -34,7 +34,8 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     expect(screen.getByAltText('第 3 块的图片')).toBeTruthy();
     // 文字块必须渲染成可编辑区域，而不是被静默丢弃（D-809 起是富文本）
     expect(screen.getByRole('textbox', { name: '第 2 块文字' })).toBeTruthy();
-    expect(screen.getByText('卖点：透气')).toBeTruthy();
+    // D-832：同一文案会出现在画布与左侧缩略图栏两处，用 getAllByText 断言
+    expect(screen.getAllByText('卖点：透气').length).toBeGreaterThan(0);
   });
 
   it('统计里图与文分开计数，便于运营核对', () => {
@@ -206,6 +207,71 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     expect(screen.getByText('1 图')).toBeTruthy();
     expect(screen.getByText('2 段文字')).toBeTruthy();
     expect(screen.getByText('1 条图注')).toBeTruthy();
+  });
+});
+
+/**
+ * D-832：左侧缩略图栏 —— 竞品编辑器同款交互。
+ * 画布里的上下箭头太难用（用户原话），排序主交互改为**直接拖拽缩略图**；
+ * 点击缩略图 → 编辑区滚到对应块；编辑区滚动 → 高亮跟随。
+ */
+describe('详情描述画布 · 左侧缩略图栏（D-832）', () => {
+  it('每块都有缩略项：图片块出缩略图、文字块出文字摘要、序号递增', () => {
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
+
+    expect(screen.getByAltText('第 1 块缩略图')).toBeTruthy();
+    expect(screen.getByAltText('第 3 块缩略图')).toBeTruthy();
+    // 文字块缩略项显示去标签后的纯文本摘要
+    expect(screen.getByRole('button', { name: '跳到第 2 块' }).textContent).toContain('卖点：透气');
+  });
+
+  it('画布里不再有上下箭头按钮（排序走拖拽），箭头只在缩略图栏悬停区', () => {
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
+
+    // 3 块 → 缩略图栏恰好 3 个「上移」3 个「下移」；画布工具条不再出现箭头
+    expect(screen.getAllByRole('button', { name: '上移' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: '下移' })).toHaveLength(3);
+  });
+
+  it('点击缩略图 → 编辑区滚动到对应块（scrollIntoView 被调用）', () => {
+    const spy = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: spy,
+    });
+    try {
+      render(<DetailCanvasEditor open blocks={BLOCKS} onChange={() => {}} onClose={() => {}} />);
+      fireEvent.click(screen.getByRole('button', { name: '跳到第 3 块' }));
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it('拖拽缩略图排序：第 1 块拖到第 3 块，数组顺序真变', () => {
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
+
+    const items = screen.getAllByRole('button', { name: /跳到第 \d+ 块/ });
+    fireEvent.dragStart(items[0]);
+    fireEvent.drop(items[2]);
+
+    expect(onChange).toHaveBeenCalledWith([
+      { type: 'text', content: '卖点：透气' },
+      { type: 'image', url: 'b.jpg' },
+      { type: 'image', url: 'a.jpg' },
+    ]);
+  });
+
+  it('拖拽到原位不触发 onChange（无害冗余操作）', () => {
+    const onChange = vi.fn();
+    render(<DetailCanvasEditor open blocks={BLOCKS} onChange={onChange} onClose={() => {}} />);
+
+    const items = screen.getAllByRole('button', { name: /跳到第 \d+ 块/ });
+    fireEvent.dragStart(items[1]);
+    fireEvent.drop(items[1]);
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 

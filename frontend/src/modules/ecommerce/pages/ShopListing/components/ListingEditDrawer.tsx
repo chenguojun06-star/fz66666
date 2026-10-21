@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Space, Spin, Switch, Tag, Tooltip, Typography } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
@@ -64,8 +64,10 @@ const Section: React.FC<{
   title: React.ReactNode;
   desc?: React.ReactNode;
   children: React.ReactNode;
-}> = ({ title, desc, children }) => (
-  <section className="shop-edit__block">
+  /** D-832：锚点 id，供左侧分区导航跳转与滚动高亮 */
+  id?: string;
+}> = ({ title, desc, children, id }) => (
+  <section id={id} className="shop-edit__block">
     <h3 className="shop-edit__block-heading">
       {title}
       {desc ? (
@@ -87,6 +89,14 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; warn?: boolean }> 
     <div className={`shop-edit__stat-value${warn ? ' shop-edit__stat-value--warn' : ''}`}>{value}</div>
   </div>
 );
+
+/** D-832：左侧分区导航的 4 个主锚点（详情页内容下还有模块子锚点） */
+const NAV_SECTIONS: Array<{ id: string; label: string }> = [
+  { id: 'sec-check', label: '上架检查' },
+  { id: 'sec-cover', label: '主图' },
+  { id: 'sec-sku', label: '规格价格库存' },
+  { id: 'sec-detail', label: '详情页内容' },
+];
 
 /**
  * 店铺商品编辑抽屉（D-785：模块与内容合一）。
@@ -196,6 +206,72 @@ const ListingEditDrawer: React.FC<Props> = ({
     })();
     return () => { alive = false; };
   }, [open]);
+
+  // ── D-832：左侧分区导航（点击跳转 + 滚动高亮，与详情图画布的缩略图栏同一套交互） ──
+  const [moduleNav, setModuleNav] = useState<Array<{ key: string; title: string }>>([]);
+  const [activeSec, setActiveSec] = useState('sec-check');
+  const [activeMod, setActiveMod] = useState('');
+  const navRef = useRef<HTMLDivElement | null>(null);
+  const moduleNavRef = useRef(moduleNav);
+  useEffect(() => {
+    moduleNavRef.current = moduleNav;
+  }, [moduleNav]);
+
+  const jumpToId = (id: string) => {
+    // jsdom 未实现 scrollIntoView，可选链静默跳过
+    document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
+
+  // 滚动高亮：沿父级找真实滚动容器（.ant-drawer-body 未必是滚动者），rAF 节流比对分区位置
+  useEffect(() => {
+    if (!open) return undefined;
+    let scroller: HTMLElement | null = null;
+    let node: HTMLElement | null = navRef.current;
+    while (node) {
+      const oy = window.getComputedStyle(node).overflowY;
+      if (oy === 'auto' || oy === 'scroll') {
+        scroller = node;
+        break;
+      }
+      node = node.parentElement;
+    }
+    if (!scroller) return undefined;
+    const scrollerEl = scroller;
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const base = scrollerEl.getBoundingClientRect().top;
+      let cur = NAV_SECTIONS[0].id;
+      NAV_SECTIONS.forEach(({ id }) => {
+        // 200px：太小会让短分区点跳转后高亮仍停在前一个分区
+        const sec = document.getElementById(id);
+        if (sec && sec.getBoundingClientRect().top - base <= 200) cur = id;
+      });
+      setActiveSec(cur);
+      if (cur === 'sec-detail') {
+        let m = '';
+        moduleNavRef.current.forEach(({ key }) => {
+          const mod = document.getElementById(`shop-mod-${key}`);
+          if (mod && mod.getBoundingClientRect().top - base <= 220) m = key;
+        });
+        setActiveMod(m);
+      } else {
+        setActiveMod('');
+      }
+    };
+    const onScroll = () => {
+      if (raf) return;
+      // jsdom 可能没有 rAF，直接同步算
+      if (typeof requestAnimationFrame === 'function') raf = requestAnimationFrame(compute);
+      else compute();
+    };
+    scrollerEl.addEventListener('scroll', onScroll);
+    compute();
+    return () => {
+      scrollerEl.removeEventListener('scroll', onScroll);
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+    };
+  }, [open, moduleNav.length]);
 
   // D-800：上架前检查清单数据源。
   // 必做项全部可由本地已有状态判定，不额外发请求；阻断项复用既有体检与违禁词库
@@ -403,8 +479,37 @@ const ListingEditDrawer: React.FC<Props> = ({
               D-831：左列改用普通 flex 列（antd Space 的 item 不保证撑满），
               预览列定宽 380 —— 消除编辑区与预览之间的大片空白。 */}
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            {/* D-832：左侧分区导航 —— 点击跳到对应分区，滚动时高亮跟随，长表单一眼定位 */}
+            <nav className="shop-edit__nav" ref={navRef} aria-label="编辑页分区导航">
+              <div className="shop-edit__nav-title">页面分区</div>
+              {NAV_SECTIONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`shop-edit__nav-item${activeSec === id ? ' is-active' : ''}`}
+                  onClick={() => jumpToId(id)}
+                >
+                  {label}
+                </button>
+              ))}
+              {moduleNav.length > 0 && (
+                <>
+                  <div className="shop-edit__nav-divider">详情模块</div>
+                  {moduleNav.map(({ key, title }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`shop-edit__nav-item shop-edit__nav-item--sub${activeMod === key ? ' is-active' : ''}`}
+                      onClick={() => jumpToId(`shop-mod-${key}`)}
+                    >
+                      {title}
+                    </button>
+                  ))}
+                </>
+              )}
+            </nav>
             <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Section title="上架检查" desc="下面这些填齐了顾客才能正常看到并下单。">
+            <Section id="sec-check" title="上架检查" desc="下面这些填齐了顾客才能正常看到并下单。">
               <div className="shop-edit__form">
                 <ListingSetupChecklist
                   required={setupSteps}
@@ -416,6 +521,7 @@ const ListingEditDrawer: React.FC<Props> = ({
             </Section>
 
             <Section
+              id="sec-cover"
               title="主图"
               desc="店铺列表卡片和详情页兜底大图都用它。各颜色的大图在下面「详情页内容 → 颜色选择」里配。图片不做上传限制：合规体检只是提示，不会拦住上传，也不会阻止上架。"
             >
@@ -434,6 +540,7 @@ const ListingEditDrawer: React.FC<Props> = ({
             </Section>
 
             <Section
+              id="sec-sku"
               title="规格、价格与库存"
               desc="这里调整 SKU 的售价与可售数量，不走出入库台账。库存变动请走「仓库 → 入库 / 出库」。"
             >
@@ -443,11 +550,12 @@ const ListingEditDrawer: React.FC<Props> = ({
             </Section>
 
             <Section
+              id="sec-detail"
               title="详情页内容"
               desc="开关、顺序、内容都在这一块里。顾客端详情页按这里的顺序从上到下展示；勾选＝显示，点开关即时生效。没有内容的模块会自动跳过，所以留空也不会出现空白标题。"
             >
               <div className="shop-edit__form">
-                <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
+                <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} onModules={setModuleNav} />
               </div>
             </Section>
             </div>
