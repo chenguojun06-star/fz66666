@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import {
   blocksToPages,
   buildSizeTableData,
@@ -16,6 +16,9 @@ import type { DetailBlock } from '../../modules/ecommerce/pages/ShopListing/type
 vi.mock('@/utils/antdStatic', () => ({
   message: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
+
+const apiPost = vi.hoisted(() => vi.fn(async () => ({ code: 200, data: 'http://uploaded/x.png' })));
+vi.mock('@/utils/api', () => ({ default: { post: apiPost } }));
 
 describe('D-835 映射层：旧 blocks ↔ 页面模型', () => {
   it('htmlToPlain：块级标签转换行、压空白、去标签', () => {
@@ -157,5 +160,35 @@ describe('D-835 编辑器冒烟：布局与交互入口', () => {
     fireEvent.mouseDown(bg);
     expect(await screen.findByText('批量应用到全部页面')).toBeTruthy();
     expect(screen.getByRole('button', { name: '替换图片' })).toBeTruthy();
+  });
+
+  it('D-836 批量导入三方式：拖拽 2 张图到页面列表 → 按顺序各成一页', async () => {
+    renderEditor([{ type: 'image', url: 'http://x/1.jpg' }, { type: 'image', url: 'http://x/2.jpg' }]);
+    const zone = document.querySelector('.dpe-left__pages') as HTMLElement;
+    const mk = (n: string) => new File(['x'], n, { type: 'image/png' });
+    fireEvent.drop(zone, { dataTransfer: { files: [mk('a.png'), mk('b.png')], types: ['Files'] } });
+    await waitFor(() => expect(document.querySelectorAll('.dpe-left__page')).toHaveLength(4));
+    expect(apiPost).toHaveBeenCalledTimes(2);
+    // 顺序稳定：先选的 a 在前（缩略图 img src 按上传返回顺序）
+    const thumbs = Array.from(document.querySelectorAll('.dpe-left__page img'));
+    expect(thumbs[2].getAttribute('src')).toContain('http://uploaded/x.png');
+  });
+
+  it('D-836 批量导入三方式：Ctrl+V 粘贴图片成页；焦点在文本框时让位不抢', async () => {
+    renderEditor([]);
+    const paste = (target: EventTarget | null, files: File[]) => {
+      const ev = Object.assign(new Event('paste', { bubbles: true }), { clipboardData: { files } });
+      (target ?? window).dispatchEvent(ev);
+    };
+    // 焦点在文本输入框：粘贴不抢（不产生新页）
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    paste(input, [new File(['x'], 'c.png', { type: 'image/png' })]);
+    expect(document.querySelectorAll('.dpe-left__page')).toHaveLength(0);
+    // 焦点不在输入框：粘贴截图直接成页
+    paste(window, [new File(['x'], 'c.png', { type: 'image/png' })]);
+    await waitFor(() => expect(document.querySelectorAll('.dpe-left__page')).toHaveLength(1));
+    input.remove();
   });
 });

@@ -99,6 +99,22 @@ const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
     if (urls.length) onAddPages(urls);
   };
 
+  /* ③ 粘贴方式：编辑器打开期间，剪贴板里的图片（截图/复制的图）直接批量成页。
+        焦点在输入框/富文本里时让位给正常文本粘贴，不抢。 */
+  const [dropActive, setDropActive] = React.useState(false);
+  React.useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+      if (!imgs.length) return;
+      e.preventDefault();
+      void doUpload(imgs);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [doUpload]);
+
   return (
     <div className="dpe-left">
       <div className="dpe-left__tabs" role="tablist" aria-label="添加元素">
@@ -206,10 +222,32 @@ const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
         )}
       </div>
 
-      <div className="dpe-left__pages">
+      {/* D-836：页面导入区对齐通用上传三方式（ImageUploadBox 的 enableDrop 模式）——
+          ① 点击「批量加图」选文件；② 直接把图片拖到这里；③ Ctrl+V 粘贴截图/复制的图。
+          拖拽/粘贴都走同一个 doUpload(files)，一次多张按顺序各成一页。 */}
+      <div
+        className={`dpe-left__pages${dropActive ? ' is-dragover' : ''}`}
+        onDragOver={(e) => {
+          if (uploading || !Array.from(e.dataTransfer.types).includes('Files')) return;
+          e.preventDefault();
+          setDropActive(true);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          setDropActive(false);
+        }}
+        onDrop={(e) => {
+          setDropActive(false);
+          if (uploading) return;
+          const fs = Array.from(e.dataTransfer.files ?? []);
+          if (!fs.length) return;
+          e.preventDefault();
+          void doUpload(fs);
+        }}
+      >
         <div className="dpe-left__sec-title dpe-left__sec-title--row">
           <span>页面（{pages.length}/{MAX_PAGES}）</span>
-          {/* D-836：批量导入入口 —— multiple 一次多选，选完按顺序批量成页；上传中可中断重复点击 */}
+          {/* ① 点击方式：multiple 一次多选，选完按顺序批量成页；上传中可中断重复点击 */}
           <input
             ref={fileInputRef}
             type="file"
@@ -247,6 +285,9 @@ const EditorLeftPanel: React.FC<EditorLeftPanelProps> = ({
               </span>
             </div>
           ))}
+        </div>
+        <div className="dpe-left__drop-hint">
+          点击「批量加图」、把图片<b>拖到这里</b>、或 <b>Ctrl+V 粘贴</b>截图，均可一次导入多张
         </div>
       </div>
     </div>

@@ -159,6 +159,19 @@
   border-top: 1px solid var(--color-border, #d9d9d9);
   min-height: 0;
 }
+/* D-836：拖拽导入高亮（对齐 ImageUploadBox 的拖拽上传体验） */
+.dpe-left__pages.is-dragover {
+  outline: 2px dashed var(--color-primary, #1677ff);
+  outline-offset: -2px;
+  background: var(--color-primary-bg, rgba(22, 119, 255, 0.06));
+}
+.dpe-left__drop-hint {
+  flex: none;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, rgba(0, 0, 0, 0.45));
+}
 .dpe-left__page-list {
   flex: 1;
   overflow: auto;
