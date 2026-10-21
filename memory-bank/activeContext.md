@@ -904,6 +904,7 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 - [x] **关键踩坑 ×3**：① 画布块 onClick 加 `guard 防重复滚动`；② **jumpTo 必须 rAF 延迟**——添加新块后 `itemRefs.current[i]` 在 React 提交前是 undefined，scrollIntoView 静默跳过，且 list.length 变化触发的 scroll spy 重算会把裸 setActiveIdx 覆盖回视口顶部块（浏览器实测发现：上传图片后面板没切到新块），rAF 推迟到提交后选中+滚动才正确；③ **antd 图标按钮 aria-label 必须**——icon+text 按钮可访问名是「eye查看大图」拼接，测试 `name:'查看大图'` 找不到，旧版画布按钮本就带 aria-label，新面板按钮漏了补齐
 - [x] **测试**：26/26 全过（改 4 个受影响用例：操作按钮需先选中块再断言；新增 rail X 删除/替换图片入口/面板空态/画布点选同步 4 个用例）；tsc 0 错（test-runner-mcp 未挂载按 P0 #23 降级）；浏览器全链路实测（模板插入 → 图片上传自动选中新块面板切「图片操作」→ rail 点选切换面板 → X 删除）；测试误操作上架的 2 个本地款已下架恢复
 - [x] **jsdom 测试技巧**：SideDrawer portal 渲染在 body，rail 查询用 `document.body.querySelector` 而非 render container；noop onChange 下列表不会真变短，第二次删除前要按原列表选中
+- [x] **推后修正（同日）**：① rAF 延迟最初加在 `jumpTo` 内部，把 rail 点选的同步语义也破坏了（4 个用例单跑即红；当时 `tail -3` 截断了测试计数行导致误判已过）——拆成 `jumpTo`（同步，rail/画布点选）+ `goToNewBlock`（rAF 包一层，仅 4 个添加流用），vitest jsdom 默认 pretendToBeVisual=true、rAF 是存在的，别信「jsdom 没有 rAF」的旧假设；② 收银台白屏测试 4 个存量失败（9ac8a6c99 全屏改造引入 useNavigate 但测试没包 Router）——`posTerminalWhiteScreen.test.tsx` 渲染包 `MemoryRouter` 修复，全量 834/834 绿
 
 ### 2026-10-21 修复店铺商品局部保存 400「请输入款号」（D-833：校验顺序 bug + 品牌示例文案）
 

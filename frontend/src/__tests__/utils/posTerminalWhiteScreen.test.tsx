@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import PosTerminal from '../../modules/pos/pages/PosTerminal';
 
 /**
@@ -57,20 +58,41 @@ describe('收银台白屏复现（D-817）', () => {
   });
 
   it('首屏（收银分区）必须能渲染出来', async () => {
-    render(<PosTerminal />);
+    // D-834 后收银台改独立全屏设计，「返回后台」用了 useNavigate ——
+    // 测试必须包 Router 上下文，否则整页渲染即抛
+    // 「useNavigate() may be used only in the context of a <Router>」
+    render(
+      <MemoryRouter>
+        <PosTerminal />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(screen.getByText(/今日单据/)).toBeTruthy());
     expect(screen.getByText('交接班')).toBeTruthy();
   });
 
   it('切到「挂单」分区不能崩', async () => {
-    render(<PosTerminal />);
+    // D-834 后收银台改独立全屏设计，「返回后台」用了 useNavigate ——
+    // 测试必须包 Router 上下文，否则整页渲染即抛
+    // 「useNavigate() may be used only in the context of a <Router>」
+    render(
+      <MemoryRouter>
+        <PosTerminal />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(screen.getByText(/今日单据/)).toBeTruthy());
     fireEvent.click(screen.getByText('挂单'));
     await waitFor(() => expect(screen.getByText('挂单号')).toBeTruthy());
   });
 
   it('切到「交接班」分区不能崩', async () => {
-    render(<PosTerminal />);
+    // D-834 后收银台改独立全屏设计，「返回后台」用了 useNavigate ——
+    // 测试必须包 Router 上下文，否则整页渲染即抛
+    // 「useNavigate() may be used only in the context of a <Router>」
+    render(
+      <MemoryRouter>
+        <PosTerminal />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(screen.getByText(/今日单据/)).toBeTruthy());
     fireEvent.click(screen.getByText('交接班'));
     await waitFor(() => expect(screen.getByText('钱箱只统计现金')).toBeTruthy());
@@ -83,7 +105,14 @@ describe('收银台白屏复现（D-817）', () => {
   it('列表接口返回非数组时也不能白屏（Table 收到对象会直接炸）', async () => {
     mockApi.holds.mockResolvedValue({ items: [] }); // 后端一旦改了返回结构就会这样
     mockApi.shifts.mockResolvedValue({ items: [] });
-    render(<PosTerminal />);
+    // D-834 后收银台改独立全屏设计，「返回后台」用了 useNavigate ——
+    // 测试必须包 Router 上下文，否则整页渲染即抛
+    // 「useNavigate() may be used only in the context of a <Router>」
+    render(
+      <MemoryRouter>
+        <PosTerminal />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(screen.getByText(/今日单据/)).toBeTruthy());
 
     fireEvent.click(screen.getByText('挂单'));

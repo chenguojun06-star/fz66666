@@ -155,19 +155,24 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
   const txtCount = list.length - imgCount;
   const captionCount = list.filter((b) => b.type === 'text' && b.caption).length;
 
-  /** D-832/D-834：选中某块并让编辑区平滑滚到对应位置。
-   *  添加新块后也走这里 —— list.length 变化会触发滚动高亮重算，裸 setActiveIdx
-   *  会被重算覆盖回视口顶部块；且新块刚入列时 itemRefs 还没提交，必须 rAF 推迟到
-   *  React 提交后再选中 + 滚动，滚动高亮才会落到目标块。 */
+  /** D-832：选中某块并让编辑区平滑滚到对应位置（rail 点选 / 画布点选，同步生效） */
   const jumpTo = useCallback((i: number) => {
-    const go = () => {
-      setActiveIdx(i);
-      // jsdom 未实现 scrollIntoView，可选链静默跳过；测试里可 mock 后断言
-      itemRefs.current[i]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    };
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
-    else go();
+    setActiveIdx(i);
+    // jsdom 未实现 scrollIntoView，可选链静默跳过；测试里可 mock 后断言
+    itemRefs.current[i]?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }, []);
+
+  /** D-834：添加新块后的选中跳转 —— 只在这里延迟。
+   *  新块刚入列时 itemRefs 还没提交（React 未渲染新块，scrollIntoView 拿不到目标），
+   *  且 list.length 变化会触发滚动高亮重算、把裸 setActiveIdx 覆盖回视口顶部块；
+   *  rAF 推迟到提交后再选中 + 滚动，高亮才会落到新块。rail 点选不走这里（同步）。 */
+  const goToNewBlock = useCallback(
+    (idx: number) => {
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => jumpTo(idx));
+      else jumpTo(idx);
+    },
+    [jumpTo],
+  );
 
   /** 只提示不拦截：传满 20 块才被拦等于让运营白传一遍（D-778 既定约定） */
   const checkSize = useCallback(async (file: File) => {
@@ -224,22 +229,20 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
         }
         if (added.length) {
           onChange([...list, ...added]);
-          // 用 jumpTo 而不是裸 setActiveIdx：list.length 变化会触发滚动高亮重算，
-          // 裸设选中会被重算覆盖回视口顶部块；jumpTo 同时滚动画布到新块，高亮自然落到目标
-          jumpTo(list.length);
+          goToNewBlock(list.length);
         }
       } catch (e: unknown) {
         // 已成功的部分照常保留：整批回滚等于让运营重传
         if (added.length) {
           onChange([...list, ...added]);
-          jumpTo(list.length);
+          goToNewBlock(list.length);
         }
         message.error(e instanceof Error ? e.message : '上传失败');
       } finally {
         setUploading(false);
       }
     },
-    [remain, list, onChange, checkSize, jumpTo],
+    [remain, list, onChange, checkSize, goToNewBlock],
   );
 
   const move = useCallback(
@@ -343,9 +346,9 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
       const next = [...list];
       next.splice(index + 1, 0, { type: 'text', content: '', caption: true });
       onChange(next);
-      jumpTo(index + 1);
+      goToNewBlock(index + 1);
     },
-    [remain, list, onChange, jumpTo],
+    [remain, list, onChange, goToNewBlock],
   );
 
   const toggleCaption = useCallback(
@@ -396,8 +399,8 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
       return;
     }
     onChange([...list, { type: 'text', content: '' }]);
-    jumpTo(list.length);
-  }, [remain, list, onChange, jumpTo]);
+    goToNewBlock(list.length);
+  }, [remain, list, onChange, goToNewBlock]);
 
   /** D-831：插入专业文案模板段落（插入后仍可自由编辑） */
   const insertTemplate = useCallback(
@@ -409,10 +412,10 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
         return;
       }
       onChange([...list, { type: 'text', content: tpl.html }]);
-      jumpTo(list.length);
+      goToNewBlock(list.length);
       message.success(`已插入「${tpl.label}」模板，内容可直接修改`);
     },
-    [remain, list, onChange, jumpTo],
+    [remain, list, onChange, goToNewBlock],
   );
 
   const templateMenu: MenuProps = {
