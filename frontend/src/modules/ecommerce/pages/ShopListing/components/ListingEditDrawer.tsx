@@ -399,10 +399,11 @@ const ListingEditDrawer: React.FC<Props> = ({
 
           {/* D-800：左编辑 / 右预览 分栏。
               预览直接 iframe 线上真实门店页，保证「预览即线上」，
-              不另写一套渲染器（否则会出现预览好看、上线不一样）。 */}
+              不另写一套渲染器（否则会出现预览好看、上线不一样）。
+              D-831：左列改用普通 flex 列（antd Space 的 item 不保证撑满），
+              预览列定宽 380 —— 消除编辑区与预览之间的大片空白。 */}
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-          <Space direction="vertical" size={14} style={{ width: '100%' }}>
+            <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="上架检查" desc="下面这些填齐了顾客才能正常看到并下单。">
               <div className="shop-edit__form">
                 <ListingSetupChecklist
@@ -449,16 +450,14 @@ const ListingEditDrawer: React.FC<Props> = ({
                 <DetailModuleEditor styleId={row?.id ?? null} ctx={ctx} />
               </div>
             </Section>
-            </Space>
             </div>
 
             {/* 右侧：顾客端实时预览（窄屏时自动落到下方） */}
             <div
               style={{
-                flex: '0 0 auto',
+                flex: '0 0 380px',
                 position: 'sticky',
                 top: 8,
-                maxWidth: 420,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
@@ -468,6 +467,8 @@ const ListingEditDrawer: React.FC<Props> = ({
                 slug={shopSlug}
                 styleId={row?.id ?? null}
                 refreshKey={previewKey}
+                width={352}
+                height={640}
               />
             </div>
           </div>

@@ -92,7 +92,13 @@ const SizeChartEditor: React.FC<SizeChartEditorProps> = ({ value, sizes, onChang
       setRows(nextRows);
       // 全空视为「不手工覆盖」→ 交回自动生成的 SKU 矩阵
       const hasValue = nextRows.some((r) => r.slice(1).some((c) => c.trim()));
-      onChange(hasValue ? JSON.stringify({ cols: nextCols, rows: nextRows }) : null);
+      const next = hasValue ? JSON.stringify({ cols: nextCols, rows: nextRows }) : null;
+      // D-831：把本次发出的值记为「已装载」—— onChange 回传同一个值时
+      // effect 不得重新装载，否则刚加的量体项列会被重置回默认
+      // （点 +胸围 → 全空触发 onChange(null) → 父组件回传 null → effect 把列冲掉，
+      //  用户表现为「不能添加部位」）。
+      loadedRef.current = next ?? '';
+      onChange(next);
     },
     [onChange],
   );

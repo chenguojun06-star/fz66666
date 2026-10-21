@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import DetailCanvasEditor from '../../modules/ecommerce/pages/ShopListing/components/DetailCanvasEditor';
 import type { DetailBlock } from '../../modules/ecommerce/pages/ShopListing/types';
 
@@ -205,5 +206,40 @@ describe('详情描述画布 · 图文交错（D-808）', () => {
     expect(screen.getByText('1 图')).toBeTruthy();
     expect(screen.getByText('2 段文字')).toBeTruthy();
     expect(screen.getByText('1 条图注')).toBeTruthy();
+  });
+});
+
+/**
+ * D-831 回归：从空白详情开始，「添加文字段落」要真的出现可编辑区。
+ *
+ * 根因：渲染列表曾把「没有内容的文字块」过滤掉 —— 点添加确实追加了空块，
+ * 但它被过滤器吞掉、界面上永远不出现，看起来就是「点了没反应」。
+ * 必须用**带状态的宿主**做渲染级断言（只断 onChange 被调用抓不到这个 bug）。
+ */
+describe('详情描述画布 · 添加文字段落真实可见（D-831）', () => {
+  const Host: React.FC = () => {
+    const [blocks, setBlocks] = useState<DetailBlock[]>([]);
+    return <DetailCanvasEditor open blocks={blocks} onChange={setBlocks} onClose={() => {}} />;
+  };
+
+  it('空白详情：点「添加文字段落」→ 立即出现可编辑的文字块', () => {
+    render(<Host />);
+    fireEvent.click(screen.getAllByRole('button', { name: /添加文字段落/ })[0]);
+    expect(screen.getByRole('textbox', { name: '第 1 块文字' })).toBeTruthy();
+  });
+
+  it('空白详情：点模板按钮「核心卖点」→ 插入的模板文案可见可编辑', () => {
+    render(<Host />);
+    fireEvent.click(screen.getByRole('button', { name: '核心卖点' }));
+    const box = screen.getByRole('textbox', { name: '第 1 块文字' });
+    expect(box.innerHTML).toContain('为什么值得入手');
+  });
+
+  it('工具条「插入文案模板」下拉可用，选中后插入对应段落', async () => {
+    render(<Host />);
+    fireEvent.click(screen.getByRole('button', { name: /插入文案模板/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '洗涤与保养' }, { timeout: 5000 }));
+    const box = await screen.findByRole('textbox', { name: '第 1 块文字' }, { timeout: 5000 });
+    expect(box.innerHTML).toContain('洗涤与保养');
   });
 });

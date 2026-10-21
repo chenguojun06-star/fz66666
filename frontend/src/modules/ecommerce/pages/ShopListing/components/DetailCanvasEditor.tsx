@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
+  Dropdown,
   Popconfirm,
-  Select,
   Space,
   Switch,
   Tag,
@@ -11,17 +11,19 @@ import {
   Upload,
   message,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   DeleteOutlined,
   EyeOutlined,
+  FileTextOutlined,
   FontSizeOutlined,
   InboxOutlined,
   PictureOutlined,
   CommentOutlined,
 } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import api from '@/utils/api';
 import RichTextField from './RichTextField';
 import type { DetailBlock } from '../types';
@@ -45,6 +47,73 @@ const MAX_W = 1242;
 const MAX_H = 1546;
 
 /**
+ * D-831：专业详情文案模板。
+ *
+ * <p><b>为什么内置模板</b>：绝大多数中小商家写不出详情文案，
+ * 对着空编辑框只能上传几张图了事（线上 11 个已上架款 9 个详情近空白，D-813 已证实）。
+ * 模板按服装详情页的行业惯例分段（卖点 → 面料工艺 → 版型尺码 → 模特参考 →
+ * 洗涤保养 → 发货售后），一键插入的是**可直接上线的内容**，
+ * 商家在其基础上改成自己的卖点即可，比「教他怎么写」现实得多。
+ *
+ * <p><b>只用白名单标签</b>：p/strong/ul/li —— 顾客端 richHtml 白名单
+ * （p/div/span/strong/em/b/i/u/ul/ol/li/h1–h6/br/img）能原样渲染，
+ * 服务端清洗后不会丢内容。
+ */
+const TEXT_TEMPLATES: Array<{ key: string; label: string; html: string }> = [
+  {
+    key: 'points',
+    label: '核心卖点',
+    html:
+      '<p><strong>为什么值得入手</strong></p>' +
+      '<ul>' +
+      '<li>面料亲肤透气，上身轻盈不闷热</li>' +
+      '<li>版型修身不紧绷，遮肉显瘦显气质</li>' +
+      '<li>经典百搭款，通勤、约会、日常都能穿</li>' +
+      '</ul>',
+  },
+  {
+    key: 'fabric',
+    label: '面料与工艺',
+    html:
+      '<p><strong>面料与工艺</strong></p>' +
+      '<p>精选高支面料，手感细腻、垂顺有光泽；走线平整细密，里衬收边干净利落，细节经得起细看。</p>',
+  },
+  {
+    key: 'size',
+    label: '版型与尺码建议',
+    html:
+      '<p><strong>版型与尺码建议</strong></p>' +
+      '<p>正常体型按平时尺码拿即可，喜欢宽松感建议拍大一码；拿不准可对照下方尺码表量一下，或联系客服帮您推荐。</p>',
+  },
+  {
+    key: 'model',
+    label: '模特实拍参考',
+    html:
+      '<p><strong>模特实拍参考</strong></p>' +
+      '<p>模特身高 168cm / 体重 50kg，试穿尺码 M，上身效果如图，供您参考。</p>',
+  },
+  {
+    key: 'wash',
+    label: '洗涤与保养',
+    html:
+      '<p><strong>洗涤与保养</strong></p>' +
+      '<ul>' +
+      '<li>建议 30℃ 以下水温单独手洗</li>' +
+      '<li>不可漂白，中性洗涤剂效果更好</li>' +
+      '<li>阴凉处平铺晾干，避免暴晒</li>' +
+      '<li>深浅色分开存放，避免串色</li>' +
+      '</ul>',
+  },
+  {
+    key: 'service',
+    label: '发货与售后',
+    html:
+      '<p><strong>发货与售后</strong></p>' +
+      '<p>付款后 48 小时内发货；支持 7 天无理由退换（不影响二次销售），质量问题运费全免，请放心购买。</p>',
+  },
+];
+
+/**
  * D-808：详情描述画布（图 + 文交错）。
  *
  * <p><b>形态</b>：淘宝/拼多多的详情不是「一串图」也不是「图 + 一段文字」，
@@ -54,13 +123,20 @@ const MAX_H = 1546;
  * <p><b>为什么按「块」而不是按「图」计上限</b>：平台的限制对象是「描述模块」，
  * 不是图片数量。按图算会导致「20 张图 + 5 段文字」这种实际超限的组合被放行，
  * 上架时平台才拒，而系统这边毫无提示。
+ *
+ * <p><b>D-831 修复「添加文字段落没反应」</b>：此前渲染列表把**没有内容的文字块**
+ * 过滤掉了 —— 点「添加文字段落」确实追加了空块，但它被过滤器吞掉、界面上永远
+ * 不出现，看起来就是「点了没反应」。文字块（含空块）现在一律渲染成可编辑区，
+ * 图片块仍然过滤掉没有 url 的坏数据。空文字块在顾客端本来就会被跳过
+ * （C 端渲染时 `blk.content` 为空不输出），所以放开渲染没有副作用。
  */
 const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, onChange, onClose }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
+  // 只剔除没有 url 的图片坏数据；文字块无论有没有内容都保留（否则新建的空段落不可见）
   const list = useMemo(
-    () => blocks.filter((b) => (b.type === 'image' ? !!b.url : !!(b as { content?: string }).content)),
+    () => blocks.filter((b) => (b.type === 'image' ? !!b.url : true)),
     [blocks],
   );
   const full = list.length >= MAX_BLOCKS;
@@ -185,6 +261,26 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
     onChange([...list, { type: 'text', content: '' }]);
   }, [remain, list, onChange]);
 
+  /** D-831：插入专业文案模板段落（插入后仍可自由编辑） */
+  const insertTemplate = useCallback(
+    (key: string) => {
+      const tpl = TEXT_TEMPLATES.find((t) => t.key === key);
+      if (!tpl) return;
+      if (remain <= 0) {
+        message.warning(`详情描述最多 ${MAX_BLOCKS} 个内容块，已达上限`);
+        return;
+      }
+      onChange([...list, { type: 'text', content: tpl.html }]);
+      message.success(`已插入「${tpl.label}」模板，内容可直接修改`);
+    },
+    [remain, list, onChange],
+  );
+
+  const templateMenu: MenuProps = {
+    items: TEXT_TEMPLATES.map((t) => ({ key: t.key, label: t.label })),
+    onClick: ({ key }) => insertTemplate(key),
+  };
+
   const updateText = useCallback(
     (index: number, content: string) => {
       const next = [...list];
@@ -198,27 +294,29 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
 
   return (
     <>
-      <ResizableModal
+      <SideDrawer
         open={open}
+        onClose={onClose}
         title="详情描述（PC 端 / 手机端同一份内容）"
-        onCancel={onClose}
-        footer={null}
-        width="92vw"
-        contentPadding={0}
-        destroyOnClose
+        width="85%"
+        footerExtra={
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            图和文字按你排的顺序从上到下连成一条（淘宝详情页的形态）。PC 端与手机端用同一份内容。
+          </Text>
+        }
       >
-        <div className="deic">
+        <div className="deic" style={{ flex: 1, minHeight: 0 }}>
           <div className="deic__bar">
             <Space size={16} wrap>
               <Space size={8}>
-                <Text className="deic__bar-label">页面模板</Text>
-                {/* 只列真实存在的模板：编造「简约版/大促版」这类后端没有的选项，
-                    选了却存不下去是纯骗人 */}
-                <Select
-                  defaultValue="default"
-                  style={{ width: 184 }}
-                  options={[{ value: 'default', label: '默认宝贝详情页' }]}
-                />
+                {/* D-831：原来这里是只有一个假选项的「页面模板」下拉（选了也存不下去）。
+                    换成真正有用的专业文案模板：一键插入服装详情页惯用段落。 */}
+                <Dropdown trigger={['click']} menu={templateMenu} disabled={full}>
+                  <Button icon={<FileTextOutlined />}>插入文案模板</Button>
+                </Dropdown>
+                <Text type="secondary" className="deic__spec">
+                  卖点 / 面料工艺 / 尺码建议 / 洗涤保养等，一键插入后可改
+                </Text>
               </Space>
               <Tag color={full ? 'error' : 'default'}>
                 {list.length} / {MAX_BLOCKS} 块
@@ -258,7 +356,15 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                 <div className="deic__empty-hint">
                   按「卖点图 → 一段话 → 细节图 → 一段话」的顺序往下排。
                   顾客在详情页一路往下滑就看完，中间不会有区块标题把内容切开。
+                  不知道写什么，点上方「插入文案模板」或下面的模板按钮，一键生成专业文案再改。
                 </div>
+                <Space size={8} wrap style={{ marginTop: 16, justifyContent: 'center' }}>
+                  {TEXT_TEMPLATES.map((t) => (
+                    <Button key={t.key} size="small" onClick={() => insertTemplate(t.key)}>
+                      {t.label}
+                    </Button>
+                  ))}
+                </Space>
               </div>
             )}
 
@@ -371,8 +477,11 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
                 multiple
                 accept="image/png,image/jpeg"
                 showUploadList={false}
-                beforeUpload={(_f, fileList) => {
-                  uploadFiles(fileList as unknown as File[]);
+                beforeUpload={(file, fileList) => {
+                  // antd 对批量选择会逐个调 beforeUpload，只在首个文件时整批处理，避免重复上传
+                  if (fileList.indexOf(file) === 0) {
+                    uploadFiles(fileList as unknown as File[]);
+                  }
                   return false;
                 }}
                 disabled={uploading || full}
@@ -397,7 +506,7 @@ const DetailCanvasEditor: React.FC<DetailCanvasEditorProps> = ({ open, blocks, o
             </div>
           </div>
         </div>
-      </ResizableModal>
+      </SideDrawer>
 
       {preview && (
         <div className="deic__viewer" onClick={() => setPreview(null)}>

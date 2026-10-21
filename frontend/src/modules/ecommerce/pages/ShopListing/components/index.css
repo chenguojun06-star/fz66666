@@ -4,8 +4,9 @@
 .deic {
   display: flex;
   flex-direction: column;
-  /* 画布本身要能一路往下排，所以头部固定、主体滚动 */
-  max-height: calc(100vh - 220px);
+  /* D-831：Modal 改为 85% 通用侧滑抽屉后，抽屉 body 本身是 flex 列容器，
+     组件用 flex:1 填满即可；max-height 仅作兜底防溢出。 */
+  max-height: calc(100vh - 140px);
 }
 
 /* ── 工具条 ── */
