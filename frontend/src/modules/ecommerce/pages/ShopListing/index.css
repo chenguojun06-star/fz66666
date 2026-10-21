@@ -146,9 +146,11 @@
   color: var(--color-text-primary);
 }
 
+/* D-831：款号是重点文字（对款、Excel 粘贴都靠它），不做灰字 */
 .shop-edit__summary-no {
-  font-size: 12px;
-  color: var(--color-text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
 }
 
 .shop-edit__summary-stats {

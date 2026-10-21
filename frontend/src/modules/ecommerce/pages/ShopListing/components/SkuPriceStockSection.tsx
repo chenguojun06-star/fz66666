@@ -97,7 +97,8 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
       title: 'SKU编码',
       dataIndex: 'skuCode',
       width: 190,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v || '—'}</Text>,
+      // D-831：SKU 编码是重点文字（Excel 粘贴/对款靠它），用正常主文字色，不做灰字
+      render: (v: string) => <Text style={{ fontSize: 12 }}>{v || '—'}</Text>,
     },
     {
       title: '售价（¥）',
