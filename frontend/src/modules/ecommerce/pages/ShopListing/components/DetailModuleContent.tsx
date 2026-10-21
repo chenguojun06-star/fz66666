@@ -4,7 +4,7 @@ import {
   DeleteOutlined, LeftOutlined, PictureOutlined, PlusOutlined, RightOutlined, StarFilled,
 } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
-import DetailCanvasEditor from './DetailCanvasEditor';
+import DetailPageEditor from './detail-page-editor/DetailPageEditor';
 import SizeChartEditor from './SizeChartEditor';
 import api from '@/utils/api';
 import type { DetailBlock, ListingContent } from '../types';
@@ -64,7 +64,6 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   // D-808：纵向详情流只看 blocks，与 gallery（顶部轮播回落）**各管一件事**。
   // 不从 gallery 派生 —— 派生会让运营改详情流时把轮播图也一起搬走。
   const blocks: DetailBlock[] = content.blocks ?? [];
-  const blockCount = blocks.length;
 
   const moveImage = (idx: number, dir: -1 | 1) => {
     const next = [...content.gallery];
@@ -148,20 +147,24 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         )}
       </div>
 
-      {/* D-803：整条详情图画布。挂在根节点内，避免被外层容器的 overflow 裁掉。
-          92px 小方块看不出「从上到下」的整体顺序，那是运营最需要看的一件事。 */}
+      {/* D-803/D-835：详情长图逐页编辑器。挂在根节点内避免被外层 overflow 裁掉；
+          D-835 起对齐竞品「批量编辑图片」：每张图一个页面，文字/尺码表/形状以覆盖元素编辑，
+          保存时烘焙成最终图片。 */}
       <div className="shop-listing__detail-canvas-entry">
         <Button type="primary" size="middle" icon={<PictureOutlined />} onClick={() => setCanvasOpen(true)}>
-          编辑详情长图（图 + 文，{blockCount} 块）
+          编辑详情长图（图文编辑器）
         </Button>
         <Text type="secondary" className="shop-listing__hint">
-          图和文字按你排的顺序从上到下连成一条（淘宝详情页的形态）。PC 端与手机端用同一份内容。
+          像做图工具一样逐页编辑：每张详情图一个页面，可添加文字、尺码表、形状并自由排版，
+          保存时自动合成进图片。PC 端与手机端用同一份内容。
         </Text>
       </div>
 
-      <DetailCanvasEditor
+      <DetailPageEditor
         open={canvasOpen}
         blocks={blocks}
+        sizeChart={content.sizeChart ?? null}
+        sizes={ctx.sizes}
         onChange={(next) => patch({ blocks: next })}
         onClose={() => setCanvasOpen(false)}
       />

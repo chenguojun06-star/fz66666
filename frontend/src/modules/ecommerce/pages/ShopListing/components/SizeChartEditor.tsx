@@ -233,7 +233,7 @@ const SizeChartEditor: React.FC<SizeChartEditorProps> = ({ value, sizes, onChang
         )}
       </Space>
 
-      <Text type="secondary" className="deic__spec" style={{ display: 'block', marginTop: 8 }}>
+      <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
         留空则不手工覆盖，顾客端按 SKU 的颜色 × 尺码矩阵自动生成。
       </Text>
     </div>
