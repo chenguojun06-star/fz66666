@@ -324,6 +324,53 @@ class ShopPlatformSchemaGuardTest {
                 .contains("row.put(\"categoryName\"");
     }
 
+    /**
+     * D-836 扫码通：一个货一个码、一处打印处处能扫的结构守护。
+     *
+     * <p>闭环口径：机读码（t_product_sku.barcode）= 纯 ASCII 的 SKU 唯一码
+     * （SKU+主键补位）。合格证/吊牌 CODE128 打它，收银台 searchSkus 的
+     * LIKE/exactMatch、仓库扫码出入库都认它；skuCode（含中文）只做人读。
+     */
+    @Test
+    @DisplayName("⑱ 扫码通：机读码必须纯 ASCII 且全场一个真相源")
+    void scanBarcodeMustBeUnified() throws Exception {
+        String skuSvc = read("style/service/impl/ProductSkuServiceImpl.java");
+        assertThat(skuSvc)
+                .as("机读码必须是纯 ASCII 规则（CODE128 一维条码只能编 ASCII，skuCode 含中文颜色）")
+                .contains(" + String.format(\"%06d\", id)");
+        assertThat(skuSvc)
+                .as("更新路径不允许再裸写 setBarcode(skuUpdate.getBarcode()) —— 那会把已有值抹成 NULL（存量红根因）")
+                .doesNotContain("existing.setBarcode(skuUpdate.getBarcode())");
+        assertThat(skuSvc)
+                .as("显式填了 barcode 的商家值必须被尊重（不覆盖商家自编码）")
+                .contains("StringUtils.hasText(explicitBarcode)");
+
+        // 存量回填迁移必须存在且幂等
+        String migration = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/db/migration/V202710210003__backfill_sku_barcode.sql"));
+        assertThat(migration)
+                .as("存量回填：只补空值，幂等可重跑")
+                .contains("WHERE barcode IS NULL OR barcode = ''")
+                .contains("CONCAT('SKU', LPAD(id, 6, '0'))");
+
+        // 收银台搜索：机读码必须进 LIKE 与精确命中
+        String orc = read("pos/orchestration/PosSaleOrchestrator.java");
+        assertThat(orc)
+                .as("POS 搜索必须 LIKE barcode（扫码枪输入的实际匹配字段）")
+                .contains("like(ProductSku::getBarcode, kw)");
+        assertThat(orc)
+                .as("精确命中必须含 barcode 全等")
+                .contains("equalsIgnoreCase(safe(k.getBarcode()))");
+
+        // 前端：合格证模板必须支持机读码，且中文解析结果自动回落（老标签零改动也能扫）
+        String tpl = java.nio.file.Files.readString(
+                java.nio.file.Path.of("../frontend/src/utils/certificateLabelPrintTemplate.ts"));
+        assertThat(tpl).as("占位符清单含 {机读码}").contains("'{机读码}'");
+        assertThat(tpl)
+                .as("解析出中文（编不成 CODE128）时必须自动回落机读码 —— 否则老配置 {款号}{颜色}{码数} 照旧扫不进")
+                .contains("return ctx.barcode");
+    }
+
     @Test
     @DisplayName("⑯ 收银台：挂账才生成应收、出库走既有正路、金额服务端算")
     void posRules() throws Exception {

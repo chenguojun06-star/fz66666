@@ -396,6 +396,11 @@ const PosTerminal: React.FC = () => {
   /**
    * 扫码回车：命中唯一结果直接加一件；多结果则列出来让人选。
    *
+   * <p>三态都必须给反馈（D-836 闭环）：此前只处理 list===1，0 结果和多结果
+   * **完全静默**—— 收银员扫完码画面没反应，只能以为扫码枪坏了。
+   * 0 结果时最可能的原因是「码贴的不是本店货 / 货品资料没这个编码」，
+   * 提示要指着这个方向说，不要让收银员去猜。
+   *
    * 放在 addLine 之后定义 —— useCallback 的依赖数组在**渲染期**求值，
    * 引用后声明的 const 会踩 TDZ。
    */
@@ -408,7 +413,17 @@ const PosTerminal: React.FC = () => {
       setKeyword('');
       await loadGoods();
       searchRef.current?.focus();
+      return;
     }
+    // 0 结果：说清最可能的原因，而不是静默
+    if (list.length === 0) {
+      message.warning(`没有找到「${kw}」对应的商品：确认条码是否本店货品、商品资料里是否已有该编码`);
+      searchRef.current?.focus();
+      return;
+    }
+    // 多结果：留在列表让人选（同款不同色同码都在这里，替用户选会加错货）
+    message.info(`「${kw}」匹配到 ${list.length} 个商品，已在下方列出，请点选`);
+    searchRef.current?.focus();
   }, [keyword, doSearch, addLine, loadGoods]);
 
   /* ── 客户 ── */

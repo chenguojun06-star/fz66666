@@ -54,6 +54,8 @@ export interface SkuRow {
   quantity: number;
   printCount: number;
   sku: string;
+  /** D-836：机读码（CODE128 条码打它；POS/仓库扫码认它） */
+  barcode?: string;
   styleImageUrl?: string;
   styleId?: string;
   styleNo?: string;

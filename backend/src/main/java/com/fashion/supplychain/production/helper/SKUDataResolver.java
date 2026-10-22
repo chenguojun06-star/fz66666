@@ -2,8 +2,11 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,8 @@ public class SKUDataResolver {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+    @Autowired
+    private ProductSkuService productSkuService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -148,6 +153,40 @@ public class SKUDataResolver {
         }
 
         List<Map<String, Object>> result = new ArrayList<>(agg.values());
+
+        // D-836 扫码通：一次查全该款 SKU 的机读码（barcode）映射，put 进每行 ——
+        // 合格证/吊牌的 CODE128 条码打它，POS 与仓库扫码认它。
+        // 生产标签是"按款出标"，同一款的色码组合有限，一次 IN 查询足够（不 N+1）。
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null && StringUtils.hasText(styleNo)) {
+                List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
+                        .eq(ProductSku::getTenantId, tenantId)
+                        .eq(ProductSku::getStyleNo, styleNo.trim())
+                        .select(ProductSku::getColor, ProductSku::getSize, ProductSku::getSkuCode,
+                                ProductSku::getBarcode));
+                Map<String, String> skuInfo = new HashMap<>();
+                for (ProductSku k : skus) {
+                    if (k == null) {
+                        continue;
+                    }
+                    String key = String.valueOf(k.getColor()).trim() + "|" + String.valueOf(k.getSize()).trim();
+                    skuInfo.put(key, StringUtils.hasText(k.getBarcode())
+                            ? k.getBarcode().trim() : String.valueOf(k.getSkuCode()));
+                }
+                for (Map<String, Object> m : result) {
+                    String key = String.valueOf(m.get("color")).trim() + "|" + String.valueOf(m.get("size")).trim();
+                    String info = skuInfo.get(key);
+                    if (StringUtils.hasText(info)) {
+                        m.put("barcode", info);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 机读码缺失不该阻断标签打印（老行为：没码也出得了标签），降级为不带码
+            log.warn("[SKUDataResolver] 机读码查询失败，标签将不带条码: orderNo={}, err={}", on, e.getMessage());
+        }
+
         orderDetailsCache.put(cacheKey, result);
         return result;
     }

@@ -27,7 +27,7 @@ export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
         const size = String(item.size ?? '');
         const quantity = Number(item.quantity ?? 0);
         const sku = String(item.sku ?? item.skuCode ?? `${order.styleNo || ''}${color}${size}`);
-        return { key: `${color}__${size}`, color, size, quantity, printCount: quantity, sku, styleImageUrl: order.styleCover || '', styleId: order.styleId || '', styleNo: order.styleNo || '' };
+        return { key: `${color}__${size}`, color, size, quantity, printCount: quantity, sku, barcode: String(item.barcode ?? ''), styleImageUrl: order.styleCover || '', styleId: order.styleId || '', styleNo: order.styleNo || '' };
       });
     }
   } catch { /* ignore */ }
@@ -204,6 +204,8 @@ export async function printCertificateLabels(
       color: row.color || '',
       size: row.size || '',
       seq: 0, // buildCertificateMultiPageHtml 内部按全局页序重排
+      // D-836：机读码进条码（SKU 唯一 ASCII 码）—— 扫码销售只认这个
+      barcode: row.barcode || undefined,
     }))
   );
   saveCertPersistedSettings(certSections.rows);

@@ -196,6 +196,28 @@ export const useLabelPrintData = () => {
     setHangCert(buildDefaultHangtagCert(selectedOrder));
     setHangSkuRows(buildSkuRows(selectedOrder));
     setWashSkuRows(buildSkuRows(selectedOrder));
+    // D-836 扫码通：按款拉一次 SKU 机读码（barcode），装饰到打印行 ——
+    // 吊牌/合格证的 CODE128 条码打它，POS 与仓库扫码认它。
+    // 拿不到不阻断：条码区降级为空（老行为），打印仍可用。
+    const styleNo = (selectedOrder?.styleNo || '').trim();
+    if (!styleNo) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await api.get('/style/sku/list', { params: { styleNo, page: 1, pageSize: 500 } });
+        const rows = (res as any)?.data?.records || (res as any)?.data?.rows || (res as any)?.data?.list || [];
+        if (cancelled || !Array.isArray(rows) || rows.length === 0) return;
+        const map: Record<string, string> = {};
+        rows.forEach((k: any) => {
+          if (!k) return;
+          const key = `${String(k.color ?? '').trim()}|${String(k.size ?? '').trim()}`;
+          const code = String(k.barcode ?? '').trim() || String(k.skuCode ?? '').trim();
+          if (code) map[key] = code;
+        });
+        setHangSkuRows((prev) => prev.map((r) => ({ ...r, barcode: map[`${r.color}|${r.size}`] })));
+        setWashSkuRows((prev) => prev.map((r) => ({ ...r, barcode: map[`${r.color}|${r.size}`] })));
+      } catch { /* 机读码拿不到不阻断打印 */ }
+    })();
     // D-232：切换订单时用款式资料预填洗水唛分区内容，用户仍可在面板里改。
     // 制造区域 / 日期属跨款通用的用户输入，以及版式偏好（偏移 / 字号 / 行距 / 间隔）都保留，
     // 不因换款被清空。
@@ -232,6 +254,7 @@ export const useLabelPrintData = () => {
         sectionGapMm: prev.sectionGapMm,
       }),
     }));
+    return () => { cancelled = true; };
   }, [selectedOrder]);
 
   useEffect(() => {
@@ -268,6 +291,8 @@ export const useLabelPrintData = () => {
         size: row.size,
         seq: 0, // buildCertificateMultiPageHtml 内部按全局页序重排
         sku: row.sku,
+        // D-836：机读码进 CODE128 条码（拿不到时模板层自动回落/空）
+        barcode: row.barcode || undefined,
       }))
     );
     saveCertPersistedSettings(hangCert.rows);

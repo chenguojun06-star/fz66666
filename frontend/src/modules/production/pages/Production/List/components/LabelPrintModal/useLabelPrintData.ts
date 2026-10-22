@@ -79,7 +79,7 @@ function buildDefaultCertSections(
       return { key: d.key, show: !!String(value).trim(), labelText: d.label, valueText: value };
     }),
     showBarcode: true,
-    barcodeTemplate: '{款号}{颜色}{码数}',
+    barcodeTemplate: '{机读码}', // D-836：条码打机读码（ASCII），人读文字行仍显示完整商品编码
     showBarcodeText: true,
     fontScale: 1,
   };

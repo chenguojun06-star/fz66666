@@ -231,6 +231,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                         newSku.setSalesPrice(style.getSalesPrice());  // 销售价
                     }
                     this.save(newSku);
+                    ensureScanBarcode(newSku);
                     log.info("Auto-created SKU {} with stock {} (from warehousing)", skuCode, quantity);
                 } else {
                     log.warn("Invalid SKU code format for auto-create: {}", skuCode);
@@ -304,6 +305,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             created.setSalesPrice(style.getSalesPrice());  // 销售价
         }
         this.save(created);
+        ensureScanBarcode(created);
         log.info("[SkuStock] SKU 行补建: skuCode={}, stock={}, styleId={}, tenantId={}",
                 skuCode, delta, style != null ? style.getId() : null, tid);
     }
@@ -399,7 +401,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     existing.setSkuCode(skuUpdate.getSkuCode());
                     existing.setColor(skuUpdate.getColor());
                     existing.setSize(skuUpdate.getSize());
-                    existing.setBarcode(skuUpdate.getBarcode());
+                    existing.setBarcode(scanBarcode(skuUpdate.getBarcode(), existing.getId()));
                     existing.setExternalSkuId(skuUpdate.getExternalSkuId());
                     existing.setExternalPlatform(skuUpdate.getExternalPlatform());
                     existing.setCostPrice(skuUpdate.getCostPrice());
@@ -421,6 +423,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 String autoCode = generateSkuCode(style.getStyleNo(), skuUpdate.getColor(), skuUpdate.getSize(), style.getUseSkuPrefix());
                 if (!StringUtils.hasText(skuUpdate.getSkuCode())) {
                     skuUpdate.setSkuCode(autoCode);
+                    skuUpdate.setBarcode(scanBarcode(skuUpdate.getBarcode(), skuUpdate.getId()));
                 }
 
                 if (existingCodeSet.contains(skuUpdate.getSkuCode())) {
@@ -674,6 +677,38 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             } catch (Exception e) {
                 log.warn("Failed to sync SKU to order {}: {}", order.getOrderNo(), e.getMessage());
             }
+        }
+    }
+
+    /**
+     * 机读码（barcode）：纯 ASCII 的 SKU 唯一码（D-836 扫码通）。
+     *
+     * <p>为什么不是镜像 skuCode：skuCode 含中文颜色（款号+颜色+码数直拼），
+     * 而合格证打的是 **CODE128 一维条码**——CODE128 原生只编码 ASCII，
+     * 中文颜色要么被剔除（与 skuCode 对不上、扫码 LIKE 失配），
+     * 要么用 GBK 扩展（取决于门店扫码枪固件，不可靠）。
+     * 所以机读码单独用纯 ASCII 规则生成，与 skuCode 解耦：
+     * 人读用 skuCode（商品资料/单据/标签文字行），机读用 barcode（条码/扫码）。
+     *
+     * <p>规则：商家显式填了 barcode 就尊重显式值；没填则用
+     * {@code SKU + 主键补6位}（主键不变，码终身稳定，不随改色/改尺码变）。
+     * 存量与新增由 Flyway V202710210003 与本方法各自覆盖，口径一致。
+     */
+    private static String scanBarcode(String explicitBarcode, Long id) {
+        if (StringUtils.hasText(explicitBarcode)) {
+            return explicitBarcode.trim();
+        }
+        return id == null ? null : "SKU" + String.format("%06d", id);
+    }
+
+    /** SKU 落库后补机读码（创建路径 save 完才有主键）；已有显式值不动 */
+    private void ensureScanBarcode(ProductSku sku) {
+        if (sku == null || sku.getId() == null) {
+            return;
+        }
+        if (!StringUtils.hasText(sku.getBarcode())) {
+            sku.setBarcode("SKU" + String.format("%06d", sku.getId()));
+            this.updateById(sku);
         }
     }
 

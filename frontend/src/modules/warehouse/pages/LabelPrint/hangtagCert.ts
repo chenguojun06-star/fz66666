@@ -20,6 +20,8 @@ export interface HangtagSkuRow {
   size: string;
   printCount: number;
   sku: string;
+  /** D-836：机读码（CODE128 条码打它） */
+  barcode?: string;
 }
 
 /**
@@ -57,7 +59,7 @@ export function buildDefaultHangtagCert(order: OrderInfo | null): CertificateSec
       return { key: d.key, show: !!String(value).trim(), labelText: d.label, valueText: value };
     }),
     showBarcode: true,
-    barcodeTemplate: '{款号}{颜色}{码数}',
+    barcodeTemplate: '{机读码}', // D-836：条码打机读码（ASCII）
     showBarcodeText: true,
     fontScale: 1,
   };

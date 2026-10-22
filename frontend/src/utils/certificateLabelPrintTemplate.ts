@@ -29,9 +29,11 @@ export interface CertificatePageData {
   size: string;
   seq: number;
   sku?: string;
+  /** D-836：机读码（SKU 唯一 ASCII 码，CODE128 打它、扫码认它） */
+  barcode?: string;
 }
 
-export const CERT_BARCODE_PLACEHOLDERS = ['{款号}', '{颜色}', '{码数}', '{序号}'] as const;
+export const CERT_BARCODE_PLACEHOLDERS = ['{机读码}', '{款号}', '{颜色}', '{码数}', '{序号}'] as const;
 
 /** 企业名称/地址/执行标准这类跨款固定项：localStorage 记忆（key: certificate-print-settings） */
 const CERT_SETTINGS_KEY = 'certificate-print-settings';
@@ -72,16 +74,31 @@ export function generateCertBarcodeSvg(value: string, height = 52): string {
 const escapeHtml = (s: string) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** 逐页替换条码占位符 */
+/**
+ * 逐页替换条码占位符（D-836：新增 {机读码}，且解析出中文时自动回落机读码）。
+ *
+ * <p>为什么有"回落"：CODE128 一维条码**只能编 ASCII**，而历史上的默认模板
+ * 是 {款号}{颜色}{码数} —— 颜色是中文，旧代码直接把非 ASCII 剔除，
+ * 于是条码变成「款号+码数」丢了颜色，与 skuCode 对不上、扫码 LIKE 失配，
+ * 这就是合格证扫不进收银台的根因。
+ * 现在：模板解析结果只要含非 ASCII（说明编不成 CODE128），就自动改打
+ * 机读码（barcode）—— **老配置零改动也能扫**，新配置用 {机读码} 直打。
+ */
 export function resolveBarcodeValue(
   template: string,
-  ctx: { styleNo: string; color: string; size: string; seq: number },
+  ctx: { styleNo: string; color: string; size: string; seq: number; barcode?: string },
 ): string {
-  return template
+  const resolved = template
+    .replace(/\{机读码\}/g, ctx.barcode || '')
     .replace(/\{款号\}/g, ctx.styleNo || '')
     .replace(/\{颜色\}/g, ctx.color || '')
     .replace(/\{码数\}/g, ctx.size || '')
     .replace(/\{序号\}/g, String(ctx.seq));
+  const asciiOnly = !/[^\x20-\x7E]/.test(resolved);
+  if (!asciiOnly && ctx.barcode) {
+    return ctx.barcode; // 编不成 CODE128 → 回落机读码（老配置无缝升级）
+  }
+  return resolved;
 }
 
 function buildLabelHtml(
@@ -133,7 +150,7 @@ export function buildCertificatePreviewHtml(
   w: number,
   h: number,
   cfg: CertificateSectionState,
-  sample: { styleNo: string; color: string; size: string; seq: number },
+  sample: { styleNo: string; color: string; size: string; seq: number; barcode?: string },
 ): string {
   const svg = cfg.showBarcode
     ? generateCertBarcodeSvg(resolveBarcodeValue(cfg.barcodeTemplate, sample))
@@ -157,6 +174,7 @@ export function buildCertificateMultiPageHtml(
         color: p.color,
         size: p.size,
         seq: p.seq,
+        barcode: p.barcode,
       }))
       : '';
     return buildLabelHtml(w, h, cfg, { ...p, seq: i + 1, sku: p.sku || `${styleNo}${p.color}${p.size}` }, svg);
