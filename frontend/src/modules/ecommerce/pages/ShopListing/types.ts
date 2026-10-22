@@ -26,8 +26,12 @@ export type EditableSku = {
   image?: string | null;
   salesPrice: number | null;
   stockQuantity: number | null;
-  /** D-837：实际仓库库存（只读，按入库明细合计；可售库存是手填虚拟库存，二者区分） */
+  /** D-837：实际仓库库存合计（只读；= 入库明细 + 无单差额，见 ShopAdminOrchestrator） */
   warehouseStock?: number;
+  /** D-838 收口：其中按入库单明细聚合的部分（对账公式分母） */
+  inboundStock?: number;
+  /** D-838 收口：无单来源差额（导入/直写/历史迁移进来的货，没有入库单） */
+  unsupportedStock?: number;
   /** 用户改过才提交，避免把并发改动覆盖回去 */
   dirty?: boolean;
 };

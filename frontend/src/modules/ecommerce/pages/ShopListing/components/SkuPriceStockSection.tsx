@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Button, InputNumber, Popconfirm, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
 import { CopyOutlined, InfoCircleOutlined, SyncOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import api from '@/utils/api';
 import type { EditableSku } from '../types';
 import { parseSpreadsheetText, applySpreadsheetRows } from '../spreadsheetPaste';
 
@@ -31,6 +32,43 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
   const [pasteAnchor, setPasteAnchor] = useState(0);
   // D-800：Enter 下移需拿到 antd Table 实例反查 DOM（antd 的 ref 是 Reference 而非 DOM）
   const tableRef = useRef<any>(null);
+
+  /**
+   * D-838 收口：补录入库单。
+   *
+   * <p>无单来源（Excel 导入/早期直写 stock_quantity/历史迁移）的货没有入库单，
+   * 「对账公式：入库 = 库存 + 出库 + 次品」永远闭合不了，上架页实际库存也
+   * 曾因此显示 0。这里给一个补录入口：按差额补一张入库单（走成品扫码入库
+   * 同一通道，sourceType=backfill），补完对账即平，unsupportedStock 归零。
+   */
+  const [backfilling, setBackfilling] = useState<number | null>(null);
+  const backfillInbound = useCallback(async (r: EditableSku) => {
+    const gap = Math.max(0, Number(r.unsupportedStock) || 0);
+    if (gap <= 0) return;
+    setBackfilling(r.skuId);
+    try {
+      await api.post('/api/warehouse/finished-inventory/scan-inbound', {
+        scanCode: r.skuCode,
+        quantity: gap,
+        sourceType: 'backfill',
+        remark: '无单库存补录（上架编辑页对账闭合）',
+        styleNo: r.skuCode?.replace(/[（(].*$/, '') || undefined,
+        color: r.color,
+        size: r.size,
+      });
+      message.success(`已补录 ${gap} 件入库单，对账公式已闭合`);
+      // 本地即时反馈：无单差额并入入库，避免还要等父组件重拉
+      setSkus((prev) => prev.map((x) => (x.skuId === r.skuId
+        ? { ...x, inboundStock: (x.inboundStock ?? 0) + gap, unsupportedStock: 0 }
+        : x)));
+      // 广播库存变动：成品仓/盘点等页面实时刷新（与扫码入库同一约定）
+      try { window.dispatchEvent(new Event('data:changed')); } catch { /* 广播失败不影响主流程 */ }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '补录失败');
+    } finally {
+      setBackfilling(null);
+    }
+  }, [setSkus]);
 
   const patch = (skuId: number, field: 'salesPrice' | 'stockQuantity', value: number | null) => {
     setSkus((prev) => prev.map((s) => (s.skuId === skuId ? { ...s, [field]: value, dirty: true } : s)));
@@ -155,10 +193,31 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         </Tooltip>
       ),
       dataIndex: 'warehouseStock',
-      width: 92,
-      render: (v: number | undefined) => (
-        <Text strong style={{ fontVariantNumeric: 'tabular-nums' }}>{v ?? 0}</Text>
-      ),
+      width: 120,
+      render: (v: number | undefined, r: EditableSku) => {
+        const gap = Math.max(0, Number(r.unsupportedStock) || 0);
+        return (
+          <Space size={4} wrap>
+            <Text strong style={{ fontVariantNumeric: 'tabular-nums' }}>{v ?? 0}</Text>
+            {gap > 0 ? (
+              <Tooltip title={`其中 ${gap} 件没有入库单（无单入库/导入/历史数据），对账公式因此闭合不了。点「补入库单」按差额补一张正规入库单。`}>
+                <Tag color="orange" style={{ marginInlineEnd: 0 }}>无单 {gap}</Tag>
+              </Tooltip>
+            ) : null}
+            {gap > 0 ? (
+              <Button
+                type="link"
+                size="small"
+                style={{ padding: 0, height: 'auto' }}
+                loading={backfilling === r.skuId}
+                onClick={() => void backfillInbound(r)}
+              >
+                补入库单
+              </Button>
+            ) : null}
+          </Space>
+        );
+      },
     },
     {
       title: '可售库存',

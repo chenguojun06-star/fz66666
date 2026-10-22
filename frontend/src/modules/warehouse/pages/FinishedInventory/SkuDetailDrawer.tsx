@@ -238,7 +238,16 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
             {loading ? (
               <Skeleton active />
             ) : warehousingList.length === 0 ? (
-              <Empty description="该商品编码暂无入库记录" />
+              <Empty description={
+                <span>
+                  该商品编码暂无入库记录
+                  <br />
+                  <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                    库存来自无单入库 / 导入 / 历史数据（不是记录丢失）。
+                    需要闭合对账公式，请到「电商运营 → 上架编辑 → 实际库存列」点「补入库单」。
+                  </span>
+                </span>
+              } />
             ) : (
               <Table
                 size="middle"

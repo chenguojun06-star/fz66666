@@ -452,14 +452,31 @@ public class ShopAdminOrchestrator {
             }
         }
 
+        // D-838 收口（2026-10-22 顾客报障"实际库存全 0"）：无单入库的货也要算数。
+        //
+        // <p>背景：门店有批货从没走过入库单（Excel 导入/早期直写 stock_quantity），
+        // 入库聚合对它们恒为 0 —— 上架编辑页显示"实际库存 0"而成品仓显示有货，
+        // 两个口径把顾客吓到报障（"入库记录全没了"）。数据一件没丢，是口径漏了。
+        //
+        // <p>口径：inboundStock = 入库明细聚合（原样保留，对账公式的分母）；
+        // unsupportedStock = max(0, 可售库存 - 入库聚合) —— 对不上入库单的那部分，
+        // 即无单来源（导入/直写/历史迁移）的库存；
+        // warehouseStock = inboundStock + unsupportedStock（合计，展示口径）。
+        // 可售库存被手改小时差额为 0（不虚增）；被手改大时差额偏大是已知边界，
+        // 由「补入库单」入口从数据上闭合，而不是把无单库存继续显示成 0。
         List<Map<String, Object>> out = new ArrayList<>();
         for (ProductSku s : skus) {
+            int inbound = stockByCode.getOrDefault(s.getSkuCode(), 0);
+            int sellable = s.getStockQuantity() == null ? 0 : s.getStockQuantity();
+            int unsupported = Math.max(0, sellable - inbound);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("skuId", s.getId());
             m.put("skuCode", s.getSkuCode());
             m.put("color", s.getColor());
             m.put("size", s.getSize());
-            m.put("warehouseStock", stockByCode.getOrDefault(s.getSkuCode(), 0));
+            m.put("inboundStock", inbound);
+            m.put("unsupportedStock", unsupported);
+            m.put("warehouseStock", inbound + unsupported);
             out.add(m);
         }
         return out;

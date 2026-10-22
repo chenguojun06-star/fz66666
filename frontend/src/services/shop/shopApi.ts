@@ -246,6 +246,9 @@ export interface SkuWarehouseStockItem {
   size?: string | null;
   /** 实际仓库库存（合格入库合计，不可手改） */
   warehouseStock: number;
+  /** D-838 收口：入库明细聚合部分 / 无单差额部分 */
+  inboundStock?: number;
+  unsupportedStock?: number;
 }
 
 /** 店铺商品的 SKU 原始行（来自 /style/sku/search） */

@@ -55,7 +55,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
       ]);
       const skuList: ShopStyleSku[] = Array.isArray(skuRaw) ? skuRaw : [];
       const whByCode = new Map(
-        (whRaw ?? []).map((w) => [String(w.skuCode), Number(w.warehouseStock) || 0]),
+        (whRaw ?? []).map((w) => [String(w.skuCode), w] as const),
       );
       setSkus(
         (Array.isArray(skuList) ? skuList : []).map((s) => ({
@@ -66,7 +66,9 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
           image: s.skuColorImage ?? null,
           salesPrice: s.salesPrice ?? null,
           stockQuantity: s.stockQuantity ?? 0,
-          warehouseStock: whByCode.get(String(s.skuCode)) ?? 0,
+          warehouseStock: Number(whByCode.get(String(s.skuCode))?.warehouseStock) || 0,
+          inboundStock: Number(whByCode.get(String(s.skuCode))?.inboundStock) || 0,
+          unsupportedStock: Number(whByCode.get(String(s.skuCode))?.unsupportedStock) || 0,
         })),
       );
       const imgs = imgRaw ?? {};

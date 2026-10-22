@@ -371,6 +371,36 @@ class ShopPlatformSchemaGuardTest {
                 .contains("return ctx.barcode");
     }
 
+    /**
+     * D-838 收口守护（2026-10-22 顾客报障"实际库存全 0、入库记录全没"）：
+     * 实际库存口径必须 = 入库明细 + 无单差额。只认入库明细的算法对
+     * 「无单入库/导入/历史直写」的货恒为 0 —— 顾客看到上架页 0、成品仓有货，
+     * 两个口径被当成"数据丢了"。数据一件没丢，是算法漏了无单来源。
+     */
+    @Test
+    @DisplayName("⑲ 实际库存口径必须兜住无单来源（入库聚合 + 差额）")
+    void warehouseStockMustCoverUnsupported() throws Exception {
+        String orc = read("shop/orchestration/ShopAdminOrchestrator.java");
+        assertThat(orc)
+                .as("实际库存 = 入库聚合 + 无单差额，不是只认入库单")
+                .contains("int unsupported = Math.max(0, sellable - inbound);")
+                .contains("m.put(\"warehouseStock\", inbound + unsupported);");
+        assertThat(orc)
+                .as("必须分别给出入库部分与无单部分（前端角标/补录入口按它渲染）")
+                .contains("m.put(\"inboundStock\", inbound);")
+                .contains("m.put(\"unsupportedStock\", unsupported);");
+
+        // 前端：无单差额必须可见（角标）且可操作（补录入库单入口），
+        // 不能让收银/运营面对一个说不清的 0
+        String col = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../frontend/src/modules/ecommerce/pages/ShopListing/components/SkuPriceStockSection.tsx"));
+        assertThat(col).as("无单差额要有醒目角标").contains("无单 {gap}");
+        assertThat(col).as("要有「补入库单」入口（按差额补单，对账公式闭合）").contains("补入库单");
+        assertThat(col).as("补录走成品扫码入库同一通道（sourceType=backfill 留痕）")
+                .contains("scan-inbound")
+                .contains("'backfill'");
+    }
+
     @Test
     @DisplayName("⑯ 收银台：挂账才生成应收、出库走既有正路、金额服务端算")
     void posRules() throws Exception {
