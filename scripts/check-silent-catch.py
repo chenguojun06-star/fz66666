@@ -30,6 +30,7 @@ import os
 import re
 import subprocess
 import sys
+from collections import Counter
 
 SRC = "backend/src/main/java"
 
@@ -114,11 +115,17 @@ def main():
 
     new_total = 0
     for path in changed:
-        before = set(catch_locations("HEAD^", path).keys())
+        # ★ D-839：键从「行号」改为「catch 块正文」——行号会因文件中部落笔整体漂移，
+        # 2026-10-22 实证：D-839 在两个 AOP 文件中部落入代码，下方 13 处存量 catch
+        # 行号集体下移，全部被误判成"新增"（误报率 100%：只要改在存量 catch 上方）。
+        # 与信封 baseline 的"假修复"同款行号键缺陷。块正文相同 = 存量，不算新增。
+        before_blocks = Counter(blk for blk in catch_locations("HEAD^", path).values())
         after = catch_locations("HEAD", path)
+        remaining = Counter(before_blocks)
         for line, blk in sorted(after.items()):
-            if line in before:
-                continue          # 存量行号未变，不算新增
+            if remaining[blk] > 0:
+                remaining[blk] -= 1
+                continue          # 存量块（正文相同，只是行号可能漂移了），不算新增
             new_total += 1
             FAILURES.append(
                 f"{path}:{line}\n"
