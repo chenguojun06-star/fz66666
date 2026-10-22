@@ -42,6 +42,11 @@ public class CommonController {
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+    /** 视频/音频类放宽到 50MB（与 spring multipart max-file-size 一致）——
+     * 30 秒手机拍摄的商品视频通常 15~60MB，10MB 上限会让「上传视频」形同虚设。 */
+    private static final Set<String> MEDIA_EXTENSIONS = Set.of(".mp4", ".mp3", ".wav", ".avi");
+    private static final long MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024;
+
     @Value("${fashion.upload-path}")
     private String uploadPath;
 
@@ -59,7 +64,12 @@ public class CommonController {
             return Result.badRequest("文件为空");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            return Result.badRequest("文件大小超过10MB限制");
+            String lowerName = String.valueOf(file.getOriginalFilename()).toLowerCase();
+            boolean isMedia = MEDIA_EXTENSIONS.stream().anyMatch(lowerName::endsWith);
+            // 视频/音频放宽到 50MB；其余维持 10MB
+            if (!isMedia || file.getSize() > MAX_MEDIA_FILE_SIZE) {
+                return Result.badRequest(isMedia ? "文件大小超过50MB限制" : "文件大小超过10MB限制");
+            }
         }
         try {
             TenantAssert.assertTenantContext();

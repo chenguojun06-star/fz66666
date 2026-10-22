@@ -897,6 +897,14 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-22 商品视频上传 10MB 硬伤修复 + 图文编辑重复入口治理（D-838 补丁）
+
+- [x] **用户疑问**：①「款式详情（图文介绍）」textarea 与「编辑详情长图（图文编辑器）」重复；②商品视频功能到底有没有实现、能不能上传与播放
+- [x] **核实结论**：视频链路早已全通（上传→ShopListingContent.videoUrl→C 端 shop/index.html `<video controls>` 紧跟轮播图、/api/file/tenant-download/** 在游客白名单），但 CommonController 有代码级 **10MB 上限**，30 秒手机视频 15~60MB 全被拒——功能形同虚设；图文重复确实存在：C 端 D-808 逻辑是 blocks 非空时 description 一律不渲染，旧 textarea 内容被静默吞掉
+- [x] **修复**：① CommonController 媒体类（.mp4/.mp3/.wav/.avi）上限放宽 10MB→50MB（与 spring multipart max-file-size 对齐），其余文件维持 10MB；② DetailContent 在 blocks 非空时把 textarea 替换为 Alert 接管提示（正文保留、删空长图页面后恢复展示），长图编辑器入口 hint 补「以长图为准」说明
+- [x] **端到端实测**（lilb/123456 本地 dev 库重置密码后登录）：12MB mp4 上传 → 200 返回 /api/file/tenant-download/2/*.mp4；12MB zip → 400「文件大小超过10MB限制」——两个分支都验证通过
+- [x] **教训**：① 本地无可用测试账号时，可直接 `htpasswd -bnBC` 生成 BCrypt hash 重置本地 dev 库 t_user 密码（SecurityConfig 用 BCryptPasswordEncoder，$2y→$2a 前缀需替换），走 mock 登录路径不通（密码仍走真实校验）；② Caddy 默认不限请求体，/api/upload 的实际瓶颈在 Spring multipart（50MB）与代码级校验
+
 ### 2026-10-22 商品上架库存双轨（实际仓库库存只读 + 一键同步）+ 轮播图批量加图（D-838）
 
 > 注：详情长图编辑器的四轮迭代在本会话内部沿用「D-836」称呼，但共享决策号已被扫码通工作流的提交占用（4c94bb508 D-836 扫码通 / 25f9e18d3 D-837 口径审计），本条库存双轨 + 轮播批量加图统一编号 **D-838**。

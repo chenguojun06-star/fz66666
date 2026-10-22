@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Input, Select, Space, Tag, Typography, Upload, message } from 'antd';
+import { Alert, Button, Input, Select, Space, Tag, Typography, Upload, message } from 'antd';
 import {
   DeleteOutlined, LeftOutlined, PictureOutlined, PlusOutlined, RightOutlined, StarFilled,
 } from '@ant-design/icons';
@@ -256,6 +256,7 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         <Text type="secondary" className="shop-listing__hint">
           像做图工具一样逐页编辑：每张详情图一个页面，可添加文字、尺码表、形状并自由排版，
           保存时自动合成进图片。PC 端与手机端用同一份内容。
+          <b>编辑保存后，顾客端以这里的长图为准，「详情页内容」里的「款式详情（图文介绍）」正文不再展示。</b>
         </Text>
       </div>
 
@@ -457,14 +458,23 @@ const DetailContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
       </Text>
 
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>款式详情（图文介绍）</div>
-      <TextArea
-        value={desc}
-        onChange={(e) => setDesc(e.target.value)}
-        placeholder="顾客端「款式详情」正文。可直接粘贴带图片的图文（支持 HTML）"
-        maxLength={20000}
-        showCount
-        autoSize={{ minRows: 4, maxRows: 12 }}
-      />
+      {(content.blocks ?? []).length > 0 ? (
+        <Alert
+          type="info"
+          showIcon
+          message="款式详情已由「编辑详情长图」接管，顾客端不再展示下面的图文正文"
+          description="你在「图片轮播」页签用图文编辑器排好的长图就是顾客看到的款式详情。此处正文原样保留，但暂不展示；把长图页面全部删空保存后，这段正文会恢复展示。要改图文请回「图片轮播」页签打开图文编辑器。"
+        />
+      ) : (
+        <TextArea
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          placeholder="顾客端「款式详情」正文。可直接粘贴带图片的图文（支持 HTML）"
+          maxLength={20000}
+          showCount
+          autoSize={{ minRows: 4, maxRows: 12 }}
+        />
+      )}
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>商品说明</div>
       <TextArea
         value={remark}
