@@ -35,6 +35,8 @@ export interface DetailPageEditorProps {
   sizeChart: string | null;
   /** 款式真实 SKU 尺码名，尺码表兜底列名 */
   sizes: string[];
+  /** D-838 补丁3：打开时直接跳到这一页（入口缩略图点击用），按底图 URL 匹配，匹配不到落第 1 页 */
+  initialPageUrl?: string | null;
   onChange: (blocks: DetailBlock[]) => void;
   onClose: () => void;
 }
@@ -55,7 +57,7 @@ const cloneEls = (els: EditorElement[]): EditorElement[] =>
   JSON.parse(JSON.stringify(els)).map((e: EditorElement) => ({ ...e, id: uid('el') }));
 
 const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
-  open, blocks, sizeChart, sizes, onChange, onClose,
+  open, blocks, sizeChart, sizes, initialPageUrl, onChange, onClose,
 }) => {
   const [pages, setPages] = useState<EditorPage[]>([]);
   const pagesRef = useRef<EditorPage[]>([]);
@@ -84,8 +86,10 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
   /* ── 打开时初始化（只在 open 由 false→true 时做，防止父组件重渲染把编辑中的内容清掉） ── */
   useEffect(() => {
     if (open && !openPrevRef.current) {
-      setPagesHard(blocksToPages(blocksRef.current));
-      setPageIdx(0);
+      const opened = blocksToPages(blocksRef.current);
+      setPagesHard(opened);
+      const jumpIdx = initialPageUrl ? opened.findIndex((p) => p.bgUrl === initialPageUrl) : -1;
+      setPageIdx(jumpIdx >= 0 ? jumpIdx : 0);
       setSel(null);
       setTemplates(loadTemplates());
       undoRef.current = [];
@@ -96,7 +100,7 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
       setHistTick((t) => t + 1);
     }
     openPrevRef.current = open;
-  }, [open, setPagesHard]);
+  }, [open, setPagesHard, initialPageUrl]);
 
   /* ── 历史（撤销/重做：页面 JSON 快照） ── */
   const pushHistory = useCallback(() => {
@@ -383,7 +387,9 @@ const DetailPageEditor: React.FC<DetailPageEditorProps> = ({
         return;
       }
       onChange(out);
-      message.success(`已保存 ${out.length} 页详情图`);
+      // D-838 补丁3：编辑器保存只是写入抽屉草稿，还要点「保存内容」才落库 ——
+      // 之前文案只说「已保存」，用户以为完事了，关掉抽屉改动全丢。
+      message.success(`已生成 ${out.length} 页详情图，请点抽屉底部「保存内容」提交`);
       onClose();
     } catch (e) {
       message.warning(e instanceof Error ? e.message : '保存失败，请重试');

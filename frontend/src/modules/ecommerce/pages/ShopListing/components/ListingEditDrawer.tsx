@@ -164,6 +164,10 @@ const ListingEditDrawer: React.FC<Props> = ({
           points: res.data.points ?? [],
           faq: res.data.faq ?? [],
           priceNote: res.data.priceNote ?? null,
+          // D-838 补丁3：详情长图内容块必须回填 —— 之前漏掉这个字段，
+          // 重开抽屉后编辑器永远是 0 页，且此时点「保存内容」会把已存的
+          // blocks 整组覆盖成空（后端整份覆盖写），用户保存的长图凭空消失。
+          blocks: res.data.blocks ?? [],
         });
       })
       .catch(() => undefined);

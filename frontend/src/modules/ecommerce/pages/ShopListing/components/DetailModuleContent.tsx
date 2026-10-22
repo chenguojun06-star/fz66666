@@ -59,6 +59,8 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   /** D-808：详情描述整条画布（图 + 文交错） */
   const [canvasOpen, setCanvasOpen] = useState(false);
+  /** D-838 补丁3：从缩略图进编辑器时直接跳到对应页（按底图 URL 匹配） */
+  const [openPageUrl, setOpenPageUrl] = useState<string | null>(null);
   /** D-837：轮播图批量上传（点击/拖拽/Ctrl+V 三方式，与详情长图编辑器同款） */
   const [uploading, setUploading] = useState(false);
   const [dropActive, setDropActive] = useState(false);
@@ -250,7 +252,12 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
           D-835 起对齐竞品「批量编辑图片」：每张图一个页面，文字/尺码表/形状以覆盖元素编辑，
           保存时烘焙成最终图片。 */}
       <div className="shop-listing__detail-canvas-entry">
-        <Button type="primary" size="middle" icon={<PictureOutlined />} onClick={() => setCanvasOpen(true)}>
+        <Button
+          type="primary"
+          size="middle"
+          icon={<PictureOutlined />}
+          onClick={() => { setOpenPageUrl(null); setCanvasOpen(true); }}
+        >
           编辑详情长图（图文编辑器）
         </Button>
         <Text type="secondary" className="shop-listing__hint">
@@ -258,6 +265,40 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
           保存时自动合成进图片。PC 端与手机端用同一份内容。
           <b>编辑保存后，顾客端以这里的长图为准，「详情页内容」里的「款式详情（图文介绍）」正文不再展示。</b>
         </Text>
+        {/* D-838 补丁3：已保存页面直接回显 —— 之前保存完这里什么都不显示，
+            重进编辑器又是一片空白（加载漏回填 blocks），用户以为白做了。
+            点缩略图直接跳到对应页继续编辑。 */}
+        {(() => {
+          const savedImgs = (content.blocks ?? []).filter(
+            (b): b is Extract<DetailBlock, { type: 'image' }> => b.type === 'image' && !!b.url,
+          );
+          if (savedImgs.length === 0) return null;
+          return (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {savedImgs.map((b, i) => (
+                  <div key={`${b.url}-${i}`} style={{ textAlign: 'center' }}>
+                    <img
+                      src={b.url}
+                      alt={`详情第 ${i + 1} 页`}
+                      loading="lazy"
+                      style={{
+                        width: 64, height: 85, objectFit: 'cover', borderRadius: 4,
+                        border: '1px solid var(--color-border, #d9d9d9)', cursor: 'pointer',
+                        display: 'block', background: 'var(--color-bg-subtle, #fafafa)',
+                      }}
+                      onClick={() => { setOpenPageUrl(b.url); setCanvasOpen(true); }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary, #999)' }}>{i + 1}</span>
+                  </div>
+                ))}
+              </div>
+              <Text type="secondary" className="shop-listing__hint" style={{ display: 'block', marginTop: 4 }}>
+                已保存 {savedImgs.length} 页详情图 · 点缩略图跳到对应页继续编辑
+              </Text>
+            </div>
+          );
+        })()}
       </div>
 
       <DetailPageEditor
@@ -265,6 +306,7 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         blocks={blocks}
         sizeChart={content.sizeChart ?? null}
         sizes={ctx.sizes}
+        initialPageUrl={openPageUrl}
         onChange={(next) => patch({ blocks: next })}
         onClose={() => setCanvasOpen(false)}
       />
