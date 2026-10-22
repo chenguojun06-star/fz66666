@@ -82,7 +82,7 @@ public class SKUDataResolver {
             if (list != null) {
                 return list;
             }
-        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        } catch (Exception e) { log.warn("订单明细解析失败（非关键路径，按空列表兜底）: {}", e.getMessage()); }
         try {
             Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
             });
@@ -97,7 +97,7 @@ public class SKUDataResolver {
                 List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
                 return cast;
             }
-        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        } catch (Exception e) { log.warn("订单明细解析失败（非关键路径，按空列表兜底）: {}", e.getMessage()); }
         return List.of();
     }
 
