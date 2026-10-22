@@ -77,11 +77,6 @@ public class SystemOperationLogAspect {
         "入库", "物料入库", "出库", "结算"
     );
 
-    // D-839-TEMP-PROBE
-    private void probeTemp() {
-        try { int x = 1; } catch (Exception e) { log.debug("temp probe {}", e.getMessage()); }
-    }
-
     private static final Set<String> SENSITIVE_FIELDS = Set.of(
         "password", "newPassword", "oldPassword", "confirmPassword",
         "secret", "appSecret", "privateKey", "accessToken", "refreshToken"
