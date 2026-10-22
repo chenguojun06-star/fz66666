@@ -111,8 +111,7 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content.gallery]);
+  }, [doUpload]);
 
   // D-808：纵向详情流只看 blocks，与 gallery（顶部轮播回落）**各管一件事**。
   // 不从 gallery 派生 —— 派生会让运营改详情流时把轮播图也一起搬走。
