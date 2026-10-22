@@ -363,11 +363,15 @@ public class ShopAdminOrchestrator {
     }
 
     /**
-     * D-837：实际仓库库存（只读）——按入库明细聚合，与可售库存（虚拟、可手改）区分。
+     * D-838：实际仓库库存（只读）——按入库明细聚合，与可售库存（虚拟、可手改）区分。
      *
      * <p>口径：t_product_warehousing 按 sku_code 聚合 qualified_quantity（合格入库数量），
      * 排除已撤回单（reversal_status='REVERSED'）与已删除记录。实际库存以实际入库合计为准，
      * 不提供手工修改入口；可售库存（t_product_sku.stock_quantity）才是下单扣减的虚拟库存。
+     *
+     * <p>匹配策略两级：① sku_code 精确 IN；② 未命中的 SKU 按「款号+颜色+尺码」规范化
+     * （去横线/空格，尺码取括号前简码）兜底——历史入库明细存在 D-228 前的横线编码、
+     * 尺码简码与 SKU 完整码名并存等格式差异，精确匹配会把这批库存漏成 0。
      */
     public List<Map<String, Object>> listSkuWarehouseStock(Long styleId) {
         Long tenantId = UserContext.tenantId();
@@ -401,6 +405,53 @@ public class ShopAdminOrchestrator {
             }
         }
 
+        // D-838 补丁：历史入库明细的 sku_code 存在多种格式（D-228 前的横线编码、尺码简码 vs SKU 完整码名），
+        // 精确匹配漏掉这批数据 → 实际库存显示 0，而成品仓（按 SKU.stock_quantity）显示有货。
+        // 兜底：按「款号+颜色+尺码」规范化（去横线/空格）匹配该款入库明细，并与精确命中值**求和**
+        // ——同一 SKU 名下可能同时存在直拼与横线两种编码的入库明细，只取其一会漏算。
+        List<ProductSku> fuzzyTargets = skus.stream()
+                .filter(s -> s.getSkuCode() != null && !s.getSkuCode().isBlank()
+                        && s.getStyleNo() != null && !s.getStyleNo().isBlank())
+                .collect(Collectors.toList());
+        if (!fuzzyTargets.isEmpty()) {
+            Set<String> styleNos = fuzzyTargets.stream()
+                    .map(ProductSku::getStyleNo).collect(Collectors.toSet());
+            QueryWrapper<ProductWarehousing> qw2 = new QueryWrapper<>();
+            qw2.select("sku_code AS skuCode", "SUM(qualified_quantity) AS qty")
+                    .eq("tenant_id", tenantId)
+                    .in("style_no", styleNos)
+                    .isNotNull("sku_code")
+                    .eq("delete_flag", 0)
+                    .and(w -> w.isNull("reversal_status").or().ne("reversal_status", "REVERSED"))
+                    .groupBy("sku_code");
+            List<Map<String, Object>> whRows = productWarehousingMapper.selectMaps(qw2);
+            for (ProductSku s : fuzzyTargets) {
+                String prefix = normSkuKey(s.getStyleNo() + (s.getColor() == null ? "" : s.getColor()));
+                if (prefix.isEmpty()) continue;
+                String shortSize = s.getSize() == null ? "" : s.getSize();
+                int paren = shortSize.indexOf('(');
+                if (paren > 0) shortSize = shortSize.substring(0, paren);
+                String fullSize = normSkuKey(s.getSize() == null ? "" : s.getSize());
+                // 只累加「非精确编码」的行：与 SKU 编码完全相同的行已计入上面的精确聚合，
+                // 再算一遍会双重计数（实测 S 码直拼 20 + 横线 8，重复计算曾返回 48 而非 28）
+                int matched = 0;
+                for (Map<String, Object> row : whRows) {
+                    Object code = row.get("skuCode");
+                    Object qty = row.get("qty");
+                    if (code == null || qty == null) continue;
+                    String raw = String.valueOf(code);
+                    if (raw.equals(s.getSkuCode())) continue;
+                    String wc = normSkuKey(raw);
+                    if (!wc.startsWith(prefix)) continue;
+                    String tail = wc.substring(prefix.length());
+                    if (tail.equals(shortSize) || tail.equals(fullSize)) {
+                        matched += ((Number) qty).intValue();
+                    }
+                }
+                if (matched > 0) stockByCode.merge(s.getSkuCode(), matched, Integer::sum);
+            }
+        }
+
         List<Map<String, Object>> out = new ArrayList<>();
         for (ProductSku s : skus) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -412,6 +463,11 @@ public class ShopAdminOrchestrator {
             out.add(m);
         }
         return out;
+    }
+
+    /** D-838 兜底匹配用：编码规范化（去横线/空格，抹平历史格式差异） */
+    private static String normSkuKey(String code) {
+        return code == null ? "" : code.replace("-", "").replace(" ", "");
     }
 
 /**

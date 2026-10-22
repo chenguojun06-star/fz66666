@@ -905,6 +905,15 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 - [x] **端到端实测**（lilb/123456 本地 dev 库重置密码后登录）：12MB mp4 上传 → 200 返回 /api/file/tenant-download/2/*.mp4；12MB zip → 400「文件大小超过10MB限制」——两个分支都验证通过
 - [x] **教训**：① 本地无可用测试账号时，可直接 `htpasswd -bnBC` 生成 BCrypt hash 重置本地 dev 库 t_user 密码（SecurityConfig 用 BCryptPasswordEncoder，$2y→$2a 前缀需替换），走 mock 登录路径不通（密码仍走真实校验）；② Caddy 默认不限请求体，/api/upload 的实际瓶颈在 Spring multipart（50MB）与代码级校验
 
+### 2026-10-22 实际库存聚合兼容历史编码兜底匹配（D-838 补丁2）
+
+- [x] **用户反馈**：线上 BR26CB0201E 象牙白 5 个 SKU「实际库存」列全 0/—，但成品仓显示可用库存 52 件——两边数据脱节
+- [x] **根因（实锤）**：`t_product_warehousing.sku_code` 存在多种历史格式（D-228 修复前的横线编码 `款号-颜色-尺码`、尺码简码 vs SKU 表完整码名 `L(170/78A)`），入库累加走 `upsertStockByStyleKeys` 三级匹配（编码精确→款色码二次查找→补建）所以 stock_quantity 加对了（成品仓 52 件可见），但 D-838 实际库存聚合只做 sku_code 精确 IN 匹配 → 历史格式数据全漏。本地复现同模式：00991122 款 S 码直拼 20 件 + 横线 8 件并存
+- [x] **修复**：`ShopAdminOrchestrator.listSkuWarehouseStock` 两级匹配——精确聚合后，按「款号+颜色」前缀 + 尺码尾匹配（短码或完整码名规范化值）做兜底，`normSkuKey` 去横线/空格抹平格式差异；**兜底累加时跳过与 SKU 编码 raw 相同的行**（已计入精确聚合，否则双重计数——实测漏此判断 S 返回 48 而非 28）
+- [x] **端到端复测**（重启后端 curl 实测）：styleId=104 → S=28（20+8）、M=5（横线 15 − REVERSED 撤回 10，撤回过滤正常）、L=0、XL=0；styleId=89 精确编码款 30/3 不受影响
+- [x] **教训**：① 库存类聚合改匹配逻辑必须先查真实数据确认「同一 SKU 多格式编码并存」的比例，精确+兜底求和时务必防双重计数；② 用户看到的「成品仓 52 件」是 stock_quantity（含手改/虚拟成分），实际库存（入库合格数合计）与它不相等是**设计预期**——这正是双轨要暴露的差异，汇报时要讲清口径
+- [x] **提交**：ShopAdminOrchestrator.java fix(shop) D-838 补丁2；推送后 autodeploy 2 分钟自动重建，用户硬刷新（Cmd+Shift+R）验证
+
 ### 2026-10-22 商品上架库存双轨（实际仓库库存只读 + 一键同步）+ 轮播图批量加图（D-838）
 
 > 注：详情长图编辑器的四轮迭代在本会话内部沿用「D-836」称呼，但共享决策号已被扫码通工作流的提交占用（4c94bb508 D-836 扫码通 / 25f9e18d3 D-837 口径审计），本条库存双轨 + 轮播批量加图统一编号 **D-838**。
