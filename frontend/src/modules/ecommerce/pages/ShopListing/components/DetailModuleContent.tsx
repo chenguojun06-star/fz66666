@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Button, Input, Select, Space, Tag, Typography, Upload } from 'antd';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, Input, Select, Space, Tag, Typography, Upload, message } from 'antd';
 import {
   DeleteOutlined, LeftOutlined, PictureOutlined, PlusOutlined, RightOutlined, StarFilled,
 } from '@ant-design/icons';
@@ -59,7 +59,60 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   /** D-808：详情描述整条画布（图 + 文交错） */
   const [canvasOpen, setCanvasOpen] = useState(false);
+  /** D-837：轮播图批量上传（点击/拖拽/Ctrl+V 三方式，与详情长图编辑器同款） */
+  const [uploading, setUploading] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const patch = (p: Partial<ListingContent>) => setContent({ ...content, ...p });
+
+  const galleryLen = Math.min(content.gallery.length, 5);
+
+  /** 批量上传：原生 multiple input（antd beforeUpload 逐张触发不可靠），拖拽/粘贴共用这里 */
+  const doUpload = async (files: File[]) => {
+    if (!files.length) return;
+    const room = 5 - content.gallery.length;
+    if (room <= 0) {
+      message.warning('轮播图最多 5 张，已达上限');
+      return;
+    }
+    const ok = files.filter((f) => f.type.startsWith('image/'));
+    if (!ok.length) {
+      message.warning('请选择图片文件');
+      return;
+    }
+    const take = ok.slice(0, room);
+    if (take.length < ok.length) message.warning(`最多还能加 ${room} 张，已只取前 ${room} 张`);
+    setUploading(true);
+    const urls: string[] = [];
+    for (const f of take) {
+      try {
+        const fd = new FormData();
+        fd.append('file', f);
+        const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', fd);
+        if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
+        urls.push(res.data);
+      } catch (e) {
+        message.warning(`「${f.name}」上传失败：${e instanceof Error ? e.message : '未知错误'}`);
+      }
+    }
+    setUploading(false);
+    if (urls.length) setContent({ ...content, gallery: [...content.gallery, ...urls] });
+  };
+
+  // Ctrl+V 粘贴截图批量加图；焦点在输入框里时让位给正常文本粘贴
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const imgs = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+      if (!imgs.length) return;
+      e.preventDefault();
+      void doUpload(imgs);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content.gallery]);
 
   // D-808：纵向详情流只看 blocks，与 gallery（顶部轮播回落）**各管一件事**。
   // 不从 gallery 派生 —— 派生会让运营改详情流时把轮播图也一起搬走。
@@ -96,7 +149,30 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
         <b>只有没设主图时才会用到这里。</b>设了主图（5 张那组）后这一组不再出现在顾客端 ——
         改它看不到变化不是坏了，是它已经让位给主图。
       </Text>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+      <div
+        style={{
+          display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, borderRadius: 8,
+          outline: dropActive ? '2px dashed var(--color-primary, #1677ff)' : '2px dashed transparent',
+          outlineOffset: 6, transition: 'outline-color .15s',
+        }}
+        onDragOver={(e) => {
+          if (uploading || !Array.from(e.dataTransfer.types).includes('Files')) return;
+          e.preventDefault();
+          setDropActive(true);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          setDropActive(false);
+        }}
+        onDrop={(e) => {
+          setDropActive(false);
+          if (uploading) return;
+          const fs = Array.from(e.dataTransfer.files ?? []);
+          if (!fs.length) return;
+          e.preventDefault();
+          void doUpload(fs);
+        }}
+      >
         {content.gallery.slice(0, 5).map((url, i) => (
           <div key={`${url}-${i}`} style={{ textAlign: 'center' }}>
             <ImageUploadBox value={url} onChange={() => undefined} width={92} height={92} showClear={false} />
@@ -115,15 +191,39 @@ const GalleryContent: React.FC<{ ctx: ModuleContentCtx }> = ({ ctx }) => {
             </Space>
           </div>
         ))}
-        <ImageUploadBox
-          value={null}
-          onChange={(url) => { if (url) patch({ gallery: [...content.gallery, url] }); }}
-          width={92}
-          height={92}
-          label="加图"
-          showClear={false}
+        {/* D-837：单张「加图」改批量三方式（点击/拖拽/粘贴），一次导入多张 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          aria-label="批量上传轮播图"
+          onChange={(e) => {
+            const fs = Array.from(e.target.files ?? []);
+            e.target.value = '';
+            void doUpload(fs);
+          }}
         />
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 92, height: 92, borderRadius: 6, border: '1px dashed var(--color-border, #d9d9d9)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              cursor: uploading || galleryLen >= 5 ? 'not-allowed' : 'pointer',
+              color: 'var(--color-text-secondary, #666)', background: 'var(--color-bg-subtle, #fafafa)',
+            }}
+            onClick={() => { if (!uploading && galleryLen < 5) fileInputRef.current?.click(); }}
+            aria-label="批量加图"
+          >
+            <PlusOutlined />
+            <span style={{ fontSize: 12 }}>{uploading ? '上传中…' : galleryLen >= 5 ? '已满 5 张' : '批量加图'}</span>
+          </div>
+        </div>
       </div>
+      <Text type="secondary" className="shop-listing__hint" style={{ display: 'block', marginTop: 4 }}>
+        点击「批量加图」、把图片<b>拖到上面</b>、或 <b>Ctrl+V 粘贴</b>截图，均可一次导入多张（最多 5 张）
+      </Text>
 
 
       <div className="shop-edit__field-label" style={{ marginTop: 14 }}>商品视频</div>

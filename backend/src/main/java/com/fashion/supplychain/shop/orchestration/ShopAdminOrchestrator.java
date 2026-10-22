@@ -1,6 +1,7 @@
 package com.fashion.supplychain.shop.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.OperationLogAppendUtil;
 import com.fashion.supplychain.common.Result;
@@ -8,6 +9,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.pos.entity.SalesTicket;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.shop.entity.ShopConfig;
 import com.fashion.supplychain.shop.entity.ShopOrder;
 import com.fashion.supplychain.shop.entity.ShopOrderItem;
@@ -81,6 +83,10 @@ public class ShopAdminOrchestrator {
     /** 取消订单时撤销挂账应收 */
     @Autowired
     private ReceivableOrchestrator receivableOrchestrator;
+
+    /** D-837：实际仓库库存聚合——只读查询入库明细（t_product_warehousing），不写任何数据 */
+    @Autowired
+    private com.fashion.supplychain.production.mapper.ProductWarehousingMapper productWarehousingMapper;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -354,6 +360,58 @@ public class ShopAdminOrchestrator {
         resp.put("stockChanged", stockChanged);
         resp.put("stockAfter", stockAfter);
         return resp;
+    }
+
+    /**
+     * D-837：实际仓库库存（只读）——按入库明细聚合，与可售库存（虚拟、可手改）区分。
+     *
+     * <p>口径：t_product_warehousing 按 sku_code 聚合 qualified_quantity（合格入库数量），
+     * 排除已撤回单（reversal_status='REVERSED'）与已删除记录。实际库存以实际入库合计为准，
+     * 不提供手工修改入口；可售库存（t_product_sku.stock_quantity）才是下单扣减的虚拟库存。
+     */
+    public List<Map<String, Object>> listSkuWarehouseStock(Long styleId) {
+        Long tenantId = UserContext.tenantId();
+        if (styleId == null) throw new IllegalArgumentException("styleId 不能为空");
+        List<ProductSku> skus = productSkuService.listByStyleId(styleId);
+        if (skus == null || skus.isEmpty()) return List.of();
+        // 租户校验：SKU 必须属于当前租户（防跨租户读取）
+        skus = skus.stream().filter(s -> tenantId.equals(s.getTenantId())).collect(Collectors.toList());
+        if (skus.isEmpty()) return List.of();
+
+        List<String> skuCodes = skus.stream()
+                .map(ProductSku::getSkuCode)
+                .filter(c -> c != null && !c.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, Integer> stockByCode = new LinkedHashMap<>();
+        if (!skuCodes.isEmpty()) {
+            QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
+            qw.select("sku_code AS skuCode", "SUM(qualified_quantity) AS qty")
+                    .eq("tenant_id", tenantId)
+                    .in("sku_code", skuCodes)
+                    .eq("delete_flag", 0)
+                    .and(w -> w.isNull("reversal_status").or().ne("reversal_status", "REVERSED"))
+                    .groupBy("sku_code");
+            for (Map<String, Object> row : productWarehousingMapper.selectMaps(qw)) {
+                Object code = row.get("skuCode");
+                Object qty = row.get("qty");
+                if (code != null && qty != null) {
+                    stockByCode.put(String.valueOf(code), ((Number) qty).intValue());
+                }
+            }
+        }
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (ProductSku s : skus) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("skuId", s.getId());
+            m.put("skuCode", s.getSkuCode());
+            m.put("color", s.getColor());
+            m.put("size", s.getSize());
+            m.put("warehouseStock", stockByCode.getOrDefault(s.getSkuCode(), 0));
+            out.add(m);
+        }
+        return out;
     }
 
 /**

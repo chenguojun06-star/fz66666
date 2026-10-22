@@ -231,6 +231,20 @@ public class ShopAdminController {
         }
     }
 
+    /**
+     * D-837：实际仓库库存（只读）——按入库明细聚合合格入库数量。
+     * 与「可售库存」（t_product_sku.stock_quantity，虚拟、可手改、下单扣减）区分；
+     * 编辑页展示 + 「一键同步库存」的数据源。
+     */
+    @GetMapping("/sku/warehouse-stock")
+    public Result<?> skuWarehouseStock(@RequestParam("styleId") Long styleId) {
+        try {
+            return Result.success(shopAdminOrchestrator.listSkuWarehouseStock(styleId));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     /** D-770：读取某款式的详情页模块布局（无记录返回默认） */
     @GetMapping("/layout/{styleId}")
     public Result<?> getLayout(@PathVariable Long styleId) {

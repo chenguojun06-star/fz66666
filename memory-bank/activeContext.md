@@ -897,6 +897,36 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-22 商品上架库存双轨（实际仓库库存只读 + 一键同步）+ 轮播图批量加图（D-838）
+
+> 注：详情长图编辑器的四轮迭代在本会话内部沿用「D-836」称呼，但共享决策号已被扫码通工作流的提交占用（4c94bb508 D-836 扫码通 / 25f9e18d3 D-837 口径审计），本条库存双轨 + 轮播批量加图统一编号 **D-838**。
+
+- [x] **用户要求**：核实「可售库存」数据来源；表格加「实际仓库库存」只读列（按入库合计、不可改）；「可售库存」保持用户手填虚拟库存；加「一键同步库存」；弄清「从 Excel 粘贴」是什么；图片轮播上传也要支持批量粘贴
+- [x] **调研结论**：原「可售库存」是混合体——入库自动累加（ProductWarehousingHelper.updateSkuStock）+ 用户手改 delta 覆盖（batchSaveSku）+ C 端下单扣减（ShopOrderOrchestrator.placeOrder）共用 t_product_sku.stock_quantity 一个字段；「从 Excel 粘贴」是正经批量录入功能（剪贴板 TSV → 从粘贴起点写售价+库存两列），保留并把文案口径改为「可售库存」
+- [x] **方案（零迁移零写库）**：实际库存 = t_product_warehousing 按 sku_code 聚合 qualified_quantity（tenant_id + delete_flag=0 + 排除 reversal_status='REVERSED' 撤回单），实时只读聚合不落新字段；可售库存沿用 stock_quantity（C 端扣它）；一键同步 = 前端把聚合值写入 stockQuantity 置 dirty，走既有 batchSaveSku delta 链路保存
+- [x] **后端**：`ShopAdminOrchestrator.listSkuWarehouseStock(styleId)`（只读聚合）+ `GET /api/shop/admin/sku/warehouse-stock`；`shopApi.ts` 加 `skuWarehouseStock` + `SkuWarehouseStockItem`；`useListingEditor.openFor` 并行拉取（失败降级空数组不阻塞开抽屉）
+- [x] **SKU 表格**（SkuPriceStockSection）：「可售库存」前插入「实际库存」只读列（Tooltip 说明口径）；顶部加 Popconfirm「一键同步库存」；「统一库存/全部设为该库存」等文案全部改「可售库存」
+- [x] **轮播图批量加图**（DetailModuleContent.GalleryContent）：单张 ImageUploadBox 改三方式——原生 multiple input 点击「批量加图」、拖拽到轮播区（dragover 判 types 含 Files、高亮 outline、dragLeave 判 relatedTarget）、Ctrl+V 粘贴截图（window paste，INPUT/TEXTAREA/contentEditable 让位）；三方式共用 doUpload（FormData → /common/upload，逐张上传失败不中断），上限 5 张（满 5 提示、room 截断提示）
+- [x] **验证**：后端 mvn compile 过；tsc 0 错；新增 `galleryBatchUpload.test.tsx` 3 用例（拖拽 2 张按序追加 / 粘贴且焦点在输入框时让位 / 满 5 张拒绝）+ 相关回归 33/33；浏览器实测（DB 交叉核对）：20264101 实际库存列 0/30/0/0/0/3/0/0 与 t_product_warehousing 聚合完全一致（可售 60/30/60/30/30/3/30/30 保持虚拟值），一键同步后可售列全部刷成实际值且全行「待保存」（未点保存不落库）；拖拽上传 POST /api/common/upload 200、gallery 涨到 5 张上限；PRICETEST003 无入库记录显示 0（正确）
+- [x] **教训**：① `performance.getEntriesByType('resource')` 有 250 条上限且被 vite 模块加载塞满，验证请求是否发生必须用 CDP network 列表（本次 uploads=0 是误报，实际 POST 已成功）；② 重启后端用 `sh 原命令行重放` 会丢父 shell 环境变量（DB_PASSWORD 等 → root 空密码 Access denied），必须显式 export；kill 包裹 sh 的父 PID 不会杀 java 子进程（孤儿继续占 8088）；③ CDP 下合成 DragEvent 的 dataTransfer.files 可保留，但 ClipboardEvent 构造器带不了 clipboardData（Chromium 限制），且非编辑区焦点时 Cmd+V 不产生 paste 事件——粘贴路径只能靠单测覆盖；④ db-query-mcp 的 mcp_readonly 账号本地未建（Access denied），按 P0 #23 降级 docker exec mysql 查询
+
+### 2026-10-21 页面缩略图独立成列，顶到底（D-836 四轮）
+
+- [x] **用户反馈**：页面缩略图（上传图片）不要再压在素材/模版内容下面——独立一列、顶到底，点缩略图与右侧预览同步
+- [x] **结构**：新建 `EditorPagesColumn.tsx`（第二列 200px，顶到底）：「页面 n/20 + 批量加图」标题行 + 缩略图列表（点选/上移/下移/删除）+ 提示行；批量导入三方式（doUpload/拖拽 dropZone/Ctrl+V paste 监听）整体随迁；`EditorLeftPanel` 瘦身为纯页签+素材内容（pageW 由 `cur?.bgW ?? 750` 传入）
+- [x] **CSS**：`.dpe-pages-col`（width 200、border-right、flex column）替代 `.dpe-left__pages`；缩略图类名 `.dpe-left__page*` 保留不变（单测兼容）
+- [x] **验证**：tsc 0 错、编辑器 14/14（拖拽用例 dropZone selector 改 `.dpe-pages-col`）；浏览器实测三列底部 916 像素级对齐、拖拽 2 图成 2 页、点缩略图标题同步「第 1/2 页」
+- [x] 推送 f28a0d0aa（门禁过）；测试数据未保存已干净退出
+
+### 2026-10-21 编辑器布局调整：ESC 不关弹窗 + 页签竖排 + 左栏满高 + 底部右移（D-836 三轮）
+
+- [x] **用户反馈**：批量加图与图片预览要顶底等高；顶部横向页签改竖向；ESC 不要关闭弹窗（用右上角 × 关）；底部按钮行整体移到右边
+- [x] **ESC 根因**：编辑器叠在「改图与数据」antd Drawer 内，ESC 冒泡关掉外层 Drawer——`DetailPageEditor` 新增 window **捕获阶段** Escape 拦截（`stopPropagation`），预览 Modal 打开时放行；关闭只走右上角 × 或「退出编辑」。实测真实按键 ESC 后编辑器与 Drawer 均不关
+- [x] **布局**：`.dpe-left__tabs` 竖排（icon 左文字右，选中态右侧竖线 + 主色浅底）；`.dpe-left__pages` 从固定 42% 高改 `flex:1` 撑满剩余（页面列表底 916 = 画布底 916 完全对齐）；`.dpe-bottombar` 改 `justify-content: flex-end`
+- [x] **验证**：tsc 0 错、编辑器 14/14；浏览器实测页签纵向 y 递增、批量加图区与画布底部像素级对齐、底部右移生效、ESC 不关弹窗
+- [x] **教训**：编辑器叠加在 antd Drawer 内时，任何 window 级 ESC 处理都会被外层 Drawer 抢先响应（Drawer 监听 document），必须捕获阶段拦截；测试注入的合成 KeyboardEvent keyCode=0，antd Modal 等 keyCode 判断的组件不响应，验证 ESC 须用 CDP 真实按键；antd Modal 在 Drawer focus-trap 嵌套下对 ESC 的响应是自身行为（有 × / 遮罩兜底关闭）
+- [x] 推送 b59bc03c0（门禁 4/4 过）
+
 ### 2026-10-21 编辑器容器回归 85% 侧滑 + 批量导入图片（D-836）
 
 - [x] **用户反馈**：D-835 全屏形态被否——「做成正常侧滑的就好啊 跟之前一样」，并要回「跟之前一样的批量导入」多图能力 + 页面列表缩略图正常显示

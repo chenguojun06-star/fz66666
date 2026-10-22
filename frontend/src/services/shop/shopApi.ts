@@ -238,6 +238,16 @@ export interface BatchSaveSkuResult {
   stockAfter: Record<string, number>;
 }
 
+/** D-837：实际仓库库存聚合行（只读，按入库明细合计） */
+export interface SkuWarehouseStockItem {
+  skuId: number | string;
+  skuCode: string;
+  color?: string | null;
+  size?: string | null;
+  /** 实际仓库库存（合格入库合计，不可手改） */
+  warehouseStock: number;
+}
+
 /** 店铺商品的 SKU 原始行（来自 /style/sku/search） */
 export interface ShopStyleSku {
   id: number;
@@ -434,6 +444,12 @@ export const shopAdminApi = {
     unwrapApiData<BatchSaveSkuResult>(
       await api.post('/shop/admin/sku/batch-save', { styleId, items }),
       '保存 SKU 失败',
+    ),
+  /** D-837：实际仓库库存（只读）——按入库明细聚合合格数量，与可售库存（虚拟）区分 */
+  skuWarehouseStock: async (styleId: number | string): Promise<SkuWarehouseStockItem[]> =>
+    unwrapApiData<SkuWarehouseStockItem[]>(
+      await api.get('/shop/admin/sku/warehouse-stock', { params: { styleId } }),
+      '加载实际仓库库存失败',
     ),
 
   /* ── P2：商品评价（商家侧） ── */

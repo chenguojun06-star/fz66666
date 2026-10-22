@@ -26,6 +26,8 @@ export type EditableSku = {
   image?: string | null;
   salesPrice: number | null;
   stockQuantity: number | null;
+  /** D-837：实际仓库库存（只读，按入库明细合计；可售库存是手填虚拟库存，二者区分） */
+  warehouseStock?: number;
   /** 用户改过才提交，避免把并发改动覆盖回去 */
   dirty?: boolean;
 };

@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Button, InputNumber, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
-import { CopyOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Button, InputNumber, Popconfirm, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
+import { CopyOutlined, InfoCircleOutlined, SyncOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { EditableSku } from '../types';
 import { parseSpreadsheetText, applySpreadsheetRows } from '../spreadsheetPaste';
@@ -77,7 +77,16 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
       return;
     }
     setSkus((prev) => prev.map((s) => ({ ...s, [field]: value, dirty: true })));
-    message.success(`已为全部 ${skus.length} 个 SKU 设置${field === 'salesPrice' ? '售价' : '库存'} ${value}`);
+    message.success(`已为全部 ${skus.length} 个 SKU 设置${field === 'salesPrice' ? '售价' : '可售库存'} ${value}`);
+  };
+
+  /**
+   * D-837：一键同步库存 —— 把每个 SKU 的可售库存刷成实际仓库库存（入库合格数合计）。
+   * 只改本地态并置 dirty，走既有 batchSaveSku delta 链路保存，不直写数据库。
+   */
+  const syncStockFromWarehouse = () => {
+    setSkus((prev) => prev.map((s) => ({ ...s, stockQuantity: s.warehouseStock ?? 0, dirty: true })));
+    message.success('已把可售库存同步为实际仓库库存，保存后生效');
   };
 
   const columns: ColumnsType<EditableSku> = [
@@ -126,6 +135,23 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
       ),
     },
     {
+      // D-837：实际仓库库存 = 入库明细（t_product_warehousing）合格数合计，只读展示；
+      // 与右边用户手填的「可售库存」区分，避免再混用一个数字。
+      title: (
+        <Tooltip title="实际仓库库存：按该 SKU 合格入库数量自动合计，不可修改。要改请用「一键同步库存」刷到可售库存，或直接改右边的可售库存。">
+          <Space size={4}>
+            实际库存
+            <InfoCircleOutlined style={{ color: 'var(--color-text-tertiary, #999)' }} />
+          </Space>
+        </Tooltip>
+      ),
+      dataIndex: 'warehouseStock',
+      width: 92,
+      render: (v: number | undefined) => (
+        <Text strong style={{ fontVariantNumeric: 'tabular-nums' }}>{v ?? 0}</Text>
+      ),
+    },
+    {
       title: '可售库存',
       dataIndex: 'stockQuantity',
       width: 140,
@@ -163,11 +189,24 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
       ) : null}
 
       <Space size={8} wrap style={{ marginBottom: 8 }}>
-        <Tooltip title="把 Excel 里的两列（售价、库存）复制后，从「粘贴起点」行开始批量填入。支持 ¥1,234.50、1.234,50 等 Excel 显示格式">
+        <Tooltip title="把 Excel 里的两列（售价、可售库存）复制后，从「粘贴起点」行开始批量填入。支持 ¥1,234.50、1.234,50 等 Excel 显示格式">
           <Button icon={<CopyOutlined />} onClick={handlePaste} disabled={skus.length === 0}>
             从 Excel 粘贴
           </Button>
         </Tooltip>
+        {/* D-837：一键同步 —— 可售库存 := 实际仓库库存 */}
+        <Popconfirm
+          title="一键同步库存"
+          description="会把全部 SKU 的可售库存改为「实际仓库库存」（按入库合计），保存后生效。"
+          okText="同步"
+          cancelText="取消"
+          onConfirm={syncStockFromWarehouse}
+          disabled={skus.length === 0}
+        >
+          <Button icon={<SyncOutlined />} disabled={skus.length === 0}>
+            一键同步库存
+          </Button>
+        </Popconfirm>
         <InputNumber
           min={0}
           precision={2}
@@ -187,7 +226,7 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
           min={0}
           precision={0}
           style={{ width: 110 }}
-          placeholder="统一库存"
+          placeholder="统一可售库存"
           value={bulkStock ?? undefined}
           onChange={(v) => setBulkStock(v ?? null)}
         />
@@ -196,7 +235,7 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
           onClick={() => applyBulk('stockQuantity', bulkStock)}
           disabled={bulkStock == null || skus.length === 0}
         >
-          全部设为该库存
+          全部设为该可售库存
         </Button>
       </Space>
 
@@ -211,7 +250,7 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         locale={{ emptyText: '该款式还没有 SKU，请先在「款式资料」维护颜色尺码' }}
       />
       <Text type="secondary" className="shop-listing__hint">
-        共 {skus.length} 个 SKU{skus.length ? `（售价 + 库存）` : ''}
+        共 {skus.length} 个 SKU{skus.length ? `（售价 + 可售库存；实际库存按入库合计只读）` : ''}
         {dirtyCount ? `，本次有 ${dirtyCount} 行改动待保存` : ''}
         {skus.length > 0 && '　·　点任意售价框会把该行设为「粘贴起点」；售价框内按 Enter 跳到下一行'}
       </Text>

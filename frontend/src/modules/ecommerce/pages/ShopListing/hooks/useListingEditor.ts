@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { message } from '@/utils/antdStatic';
 import shopAdminApi, { shopProductApi } from '@/services/shop/shopApi';
-import type { BatchSaveSkuResult, ShopStyleInfoRow, ShopStyleSku } from '@/services/shop/shopApi';
+import type { BatchSaveSkuResult, ShopStyleInfoRow, ShopStyleSku, SkuWarehouseStockItem } from '@/services/shop/shopApi';
 import type { EditableSku, ListingRow } from '../types';
 
 const errText = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
@@ -46,12 +46,17 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
     setSkus([]);
     setColorImages({});
     try {
-      const [skuRaw, imgRaw, styleRaw] = await Promise.all([
+      const [skuRaw, imgRaw, styleRaw, whRaw] = await Promise.all([
         shopProductApi.searchSkus(r.id),
         r.styleNo ? shopProductApi.listColorImages(r.styleNo).catch(() => null) : Promise.resolve(null),
         shopProductApi.getStyle(r.id).catch(() => null),
+        // D-837：实际仓库库存（只读聚合，与可售库存区分）；失败不阻塞编辑器打开
+        shopAdminApi.skuWarehouseStock(r.id).catch(() => [] as SkuWarehouseStockItem[]),
       ]);
       const skuList: ShopStyleSku[] = Array.isArray(skuRaw) ? skuRaw : [];
+      const whByCode = new Map(
+        (whRaw ?? []).map((w) => [String(w.skuCode), Number(w.warehouseStock) || 0]),
+      );
       setSkus(
         (Array.isArray(skuList) ? skuList : []).map((s) => ({
           skuId: s.id,
@@ -61,6 +66,7 @@ export function useListingEditor(onSaved: (styleId: number) => void) {
           image: s.skuColorImage ?? null,
           salesPrice: s.salesPrice ?? null,
           stockQuantity: s.stockQuantity ?? 0,
+          warehouseStock: whByCode.get(String(s.skuCode)) ?? 0,
         })),
       );
       const imgs = imgRaw ?? {};
