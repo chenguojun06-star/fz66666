@@ -83,8 +83,17 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
   /**
    * D-837：一键同步库存 —— 把每个 SKU 的可售库存刷成实际仓库库存（入库合格数合计）。
    * 只改本地态并置 dirty，走既有 batchSaveSku delta 链路保存，不直写数据库。
+   *
+   * <p>D-838 补丁4 防呆：实际库存全为 0 时**禁止同步**——实际库存列可能是加载失败
+   * 或还没出数，此时同步会把全款可售库存刷成 0，成品仓（只显示可售库存>0）整款
+   * 消失，看起来像"记录被清空"（2026-10-22 真实事故）。
    */
   const syncStockFromWarehouse = () => {
+    const warehouseTotal = skus.reduce((sum, s) => sum + (s.warehouseStock ?? 0), 0);
+    if (warehouseTotal <= 0) {
+      message.warning('实际库存全为 0：该款可能还没入库，或入库数据没加载出来。已阻止同步，避免把可售库存清成 0。');
+      return;
+    }
     setSkus((prev) => prev.map((s) => ({ ...s, stockQuantity: s.warehouseStock ?? 0, dirty: true })));
     message.success('已把可售库存同步为实际仓库库存，保存后生效');
   };
