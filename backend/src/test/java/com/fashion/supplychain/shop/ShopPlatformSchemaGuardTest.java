@@ -401,6 +401,39 @@ class ShopPlatformSchemaGuardTest {
                 .contains("'backfill'");
     }
 
+    /**
+     * D-838 补录通道守护（库存翻倍事故防线）：
+     * 对账补录（sourceType=backfill）必须走 stockless 通道 ——
+     * 补录的货早在 stock_quantity 里，再 updateStock 一次库存就翻倍
+     * （补 22 变 44，对账反而更不平）。这不是理论风险，是补录功能
+     * 自身的语义决定的：补的是"单"，不是"货"。
+     */
+    @Test
+    @DisplayName("⑳ 补录入库单必须走 stockless（只补单不动库存）")
+    void backfillInboundMustBeStockless() throws Exception {
+        String wh = read("warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java");
+        assertThat(wh)
+                .as("白名单必须含 backfill（否则前端补录直接被拒）")
+                .contains("\"backfill\"");
+        assertThat(wh)
+                .as("updateStock 必须被 stockless 开关保护，不能无条件调用")
+                .contains("boolean stockless = params.get(\"stockless\") != null")
+                // 这两条才是硬防线：回退成无条件 updateStock 时它们必然消失
+                //（首版守护只断言 afterQty 那行，注入回退后仍命中 → 没抓到，已加固）
+                .contains("if (stockless) {")
+                .contains("int afterQty = stockless ? beforeQty : beforeQty + quantity;");
+
+        // 前端两处补录入口都必须显式传 stockless: true
+        String listing = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../frontend/src/modules/ecommerce/pages/ShopListing/components/SkuPriceStockSection.tsx"));
+        assertThat(listing).as("上架页补录必须传 stockless: true").contains("stockless: true");
+        String drawer = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../frontend/src/modules/warehouse/pages/FinishedInventory/SkuDetailDrawer.tsx"));
+        assertThat(drawer).as("详情页补录必须传 stockless: true").contains("stockless: true");
+        assertThat(drawer).as("详情页补录必须让用户填库位（补完库位不再是横杠）")
+                .contains("label=\"库位\"");
+    }
+
     @Test
     @DisplayName("⑯ 收银台：挂账才生成应收、出库走既有正路、金额服务端算")
     void posRules() throws Exception {

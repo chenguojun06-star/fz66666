@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table } from 'antd';
+import { Alert, Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, message } from 'antd';
 import { EditOutlined, PlusOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
-import FreeInboundModal from './FreeInboundModal';
 import { useWarehouseAreaOptions } from '../../../../hooks/useWarehouseAreaOptions';
 import api from '@/utils/api';
 import type { FinishedInventoryRow } from './flattenBySku';
@@ -68,7 +67,9 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
   const [editForm] = Form.useForm();
   const [editSaving, setEditSaving] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [inboundOpen, setInboundOpen] = useState(false);
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [backfillSaving, setBackfillSaving] = useState(false);
+  const [backfillForm] = Form.useForm();
 
   const skuCode = record?.__skuCode || '';
   const styleNo = record?.styleNo || '';
@@ -106,7 +107,6 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
     if (!open) {
       setEditingRow(null);
       editForm.resetFields();
-      setInboundOpen(false);
     }
   }, [open, record, loadWarehousingList, editForm]);
 
@@ -124,6 +124,37 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
   const cancelEdit = () => {
     setEditingRow(null);
     editForm.resetFields();
+  };
+
+  /** D-838：提交补入库单（stockless 通道：只落单不动库存，避免库存翻倍） */
+  const submitBackfill = async () => {
+    if (!skuCode) return;
+    let values: { quantity: number; warehouse: string; warehouseAreaId?: string; remark?: string };
+    try {
+      values = await backfillForm.validateFields();
+    } catch { return; } // 表单校验失败，antd 已显示
+    setBackfillSaving(true);
+    try {
+      await api.post('/warehouse/finished-inventory/scan-inbound', {
+        scanCode: skuCode,
+        quantity: values.quantity,
+        sourceType: 'backfill',
+        stockless: true,
+        warehouseLocation: values.warehouse,
+        warehouseAreaId: values.warehouseAreaId,
+        remark: values.remark || '无单库存补录（详情页对账闭合，不重复加库存）',
+      });
+      message.success('补录成功：库位与对账公式已落地');
+      setBackfillOpen(false);
+      backfillForm.resetFields();
+      try { window.dispatchEvent(new Event('data:changed')); } catch { /* 广播失败不影响主流程 */ }
+      await loadWarehousingList();
+      await onRefresh();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '补录失败');
+    } finally {
+      setBackfillSaving(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -162,7 +193,16 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         width="85%"
         footer={(
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setInboundOpen(true)}>入库登记</Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
+                setBackfillOpen(true);
+              }}
+            >
+              补入库单
+            </Button>
             <Button icon={<HistoryOutlined />} onClick={() => setLogOpen(true)}>操作日志</Button>
             <Button icon={<ReloadOutlined />} onClick={() => { void loadWarehousingList(); }}>刷新</Button>
             <Button onClick={onClose}>关闭</Button>
@@ -232,8 +272,22 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
               ]}
             />
 
-            <div style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 10px' }}>
-              入库记录（{warehousingList.length} 条）
+            <div style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>入库记录（{warehousingList.length} 条）</span>
+              {/* D-838：就地入库登记。无单来源的货（导入/历史直写）在这里补一张正规
+                  入库单，库位/工厂/对账公式/单号关联全部就此落地。 */}
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  // 默认补录量 = 当前库存（这款的货全是无单来源），用户可改
+                  backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
+                  setBackfillOpen(true);
+                }}
+              >
+                补入库单
+              </Button>
             </div>
             {loading ? (
               <Skeleton active />
@@ -244,7 +298,8 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
                   <br />
                   <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
                     库存来自无单入库 / 导入 / 历史数据（不是记录丢失）。
-                    需要闭合对账公式，请到「电商运营 → 上架编辑 → 实际库存列」点「补入库单」。
+                  <br />
+                  点右上角「入库登记」补一张入库单：库位、工厂、对账公式、单号关联一次落地。
                   </span>
                 </span>
               } />
@@ -369,16 +424,42 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         }}
       />
 
-      <FreeInboundModal
-        open={inboundOpen}
-        onClose={() => setInboundOpen(false)}
-        onSuccess={() => {
-          setInboundOpen(false);
-          void loadWarehousingList();
-          void onRefresh();
-        }}
-        presetSkuCode={skuCode}
-      />
+      {/* D-838：补入库单小弹窗（对账补录专用）。
+          与主页面工具栏的「自由入库」区分：那个是正常收货（会加库存）；
+          这个只补单不加库存（货早在库里），并让用户填库位 —— 补完
+          「库位/工厂/对账公式/单号关联」全部落地。 */}
+      <Modal
+        title={`补入库单 - ${skuCode || ''}`}
+        open={backfillOpen}
+        onCancel={() => setBackfillOpen(false)}
+        onOk={() => { void submitBackfill(); }}
+        confirmLoading={backfillSaving}
+        okText="补录"
+        cancelText="取消"
+        width={480}
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="只补单、不重复加库存"
+          description="这批货之前是无单进来的（导入/历史数据），库存 already 在库里。补录只是落一张正规入库单，让对账公式闭合、库位有值。"
+        />
+        <Form form={backfillForm} layout="vertical">
+          <Form.Item name="quantity" label="补录数量（件）" initialValue={1} rules={[{ required: true, message: '请输入数量' }]}>
+            <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="warehouse" label="库位" rules={[{ required: true, message: '请输入库位，如 A-002' }]}>
+            <Input placeholder="如 A-002" />
+          </Form.Item>
+          <Form.Item name="warehouseAreaId" label="库区">
+            <Select allowClear placeholder="选择库区" options={areaOptions} />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="备注（可选）" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };

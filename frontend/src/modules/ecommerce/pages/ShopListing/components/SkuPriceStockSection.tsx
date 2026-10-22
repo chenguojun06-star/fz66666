@@ -51,7 +51,10 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         scanCode: r.skuCode,
         quantity: gap,
         sourceType: 'backfill',
-        remark: '无单库存补录（上架编辑页对账闭合）',
+        // 关键：只补单不动库存 —— 货早在 stock_quantity 里，再让后端加一次
+        // 库存就翻倍（补 22 变 44，对账反而更不平）。后端 freeInbound 认这个开关。
+        stockless: true,
+        remark: '无单库存补录（上架编辑页对账闭合，不重复加库存）',
         styleNo: r.skuCode?.replace(/[（(].*$/, '') || undefined,
         color: r.color,
         size: r.size,

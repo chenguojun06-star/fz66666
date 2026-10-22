@@ -48,7 +48,10 @@ public class FinishedWarehouseOperationOrchestrator {
     private ProductionOrderService productionOrderService;
 
     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
-            "external_purchase", "free_inbound", "transfer_in", "return_in", "other_in", "scan_inbound");
+            "external_purchase", "free_inbound", "transfer_in", "return_in", "other_in", "scan_inbound",
+            // D-838：对账补录。无单来源（导入/历史直写）的货补一张正规入库单，
+            // 让「入库=库存+出库+次品」闭合 —— 货早已在库存里，**不能重复加库存**。
+            "backfill");
 
     private static final Set<String> VALID_OUTSTOCK_TYPES = Set.of(
             "free_outbound", "sample_out", "damage_out", "transfer_out", "other_out", "scan_outbound");
@@ -80,6 +83,11 @@ public class FinishedWarehouseOperationOrchestrator {
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
         String batchNo = trimToNull(params.get("batchNo"));
         String traceId = trimToNull(params.get("traceId"));
+        // D-838：stockless = 只补单不动库存（对账补录专用）。
+        // 补录的货早在 stock_quantity 里，再 updateStock 一次库存就翻倍 —— 真实风险：
+        // 补 22 件库存变 44，对账反而更不平。只有补录传 true。
+        boolean stockless = params.get("stockless") != null
+                && Boolean.parseBoolean(String.valueOf(params.get("stockless")));
 
         if (!StringUtils.hasText(skuCode)) {
             throw new IllegalArgumentException("SKU编码不能为空");
@@ -113,8 +121,13 @@ public class FinishedWarehouseOperationOrchestrator {
         }
 
         int beforeQty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-        productSkuService.updateStock(skuCode, quantity);
-        int afterQty = beforeQty + quantity;
+        if (stockless) {
+            // 补录：库存不动（货早在库里），只落单。afterQty 记原值，流水里写明是补录。
+            log.info("[成品补录] stockless 入库单 skuCode={} +{}（不重复加库存，对账补录）", skuCode, quantity);
+        } else {
+            productSkuService.updateStock(skuCode, quantity);
+        }
+        int afterQty = stockless ? beforeQty : beforeQty + quantity;
 
         BigDecimal effectivePrice = unitPrice != null ? unitPrice : sku.getCostPrice();
         BigDecimal totalAmount = effectivePrice != null ? effectivePrice.multiply(BigDecimal.valueOf(quantity)) : null;
@@ -163,8 +176,10 @@ public class FinishedWarehouseOperationOrchestrator {
         w.setTenantId(tenantId);
         productWarehousingMapper.insert(w);
 
-        logStockChange("INBOUND", sku, beforeQty, quantity, afterQty, w.getWarehousingNo(),
-                sourceType, effectivePrice, totalAmount, traceId, userId, username, tenantId);
+        if (!stockless) {
+            logStockChange("INBOUND", sku, beforeQty, quantity, afterQty, w.getWarehousingNo(),
+                    sourceType, effectivePrice, totalAmount, traceId, userId, username, tenantId);
+        }
 
         warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", 1);
 
