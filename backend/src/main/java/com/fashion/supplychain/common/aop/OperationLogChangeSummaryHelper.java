@@ -75,7 +75,11 @@ public class OperationLogChangeSummaryHelper {
         Map.entry("warehouseLocation", "库位"), Map.entry("warehouseAreaId", "仓库"),
         Map.entry("items", "明细"), Map.entry("pickQty", "领取数量"),
         Map.entry("expressCompany", "快递公司"), Map.entry("trackingNo", "物流单号"),
-        Map.entry("platformCode", "平台"), Map.entry("productionOrderNo", "生产单号")
+        Map.entry("platformCode", "平台"), Map.entry("productionOrderNo", "生产单号"),
+        // D-839：出库链路标签补齐
+        Map.entry("outboundType", "出库类型"), Map.entry("outboundReason", "出库原因"),
+        Map.entry("customerPhone", "客户电话"), Map.entry("shippingAddress", "收货地址"),
+        Map.entry("qrCode", "二维码"), Map.entry("bundleCode", "扎号")
     );
 
     /**
@@ -152,7 +156,11 @@ public class OperationLogChangeSummaryHelper {
                             "outstockNo", "outstockId", "skuCode", "color", "size",
                             "warehouseLocation", "warehouseAreaId", "warehouse", "customerName",
                             "materialCode", "pickQty", "trackingNo", "expressCompany",
-                            "productionOrderNo", "platformCode", "assignee"
+                            "productionOrderNo", "platformCode", "assignee",
+                            // D-839：出库链路补齐——此前出库类型/客户电话/收货地址全部不在名单，
+                            // 详情看不到「什么类型的出库、发给谁、寄到哪」
+                            "outboundType", "outboundReason", "customerPhone", "shippingAddress",
+                            "qrCode", "bundleCode"
                         };
                         for (String key : keyFields) {
                             if (map.containsKey(key)) {
@@ -177,7 +185,9 @@ public class OperationLogChangeSummaryHelper {
                                 Map<String, Object> item = (Map<String, Object>) o;
                                 Object sku = item.containsKey("sku") ? item.get("sku")
                                         : item.containsKey("skuCode") ? item.get("skuCode")
-                                        : item.containsKey("materialCode") ? item.get("materialCode") : null;
+                                        : item.containsKey("qrCode") ? item.get("qrCode")
+                                        : item.containsKey("materialCode") ? item.get("materialCode")
+                                        : item.containsKey("bundleCode") ? item.get("bundleCode") : null;
                                 int q = 0;
                                 Object qObj = item.get("quantity");
                                 if (qObj instanceof Number n) q = n.intValue();

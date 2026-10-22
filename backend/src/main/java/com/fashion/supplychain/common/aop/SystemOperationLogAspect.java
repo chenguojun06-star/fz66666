@@ -153,6 +153,20 @@ public class SystemOperationLogAspect {
                 details = rebuiltDetails;
             }
 
+            // D-839：详情为空诊断——生产曾出现「出库日志操作内容全是 -」且无法回溯
+            // （2026-10-21 排查：44 条出库 details 全 NULL，端到端探针却证明当前代码正常，
+            // 疑为当时容器跑旧 jar）。此处让「该记的没记上」在生产日志里可见：
+            // 出库频率低，每次全打也不吵；真有异常时一眼看到 args 形态。
+            if (details == null && LOGGED_OPERATIONS.contains(operation)) {
+                Object[] diagArgs = pjp.getArgs();
+                log.info("[OpLog] 详情为空诊断: operation={}, method={}, uri={}, argsCount={}, argsTypes={}, requestNull={}",
+                        operation, method, uri,
+                        diagArgs == null ? -1 : diagArgs.length,
+                        diagArgs == null ? "null" : java.util.Arrays.stream(diagArgs)
+                                .map(a -> a == null ? "null" : a.getClass().getSimpleName()).toList(),
+                        request == null);
+            }
+
             // 修改操作：执行后查询新值，生成变更摘要
             String changeSummary = null;
             if ("修改".equals(operation) && oldSnapshot != null) {
@@ -426,6 +440,9 @@ public class SystemOperationLogAspect {
                 if (v != null) return String.valueOf(v);
                 v = ((Map<?,?>) arg).get("reason");
                 if (v != null) return String.valueOf(v);
+                // D-839：出库/报废场景的原因键是 outboundReason（此前不在查找范围，出库原因的备注列恒空）
+                v = ((Map<?,?>) arg).get("outboundReason");
+                if (v != null && !String.valueOf(v).isBlank()) return String.valueOf(v);
             } else if (!(arg instanceof String) && !(arg instanceof Number)) {
                 try { Object v = arg.getClass().getMethod("getRemark").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
                 try { Object v = arg.getClass().getMethod("getReason").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
