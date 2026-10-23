@@ -448,6 +448,41 @@ class ShopPlatformSchemaGuardTest {
                 .contains("warehousingList.length === 0 ? (");
     }
 
+    /**
+     * D-843 库位地图硬闸守护（2026-10-23 顾客报障"库位关联不到仓库地图"）：
+     * 入库的库位必须来自仓库地图（t_warehouse_location）。历史上
+     * freeInbound 兜底「默认仓」+ 前端两个入口手输，导致 88 条入库单
+     * 库位在地图外（详情页「库位」仓库地图不认识，按库位找货全线失灵）。
+     */
+    @Test
+    @DisplayName("㉑ 入库库位必须来自仓库地图（无默认仓兜底）")
+    void inboundLocationMustBeOnWarehouseMap() throws Exception {
+        String wh = read("warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java");
+        assertThat(wh)
+                .as("freeInbound 必须按 location_code 查仓库地图校验")
+                .contains("WarehouseLocation::getLocationCode, loc");
+        assertThat(wh)
+                .as("不得再兜底「默认仓」——兜底值就是地图外库位的来源")
+                .doesNotContain("warehouseLocation = \"默认仓\"");
+        assertThat(wh)
+                .as("批量入库（batchInbound）同样不得兜底默认仓")
+                .doesNotContain("warehouseLocation) warehouseLocation = \"默认仓\"");
+        assertThat(wh)
+                .as("扫码入库（scanInbound）同样不得兜底默认仓")
+                .doesNotContain("warehouseLocation : \"默认仓\"");
+        assertThat(wh)
+                .as("直发客户是直发流程的合法特殊值，白名单放行")
+                .contains("直发客户");
+
+        // 上架页补录也必须带库位（44 条默认仓就是从这不带库位补出来的）
+        String listing = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../frontend/src/modules/ecommerce/pages/ShopListing/components/SkuPriceStockSection.tsx"));
+        assertThat(listing).as("上架页补录必须传 warehouseLocation").contains("warehouseLocation: values.warehouse");
+        assertThat(listing).as("上架页补录必须用仓库地图库位下拉")
+                .contains("useWarehouseLocationOptions")
+                .contains("选择库位（来自仓库地图）");
+    }
+
     @Test
     @DisplayName("⑯ 收银台：挂账才生成应收、出库走既有正路、金额服务端算")
     void posRules() throws Exception {

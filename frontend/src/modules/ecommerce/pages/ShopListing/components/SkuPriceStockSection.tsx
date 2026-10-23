@@ -1,8 +1,10 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Button, InputNumber, Popconfirm, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
+import { Alert, Button, Form, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
 import { CopyOutlined, InfoCircleOutlined, SyncOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/utils/api';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
+import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
 import type { EditableSku } from '../types';
 import { parseSpreadsheetText, applySpreadsheetRows } from '../spreadsheetPaste';
 
@@ -42,9 +44,33 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
    * 同一通道，sourceType=backfill），补完对账即平，unsupportedStock 归零。
    */
   const [backfilling, setBackfilling] = useState<number | null>(null);
-  const backfillInbound = useCallback(async (r: EditableSku) => {
-    const gap = Math.max(0, Number(r.unsupportedStock) || 0);
-    if (gap <= 0) return;
+  // D-843：补录必须选仓库地图的库位（原来直接提交、后端兜底"默认仓"，
+  // 结果 44 条补录单库位在地图外，详情页「库位」与仓库地图对不上）
+  const [backfillRow, setBackfillRow] = useState<EditableSku | null>(null);
+  const [backfillForm] = Form.useForm();
+  const [backfillAreaId, setBackfillAreaId] = useState<string | undefined>(undefined);
+  const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED' as any);
+  const { locations: locationOptions, loading: locationsLoading } =
+    useWarehouseLocationOptions(backfillAreaId, 'FINISHED');
+  const openBackfill = (r: EditableSku) => {
+    setBackfillRow(r);
+    setBackfillAreaId(undefined);
+    backfillForm.resetFields();
+    backfillForm.setFieldsValue({ quantity: Math.max(0, Number(r.unsupportedStock) || 0) });
+  };
+
+  const submitBackfill = async () => {
+    const r = backfillRow;
+    if (!r) return;
+    let values: { quantity: number; warehouseAreaId?: string; warehouse: string };
+    try {
+      values = await backfillForm.validateFields();
+    } catch { return; }
+    const gap = Number(values.quantity) || 0;
+    if (gap <= 0) {
+      message.warning('补录数量必须大于 0');
+      return;
+    }
     setBackfilling(r.skuId);
     try {
       await api.post('/api/warehouse/finished-inventory/scan-inbound', {
@@ -54,6 +80,9 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         // 关键：只补单不动库存 —— 货早在 stock_quantity 里，再让后端加一次
         // 库存就翻倍（补 22 变 44，对账反而更不平）。后端 freeInbound 认这个开关。
         stockless: true,
+        // D-843：库位必须来自仓库地图（服务端也会校验，地图外一律拒绝）
+        warehouseLocation: values.warehouse,
+        warehouseAreaId: values.warehouseAreaId,
         remark: '无单库存补录（上架编辑页对账闭合，不重复加库存）',
         styleNo: r.skuCode?.replace(/[（(].*$/, '') || undefined,
         color: r.color,
@@ -66,12 +95,13 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         : x)));
       // 广播库存变动：成品仓/盘点等页面实时刷新（与扫码入库同一约定）
       try { window.dispatchEvent(new Event('data:changed')); } catch { /* 广播失败不影响主流程 */ }
+      setBackfillRow(null);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '补录失败');
     } finally {
       setBackfilling(null);
     }
-  }, [setSkus]);
+  };
 
   const patch = (skuId: number, field: 'salesPrice' | 'stockQuantity', value: number | null) => {
     setSkus((prev) => prev.map((s) => (s.skuId === skuId ? { ...s, [field]: value, dirty: true } : s)));
@@ -213,7 +243,7 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
                 size="small"
                 style={{ padding: 0, height: 'auto' }}
                 loading={backfilling === r.skuId}
-                onClick={() => void backfillInbound(r)}
+                onClick={() => openBackfill(r)}
               >
                 补入库单
               </Button>
@@ -325,6 +355,64 @@ const SkuPriceStockSection: React.FC<Props> = ({ skus, setSkus }) => {
         {dirtyCount ? `，本次有 ${dirtyCount} 行改动待保存` : ''}
         {skus.length > 0 && '　·　点任意售价框会把该行设为「粘贴起点」；售价框内按 Enter 跳到下一行'}
       </Text>
+
+      {/* D-843：补入库单小窗（库位必须来自仓库地图）。
+          2026-10-23 排查：补录原先直接提交、后端兜底「默认仓」，44 条补录单
+          库位在地图外，详情页「库位」与仓库地图对不上、按库位找货全线失灵。 */}
+      <Modal
+        title={`补入库单${backfillRow?.skuCode ? ` - ${backfillRow.skuCode}` : ''}`}
+        open={!!backfillRow}
+        onCancel={() => setBackfillRow(null)}
+        onOk={() => void submitBackfill()}
+        confirmLoading={backfilling !== null}
+        okText="补录"
+        cancelText="取消"
+        width={480}
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="只补单、不重复加库存"
+          description="这批货之前是无单进来的（导入/历史数据），库存 already 在库里。补录只是落一张正规入库单，让对账公式闭合、库位有着落。"
+        />
+        <Form form={backfillForm} layout="vertical">
+          <Form.Item name="quantity" label="补录数量（件）" rules={[{ required: true, message: '请输入数量' }]}>
+            <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="warehouseAreaId" label="库区" extra="选好库区后，库位只列该库区下已建的库位">
+            <Select
+              allowClear
+              placeholder="选择库区"
+              options={areaOptions}
+              onChange={(v: string | undefined) => {
+                setBackfillAreaId(v);
+                backfillForm.setFieldsValue({ warehouse: undefined });
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="warehouse"
+            label="库位"
+            rules={[{ required: true, message: '请从仓库地图的库位里选' }]}
+            extra={locationOptions.length === 0 && !locationsLoading
+              ? '当前条件下没有可用库位：请先在「仓库地图」建好库位，或换个库区'
+              : undefined}
+          >
+            <Select
+              showSearch
+              allowClear
+              loading={locationsLoading}
+              placeholder={locationsLoading ? '库位加载中…' : '选择库位（来自仓库地图）'}
+              optionFilterProp="label"
+              options={locationOptions.map((l) => ({
+                value: l.locationCode,
+                label: `${l.locationCode}${l.locationName ? ` · ${l.locationName}` : ''}`,
+              }))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

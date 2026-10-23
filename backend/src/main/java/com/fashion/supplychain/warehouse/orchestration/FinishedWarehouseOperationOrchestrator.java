@@ -6,6 +6,8 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
+import com.fashion.supplychain.warehouse.mapper.WarehouseLocationMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -43,6 +45,7 @@ public class FinishedWarehouseOperationOrchestrator {
     private final StockChangeLogService stockChangeLogService;
     private final WarehouseLocationOrchestrator warehouseLocationOrchestrator;
     private final ObjectMapper objectMapper;
+    private final WarehouseLocationMapper warehouseLocationMapper;
 
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
@@ -95,9 +98,26 @@ public class FinishedWarehouseOperationOrchestrator {
         if (quantity == null || quantity <= 0) {
             throw new IllegalArgumentException("入库数量必须大于0");
         }
+        // D-843：库位必须来自仓库地图，消灭「默认仓」这种地图外库位 ——
+        // 2026-10-23 排查：88 条入库单的库位在地图外（默认仓 44/NULL 12/手输 A-002、A仓 15），
+        // 详情页「库位」显示的值仓库地图不认识，按库位找货/盘点全线对不上。
+        // 三个前端入口（自由入库/扫码入库/上架与详情补录）均已改为地图下拉，
+        // 这里加服务端硬闸：不是地图库位一律拒绝（「直发客户」是直发流程的合法特殊值，白名单放行）。
         if (!StringUtils.hasText(warehouseLocation)) {
-            warehouseLocation = "默认仓";
+            throw new IllegalArgumentException("请选择库位（从仓库地图选，不再支持手输/默认仓）");
         }
+        String loc = warehouseLocation.trim();
+        if (!"直发客户".equals(loc)) {
+            WarehouseLocation hit = warehouseLocationMapper.selectOne(
+                    new LambdaQueryWrapper<WarehouseLocation>()
+                            .eq(WarehouseLocation::getLocationCode, loc)
+                            .eq(WarehouseLocation::getTenantId, tenantId)
+                            .last("LIMIT 1"));
+            if (hit == null) {
+                throw new IllegalArgumentException("库位「" + loc + "」不在仓库地图中，请先在仓库地图建好库位再入库");
+            }
+        }
+        warehouseLocation = loc;
         if (!StringUtils.hasText(sourceType)) {
             sourceType = "free_inbound";
         }
@@ -196,7 +216,8 @@ public class FinishedWarehouseOperationOrchestrator {
         String warehouseAreaId = trimToNull(body.get("warehouseAreaId"));
         String sourceType = trimToNull(body.get("sourceType"));
         if (!StringUtils.hasText(sourceType)) sourceType = "free_inbound";
-        if (!StringUtils.hasText(warehouseLocation)) warehouseLocation = "默认仓";
+        // D-843：不再兜底「默认仓」——库位由 freeInbound 统一按仓库地图校验，
+        // 没选库位会得到明确错误（"请选择库位"），而不是静默落一个地图外库位。
 
         String batchNo = buildNo("BN", LocalDateTime.now());
         String traceId = "TR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
@@ -655,7 +676,9 @@ public class FinishedWarehouseOperationOrchestrator {
                 outstockType, sku.getSalesPrice(), o.getTotalAmount(), traceId,
                 UserContext.userId(), UserContext.username(), tenantId);
 
-        warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", -1);
+        if (StringUtils.hasText(warehouseLocation)) {
+            warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", -1);
+        }
 
         log.info("[成品出库] skuCode={} -{} 类型={} traceId={}", skuCode, quantity, outstockType, traceId);
         return o;
@@ -669,7 +692,9 @@ public class FinishedWarehouseOperationOrchestrator {
         Map<String, Object> params = new HashMap<>();
         params.put("skuCode", skuCode);
         params.put("quantity", quantity);
-        params.put("warehouseLocation", warehouseLocation != null ? warehouseLocation : "默认仓");
+        // D-843：不再兜底「默认仓」——扫码 modal 的库位已是仓库地图下拉，
+        // 没选就让它带着 null 进 freeInbound，得到明确错误而不是静默错库位。
+        if (warehouseLocation != null) params.put("warehouseLocation", warehouseLocation);
         params.put("warehouseAreaId", warehouseAreaId);
         params.put("sourceType", sourceType != null ? sourceType : "scan_inbound");
         params.put("remark", remark);
