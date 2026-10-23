@@ -60,6 +60,19 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     @org.springframework.beans.factory.annotation.Value("${spring-ai.adapter.model:deepseek-flash}")
     private String modelName;
 
+    /**
+     * D-856：QuickPath 场景输出 token 上限（可配置，默认 1024）。
+     * 输出长度是小云单次耗时的第一大头（2048 token 跑满≈50-70s），
+     * 做成可配置便于按实测数据调优而不必改代码发版。
+     * 注：不用 Map 绑定——`@Value("${...:}")` 默认空串无法转 Map，会启动失败。
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.scene-max-tokens.ai-advisor:1024}")
+    private int aiAdvisorMaxTokens;
+
+    /** D-856：Agent 循环场景输出上限（多轮带工具，比 QuickPath 长一些） */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.scene-max-tokens.agent-loop:3072}")
+    private int agentLoopMaxTokens;
+
     @Override
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
         long start = System.currentTimeMillis();
@@ -488,7 +501,14 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     private int resolveMaxTokens(String scene) {
         if (scene == null) return 2048;
         return switch (scene) {
-            case "agent-loop" -> 4096;
+            // D-856：QuickPath 场景（ai-advisor）输出上限从 2048 → 1024。
+            // 生产实测：scene=quick 的 17 次执行中 16 次耗时 56-82 秒——瓶颈不是
+            // 上下文构建（四路并行 + 4s 上限）也不是工具轮次，而是**单次输出跑满
+            // 2048 token**（deepseek-flash 约 30-45 token/s → 50-70s）。
+            // 小云的定位是「快速给结论 + 关键数据」，1024 token（约 700 字）足够；
+            // 需要长篇分析的场景走 agent-loop（多轮、带工具）。
+            case "ai-advisor" -> aiAdvisorMaxTokens > 0 ? aiAdvisorMaxTokens : 1024;
+            case "agent-loop" -> agentLoopMaxTokens > 0 ? agentLoopMaxTokens : 3072;
             case "critic_review" -> 1024;
             case "nl-intent" -> 256;
             case "daily-brief" -> 512;

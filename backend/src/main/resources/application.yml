@@ -526,6 +526,13 @@ xiaoyun:
     # D-770：每轮迭代 = 1 次 LLM 往返（生产实测约 15s），10 轮最坏 150s。
     # 收到 5 轮（与 AgentLoopContextBuilder 的代码默认值对齐），最坏约 75s。
     max-iterations-hard-limit: ${XIAOYUN_MAX_ITERATIONS_HARD_LIMIT:5}
+  # D-856：按场景覆盖输出 token 上限。输出长度 = 小云单次耗时第一大头
+  # （生产实测 scene=quick 16/17 次耗时 56-82s，瓶颈是 2048 token 跑满，
+  #   deepseek-flash 约 30-45 token/s）。QuickPath 定位是「快速给结论+关键数据」，
+  # 1024 token（≈700 字）足够；需要长篇分析走 agent-loop（多轮带工具）。
+  scene-max-tokens:
+    ai-advisor: ${XIAOYUN_MAX_TOKENS_AI_ADVISOR:1024}
+    agent-loop: ${XIAOYUN_MAX_TOKENS_AGENT_LOOP:3072}
     tool-executor:
       core-pool-size: ${XIAOYUN_TOOL_EXECUTOR_CORE:16}
       max-pool-size: ${XIAOYUN_TOOL_EXECUTOR_MAX:32}
