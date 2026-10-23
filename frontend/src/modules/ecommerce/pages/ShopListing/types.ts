@@ -13,6 +13,16 @@ export type ListingRow = {
   shopListingTime?: string | null;
   /** 款级售价（未维护 SKU 时的兜底展示） */
   salesPrice?: number | null;
+  /** D-843：款式当前进度节点（未开始 / 纸样开发中 / 样衣制作中 / 样衣完成 …） */
+  progressNode?: string | null;
+  /** D-843：样衣开发状态 PENDING / IN_PROGRESS / COMPLETED / PRODUCTION_COMPLETED / WAREHOUSE_IN */
+  sampleStatus?: string | null;
+  /** D-843：款式状态 ENABLED / DISABLED / SCRAPPED */
+  status?: string | null;
+  /** D-843：最新一张大货订单状态（pending/production/completed/delayed/...） */
+  latestOrderStatus?: string | null;
+  /** D-843：该款大货订单数 */
+  orderCount?: number | null;
 };
 
 export type { ShopSkuSummary };

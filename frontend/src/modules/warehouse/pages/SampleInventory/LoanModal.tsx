@@ -88,7 +88,8 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
         .finally(() => setWorkersFetching(false));
 
       // 借入人（客户）：客户下拉
-      customerApi.list({ page: 1, pageSize: 500, status: 'ACTIVE' }).then(res => {
+      // D-842：去掉 status:'ACTIVE' 硬过滤（后端大小写敏感精确匹配，存量小写值会被全过滤）
+      customerApi.list({ page: 1, pageSize: 500 }).then(res => {
         const records = res?.records || [];
         setCustomerOptions(records.map((c: any) => ({
           value: c.contactPerson || c.companyName,

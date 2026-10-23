@@ -207,7 +207,7 @@ const ShopListing: React.FC = () => {
           columns={columns}
           dataSource={filtered}
           loading={loading}
-          scroll={{ x: 1180 }}
+          scroll={{ x: 1300 }}
           pagination={{
             current: page,
             pageSize,

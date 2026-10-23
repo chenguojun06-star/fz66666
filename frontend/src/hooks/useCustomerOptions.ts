@@ -17,7 +17,9 @@ export function useCustomerOptions() {
     (async () => {
       setLoading(true);
       try {
-        const resp = await customerApi.list({ pageSize: 1000, status: 'ACTIVE' });
+        // D-842：去掉 status:'ACTIVE' 硬过滤 —— 后端大小写敏感精确匹配，
+        // 存量小写状态值会导致整表被过滤成 0 条。
+        const resp = await customerApi.list({ pageSize: 1000 });
         if (!cancelled && resp?.records) {
           setCustomers(
             resp.records.map((c: any) => ({

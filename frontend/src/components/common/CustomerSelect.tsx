@@ -56,8 +56,12 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
         // 小写/历史状态值时会整表被过滤成 0 条，出库选客户全空（2026-10-23 报障）。
         // 未删除的客户全部可选，禁用与否交由业务侧判断。
         const response = await customerApi.list(params as any);
-        if (mounted && (response as any)?.data?.records) {
-          setCustomers((response as any).data.records);
+        // D-842 真正根因（2026-10-23）：customerApi.list 返回的是裸数据 PageResult
+        // （顶层直接是 { records, total }），不是 wn 信封。此前读 response.data.records
+        // 恒为 undefined，导致下拉永远「未找到匹配的客户」——而齿轮维护弹窗读
+        // res.records 正常，所以出现「客户清清楚楚却选不到」的诡异现象。
+        if (mounted && response?.records) {
+          setCustomers(response.records);
         }
         if (mounted) setLoadError(false);
       } catch {

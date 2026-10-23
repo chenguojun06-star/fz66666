@@ -205,6 +205,10 @@ public class StyleListEnrichmentHelper {
         Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
         Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
         Map<String, String> latestOrderCreatorByStyleNo = new HashMap<>();
+        // D-843：顺带取回「最新一张大货订单的状态」，供商品上架列表展示款式状态
+        // （卡片"开发中/大货生产中"缺口）。与 latestCreator 同一张子查询代价，不额外加查询。
+        Map<String, String> latestOrderStatusByStyleId = new HashMap<>();
+        Map<String, String> latestOrderStatusByStyleNo = new HashMap<>();
 
         QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
         timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
@@ -212,7 +216,10 @@ public class StyleListEnrichmentHelper {
                      "(po2.style_id = t_production_order.style_id OR po2.style_no = t_production_order.style_no) " +
                     (tenantScopedRead ? ("AND po2.tenant_id = " + readableTenantId + " ") : "") +
                      "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
-                     "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
+                     "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator",
+                     // 同一分组内聚合取「最新一条」的 status：相关子查询在 GROUP BY 外层拿不到
+                     // 分组行时返回 NULL（实测全为空），GROUP_CONCAT + SUBSTRING_INDEX 稳定可靠。
+                     "SUBSTRING_INDEX(GROUP_CONCAT(status ORDER BY create_time DESC, id DESC), ',', 1) as latestStatus")
                     .eq(tenantScopedRead, "tenant_id", readableTenantId)
                     .and(w -> buildStyleIdOrNoCondition(w, keys))
                     .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
@@ -226,9 +233,10 @@ public class StyleListEnrichmentHelper {
                 Object latestTimeObj = r.get("latestTime");
                 LocalDateTime latestTime = parseLocalDateTime(latestTimeObj);
                 String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
+                String latestStatus = r.get("latestStatus") == null ? null : String.valueOf(r.get("latestStatus")).trim();
                 if (latestTime != null) {
-                    if (StringUtils.hasText(sid)) { latestOrderTimeByStyleId.put(sid, latestTime); if (StringUtils.hasText(latestCreator)) latestOrderCreatorByStyleId.put(sid, latestCreator); }
-                    if (StringUtils.hasText(sno)) { latestOrderTimeByStyleNo.put(sno, latestTime); if (StringUtils.hasText(latestCreator)) latestOrderCreatorByStyleNo.put(sno, latestCreator); }
+                    if (StringUtils.hasText(sid)) { latestOrderTimeByStyleId.put(sid, latestTime); if (StringUtils.hasText(latestCreator)) latestOrderCreatorByStyleId.put(sid, latestCreator); if (StringUtils.hasText(latestStatus)) latestOrderStatusByStyleId.put(sid, latestStatus); }
+                    if (StringUtils.hasText(sno)) { latestOrderTimeByStyleNo.put(sno, latestTime); if (StringUtils.hasText(latestCreator)) latestOrderCreatorByStyleNo.put(sno, latestCreator); if (StringUtils.hasText(latestStatus)) latestOrderStatusByStyleNo.put(sno, latestStatus); }
                 }
             }
         } catch (Exception e) {
@@ -242,13 +250,21 @@ public class StyleListEnrichmentHelper {
             if (byId != null && byId > 0) {
                 s.setOrderCount(byId);
                 s.setTotalOrderQuantity(quantityByStyleId.get(idKey));
-                if (StringUtils.hasText(idKey)) { s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey)); s.setLatestOrderCreator(latestOrderCreatorByStyleId.get(idKey)); }
+                if (StringUtils.hasText(idKey)) {
+                    s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey));
+                    s.setLatestOrderCreator(latestOrderCreatorByStyleId.get(idKey));
+                    s.setLatestOrderStatus(latestOrderStatusByStyleId.get(idKey));
+                }
                 continue;
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
             s.setTotalOrderQuantity(StringUtils.hasText(sno) ? quantityByStyleNo.getOrDefault(sno, 0) : 0);
-            if (StringUtils.hasText(sno)) { s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno)); s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno)); }
+            if (StringUtils.hasText(sno)) {
+                s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
+                s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno));
+                s.setLatestOrderStatus(latestOrderStatusByStyleNo.get(sno));
+            }
         }
     }
 
