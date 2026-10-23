@@ -114,6 +114,10 @@ public class FinishedOutstockHelper {
     @Autowired
     private com.fashion.supplychain.crm.helper.OutstockReceivableHelper outstockReceivableHelper;
 
+    /** D-847：出库必须写库存流水（此前出库从不写，直发更是连库存流水都没有） */
+    @Autowired
+    private com.fashion.supplychain.warehouse.service.StockChangeLogService stockChangeLogService;
+
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
                                   StyleInfoService styleInfoService,
@@ -225,6 +229,13 @@ public class FinishedOutstockHelper {
             if (sku == null) {
                 throw new IllegalArgumentException("SKU不存在: " + skuCode);
             }
+            // D-847：直发模式不得用于「货还在成品库存里」的 SKU。
+            // 2026-09-11 实证：BR24XQ0098E 从直发入口出库 300 件（approved，库位 A-01-1-1），
+            // 但货实际还在成品库存（库存 300），直发跳过扣库存 → 出库单已算发货、
+            // 库存却原地不动 → 幽灵库存 300 件，对账永远不平。
+            if (directShip) {
+                assertDirectShipAllowed(sku);
+            }
             if (!directShip && !stockAlreadyDeducted) {
                 boolean updated = productSkuService.decreaseStockBySkuCode(skuCode, quantity);
                 if (!updated) {
@@ -232,10 +243,14 @@ public class FinishedOutstockHelper {
                     throw new IllegalArgumentException(
                             "库存不足: " + skuCode + "，可用库存:" + current + "件，申请出库:" + quantity + "件");
                 }
+                writeOutstockStockLog(sku, quantity, "OUTBOUND", "成品出库（" + finalOutstockType + "）");
             } else if (directShip) {
                 log.info("[出库] 质检直发模式：不扣减库存 skuCode={} qty={}", skuCode, quantity);
+                // D-847：直发不扣库存也必须留流水——否则事后无法解释「出库了库存为什么还在」
+                writeOutstockStockLog(sku, quantity, "DIRECT_SHIP", "质检直发：货未经过成品库存，不扣减");
             } else {
                 log.info("[出库] 库存已由调用方扣减，本次仅补台账 skuCode={} qty={}", skuCode, quantity);
+                writeOutstockStockLog(sku, quantity, "OUTBOUND_EXTERNAL", "库存已由调用方扣减，本单仅补台账");
             }
 
             // 价格覆盖逻辑
@@ -1009,5 +1024,69 @@ public class FinishedOutstockHelper {
     private String buildOutstockNo(LocalDateTime now) {
         return "FI" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                 + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)).toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * D-847：直发模式守卫——货还在成品库存里就不许走直发。
+     *
+     * <p>直发语义是「货从未进过成品库存」（质检完直接发客户）。如果 SKU 库存 > 0，
+     * 说明货在库位上，走直发会跳过扣库存 → 出库单已算发货、库存原地不动 →
+     * 幽灵库存（BR24XQ0098E 实证 300 件）。
+     */
+    static void assertDirectShipAllowed(ProductSku sku) {
+        if (sku == null) {
+            return;
+        }
+        int curStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+        if (curStock > 0) {
+            throw new IllegalArgumentException("该 SKU 尚有 " + curStock + " 件成品库存（" + sku.getSkuCode()
+                    + "），质检直发仅适用于未入库的货；请从库存管理页正常出库（会扣减库存）");
+        }
+    }
+
+    /**
+     * D-847：出库/直发写库存流水。
+     *
+     * <p>此前出库从不写 t_stock_change_log（只有入库写），2026-10-23 排查
+     * 「出库了库存为什么还在」时，该款流水里只有 INBOUND 300 没有 OUTBOUND，
+     * 无法从流水复算账。三种出库路径全部在此记账：
+     * <ul>
+     *   <li>OUTBOUND：正常出库，库存已扣（change=-qty）</li>
+     *   <li>DIRECT_SHIP：质检直发，货未经过成品库存，库存不变（change=0）</li>
+     *   <li>OUTBOUND_EXTERNAL：调用方已扣库存，本单仅补台账，库存不变（change=0）</li>
+     * </ul>
+     * 失败不阻断出库主流程（流水是审计副产物）。
+     */
+    private void writeOutstockStockLog(ProductSku sku, int quantity, String changeType, String remark) {
+        try {
+            int before = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+            boolean deducted = "OUTBOUND".equals(changeType);
+            int after = deducted ? before - quantity : before;
+
+            com.fashion.supplychain.warehouse.entity.StockChangeLog scl =
+                    new com.fashion.supplychain.warehouse.entity.StockChangeLog();
+            scl.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+            scl.setChangeNo("SC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                    + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)).toUpperCase(Locale.ROOT));
+            scl.setChangeType(changeType);
+            scl.setStockType("FINISHED");
+            scl.setStyleNo(sku.getStyleNo());
+            scl.setColor(sku.getColor());
+            scl.setSize(sku.getSize());
+            scl.setBeforeQuantity(BigDecimal.valueOf(before));
+            scl.setChangeQuantity(BigDecimal.valueOf(deducted ? -quantity : 0));
+            scl.setAfterQuantity(BigDecimal.valueOf(after));
+            scl.setBizType("product_outstock");
+            scl.setBizId(sku.getSkuCode());
+            scl.setBizNo(sku.getSkuCode());
+            scl.setOperatorId(UserContext.userId());
+            scl.setOperatorName(UserContext.username());
+            scl.setRemark(remark);
+            scl.setTenantId(UserContext.tenantId());
+            scl.setCreateTime(LocalDateTime.now());
+            stockChangeLogService.save(scl);
+        } catch (Exception e) {
+            log.warn("记录出库库存流水失败（不阻断出库）: skuCode={}, err={}", sku.getSkuCode(), e.getMessage());
+        }
     }
 }
