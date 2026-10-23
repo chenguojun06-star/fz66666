@@ -174,6 +174,8 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             StringBuilder contentBuilder = new StringBuilder();
             StringBuilder reasoningBuilder = new StringBuilder();
             boolean[] streamError = {false};
+            // D-857 可观测性：首字到达时间（0 = 还没收到首个文本 chunk）
+            final long[] firstChunkAt = {0L};
             // 工具定义必须随流式请求下发（D-743b：流式不带工具 → 模型永远无法发起工具调用，
             // AgentLoop 流式主循环整体哑火，用户只会拿到无实时数据的"裸"回答）。
             // 2.0 的 ChunkMerger 会把工具调用分片合并成完整调用，这里按 id 兜底去重聚合。
@@ -213,6 +215,11 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                         }
                         String chunk = output.getText();
                         if (chunk != null && !chunk.isEmpty()) {
+                            // D-857：首字耗时——真正决定「用户等多久」的指标。
+                            // 此前只有完成时间（日志 56-82s），无法区分是"检索慢"还是"生成慢"。
+                            if (firstChunkAt[0] == 0) {
+                                firstChunkAt[0] = System.currentTimeMillis();
+                            }
                             contentBuilder.append(chunk);
                             chunkConsumer.accept(chunk, false);
                         }
@@ -228,6 +235,20 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                         if (!streamError[0]) {
                             chunkConsumer.accept("", true);
                         }
+                        // D-857 可观测性：结构化性能日志。
+                        // 用法：grep "\[Perf\]" 即可统计首字/生成/总耗时分布，
+                        // 区分"检索慢（首字晚）"与"生成慢（first→done 长）"——
+                        // 此前只有总耗时，无法定位到这一步。
+                        long end = System.currentTimeMillis();
+                        long first = firstChunkAt[0] == 0 ? end : firstChunkAt[0];
+                        log.info("[Perf] scene={} model={} firstChunkMs={} generateMs={} totalMs={} chars={} toolCalls={}",
+                                scene != null ? scene : "-",
+                                modelName,
+                                first - start,
+                                end - first,
+                                end - start,
+                                contentBuilder.length(),
+                                toolCallAggregator.size());
                     })
                     .blockLast();
 
