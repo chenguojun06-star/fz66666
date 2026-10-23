@@ -26,6 +26,10 @@ export function useShopListing() {
         // 只拉「开发侧已推送资料」的款：开发没推送（pushed_to_order=0）说明这款还没放行，
         // 不该出现在商品上架列表里（否则开发中的款混进在售列表，运营无从判断能不能上）。
         pushedToOrderOnly: true,
+        // D-844：报废款（status=SCRAPPED，含全报废样衣款）不进上架列表 ——
+        // 顾客原话"所有的报废的款都不应该进入到上架那边去"。
+        // 后端 StyleInfoServiceImpl 已支持该过滤（待办模块早在用）。
+        excludeScrapped: true,
       });
       const records: ListingRow[] = Array.isArray(body.records) ? body.records : [];
       setRows(records);

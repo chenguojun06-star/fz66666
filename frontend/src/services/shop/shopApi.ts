@@ -501,7 +501,7 @@ export const shopProductApi = {
    * pushedToOrderOnly：只返回「开发侧已推送资料」的款（pushed_to_order=1）。
    * 商品上架管理必须传 true —— 未推送的款式说明开发还没放行，不该出现在可上架列表里。
    */
-  listStyles: async (params: { keyword?: string; page?: number; pageSize?: number; pushedToOrderOnly?: boolean }): Promise<{ records: ShopStyleInfoRow[]; total: number }> =>
+  listStyles: async (params: { keyword?: string; page?: number; pageSize?: number; pushedToOrderOnly?: boolean; excludeScrapped?: boolean }): Promise<{ records: ShopStyleInfoRow[]; total: number }> =>
     unwrapApiData<{ records: ShopStyleInfoRow[]; total: number }>(
       await api.get('/style/info/list', { params }),
       '加载款式列表失败',

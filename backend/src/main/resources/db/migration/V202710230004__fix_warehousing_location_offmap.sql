@@ -10,6 +10,12 @@
 --   tenant 106          → A-001（其成品区 2055960236683132929 下的启用库位）
 --
 -- 幂等：只订正地图外的行（NOT EXISTS 子查询），重跑无副作用。
+--
+-- ⚠️ 执行前提（2026-10-23 事故教训）：本文件的中文条件一律用 UNHEX 字面量，
+-- 不依赖连接字符集。历史上曾因执行时漏 --default-character-set=utf8mb4，
+-- NOT IN ('直发客户') 中文乱码 → 条件恒真 → 20 条直发客户单被误订正
+-- （后从 03:30 备份按 id 精确恢复）。flyway 走 JDBC（字符集由连接池定），
+-- 手工执行务必带 --default-character-set=utf8mb4。
 -- 留痕：原值先落 t_product_warehousing_loc_fix_log，再 UPDATE。
 
 CREATE TABLE IF NOT EXISTS t_product_warehousing_loc_fix_log (
@@ -30,7 +36,7 @@ SELECT w.id, w.sku_code, w.tenant_id, w.warehouse,
        CASE w.tenant_id WHEN 2 THEN 'A-01-1-1' ELSE 'A-001' END
 FROM t_product_warehousing w
 WHERE w.delete_flag = 0
-  AND (w.warehouse IS NULL OR w.warehouse NOT IN ('直发客户'))
+  AND (w.warehouse IS NULL OR w.warehouse <> CONVERT(UNHEX('E79B86E58F91E5AEA2E6B88A') USING utf8mb4))
   AND (w.warehouse IS NULL
        OR NOT EXISTS (SELECT 1 FROM t_warehouse_location l WHERE l.location_code = w.warehouse))
   AND NOT EXISTS (SELECT 1 FROM t_product_warehousing_loc_fix_log f WHERE f.warehousing_id = w.id);
@@ -42,7 +48,7 @@ SET w.warehouse = 'A-01-1-1',
     w.warehouse_area_name = '广州成品仓库1'
 WHERE w.delete_flag = 0
   AND w.tenant_id = 2
-  AND (w.warehouse IS NULL OR w.warehouse NOT IN ('直发客户'))
+  AND (w.warehouse IS NULL OR w.warehouse <> CONVERT(UNHEX('E79B86E58F91E5AEA2E6B88A') USING utf8mb4))
   AND (w.warehouse IS NULL
        OR NOT EXISTS (SELECT 1 FROM t_warehouse_location l WHERE l.location_code = w.warehouse));
 
@@ -53,6 +59,6 @@ SET w.warehouse = 'A-001',
     w.warehouse_area_name = '广州成品仓库1'
 WHERE w.delete_flag = 0
   AND w.tenant_id = 106
-  AND (w.warehouse IS NULL OR w.warehouse NOT IN ('直发客户'))
+  AND (w.warehouse IS NULL OR w.warehouse <> CONVERT(UNHEX('E79B86E58F91E5AEA2E6B88A') USING utf8mb4))
   AND (w.warehouse IS NULL
        OR NOT EXISTS (SELECT 1 FROM t_warehouse_location l WHERE l.location_code = w.warehouse));
