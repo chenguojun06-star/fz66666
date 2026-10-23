@@ -892,6 +892,18 @@ export const intelligenceApi = {
   platformPatrolMttr: async (days = 30): Promise<Record<string, unknown>[]> =>
     unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/platform/patrol-mttr', { params: { days } }), '智能服务请求失败') ?? [],
 
+  // D-853：AI 决策建议「列表 + 采纳/反馈」。
+  // 此前 t_ai_decision_card 有 58 张建议但 adopted 全 0、feedback 0 条——
+  // 不是用户不采纳，而是前端没有任何接口能列出/采纳（后端方法写好了没端点）。
+  aiDecisionCards: async (limit = 20): Promise<Record<string, unknown>[]> =>
+    unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/decision-cards', { params: { limit } }), 'AI 建议加载失败') ?? [],
+
+  aiDecisionFeedback: async (id: number, adopted: 0 | 1, reason?: string, feedbackScore?: number): Promise<void> => {
+    await api.post(`/intelligence/decision-cards/${id}/feedback`, null, {
+      params: { adopted, ...(reason ? { reason } : {}), ...(feedbackScore != null ? { feedbackScore } : {}) },
+    });
+  },
+
   evolutionPending: async (): Promise<Record<string, unknown>[]> =>
     unwrapApiData<Record<string, unknown>[]>(await api.get('/intelligence/evolution/pending'), '智能服务请求失败') ?? [],
 

@@ -36,6 +36,7 @@ public class IntelligencePanelController {
     private final AiPatrolOrchestrator aiPatrolOrchestrator;
     private final PreOrderDeliveryPredictionOrchestrator preOrderDeliveryPredictionOrchestrator;
     private final FactoryActiveOrderOrchestrator factoryActiveOrderOrchestrator;
+    private final DecisionCardOrchestrator decisionCardOrchestrator;
 
     @PostMapping("/live-pulse")
     public Result<LivePulseResponse> livePulse() {
@@ -166,5 +167,38 @@ public class IntelligencePanelController {
     public Result<java.util.List<FactoryActiveOrderDTO>> factoryActiveOrders(
             @RequestParam String factoryName) {
         return Result.success(factoryActiveOrderOrchestrator.getActiveOrdersByFactory(factoryName));
+    }
+
+    /**
+     * D-853：AI 决策建议列表（当前租户最近 N 条）。
+     *
+     * <p>2026-10-23 核实：`t_ai_decision_card` 已积累 58 张 AI 建议，adopted 全为 0、
+     * 人工反馈 0 条。根因不是用户不采纳——`DecisionCardOrchestrator.recentForCurrentTenant()`
+     * 和 `feedback()` 都写好了，但**没有任何端点暴露**，前端连列都列不出来：
+     * AI 给了建议，人看不到，等于没给。本端点闭合「生成 → 可见 → 采纳 → 反馈」。
+     */
+    @GetMapping("/decision-cards")
+    public Result<java.util.List<com.fashion.supplychain.intelligence.entity.AiDecisionCard>> decisionCards(
+            @RequestParam(defaultValue = "20") int limit) {
+        return Result.success(decisionCardOrchestrator.recentForCurrentTenant(Math.max(1, Math.min(limit, 100))));
+    }
+
+    /**
+     * D-853：AI 建议采纳/反馈入口。
+     *
+     * <p>此前 `feedback()` 无端点调用 → 采纳率恒为 0、AI 准确率无真值可评估。
+     *
+     * @param adopted       1=采纳，0=未采纳
+     * @param reason        未采纳原因（可空）
+     * @param feedbackScore 1-5 分（可空）
+     */
+    @PostMapping("/decision-cards/{id}/feedback")
+    public Result<Void> decisionCardFeedback(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int adopted,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false) Integer feedbackScore) {
+        decisionCardOrchestrator.feedback(id, adopted, reason, feedbackScore);
+        return Result.success(null);
     }
 }

@@ -62,6 +62,9 @@ public class PlatformIntelligenceController {
         return Result.success(decisionCardOrchestrator.aggregateAdoption(since));
     }
 
+    // D-853：决策卡「列表/采纳」端点放在用户侧 IntelligencePanelController
+    // （本类仅超管可见，普通用户的工作台调不到）。
+
     @GetMapping("/patrol-mttr")
     public Result<List<Map<String, Object>>> patrolMttr(
             @RequestParam(defaultValue = "30") int days) {
