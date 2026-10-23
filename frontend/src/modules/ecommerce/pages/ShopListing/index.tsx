@@ -143,6 +143,7 @@ const ShopListing: React.FC = () => {
                   <div>① 找到款式 → 点右侧「上架」，顾客立刻能看到；</div>
                   <div>② 点「改图与数据」改主图、每个颜色的图、SKU 售价与库存。</div>
                   <div>价格显示 ¥— 说明该 SKU 没维护售价，顾客无法下单。</div>
+                  <div>③ 本列表只显示「开发侧已推送资料」的款；开发还没推送的款式不会出现在这里。</div>
                 </div>
               }
             >
@@ -152,6 +153,7 @@ const ShopListing: React.FC = () => {
           </div>
           <Text type="secondary" className="shop-listing__desc">
             在这里调整店铺商品的图片和上架数据（售价、库存）。顾客端免登录打开店铺链接即可下单。
+            仅显示开发侧已推送资料的款式。
           </Text>
         </div>
         <Space>

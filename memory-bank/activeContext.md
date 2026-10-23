@@ -2023,3 +2023,46 @@ sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 - **待办（需用户）**：① 真机扫码验收 H5 ② Trae MCP 面板启用自研 6 件套 + 配 `MCP_DB_PASSWORD=changeme` 后重启会话（市场 11 个候选已核实全部不装，结论记 D-828）③ 用线上账号 POS 开单验收小票，顺带确认 P1-2 已上线（对不存在单据 ID 取票应报「来源单据不存在或不属于当前租户」而非建空壳票）
 
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/activeContext-202608.md
+
+## 2026-10-23 出库客户下拉恒空真因 + 上架列表款式状态（D-842 / D-843）
+
+### D-842 根因（推翻此前"状态值/权限"假设）
+- **现象**：出库点客户下拉恒显示「未找到匹配的客户」，但齿轮「维护客户」弹窗里 7 个客户清清楚楚；用户是租户老板账号，排除工厂隔离。
+- **真因**：`customerApi.list` 已改为裸数据返回（`unwrapApiData` 后顶层就是 `{records,total}`），而 `CustomerSelect.tsx` 仍读 `response.data.records` → 恒 `undefined`，`setCustomers` 从未执行。齿轮弹窗 `QuickManageModal` 读的是 `res.records`，所以正常。两处读法不一致造成"数据在但选不到"。
+- **修复**：`CustomerSelect` 改读 `response.records`；同步去掉 `useCustomerOptions.ts`、`SampleInventory/LoanModal.tsx` 的 `status:'ACTIVE'` 硬过滤（后端大小写敏感精确匹配，存量小写值会整表过滤成 0）。
+- **波及面**：`CustomerSelect` 全站 5 处（下单 OrderCreateModal / 款式 BasicInfoSection / 裁剪 CuttingCreateTaskModal / 成品仓 CustomerInfoSection / 仓库地图 OutboundDrawer），一处修复全好。
+- **实测**：本地 `/api/crm/customers/list` 返回 4 条 records，status=ACTIVE；`npx tsc --noEmit` EXIT=0。
+
+### D-843 商品上架列表新增「款式状态」列
+- 需求：上架列表里看不出款是开发中还是大货生产中，已导致开发中的款混进在售。
+- 后端：`StyleListEnrichmentHelper.fillOrderCountFields` 在既有分组查询里用 `SUBSTRING_INDEX(GROUP_CONCAT(status ORDER BY create_time DESC, id DESC), ',', 1) as latestStatus` 取最新大货订单状态 —— **相关子查询在 GROUP BY 外层恒返回 NULL（实测全空），不要再用**。
+- 前端：`ShopListing/types.ts` 补 `progressNode / sampleStatus / status / latestOrderStatus / orderCount`；`columns.tsx` 新增 `resolveStyleStage()` 与「款式状态」列（已报废 > 大货逾期/生产中 > 大货已完成 > 已入库/样衣完成 > 开发中 > 待开发），Tooltip 说明。
+- **口径**：只展示不拦截，开发中允许上架（预售/测款）；是否拦截待用户确认。
+- **实测**：本地重启后端后 `/api/style/info/list` 对有订单款返回 latestOrderStatus（如 completed/pending/scrapped），mvn compile + tsc 均 0 错误。提交 d4914c57b 已推送。
+- **D-843 口径修正（2026-10-23，用户报障"昨天显示开发，今天显示纸样完成"）**：`resolveStyleStage` 原实现对 `progressNode` 兜底直出原文，而「纸样完成/纸样开发中/样衣制作中/样衣生产完成」都只是样衣开发阶段的**细分节点**（后端 `resolveAndSetProgressNode`：仅 sampleStatus=COMPLETED 才是"样衣完成"），导致运营看到"纸样完成"以为是独立状态。改为对外只有粗口径：已报废 / 大货逾期 / 大货生产中 / 大货已完成 / 已停用 / 开发完成 / 开发中（其余全部），细分节点只进 Tooltip。本地 API 实测分布：开发中 37、开发完成 3、已报废 4、大货已完成 12、大货生产中 2。提交 c9f8043a6。
+- **「实际库存」数字来源确认**：`warehouseStock = inboundStock + unsupportedStock`，其中 `inboundStock` 来自 `t_product_warehousing` 按 sku_code 的 `SUM(qualified_quantity)`（排除 REVERSED + delete_flag=0），`unsupportedStock = max(0, 可售库存 - 入库)` 是无单来源兜底。**兜底生效时前端会额外挂橙色「无单 N」标签**——用户截图的 BR26X1Q1011A 三个码均显示 22 且无该标签，说明 22 是入库明细真算出来的（inbound≥22），不是照搬可售库存。
+
+## 2026-10-23 线上库直连取证 + 上架列表「只显示已推送资料」过滤（D-844）
+
+### 线上库直连方式（已验证可用，长期沿用）
+- 服务器 `ubuntu@106.55.12.216`，密钥 `~/.ssh/fz66666_backup` 免密可用。
+- 查库命令：`ssh -i ~/.ssh/fz66666_backup -o BatchMode=yes ubuntu@106.55.12.216 'cd /opt/fz66666/deploy/lighthouse && docker compose exec -T mysql sh -c "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -t fashion_supplychain"' < 本地SQL文件`。中文在终端显示为 `??` 但数据正常。
+- **时区坑（重要）**：裸 mysql CLI 会话时区是 **UTC**（`@@global.time_zone=SYSTEM`，实测比北京时间早 8h），`NOW()` 写入的是 UTC；而应用 JDBC 会话带 `sessionVariables=time_zone='+08:00'`。**任何手工 SQL 补数据都必须显式 `SET time_zone='+08:00'`，否则时间戳早 8 小时。**
+
+### BR26X1Q1011A「实际库存 22」取证结论
+- 5 条 `t_product_warehousing` 入库明细（XS/S/M/L/XL 各 22），`warehousing_type=backfill`、单号 `WH20261023BF008~012`、`creator_name=NULL`、`delete_flag=0` → **记录完好未删**，实际库存 22 即由此合计。
+- 全库 `backfill` 共 44 条/345 件/10 款，均为 **D-841 对账补录**，脚本为 `/tmp/backfill_fix.sql`（"有库存无入库单"的款逐 SKU 补单、只补单不动库存）。**不是异常来源，是修当天报障（入库记录全没/实际库存全0）的一次性数据修复。**
+- 单号前缀 `BF` 只存在于该脚本，应用代码生成的是 `FI/BN/RV/FO + yyyyMMddHHmmss + hex`（`FinishedWarehouseOperationOrchestrator.buildNo`）；全仓库代码/git history 无 `BF` → 证明是脚本直写库，非应用前台。
+- `t_operation_log` 在 01:01 时段 0 条（脚本不走应用，无操作留痕）。
+- **时间修正**：44 条 `create_time` 原为 `2026-10-23 01:01:59`（UTC 直写），已 `UPDATE ... SET create_time=DATE_ADD(create_time, INTERVAL 8 HOUR)` 修正为 `09:01:59`（真实北京时间），update_time 同步 +8h。
+- 该款真实状态：`pattern_status=COMPLETED`、`sample_status=NULL` → 按 D-843 修正口径应为「开发中」；此前显示「纸样完成」是显示 bug，已在 c9f8043a6 修复。
+
+### D-844 商品上架列表只显示「开发侧已推送资料」的款
+- 需求（用户）：「没有开发完成的不要扭转到商品上架里面去，就是开发那没有推送资料，上架那边看不到这个款」。
+- 「推送资料」= `t_style_info.pushed_to_order=1`（由款式详情页「推送到商品下单」写入；资料维护中心即用 `pushedToOrderOnly:true` 筛选）。
+- 线上现状：112 款中已推送 27、未推送 85；已上架 10 款中有 3 款未推送（BV26Q1Q1154A / BV26Q2W1208A / BR26X1Q1011A）。
+- 修复：`shopProductApi.listStyles` 增加 `pushedToOrderOnly` 参数；`useShopListing.load` 传 `pushedToOrderOnly: true`（该接口仅上架页在用）。页面 hero 增加第③条说明与 desc 提示。后端参数与过滤早已存在（`StyleInfoServiceImpl` 第 71/110 行），无需改后端。
+- 实测：`npx tsc --noEmit` EXIT=0。
+
+### 待用户拍板
+- 已上架但未推送的 3 款（含 BR26X1Q1011A）在上架列表将消失，但顾客端仍在售——是否需一并下架/补推送，待用户确认。

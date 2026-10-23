@@ -23,6 +23,9 @@ export function useShopListing() {
         keyword: keyword || undefined,
         page: 1,
         pageSize: FETCH_SIZE,
+        // 只拉「开发侧已推送资料」的款：开发没推送（pushed_to_order=0）说明这款还没放行，
+        // 不该出现在商品上架列表里（否则开发中的款混进在售列表，运营无从判断能不能上）。
+        pushedToOrderOnly: true,
       });
       const records: ListingRow[] = Array.isArray(body.records) ? body.records : [];
       setRows(records);

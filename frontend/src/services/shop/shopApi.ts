@@ -495,8 +495,13 @@ export interface ShopReviewSummary {
  * D-768：单独成组，避免与 /shop/admin/** 混淆。
  */
 export const shopProductApi = {
-  /** 款式列表（keyword 对 款号/款名/品类 做 OR 模糊匹配；勿同时传 styleName+styleNo） */
-  listStyles: async (params: { keyword?: string; page?: number; pageSize?: number }): Promise<{ records: ShopStyleInfoRow[]; total: number }> =>
+  /**
+   * 款式列表（keyword 对 款号/款名/品类 做 OR 模糊匹配；勿同时传 styleName+styleNo）
+   *
+   * pushedToOrderOnly：只返回「开发侧已推送资料」的款（pushed_to_order=1）。
+   * 商品上架管理必须传 true —— 未推送的款式说明开发还没放行，不该出现在可上架列表里。
+   */
+  listStyles: async (params: { keyword?: string; page?: number; pageSize?: number; pushedToOrderOnly?: boolean }): Promise<{ records: ShopStyleInfoRow[]; total: number }> =>
     unwrapApiData<{ records: ShopStyleInfoRow[]; total: number }>(
       await api.get('/style/info/list', { params }),
       '加载款式列表失败',
