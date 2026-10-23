@@ -64,6 +64,21 @@ public class AgentLoopContextBuilder {
     @Value("${xiaoyun.agent.max-iterations-hard-limit:5}")
     private int maxIterationsHardLimit;
 
+    /**
+     * D-855：把领域路由结果转成工具裁剪集合——**多领域必须全取**。
+     *
+     * <p>原实现只取 `multiDomains.get(0)`：「这批料够不够生产这个单」
+     * （WAREHOUSE+PRODUCTION）只会拿到仓储工具，模型看不到生产侧数据 → 答不全/答偏。
+     * routeMulti 内部已 limit(3)，工具量可控（后续还有 toolAdvisor 二次收敛）。
+     */
+    static Set<ToolDomain> collectDomains(List<ToolDomain> multiDomains) {
+        Set<ToolDomain> domains = new LinkedHashSet<>();
+        if (multiDomains != null && !multiDomains.isEmpty()) {
+            domains.addAll(multiDomains);
+        }
+        return domains;
+    }
+
     public AgentLoopContext build(String userMessage, String pageContext) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -85,14 +100,12 @@ public class AgentLoopContextBuilder {
         // 新问题缓存必然 miss，于是首个请求要把领域判定重复跑多遍。
         //
         // 现在：只调一次 routeMulti，其余从同一结果派生。
-        // domains 取首个域 —— 与原 route() 的语义完全一致
-        //（原实现就是 multi.domains.get(0)），isMultiDomain 即 domains.size() > 1。
-        // 领域判定结果**逐项等价**，只是不再重复计算。
+        // D-855：多领域问题必须用**完整领域集合**裁剪工具。
+        // 原实现只取 get(0)，导致「这批料够不够生产这个单」（WAREHOUSE+PRODUCTION）
+        // 只拿到仓储工具 → 模型看不到生产侧数据 → 答不全/答偏，是准确性问题的根因之一。
+        // routeMulti 内部已 limit(3)，工具量可控（配合 toolAdvisor 二次收敛）。
         List<ToolDomain> multiDomains = domainRouter.routeMulti(userMessage);
-        Set<ToolDomain> domains = new LinkedHashSet<>();
-        if (multiDomains != null && !multiDomains.isEmpty()) {
-            domains.add(multiDomains.get(0));
-        }
+        Set<ToolDomain> domains = collectDomains(multiDomains);
         boolean isMultiDomain = multiDomains != null && multiDomains.size() > 1;
         if (!domains.isEmpty()) {
             visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
