@@ -178,6 +178,10 @@ public class CuttingBomOrchestrator {
         cuttingBomService.updateById(existing);
         // D-363d：逻辑删除空操作修复
         cuttingBomService.removeById(existing.getId());
+        // D-851：移除物料必须留痕（原先删掉一整行面辅料，操作日志里没有任何记录）
+        logAppendHelper.appendRemoveMaterial(existing.getId(),
+                existing.getMaterialName() != null ? existing.getMaterialName()
+                        : existing.getMaterialCode());
     }
 
     @Transactional

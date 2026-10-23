@@ -65,6 +65,13 @@ jobs:
     - name: 禁止新增 service 层信封泄漏
       run: python3 scripts/check-api-envelope-leak.py
 
+    # D-851：存量 156 处（AI 能力库/预留接口/待判断），只允许减少不允许新增。
+    # 「做了没接」是本项目最贵的病：巡检器空壳每日空跑、库存流水表完整但出库
+    # 从不写、FreeInboundModal 挂载无按钮、helper 注入了却零调用——全部编译
+    # 通过、单测通过，只在生产报障后才靠逆向排查发现。
+    - name: 禁止新增「写了没接线」的方法（baseline 只减不增）
+      run: python3 scripts/check-unwired.py --check
+
     - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
       run: |
         echo "🔍 核对原生 SQL 里的列名是否真的存在于数据库..."

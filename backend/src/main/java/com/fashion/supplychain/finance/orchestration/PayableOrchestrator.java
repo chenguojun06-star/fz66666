@@ -405,7 +405,13 @@ public class PayableOrchestrator {
         p.setAmount(amount);
         p.setDueDate(dueDate);
         p.setDescription(description);
-        return create(p);
+        Payable created = create(p);
+        // D-851：应付从订单生成必须留痕——本类注入了 logAppendHelper 却从未调用，
+        // 这条「凭空多出一笔应付」的资金动作此前在操作日志里查不到任何记录。
+        if (logAppendHelper != null && created != null) {
+            logAppendHelper.appendGenerateFromOrder(created.getId(), orderNo);
+        }
+        return created;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -436,7 +442,12 @@ public class PayableOrchestrator {
         p.setCounterpartyName(bill.getCounterpartyName());
         p.setStyleNo(bill.getStyleNo());
         p.setSettlementMonth(bill.getSettlementMonth());
-        return create(p);
+        Payable created = create(p);
+        // D-851：应付从账单派生必须留痕（原 helper 注入未用，资金动作无日志）
+        if (logAppendHelper != null && created != null) {
+            logAppendHelper.appendCreateFromBill(created.getId(), bill.getId());
+        }
+        return created;
     }
 
     @Transactional(rollbackFor = Exception.class)

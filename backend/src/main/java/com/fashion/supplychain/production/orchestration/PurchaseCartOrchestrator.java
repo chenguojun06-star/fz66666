@@ -269,6 +269,8 @@ public class PurchaseCartOrchestrator {
         
         purchaseCartItemMapper.updateById(item);
         recalculateCartTotal(item.getCartId());
+        // D-851：采购车改数量/单价必须留痕（同类的 deleteItem 已记日志，updateItem 漏了）
+        logAppendHelper.appendUpdateItem(item.getCartId(), item.getMaterialName());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -293,8 +295,12 @@ public class PurchaseCartOrchestrator {
         LambdaQueryWrapper<PurchaseCartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
                .eq(PurchaseCartItem::getDeleteFlag, 0);
-        purchaseCartItemMapper.delete(wrapper);
+        int cleared = purchaseCartItemMapper.delete(wrapper);
         recalculateCartTotal(cart.getId());
+        // D-851：清空采购车是高破坏性动作（一键抹掉整单），必须留痕
+        if (cleared > 0) {
+            logAppendHelper.appendClear(cart.getId());
+        }
     }
     
     @Transactional

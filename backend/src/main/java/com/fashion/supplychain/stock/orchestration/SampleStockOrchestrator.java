@@ -253,6 +253,11 @@ public class SampleStockOrchestrator {
                 log.error("样衣借出同步PatternProduction状态失败: styleNo={}", stock.getStyleNo(), e);
             }
         }
+        // D-851：样衣借出必须留痕（本类注入了 logAppendHelper 却从未调用，
+        // 借出后库存减少却查不到是谁借给谁——对账纠纷时无从追溯）
+        if (logAppendHelper != null) {
+            logAppendHelper.appendLoan(loan.getSampleStockId(), loan.getBorrower(), loanQty);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

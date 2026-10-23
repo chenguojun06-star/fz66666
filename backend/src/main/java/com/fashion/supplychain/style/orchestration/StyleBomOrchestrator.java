@@ -570,7 +570,12 @@ public class StyleBomOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public int generatePurchase(Long styleId, boolean force) {
-        return purchaseHelper.generatePurchase(styleId, force);
+        int count = purchaseHelper.generatePurchase(styleId, force);
+        // D-851：BOM 一键生成采购单必须留痕（原 helper 注入未用，生成了多少采购单无记录）
+        if (logAppendHelper != null && count > 0) {
+            logAppendHelper.appendGeneratePurchase(styleId, count);
+        }
+        return count;
     }
 
     public java.util.Map<String, Object> getPurchaseStatus(Long styleId) {

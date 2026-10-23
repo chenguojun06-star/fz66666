@@ -144,16 +144,90 @@ def scan():
     return empty_shells, unwired
 
 
+BASELINE = ROOT / "scripts" / "unwired-baseline.txt"
+
+# 自动分类规则（按文件路径/方法名推断"这处未接线大概是什么性质"）
+CLASSIFY_RULES = [
+    # (正则, 类别, 说明)
+    (r"/intelligence/(service|helper|prompt|engine|orchestration|gateway)/", "AI能力库",
+     "AI 模块的能力/提示词/工具库，多数供 AiTool 内部按需调用或尚未接入对话流程"),
+    (r"/(common)/DataPermissionHelper", "高危-数据权限", "权限过滤器未接线 = 权限可能形同虚设，必须核实"),
+    (r"/(common)/SensitiveDataMaskHelper", "高危-脱敏", "脱敏方法未接线 = 接口可能泄露敏感字段，必须核实"),
+    (r"StockChangeLogOrchestrator", "高危-库存流水", "流水统一入口未接线，各业务分散写流水"),
+    (r"/(finance)/", "账务", "账务能力未接线 = 可能少生成账单/应收，需核实"),
+    (r"/(production)/helper/", "生产helper", "生产的日志/装配/同步 helper，常见于漏接入"),
+    (r"/(style)/", "款式域", "款式/SKU 域能力"),
+    (r"/(integration)/", "外部集成", "第三方对接抽象，可能仅部分平台使用"),
+    (r"/(warehouse)/", "仓储", "仓储域能力"),
+    (r"Legacy$|legacy", "兼容旧接口", "带 Legacy 命名的旧端点/兼容方法"),
+    (r"^.*$", "其他", "需要人工判断"),
+]
+
+
+def classify(rel_path: str, name: str) -> tuple:
+    for pattern, cat, desc in CLASSIFY_RULES:
+        if re.search(pattern, rel_path + " " + name):
+            return cat, desc
+    return "其他", "需要人工判断"
+
+
+def load_baseline() -> set:
+    if not BASELINE.exists():
+        return set()
+    return {ln.strip() for ln in BASELINE.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.startswith("#")}
+
+
+def key_of(rel: str, ln: int, sig: str) -> str:
+    """baseline 键：文件 + 方法签名（不用行号——行号会因无关改动漂移，
+    D-840 已经踩过「行号做键导致集体误报」的坑）。
+
+    ⚠️ 签名必须把换行/连续空白压成单空格：多参数方法签名跨行时，
+    原样写进 baseline 会被拆成多行，读回来比对全部错位（首版实测：
+    baseline 161 条 vs 实际 156 条，报 14 处假新增）。"""
+    norm = re.sub(r"\s+", " ", sig).strip()
+    return f"{rel}::{norm}"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--empty", action="store_true")
     ap.add_argument("--unwired", action="store_true")
+    ap.add_argument("--classify", action="store_true", help="按类别分组输出")
+    ap.add_argument("--write-baseline", action="store_true", help="写入/更新 baseline（清理后调用）")
+    ap.add_argument("--check", action="store_true", help="CI 门禁：只允许减少，新增即失败")
     args = ap.parse_args()
 
     empty_shells, unwired = scan()
     show_empty = args.empty or (not args.unwired)
     show_unwired = args.unwired or (not args.empty)
+
+    if args.write_baseline:
+        lines = ["# 未接线方法 baseline（D-851）",
+                 "# 只允许减少：清理掉一条就从这里删一行；新增未接线会被 --check 拦下",
+                 "# 键 = 文件::方法签名（不用行号，避免无关改动导致漂移误报）"]
+        lines += sorted(key_of(f, ln, sig) for f, ln, sig, _ in unwired)
+        BASELINE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"✅ baseline 已写入 {BASELINE.relative_to(ROOT)}：{len(unwired)} 条")
+        return 0
+
+    if args.check:
+        base = load_baseline()
+        current = {key_of(f, ln, sig): (f, ln, sig) for f, ln, sig, _ in unwired}
+        new_items = [v for k, v in current.items() if k not in base]
+        removed = [k for k in base if k not in current]
+        print(f"baseline: {len(base)} 条 / 当前: {len(current)} 条")
+        if removed:
+            print(f"✅ 已清理 {len(removed)} 条（记得 --write-baseline 收口）")
+        if new_items:
+            print(f"❌ 新增 {len(new_items)} 处未接线（代码写了却没有任何调用方）：")
+            for f, ln, sig in new_items[:15]:
+                print(f"   {f}:{ln}  {sig}")
+            print("\n修法二选一：①接到真实调用链上；②若为预留能力，加 // RESERVED(D-xxx) 说明并更新 baseline")
+            return 1
+        print("✅ 无新增未接线")
+        return 0
 
     print("=" * 78)
     print("「做了没接」扫描（D-848）—— 代码存在 ≠ 功能生效")
@@ -161,6 +235,22 @@ def main():
     print(f"扫描范围: backend/src/main/java 共 {len(list(SRC.rglob('*.java')))} 个 java 文件")
     print(f"空壳方法 : {len(empty_shells)} 处")
     print(f"未接线方法: {len(unwired)} 处")
+
+    if args.classify:
+        groups = {}
+        for f, ln, sig, _ in unwired:
+            cat, desc = classify(f, sig)
+            groups.setdefault(cat, []).append((f, ln, sig))
+        print(f"\n【按类别分组】共 {len(groups)} 类")
+        for cat in sorted(groups, key=lambda c: -len(groups[c])):
+            items = groups[cat]
+            desc = next((d for p, c, d in CLASSIFY_RULES if c == cat), "")
+            print(f"\n── {cat}（{len(items)} 处）: {desc}")
+            for f, ln, sig in items if args.all else items[:6]:
+                print(f"   {f}:{ln}  {sig}")
+            if not args.all and len(items) > 6:
+                print(f"   ... 其余 {len(items) - 6} 处用 --all 查看")
+        return 0
 
     limit = None if args.all else 20
     if show_empty and empty_shells:

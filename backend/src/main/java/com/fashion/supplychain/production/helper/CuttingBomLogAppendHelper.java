@@ -49,10 +49,11 @@ public class CuttingBomLogAppendHelper extends AbstractOperationLogAppendHelper<
         appendOperation(bomId, "修改裁剪BOM", "更新字段：" + fieldNames);
     }
 
-    public void appendAddMaterial(String bomId, String materialName) {
-        appendOperation(bomId, "添加物料", "物料：" + materialName);
-    }
-
+    /**
+     * D-851：移除物料——原方法写了但 delete() 从未调用（物料被删无任何日志）。
+     * 注：appendAddMaterial 已删除——它与 appendCreate 语义重复（新增一条 BOM 明细
+     * 就是"添加物料"），保留会造成同一次操作两条日志。
+     */
     public void appendRemoveMaterial(String bomId, String materialName) {
         appendOperation(bomId, "移除物料", "物料：" + materialName);
     }
