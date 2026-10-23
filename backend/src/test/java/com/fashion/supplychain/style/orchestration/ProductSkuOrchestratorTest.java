@@ -50,6 +50,8 @@ class ProductSkuOrchestratorTest {
     private ProductWarehousingService productWarehousingService;
     @Mock
     private LambdaQueryChainWrapper<ProductSku> skuQueryChain;
+    @Mock
+    private com.fashion.supplychain.warehouse.service.StockChangeLogService stockChangeLogService;
 
     @InjectMocks
     private ProductSkuOrchestrator orchestrator;
@@ -96,6 +98,17 @@ class ProductSkuOrchestratorTest {
 
             // 增量语义：-3 必须透传到 Service（100 → 97）
             verify(productSkuService).updateStock("BR26X1Q1011A-墨绿-M", -3);
+
+            // D-845：手工调整必须写库存流水（此前只有入库/出库写，调整是盲区）
+            org.mockito.ArgumentCaptor<com.fashion.supplychain.warehouse.entity.StockChangeLog> cap =
+                    org.mockito.ArgumentCaptor.forClass(com.fashion.supplychain.warehouse.entity.StockChangeLog.class);
+            verify(stockChangeLogService).save(cap.capture());
+            com.fashion.supplychain.warehouse.entity.StockChangeLog scl = cap.getValue();
+            org.assertj.core.api.Assertions.assertThat(scl.getChangeType()).isEqualTo("ADJUST");
+            org.assertj.core.api.Assertions.assertThat(scl.getBeforeQuantity()).isEqualByComparingTo("100");
+            org.assertj.core.api.Assertions.assertThat(scl.getChangeQuantity()).isEqualByComparingTo("-3");
+            org.assertj.core.api.Assertions.assertThat(scl.getAfterQuantity()).isEqualByComparingTo("97");
+            org.assertj.core.api.Assertions.assertThat(scl.getBizType()).isEqualTo("manual_adjust");
         }
     }
 }

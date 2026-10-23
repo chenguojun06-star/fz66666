@@ -3,7 +3,9 @@ package com.fashion.supplychain.common.monitor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.mapper.*;
+import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.mapper.ProductSkuMapper;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.system.mapper.FactoryMapper;
 import com.fashion.supplychain.system.mapper.UserMapper;
@@ -60,6 +62,10 @@ public class DataConsistencyChecker {
     @Autowired
     private UserMapper userMapper;
 
+    /** D-845：库存对账巡检需要 SKU 库存视角 */
+    @Autowired
+    private ProductSkuMapper productSkuMapper;
+
     /** 检测结果缓存 */
     private volatile long lastCheckTime = 0;
     private volatile CheckResult lastResult = null;
@@ -100,6 +106,12 @@ public class DataConsistencyChecker {
         
         // 3. 检查数据不一致
         checkDataInconsistency(result);
+
+        // 4. D-845：库存对账闭环检查——「有库存无入库单」「有入库单但账不平」
+        //    （2026-10-23 生产报障「入库记录全没、0=110+0+0」的守护；
+        //     此前该类问题只能靠人肉翻库发现）
+        checkStockWithoutInbound(result);
+        checkStockVsInboundMismatch(result);
         
         result.endTime = System.currentTimeMillis();
         result.duration = result.endTime - result.startTime;
@@ -286,24 +298,151 @@ public class DataConsistencyChecker {
         }
     }
 
-    private void checkWarehousingOrderMismatch(CheckResult result) {
-        // 检查入库数量超过订单数量的异常情况
-        // 入库合格数量 > 订单数量可能是录入错误
-        List<ProductionOrder> orders = orderMapper.selectList(
-            new LambdaQueryWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getStatus, "completed")
-        );
-        
-        List<String> abnormalOrders = new ArrayList<>();
-        for (ProductionOrder order : orders) {
-            Integer orderQty = order.getOrderQuantity();
-            // 实际入库数量需要从入库表汇总
-            // 这里简化处理，只记录检查点
+    /**
+     * D-845：检查「有库存但无任何入库单」的款。
+     *
+     * <p>2026-10-23 事故：11 个款库存非零却查不到入库单，对账公式呈现
+     * 0 = 110 + 0 + 0，用户以为数据丢失。根因是 SKU 库存可被建款/导入直接写入，
+     * 与入库单（只由质检入库/扫码/补录生成）是两条独立路径。
+     * 本检查让这类「无单库存」在每日巡检里显形，不等用户报障。
+     */
+    private void checkStockWithoutInbound(CheckResult result) {
+        log.info("[DataConsistency] 检查有库存无入库单的款...");
+        try {
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            List<ProductSku> skusWithStock = productSkuMapper.selectList(
+                    new LambdaQueryWrapper<ProductSku>()
+                            .gt(ProductSku::getStockQuantity, 0)
+                            .eq(tenantId != null, ProductSku::getTenantId, tenantId));
+            if (skusWithStock == null || skusWithStock.isEmpty()) {
+                return;
+            }
+            List<ProductWarehousing> inbound = warehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId));
+            Set<String> stylesWithInbound = (inbound == null ? List.<ProductWarehousing>of() : inbound).stream()
+                    .map(w -> w.getStyleNo() == null ? "" : w.getStyleNo().trim())
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toSet());
+
+            Map<String, Integer> stockByStyle = new LinkedHashMap<>();
+            for (ProductSku sku : skusWithStock) {
+                String sn = sku.getStyleNo() == null ? "" : sku.getStyleNo().trim();
+                if (sn.isEmpty()) continue;
+                int q = sku.getStockQuantity() == null ? 0 : sku.getStockQuantity();
+                stockByStyle.merge(sn, q, Integer::sum);
+            }
+            List<String> orphans = new ArrayList<>();
+            int orphanQty = 0;
+            for (Map.Entry<String, Integer> e : stockByStyle.entrySet()) {
+                if (!stylesWithInbound.contains(e.getKey())) {
+                    orphans.add(e.getKey() + "(" + e.getValue() + "件)");
+                    orphanQty += e.getValue();
+                }
+            }
+            if (!orphans.isEmpty()) {
+                result.addIssue("t_product_sku", "有库存无入库单", orphans.size(),
+                        "以下款有库存但无任何入库单（库存来自建款/导入直写，需补录入库单闭合对账）: "
+                                + orphans.stream().limit(10).collect(Collectors.joining(", "))
+                                + (orphans.size() > 10 ? " 等共 " + orphans.size() + " 款" : "")
+                                + "，合计 " + orphanQty + " 件");
+            }
+        } catch (Exception e) {
+            result.addError("checkStockWithoutInbound", e.getMessage());
         }
-        
-        if (!abnormalOrders.isEmpty()) {
-            result.addIssue("t_production_order", "数量异常", abnormalOrders.size(),
-                "入库数量超过订单数量的订单: " + abnormalOrders.stream().limit(5).collect(Collectors.joining(",")));
+    }
+
+    /**
+     * D-845：检查「有入库单但库存与入库总量不一致」的款（账不平）。
+     * 排除无入库单的款（由 checkStockWithoutInbound 单独报告，避免重复噪音）。
+     * 差异来源：未登记出库/次品、盘点调整、异常删单等。
+     */
+    private void checkStockVsInboundMismatch(CheckResult result) {
+        log.info("[DataConsistency] 检查库存与入库总量是否平衡...");
+        try {
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            List<ProductSku> skus = productSkuMapper.selectList(
+                    new LambdaQueryWrapper<ProductSku>()
+                            .gt(ProductSku::getStockQuantity, 0)
+                            .eq(tenantId != null, ProductSku::getTenantId, tenantId));
+            if (skus == null || skus.isEmpty()) {
+                return;
+            }
+            List<ProductWarehousing> inbound = warehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId));
+            Map<String, Integer> inboundByStyle = new HashMap<>();
+            for (ProductWarehousing w : (inbound == null ? List.<ProductWarehousing>of() : inbound)) {
+                String sn = w.getStyleNo() == null ? "" : w.getStyleNo().trim();
+                if (sn.isEmpty()) continue;
+                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                inboundByStyle.merge(sn, q, Integer::sum);
+            }
+            Map<String, Integer> stockByStyle = new LinkedHashMap<>();
+            for (ProductSku sku : skus) {
+                String sn = sku.getStyleNo() == null ? "" : sku.getStyleNo().trim();
+                if (sn.isEmpty()) continue;
+                int q = sku.getStockQuantity() == null ? 0 : sku.getStockQuantity();
+                stockByStyle.merge(sn, q, Integer::sum);
+            }
+            List<String> diffs = new ArrayList<>();
+            for (Map.Entry<String, Integer> e : stockByStyle.entrySet()) {
+                Integer in = inboundByStyle.get(e.getKey());
+                if (in == null) continue;              // 无单款由另一检查报告
+                if (!in.equals(e.getValue())) {
+                    diffs.add(e.getKey() + "(库存" + e.getValue() + "≠入库" + in + ")");
+                }
+            }
+            if (!diffs.isEmpty()) {
+                result.addIssue("t_product_sku", "库存与入库不平", diffs.size(),
+                        "以下款库存与入库总量不一致（可能存在未登记出库/次品或异常删单）: "
+                                + diffs.stream().limit(10).collect(Collectors.joining(", "))
+                                + (diffs.size() > 10 ? " 等共 " + diffs.size() + " 款" : ""));
+            }
+        } catch (Exception e) {
+            result.addError("checkStockVsInboundMismatch", e.getMessage());
+        }
+    }
+
+    private void checkWarehousingOrderMismatch(CheckResult result) {
+        // D-845：填实原空壳——检查入库合格数量超过订单总数量的异常（录入错误/重复入库）。
+        // 原实现只有注释和空循环，等于没检查。
+        try {
+            List<ProductionOrder> orders = orderMapper.selectList(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getStatus, "completed"));
+            if (orders == null || orders.isEmpty()) {
+                return;
+            }
+            Map<String, Integer> inboundByOrderNo = new HashMap<>();
+            List<ProductWarehousing> inbound = warehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            for (ProductWarehousing w : (inbound == null ? List.<ProductWarehousing>of() : inbound)) {
+                String on = w.getOrderNo() == null ? "" : w.getOrderNo().trim();
+                if (on.isEmpty()) continue;
+                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                inboundByOrderNo.merge(on, q, Integer::sum);
+            }
+            List<String> abnormalOrders = new ArrayList<>();
+            for (ProductionOrder order : orders) {
+                Integer orderQty = order.getOrderQuantity();
+                String on = order.getOrderNo() == null ? "" : order.getOrderNo().trim();
+                if (orderQty == null || on.isEmpty()) continue;
+                Integer in = inboundByOrderNo.get(on);
+                if (in != null && in > orderQty) {
+                    abnormalOrders.add(on + "(入库" + in + ">订单" + orderQty + ")");
+                }
+            }
+            if (!abnormalOrders.isEmpty()) {
+                result.addIssue("t_production_order", "数量异常", abnormalOrders.size(),
+                        "入库数量超过订单数量的订单: "
+                                + abnormalOrders.stream().limit(5).collect(Collectors.joining(",")));
+            }
+        } catch (Exception e) {
+            result.addError("checkWarehousingOrderMismatch", e.getMessage());
         }
     }
 

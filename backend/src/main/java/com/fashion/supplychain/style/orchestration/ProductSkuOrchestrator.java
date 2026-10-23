@@ -52,6 +52,9 @@ public class ProductSkuOrchestrator {
     @Autowired
     private ProductWarehousingService productWarehousingService;
 
+    @Autowired
+    private com.fashion.supplychain.warehouse.service.StockChangeLogService stockChangeLogService;
+
     public List<ProductSku> listByStyleId(Long styleId) {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -458,6 +461,38 @@ public class ProductSkuOrchestrator {
                 String.format("商品编码: %s；款号: %s；库存: %d → %d（%+d）",
                         skuCode, existing.getStyleNo(), oldStock, oldStock + quantity, quantity),
                 skuCode, skuCode);
+
+        // D-845：同一入口补写「库存流水」——此前只有入库/出库写 t_stock_change_log，
+        // 手工调整（建款/上架页直改）是流水盲区，账面永远无法用流水复算。
+        // 失败不阻断主流程（流水是审计副产物，不能反过来卡住业务）。
+        try {
+            com.fashion.supplychain.warehouse.entity.StockChangeLog scl =
+                    new com.fashion.supplychain.warehouse.entity.StockChangeLog();
+            scl.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+            scl.setChangeNo("SC" + java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                    + Integer.toHexString(java.util.concurrent.ThreadLocalRandom.current()
+                    .nextInt(0x1000, 0x10000)).toUpperCase());
+            scl.setChangeType("ADJUST");
+            scl.setStockType("FINISHED");
+            scl.setStyleNo(existing.getStyleNo());
+            scl.setColor(existing.getColor());
+            scl.setSize(existing.getSize());
+            scl.setBeforeQuantity(java.math.BigDecimal.valueOf(oldStock));
+            scl.setChangeQuantity(java.math.BigDecimal.valueOf(quantity));
+            scl.setAfterQuantity(java.math.BigDecimal.valueOf(oldStock + quantity));
+            scl.setBizType("manual_adjust");
+            scl.setBizId(skuCode);
+            scl.setBizNo(skuCode);
+            scl.setOperatorId(UserContext.userId());
+            scl.setOperatorName(UserContext.username());
+            scl.setRemark("手工库存调整（建款/上架编辑页）");
+            scl.setTenantId(tenantId);
+            scl.setCreateTime(java.time.LocalDateTime.now());
+            stockChangeLogService.save(scl);
+        } catch (Exception e) {
+            log.warn("记录库存流水失败（不阻断库存调整）: skuCode={}, err={}", skuCode, e.getMessage());
+        }
     }
 
     /**

@@ -55,6 +55,8 @@ public class SystemIssueCollectorOrchestrator {
         safeCheck(issues, this::checkDuplicateScanBlocked);
         safeCheck(issues, this::checkDatabaseConnection);
         safeCheck(issues, this::checkFrontendErrors);
+        // D-845：库存对账闭环——有库存无入库单（2026-10-23「入库记录全没」报障的看板守护）
+        safeCheck(issues, this::checkStockWithoutInbound);
 
         long errorCount = issues.stream().filter(i -> "ERROR".equals(i.getLevel())).count();
         long warnCount  = issues.stream().filter(i -> "WARN".equals(i.getLevel())).count();
@@ -182,6 +184,38 @@ public class SystemIssueCollectorOrchestrator {
                     "进行中的订单连续3天没有新的成功扫码记录，可能是工厂停工、扫码设备故障或订单遗忘跟进。",
                     cnt, null,
                     "前往 工序跟进 页面，查看停滞订单（橙色 ⏸ 停滞标签）"));
+        }
+    }
+
+    /**
+     * D-845：有库存但无任何入库单的款。
+     *
+     * <p>背景（2026-10-23 报障）：「之前生产做质检入库的数据都没有了」「0 = 110 + 0 + 0」。
+     * 实为 SKU 库存与入库单是两条独立路径——建款/导入可直写 stock_quantity，
+     * 入库单只由质检入库/扫码/补录生成。两条路不交叉 → 有库存无单 → 对账公式刺眼。
+     * 本检查让这类款在超管看板上显形，不再依赖用户报障后人工翻库。
+     */
+    private void checkStockWithoutInbound(List<SystemIssueItemDTO> issues) {
+        String sql = "SELECT COUNT(*) AS cnt, COALESCE(SUM(t.stock_qty), 0) AS qty FROM (" +
+                     "  SELECT s.style_no, SUM(s.stock_quantity) AS stock_qty" +
+                     "  FROM t_product_sku s" +
+                     "  WHERE s.stock_quantity > 0" +
+                     "    AND NOT EXISTS (SELECT 1 FROM t_product_warehousing w" +
+                     "                    WHERE TRIM(w.style_no) = TRIM(s.style_no) AND w.delete_flag = 0)" +
+                     "  GROUP BY s.style_no" +
+                     ") t";
+        Map<String, Object> row = jdbcTemplate.queryForMap(sql);
+        int cnt = toInt(row.get("cnt"));
+        if (cnt > 0) {
+            int qty = toInt(row.get("qty"));
+            issues.add(SystemIssueItemDTO.of(cnt >= 5 ? "WARN" : "INFO", "STOCK",
+                    cnt + " 个款有库存但无入库单（合计 " + qty + " 件）",
+                    "这些款的库存来自建款/导入直写，未走质检入库流程。对账公式会显示"
+                            + "「入库 0 = 库存 N + 出库 0 + 次品 0」，容易被误判为数据丢失；"
+                            + "实际是单据链不完整（库存与入库单是两条独立路径）。",
+                    cnt, null,
+                    "成品库存 → 款号详情抽屉点「补入库单」闭合对账（backfill 只补单不动库存）；"
+                            + "也可跑 scripts/check-stock-reconcile.sql 查看完整清单"));
         }
     }
 
