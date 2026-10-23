@@ -364,9 +364,14 @@ public class InventoryCheckOrchestrator {
                     }
                 }
                 log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
+                // D-852：盘点调整直接改库存，必须留痕（此前只有 log.info，操作日志查不到任何记录）
+                logAppendHelper.appendAdjust(item.getId(), delta,
+                        "盘点确认调整物料库存（盘点单 " + check.getCheckNo() + "）");
             } else if ("FINISHED".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
                 productSkuService.updateStockById(Long.valueOf(item.getStockId()), delta);
                 log.info("盘点调整成品库存: skuId={}, delta={}", item.getStockId(), delta);
+                logAppendHelper.appendAdjust(item.getId(), delta,
+                        "盘点确认调整成品库存（盘点单 " + check.getCheckNo() + "）");
             } else if ("SAMPLE".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
                 int rows = ((SampleStockMapper) sampleStockService.getBaseMapper())
                         .updateStockQuantity(item.getStockId(), delta, tenantId);
@@ -374,6 +379,8 @@ public class InventoryCheckOrchestrator {
                     log.warn("[盘点调整] 样衣库存调整失败: stockId={}, delta={}", item.getStockId(), delta);
                 }
                 log.info("盘点调整样衣库存: stockId={}, delta={}", item.getStockId(), delta);
+                logAppendHelper.appendAdjust(item.getId(), delta,
+                        "盘点确认调整样衣库存（盘点单 " + check.getCheckNo() + "）");
             }
         }
     }

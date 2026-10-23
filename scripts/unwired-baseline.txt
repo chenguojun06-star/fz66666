@@ -154,6 +154,5 @@ backend/src/main/java/com/fashion/supplychain/system/orchestration/OrganizationU
 backend/src/main/java/com/fashion/supplychain/system/service/AppStoreService.java::List<AppStore> listWithJson()
 backend/src/main/java/com/fashion/supplychain/template/orchestration/TemplateStyleOrchestrator.java::int batchApplyBomTemplate(String templateId, List<Long> targetStyleIds, boolean overwr)
 backend/src/main/java/com/fashion/supplychain/template/orchestration/TemplateStyleOrchestrator.java::int batchApplyProcessTemplate(String templateId, List<Long> targetStyleIds, boolean overwr)
-backend/src/main/java/com/fashion/supplychain/warehouse/helper/InventoryCheckLogAppendHelper.java::void appendAdjust(String itemId, Integer variance, String reason)
 backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/MaterialPickupReceivableOrchestrator.java::void syncAfterApproval(MaterialPickupRecord record, String auditRemark)
 backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/StockChangeLogOrchestrator.java::void logChange(String changeType, String stockType, String stockId, )
