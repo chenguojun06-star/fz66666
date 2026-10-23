@@ -14,49 +14,52 @@ const price = (v?: number | null) => (v == null ? '—' : `¥${Number(v).toFixed
 
 /**
  * D-843：款式状态（上架列表用）。
- * 口径优先级：报废 > 大货订单进行中 > 大货已完成 > 样衣开发阶段。
- * 依据：StyleInfo.status / sampleStatus / progressNode + 最新大货订单状态（后端 fillOrderCountFields 回填）。
- * 只做展示、不做拦截：开发中的款也允许上架（预售/测试场景），由运营看状态判断。
+ * 对外只有三档粗口径（用户口径：开发中 / 大货生产中 / 已结束），
+ * 细分节点（纸样开发中/纸样完成/样衣制作中/样衣生产完成…）只在 Tooltip 里展示，
+ * 不再把后端 progressNode 原文直接当状态显示（D-843 修正：之前「纸样完成」这种
+ * 开发阶段的细分节点被 fallthrough 原样显示，运营看到以为是独立状态）。
+ * 只做展示、不做拦截：开发中的款也允许上架（预售/测款）。
  */
 export function resolveStyleStage(row: ListingRow): { text: string; color: string; tip: string } {
   const status = String(row.status ?? '').trim().toUpperCase();
   const sample = String(row.sampleStatus ?? '').trim().toUpperCase();
   const order = String(row.latestOrderStatus ?? '').trim().toLowerCase();
   const node = String(row.progressNode ?? '').trim();
+  const orders = row.orderCount ? `（共 ${row.orderCount} 张大货单）` : '';
 
+  // 1. 报废最优先
   if (status === 'SCRAPPED') {
     return { text: '已报废', color: 'error', tip: '该款已报废，不建议上架销售' };
   }
+  // 2. 有最新大货订单 → 按订单状态
   if (['pending', 'production', 'delayed', 'paused'].includes(order)) {
     return {
       text: order === 'delayed' ? '大货逾期' : '大货生产中',
       color: order === 'delayed' ? 'error' : 'blue',
-      tip: `已下大货订单，当前订单状态：${order}${row.orderCount ? `（共 ${row.orderCount} 单）` : ''}`,
+      tip: `已下大货订单${orders}，当前订单状态：${order}`,
     };
   }
   if (['completed', 'closed', 'archived'].includes(order)) {
-    return { text: '大货已完成', color: 'success', tip: '大货订单已完成/关单，可直接补货上架' };
+    return { text: '大货已完成', color: 'success', tip: `大货订单已完成/关单${orders}` };
   }
-  if (sample === 'WAREHOUSE_IN') {
-    return { text: '已入库', color: 'success', tip: '样衣已审核入库，可上架' };
+  // 3. 款式停用
+  if (status === 'DISABLED') {
+    return { text: '已停用', color: 'default', tip: '款式已停用，不再参与经营' };
   }
-  if (sample === 'COMPLETED') {
-    return { text: '样衣完成', color: 'success', tip: '样衣开发已完成，尚未推大货/入库' };
-  }
-  if (sample === 'PRODUCTION_COMPLETED') {
-    return { text: '样衣生产完成', color: 'cyan', tip: '样衣已生产完，等待审核入库' };
-  }
-  if (sample === 'IN_PROGRESS' || node.includes('制作中') || node.includes('开发中')) {
+  // 4. 样衣开发流程真正走完（样衣完成 / 已审核入库），但还没下大货
+  if (sample === 'COMPLETED' || sample === 'WAREHOUSE_IN') {
     return {
-      text: '开发中',
-      color: 'processing',
-      tip: `该款仍在开发中（${node || '样衣制作中'}），可预售/测款，正式上架请先确认库存`,
+      text: '开发完成',
+      color: 'cyan',
+      tip: `样衣开发已完成（${node || '样衣完成'}），尚未下大货，可直接零售/补货`,
     };
   }
-  if (status === 'DISABLED') {
-    return { text: '已停用', color: 'default', tip: '款式已停用' };
-  }
-  return { text: node || '待开发', color: 'default', tip: '尚未进入样衣开发流程' };
+  // 5. 其余一律归「开发中」：纸样开发中 / 纸样完成 / 样衣制作中 / 样衣生产完成 / 未开始 / 无
+  return {
+    text: '开发中',
+    color: 'processing',
+    tip: `样衣开发阶段：${node || '未开始'}。开发中款式可预售/测款，正式上架请先确认库存`,
+  };
 }
 
 /** 售价区间：min==max 只显示一个价 */
