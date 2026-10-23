@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AutoComplete, Tooltip } from 'antd';
+import { AutoComplete, Button, Tooltip } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { BrandLoader } from '@/components/common/loading';
@@ -36,6 +36,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
 }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [manageOpen, setManageOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(searchText, 300);
@@ -47,16 +48,22 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
     const fetchCustomers = async () => {
       setLoading(true);
       try {
-        const params: Record<string, unknown> = { pageSize: 50, status: 'ACTIVE' };
+        const params: Record<string, unknown> = { pageSize: 50 };
         if (debouncedSearch.trim()) {
           params.keyword = debouncedSearch.trim();
         }
+        // D-842：不再传 status:'ACTIVE' —— 后端是大小写敏感精确匹配，线上存在
+        // 小写/历史状态值时会整表被过滤成 0 条，出库选客户全空（2026-10-23 报障）。
+        // 未删除的客户全部可选，禁用与否交由业务侧判断。
         const response = await customerApi.list(params as any);
         if (mounted && (response as any)?.data?.records) {
           setCustomers((response as any).data.records);
         }
+        if (mounted) setLoadError(false);
       } catch {
-        if (mounted) setCustomers([]);
+        // D-842：之前静默吞错——接口 500/403 时下拉显示「未找到匹配的客户」，
+        // 用户根本分不清是没客户还是接口挂了。现在显式标错并给重试入口。
+        if (mounted) { setCustomers([]); setLoadError(true); }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -131,7 +138,16 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         style={style}
-        notFoundContent={loading ? <BrandLoader size={40} /> : '未找到匹配的客户（可直接输入客户名称）'}
+        notFoundContent={loading ? <BrandLoader size={40} /> : (
+          loadError ? (
+            <div style={{ padding: '8px 0', textAlign: 'center' }}>
+              <span style={{ color: 'var(--color-text-secondary, #999)' }}>客户列表加载失败</span>
+              <Button type="link" size="small" onClick={() => setSearchText((v) => `${v} `)}>
+                重试
+              </Button>
+            </div>
+          ) : '未找到匹配的客户（可直接输入客户名称）'
+        )}
         filterOption={(inputValue, option) => {
           const searchText = inputValue.toLowerCase();
           const companyName = (option?.customer?.companyName || '').toLowerCase();
