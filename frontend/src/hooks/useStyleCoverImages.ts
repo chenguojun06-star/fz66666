@@ -140,6 +140,10 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
    * （真实编码无分隔符，前端无法自行拆解），颜色图优先、款图兜底。
    */
   const fetchBySkuCodes = useCallback(async (skuCodes: Array<string | null | undefined>) => {
+    // node/测试环境守卫：组件销毁后（vitest teardown）window 已没了，
+    // 迟到的异步回调再发请求会抛 "window is not defined" 形成 Unhandled
+    // Rejection（CI 844 用例全过仍 exit 1 的根因）。图片是锦上添花，直接跳过。
+    if (typeof window === 'undefined') return;
     const unique = Array.from(new Set(
       skuCodes
         .map(s => (typeof s === 'string' ? s.trim() : ''))
