@@ -141,10 +141,10 @@ class DataConsistencyCheckerTest {
     }
 
     @Test
-    @DisplayName("有出库+次品时按「入库-出库-次品」判定，不得误报（首版漏扣会洪水误报）")
-    void noFalsePositiveWhenOutstockAndDefectExist() {
-        // 入库 100、出库 30、次品 5 → 期望库存 65
-        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("SHIPPED-STYLE", 65)));
+    @DisplayName("有出库时按「合格入库-出库」判定；次品不参与（不进库存），不得误报")
+    void noFalsePositiveWhenOutstockExists() {
+        // 入库 100（含次品 5）、出库 30 → 期望库存 70（次品不参与）
+        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("SHIPPED-STYLE", 70)));
         when(warehousingMapper.selectList(any())).thenReturn(List.of(inboundWithDefect("SHIPPED-STYLE", 100, 5)));
         when(productOutstockMapper.selectList(any())).thenReturn(List.of(outstock("SHIPPED-STYLE", 30)));
 
@@ -154,17 +154,17 @@ class DataConsistencyCheckerTest {
     }
 
     @Test
-    @DisplayName("真不平（库存与期望差 2）必须报出，并给出 入库-出库-次品 明细")
+    @DisplayName("真不平（库存比期望多 2）必须报出，并给出 入库-出库 明细")
     void flagsRealMismatchWithBreakdown() {
-        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("BAD-STYLE", 83)));
+        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("BAD-STYLE", 92)));
         when(warehousingMapper.selectList(any())).thenReturn(List.of(inboundWithDefect("BAD-STYLE", 100, 5)));
         when(productOutstockMapper.selectList(any())).thenReturn(List.of(outstock("BAD-STYLE", 10)));
-        // 期望 100-10-5=85，实际 83 → 差 2
+        // 期望 100-10=90，实际 92 → 差 2
 
         DataConsistencyChecker.CheckResult r = checker.performFullCheck();
 
         DataConsistencyChecker.Issue issue = r.issues.stream()
                 .filter(i -> "库存与入库不平".equals(i.type)).findFirst().orElseThrow();
-        assertThat(issue.detail).contains("BAD-STYLE").contains("入库100").contains("出库10").contains("次品5");
+        assertThat(issue.detail).contains("BAD-STYLE").contains("入库100").contains("出库10");
     }
 }

@@ -411,17 +411,19 @@ public class DataConsistencyChecker {
                 String sn = e.getKey();
                 Integer in = inboundByStyle.get(sn);
                 if (in == null) continue;              // 无单款由另一检查报告
-                int defect = defectByStyle.getOrDefault(sn, 0);
                 int out = outByStyle.getOrDefault(sn, 0);
-                int expected = in - out - defect;      // 期望库存
+                // D-849：次品不进库存（入库只加合格数），期望 = 合格入库 − 出库。
+                // 若再减次品，会把「历史库存误含次品」的款误判成差两倍。
+                int expected = Math.max(0, in - out);
                 if (expected != e.getValue()) {
+                    int defect = defectByStyle.getOrDefault(sn, 0);
                     diffs.add(sn + "(库存" + e.getValue() + "≠期望" + expected
-                            + "：入库" + in + "-出库" + out + "-次品" + defect + ")");
+                            + "：入库" + in + "-出库" + out + (defect > 0 ? "，次品" + defect + "单列" : "") + ")");
                 }
             }
             if (!diffs.isEmpty()) {
                 result.addIssue("t_product_sku", "库存与入库不平", diffs.size(),
-                        "以下款库存与「入库-出库-次品」不一致（可能存在未登记出库/次品、盘点调整或异常删单）: "
+                        "以下款库存与「合格入库-出库」不一致（可能存在未登记出库、盘点调整或异常删单）: "
                                 + diffs.stream().limit(10).collect(Collectors.joining(", "))
                                 + (diffs.size() > 10 ? " 等共 " + diffs.size() + " 款" : ""));
             }

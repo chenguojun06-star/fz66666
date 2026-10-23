@@ -71,17 +71,17 @@ class ProductSkuOrchestratorTest {
     }
 
     @Test
-    @DisplayName("D-849 期望库存口径：合格入库-出库-次品，下限 0（防止重算把已发货的货刷回在库）")
-    void computeExpectedStock_deductsOutstockAndDefect() {
-        // 入库 300、出库 300 → 0（BR24XQ0098E 的真实场景：原实现只算入库会刷回 300）
+    @DisplayName("D-849 期望库存口径：合格入库-出库（次品不参与，下限 0）")
+    void computeExpectedStock_deductsOutstock() {
+        // 入库 300、出库 300 → 0（BR24XQ0098E 真实场景：原实现只算入库会刷回 300）
         org.assertj.core.api.Assertions.assertThat(
-                ProductSkuOrchestrator.computeExpectedStock(300, 300, 0)).isEqualTo(0);
-        // 入库 100、出库 10、次品 5 → 85
+                ProductSkuOrchestrator.computeExpectedStock(300, 300)).isEqualTo(0);
+        // 入库 100、出库 10 → 90（次品不进库存，不参与计算）
         org.assertj.core.api.Assertions.assertThat(
-                ProductSkuOrchestrator.computeExpectedStock(100, 10, 5)).isEqualTo(85);
-        // 出库+次品超过入库 → 下限 0，不出负数
+                ProductSkuOrchestrator.computeExpectedStock(100, 10)).isEqualTo(90);
+        // 出库超过入库 → 下限 0，不出负数
         org.assertj.core.api.Assertions.assertThat(
-                ProductSkuOrchestrator.computeExpectedStock(10, 8, 5)).isEqualTo(0);
+                ProductSkuOrchestrator.computeExpectedStock(10, 15)).isEqualTo(0);
     }
 
     @Test

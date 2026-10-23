@@ -500,14 +500,17 @@ public class ProductSkuOrchestrator {
     }
 
     /**
-     * D-849：期望库存口径——合格入库 − 出库 − 次品（下限 0）。
+     * D-849：期望库存口径——合格入库 − 出库（下限 0）。
      *
-     * <p>三处必须永远同口径：本重算、DataConsistencyChecker 巡检、前端对账公式。
-     * 2026-10-23 实证：本方法原实现只算入库，调用一次就把已出库 300 件的款
-     * 库存从 0 刷回 300 —— 库存重算反而制造了幽灵库存。
+     * <p><b>次品不参与</b>：系统设计上次品不进库存（WarehousingWriteHelper 入库时
+     * 只 updateSkuStock 合格数，次品仅记录在入库单 unqualified_quantity）。
+     * 2026-10-23 实证：H0002/hyy111111 历史库存被误加了次品（85=83+2、45=43+2），
+     * 按「再减次品」的口径会把这种数据误判成差 4 件。
+     *
+     * <p>三处必须永远同口径：本重算、DataConsistencyChecker 巡检、check-stock-reconcile.sql。
      */
-    static int computeExpectedStock(int inboundQualified, int outstock, int defect) {
-        return Math.max(0, inboundQualified - outstock - defect);
+    static int computeExpectedStock(int inboundQualified, int outstock) {
+        return Math.max(0, inboundQualified - outstock);
     }
 
     /**
@@ -620,8 +623,8 @@ public class ProductSkuOrchestrator {
                 }
                 outTotal = outstockMap.getOrDefault(key, 0);
             }
-            // D-849：期望库存 = 合格入库 − 出库 − 次品（与巡检/前端对账公式同口径）
-            int expectedStock = computeExpectedStock(inboundTotal, outTotal, defectTotal);
+            // D-849：期望库存 = 合格入库 − 出库（次品不进库存，不参与；与巡检同口径）
+            int expectedStock = computeExpectedStock(inboundTotal, outTotal);
 
             int oldStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
             if (oldStock != expectedStock) {
