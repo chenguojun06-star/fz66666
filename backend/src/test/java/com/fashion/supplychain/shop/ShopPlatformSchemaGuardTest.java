@@ -432,6 +432,20 @@ class ShopPlatformSchemaGuardTest {
         assertThat(drawer).as("详情页补录必须传 stockless: true").contains("stockless: true");
         assertThat(drawer).as("详情页补录必须让用户填库位（补完库位不再是横杠）")
                 .contains("label=\"库位\"");
+        // D-839：库位必须从仓库地图已建的库位里**下拉选**，不能手输 ——
+        // 手输的库位仓库地图不认识（顾客 2026-10-23 截图表异议："库位根本就没有
+        // 关联到仓库地图的库位都选不了"）。且按库区联动、换区清已选。
+        assertThat(drawer)
+                .as("库位必须是 Select 且选项来自仓库地图 hook")
+                .contains("useWarehouseLocationOptions")
+                .contains("选择库位（来自仓库地图）");
+        assertThat(drawer)
+                .as("库位表单项不能再是 Input（手输）——必须是 Select")
+                .doesNotContain("name=\"warehouse\"\n            <Input");
+        // 补录按钮只对没有入库单的款出现：有单的款再补就是添乱
+        assertThat(drawer)
+                .as("补录按钮必须只在无入库单时显示")
+                .contains("warehousingList.length === 0 ? (");
     }
 
     @Test

@@ -5,6 +5,7 @@ import SideDrawer from '@/components/common/SideDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import { useWarehouseAreaOptions } from '../../../../hooks/useWarehouseAreaOptions';
+import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
 import api from '@/utils/api';
 import type { FinishedInventoryRow } from './flattenBySku';
 
@@ -76,6 +77,11 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
 
   // 编辑框里的库区下拉（成品仓 FINISHED，与自由入库同源）
   const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED' as any);
+  // D-839：补录入库单的库位必须从仓库地图已建的库里选（按库区联动）。
+  // 手输的库位仓库地图不认识——库存放哪永远说不清，顾客已就此报障。
+  const [backfillAreaId, setBackfillAreaId] = useState<string | undefined>(undefined);
+  const { locations: locationOptions, loading: locationsLoading } =
+    useWarehouseLocationOptions(backfillAreaId, 'FINISHED');
 
   // 只读区：当前实时库存（来自 rawDataSource 的同 SKU 行）
   const liveStock = useMemo(() => {
@@ -193,16 +199,18 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         width="85%"
         footer={(
           <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
-                setBackfillOpen(true);
-              }}
-            >
-              补入库单
-            </Button>
+            {warehousingList.length === 0 ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
+                  setBackfillOpen(true);
+                }}
+              >
+                补入库单
+              </Button>
+            ) : null}
             <Button icon={<HistoryOutlined />} onClick={() => setLogOpen(true)}>操作日志</Button>
             <Button icon={<ReloadOutlined />} onClick={() => { void loadWarehousingList(); }}>刷新</Button>
             <Button onClick={onClose}>关闭</Button>
@@ -274,20 +282,22 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
 
             <div style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>入库记录（{warehousingList.length} 条）</span>
-              {/* D-838：就地入库登记。无单来源的货（导入/历史直写）在这里补一张正规
-                  入库单，库位/工厂/对账公式/单号关联全部就此落地。 */}
-              <Button
-                type="primary"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  // 默认补录量 = 当前库存（这款的货全是无单来源），用户可改
-                  backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
-                  setBackfillOpen(true);
-                }}
-              >
-                补入库单
-              </Button>
+              {/* D-838：就地补录。**只对没有入库单的款显示**——有单的款再补就是添乱
+                  （顾客 2026-10-23 截图表异议：有 3 条入库记录的款也弹补录）。 */}
+              {!loading && warehousingList.length === 0 ? (
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    // 默认补录量 = 当前库存（无单款的货全是无单来源），用户可改
+                    backfillForm.setFieldsValue({ quantity: liveStock?.availableQty ?? liveStock?.stockQuantity ?? 1 });
+                    setBackfillOpen(true);
+                  }}
+                >
+                  补入库单
+                </Button>
+              ) : null}
             </div>
             {loading ? (
               <Skeleton active />
@@ -449,11 +459,40 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
           <Form.Item name="quantity" label="补录数量（件）" initialValue={1} rules={[{ required: true, message: '请输入数量' }]}>
             <InputNumber min={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="warehouse" label="库位" rules={[{ required: true, message: '请输入库位，如 A-002' }]}>
-            <Input placeholder="如 A-002" />
+          <Form.Item
+            name="warehouseAreaId"
+            label="库区"
+            extra="选好库区后，库位只列该库区下已建的库位"
+          >
+            <Select
+              allowClear
+              placeholder="选择库区"
+              options={areaOptions}
+              onChange={(v: string | undefined) => {
+                setBackfillAreaId(v);
+                backfillForm.setFieldsValue({ warehouse: undefined }); // 换库区清掉已选库位，避免跨区错放
+              }}
+            />
           </Form.Item>
-          <Form.Item name="warehouseAreaId" label="库区">
-            <Select allowClear placeholder="选择库区" options={areaOptions} />
+          <Form.Item
+            name="warehouse"
+            label="库位"
+            rules={[{ required: true, message: '请从仓库地图的库位里选（没建库位请先去仓库地图添加）' }]}
+            extra={locationOptions.length === 0 && !locationsLoading
+              ? '当前条件下没有可用库位：请先在「仓库地图」建好库位，或换个库区'
+              : undefined}
+          >
+            <Select
+              showSearch
+              allowClear
+              loading={locationsLoading}
+              placeholder={locationsLoading ? '库位加载中…' : '选择库位（来自仓库地图）'}
+              optionFilterProp="label"
+              options={locationOptions.map((l) => ({
+                value: l.locationCode,
+                label: `${l.locationCode}${l.locationName ? ` · ${l.locationName}` : ''}`,
+              }))}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} placeholder="备注（可选）" />
