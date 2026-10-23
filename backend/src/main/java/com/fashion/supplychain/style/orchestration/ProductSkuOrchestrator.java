@@ -447,7 +447,17 @@ public class ProductSkuOrchestrator {
         if (existing == null) {
             throw new IllegalArgumentException("SKU不存在: " + skuCode);
         }
+        int oldStock = existing.getStockQuantity() != null ? existing.getStockQuantity() : 0;
         productSkuService.updateStock(skuCode, quantity);
+        // D-841：库存改动必须留痕。2026-10-23 事故排查：一批 SKU 库存被批量改写，
+        // 但操作日志与库存流水均为空，无法回答「谁、什么时候、从多少改到多少」。
+        // updateStock 是库存改动单点入口（增量语义），在此统一记账；
+        // 入库/出库联动走 Service 层另一路径，有对应单据，不会重复记。
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "成品库存", "库存调整",
+                String.format("商品编码: %s；款号: %s；库存: %d → %d（%+d）",
+                        skuCode, existing.getStyleNo(), oldStock, oldStock + quantity, quantity),
+                skuCode, skuCode);
     }
 
     /**

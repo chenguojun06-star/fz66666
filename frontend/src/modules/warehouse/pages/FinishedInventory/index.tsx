@@ -420,6 +420,24 @@ const _FinishedInventory: React.FC = () => {
                 <div className="u-mt-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-container)' }}>
                   <div className="u-fw-600 u-mb-4">对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>
+                  {/* D-841：账目不平时明确说明，避免「0 = 110 + 0 + 0」被用户当成数据丢失。
+                      库存与入库单是两条独立路径（建款/导入可直写库存，入库单只由质检入库/扫码生成），
+                      不平 = 单据链不完整，不是数据没了 */}
+                  {(() => {
+                    const inbound = Number(inboundHistoryModal.data.totalInboundQty ?? 0);
+                    const stock = Number(inboundHistoryModal.data.availableQty ?? 0);
+                    const out = Number(outstockTotal ?? 0);
+                    const defect = Number(inboundHistoryModal.data.defectQty ?? 0);
+                    const expected = stock + out + defect;
+                    if (inbound === expected) return null;
+                    return (
+                      <div className="u-mt-4 u-fs-12" style={{ color: 'var(--color-warning, #fa8c16)' }}>
+                        ⚠️ 账目不平（差额 {expected - inbound} 件）：库存与入库单不匹配。
+                        常见原因是该款库存为建款/导入时直接录入、未走质检入库流程——可在本页点「补入库单」闭合对账；
+        也可能是存在未登记的出库或次品。这是单据链不完整，不是数据丢失。
+                      </div>
+                    );
+                  })()}
                   <div className="u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>入库记录合计: {inboundTotalQty} 件（{inboundHistory.length} 条记录）</div>
                 </div>
               </>
