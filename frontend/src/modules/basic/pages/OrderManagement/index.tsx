@@ -40,6 +40,8 @@ import { useOrderStats } from './hooks/useOrderStats';
 import { useSmartFilter } from './hooks/useSmartFilter';
 import { useStatCardsConfig } from './hooks/useStatCardsConfig';
 import { useCreateDialog } from './hooks/useCreateDialog';
+// D-854：AI 建议横条——放在用户每天必看的订单列表页（此前建议只在超管看板，0 采纳）
+import AiSuggestionBar from './components/AiSuggestionBar';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -347,6 +349,8 @@ const OrderManagement: React.FC = () => {
           />
         }
       >
+        {/* D-854：AI 建议横条（无建议时不渲染，不占位不打扰） */}
+        <AiSuggestionBar />
         <OrderManagementTabs
           viewMode={viewMode}
           setViewMode={setViewMode}
