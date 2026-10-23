@@ -29,7 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * D-845：库存对账巡检（DataConsistencyChecker 新增检查项）的单测。
+ * D-846：库存对账巡检（DataConsistencyChecker 新增检查项）的单测。
  *
  * <p>背景（2026-10-23 报障）：11 个款有库存无入库单，对账公式 0 = 110 + 0 + 0，
  * 用户以为数据丢失。此前巡检器的空壳检查发现不了，本测试守护两个新检查项：
@@ -48,6 +48,7 @@ class DataConsistencyCheckerTest {
     @Mock private FactoryMapper factoryMapper;
     @Mock private UserMapper userMapper;
     @Mock private ProductSkuMapper productSkuMapper;
+    @Mock private com.fashion.supplychain.production.mapper.ProductOutstockMapper productOutstockMapper;
 
     @InjectMocks
     private DataConsistencyChecker checker;
@@ -66,6 +67,7 @@ class DataConsistencyCheckerTest {
         when(styleInfoMapper.selectList(any())).thenReturn(List.of());
         when(factoryMapper.selectList(any())).thenReturn(List.of());
         when(userMapper.selectList(any())).thenReturn(List.of());
+        when(productOutstockMapper.selectList(any())).thenReturn(List.of());
     }
 
     private static ProductSku sku(String styleNo, int stock) {
@@ -81,6 +83,21 @@ class DataConsistencyCheckerTest {
         w.setQualifiedQuantity(qty);
         w.setDeleteFlag(0);
         return w;
+    }
+
+    private static ProductWarehousing inboundWithDefect(String styleNo, int qualified, int defect) {
+        ProductWarehousing w = inbound(styleNo, qualified);
+        w.setUnqualifiedQuantity(defect);
+        return w;
+    }
+
+    private static com.fashion.supplychain.production.entity.ProductOutstock outstock(String styleNo, int qty) {
+        com.fashion.supplychain.production.entity.ProductOutstock o =
+                new com.fashion.supplychain.production.entity.ProductOutstock();
+        o.setStyleNo(styleNo);
+        o.setOutstockQuantity(qty);
+        o.setDeleteFlag(0);
+        return o;
     }
 
     private static List<String> issueTypes(DataConsistencyChecker.CheckResult r) {
@@ -121,5 +138,33 @@ class DataConsistencyCheckerTest {
         DataConsistencyChecker.CheckResult r = checker.performFullCheck();
 
         assertThat(issueTypes(r)).doesNotContain("有库存无入库单", "库存与入库不平");
+    }
+
+    @Test
+    @DisplayName("有出库+次品时按「入库-出库-次品」判定，不得误报（首版漏扣会洪水误报）")
+    void noFalsePositiveWhenOutstockAndDefectExist() {
+        // 入库 100、出库 30、次品 5 → 期望库存 65
+        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("SHIPPED-STYLE", 65)));
+        when(warehousingMapper.selectList(any())).thenReturn(List.of(inboundWithDefect("SHIPPED-STYLE", 100, 5)));
+        when(productOutstockMapper.selectList(any())).thenReturn(List.of(outstock("SHIPPED-STYLE", 30)));
+
+        DataConsistencyChecker.CheckResult r = checker.performFullCheck();
+
+        assertThat(issueTypes(r)).doesNotContain("库存与入库不平");
+    }
+
+    @Test
+    @DisplayName("真不平（库存与期望差 2）必须报出，并给出 入库-出库-次品 明细")
+    void flagsRealMismatchWithBreakdown() {
+        when(productSkuMapper.selectList(any())).thenReturn(List.of(sku("BAD-STYLE", 83)));
+        when(warehousingMapper.selectList(any())).thenReturn(List.of(inboundWithDefect("BAD-STYLE", 100, 5)));
+        when(productOutstockMapper.selectList(any())).thenReturn(List.of(outstock("BAD-STYLE", 10)));
+        // 期望 100-10-5=85，实际 83 → 差 2
+
+        DataConsistencyChecker.CheckResult r = checker.performFullCheck();
+
+        DataConsistencyChecker.Issue issue = r.issues.stream()
+                .filter(i -> "库存与入库不平".equals(i.type)).findFirst().orElseThrow();
+        assertThat(issue.detail).contains("BAD-STYLE").contains("入库100").contains("出库10").contains("次品5");
     }
 }

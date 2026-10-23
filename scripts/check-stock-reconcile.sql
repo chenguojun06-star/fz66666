@@ -35,12 +35,26 @@ WHERE s.stock_quantity > 0
 GROUP BY s.style_no
 ORDER BY stock_qty DESC;
 
-SELECT '=== 3. 闭合校验：库存 ≠ 入库+出库+次品 的款 ===' AS section;
+SELECT '=== 3. 闭合校验：库存 ≠ 入库-出库-次品 的款 ===' AS section;
+-- 对账口径必须与前端公式一致：合格入库 = 当前库存 + 出库总量 + 次品
+--   → 期望库存 = 合格入库 - 出库 - 次品
+-- ⚠️ 只比「库存 vs 入库」不扣出库/次品 = 所有有出货的款全部误报（首版踩过）
 SELECT s.style_no,
        SUM(s.stock_quantity) AS stock_qty,
-       COALESCE((SELECT SUM(w.qualified_quantity) FROM t_product_warehousing w
-                 WHERE TRIM(w.style_no) = TRIM(s.style_no) AND w.delete_flag = 0), 0) AS inbound_qty
+       COALESCE(MAX(inb.q), 0) AS inbound_qty,
+       COALESCE(MAX(outb.q), 0) AS out_qty,
+       COALESCE(MAX(def.q), 0) AS defect_qty,
+       COALESCE(MAX(inb.q), 0) - COALESCE(MAX(outb.q), 0) - COALESCE(MAX(def.q), 0) AS expected_stock
 FROM t_product_sku s
+LEFT JOIN (SELECT TRIM(style_no) AS sn, SUM(qualified_quantity) AS q
+           FROM t_product_warehousing WHERE delete_flag = 0 GROUP BY TRIM(style_no)) inb
+       ON inb.sn = TRIM(s.style_no)
+LEFT JOIN (SELECT TRIM(style_no) AS sn, SUM(outstock_quantity) AS q
+           FROM t_product_outstock WHERE delete_flag = 0 GROUP BY TRIM(style_no)) outb
+       ON outb.sn = TRIM(s.style_no)
+LEFT JOIN (SELECT TRIM(style_no) AS sn, SUM(unqualified_quantity) AS q
+           FROM t_product_warehousing WHERE delete_flag = 0 GROUP BY TRIM(style_no)) def
+       ON def.sn = TRIM(s.style_no)
 WHERE s.stock_quantity > 0
 GROUP BY s.style_no
-HAVING stock_qty <> inbound_qty;
+HAVING stock_qty <> expected_stock;

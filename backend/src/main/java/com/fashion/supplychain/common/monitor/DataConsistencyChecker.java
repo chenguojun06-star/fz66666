@@ -62,9 +62,13 @@ public class DataConsistencyChecker {
     @Autowired
     private UserMapper userMapper;
 
-    /** D-845：库存对账巡检需要 SKU 库存视角 */
+    /** D-846：库存对账巡检需要 SKU 库存视角 */
     @Autowired
     private ProductSkuMapper productSkuMapper;
+
+    /** D-846：对账判定要扣减出库（否则有出货的款会被全部误报） */
+    @Autowired
+    private ProductOutstockMapper productOutstockMapper;
 
     /** 检测结果缓存 */
     private volatile long lastCheckTime = 0;
@@ -107,7 +111,7 @@ public class DataConsistencyChecker {
         // 3. 检查数据不一致
         checkDataInconsistency(result);
 
-        // 4. D-845：库存对账闭环检查——「有库存无入库单」「有入库单但账不平」
+        // 4. D-846：库存对账闭环检查——「有库存无入库单」「有入库单但账不平」
         //    （2026-10-23 生产报障「入库记录全没、0=110+0+0」的守护；
         //     此前该类问题只能靠人肉翻库发现）
         checkStockWithoutInbound(result);
@@ -299,7 +303,7 @@ public class DataConsistencyChecker {
     }
 
     /**
-     * D-845：检查「有库存但无任何入库单」的款。
+     * D-846：检查「有库存但无任何入库单」的款。
      *
      * <p>2026-10-23 事故：11 个款库存非零却查不到入库单，对账公式呈现
      * 0 = 110 + 0 + 0，用户以为数据丢失。根因是 SKU 库存可被建款/导入直接写入，
@@ -354,12 +358,16 @@ public class DataConsistencyChecker {
     }
 
     /**
-     * D-845：检查「有入库单但库存与入库总量不一致」的款（账不平）。
+     * D-846：检查「有入库单但库存与库存流水平账不一致」的款。
+     *
+     * <p>对账口径必须与前端公式一致：<b>合格入库 = 当前库存 + 出库总量 + 次品</b>
+     * → 期望库存 = 合格入库 − 出库 − 次品。
+     * ⚠️ 首版只比「库存 vs 合格入库」没有扣减出库/次品，会把所有有出货的款
+     * 全部误报（假阳性洪水），本版修正。出库冲销用负数记录，SUM 自然抵消。
      * 排除无入库单的款（由 checkStockWithoutInbound 单独报告，避免重复噪音）。
-     * 差异来源：未登记出库/次品、盘点调整、异常删单等。
      */
     private void checkStockVsInboundMismatch(CheckResult result) {
-        log.info("[DataConsistency] 检查库存与入库总量是否平衡...");
+        log.info("[DataConsistency] 检查库存与入库-出库-次品是否平衡...");
         try {
             Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
             List<ProductSku> skus = productSkuMapper.selectList(
@@ -373,31 +381,47 @@ public class DataConsistencyChecker {
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getDeleteFlag, 0)
                             .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId));
+            List<ProductOutstock> outstock = productOutstockMapper.selectList(
+                    new LambdaQueryWrapper<ProductOutstock>()
+                            .eq(ProductOutstock::getDeleteFlag, 0)
+                            .eq(tenantId != null, ProductOutstock::getTenantId, tenantId));
+
             Map<String, Integer> inboundByStyle = new HashMap<>();
+            Map<String, Integer> defectByStyle = new HashMap<>();
             for (ProductWarehousing w : (inbound == null ? List.<ProductWarehousing>of() : inbound)) {
                 String sn = w.getStyleNo() == null ? "" : w.getStyleNo().trim();
                 if (sn.isEmpty()) continue;
-                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-                inboundByStyle.merge(sn, q, Integer::sum);
+                inboundByStyle.merge(sn, w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity(), Integer::sum);
+                defectByStyle.merge(sn, w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity(), Integer::sum);
+            }
+            Map<String, Integer> outByStyle = new HashMap<>();
+            for (ProductOutstock o : (outstock == null ? List.<ProductOutstock>of() : outstock)) {
+                String sn = o.getStyleNo() == null ? "" : o.getStyleNo().trim();
+                if (sn.isEmpty()) continue;
+                outByStyle.merge(sn, o.getOutstockQuantity() == null ? 0 : o.getOutstockQuantity(), Integer::sum);
             }
             Map<String, Integer> stockByStyle = new LinkedHashMap<>();
             for (ProductSku sku : skus) {
                 String sn = sku.getStyleNo() == null ? "" : sku.getStyleNo().trim();
                 if (sn.isEmpty()) continue;
-                int q = sku.getStockQuantity() == null ? 0 : sku.getStockQuantity();
-                stockByStyle.merge(sn, q, Integer::sum);
+                stockByStyle.merge(sn, sku.getStockQuantity() == null ? 0 : sku.getStockQuantity(), Integer::sum);
             }
             List<String> diffs = new ArrayList<>();
             for (Map.Entry<String, Integer> e : stockByStyle.entrySet()) {
-                Integer in = inboundByStyle.get(e.getKey());
+                String sn = e.getKey();
+                Integer in = inboundByStyle.get(sn);
                 if (in == null) continue;              // 无单款由另一检查报告
-                if (!in.equals(e.getValue())) {
-                    diffs.add(e.getKey() + "(库存" + e.getValue() + "≠入库" + in + ")");
+                int defect = defectByStyle.getOrDefault(sn, 0);
+                int out = outByStyle.getOrDefault(sn, 0);
+                int expected = in - out - defect;      // 期望库存
+                if (expected != e.getValue()) {
+                    diffs.add(sn + "(库存" + e.getValue() + "≠期望" + expected
+                            + "：入库" + in + "-出库" + out + "-次品" + defect + ")");
                 }
             }
             if (!diffs.isEmpty()) {
                 result.addIssue("t_product_sku", "库存与入库不平", diffs.size(),
-                        "以下款库存与入库总量不一致（可能存在未登记出库/次品或异常删单）: "
+                        "以下款库存与「入库-出库-次品」不一致（可能存在未登记出库/次品、盘点调整或异常删单）: "
                                 + diffs.stream().limit(10).collect(Collectors.joining(", "))
                                 + (diffs.size() > 10 ? " 等共 " + diffs.size() + " 款" : ""));
             }
@@ -407,7 +431,7 @@ public class DataConsistencyChecker {
     }
 
     private void checkWarehousingOrderMismatch(CheckResult result) {
-        // D-845：填实原空壳——检查入库合格数量超过订单总数量的异常（录入错误/重复入库）。
+        // D-846：填实原空壳——检查入库合格数量超过订单总数量的异常（录入错误/重复入库）。
         // 原实现只有注释和空循环，等于没检查。
         try {
             List<ProductionOrder> orders = orderMapper.selectList(
