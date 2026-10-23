@@ -55,6 +55,10 @@ public class ProductSkuOrchestrator {
     @Autowired
     private com.fashion.supplychain.warehouse.service.StockChangeLogService stockChangeLogService;
 
+    /** D-849：库存重算必须扣减出库（原实现只算入库，会把已发货的货刷回在库） */
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductOutstockService productOutstockService;
+
     public List<ProductSku> listByStyleId(Long styleId) {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -496,6 +500,17 @@ public class ProductSkuOrchestrator {
     }
 
     /**
+     * D-849：期望库存口径——合格入库 − 出库 − 次品（下限 0）。
+     *
+     * <p>三处必须永远同口径：本重算、DataConsistencyChecker 巡检、前端对账公式。
+     * 2026-10-23 实证：本方法原实现只算入库，调用一次就把已出库 300 件的款
+     * 库存从 0 刷回 300 —— 库存重算反而制造了幽灵库存。
+     */
+    static int computeExpectedStock(int inboundQualified, int outstock, int defect) {
+        return Math.max(0, inboundQualified - outstock - defect);
+    }
+
+    /**
      * 批量更新SKU颜色图片（按款号+颜色匹配）
      * @param styleId 款式ID
      * @param colorImageMap Map<颜色, 图片URL>
@@ -533,9 +548,12 @@ public class ProductSkuOrchestrator {
     }
 
     /**
-     * 重新计算所有SKU的库存（根据入库单汇总进行修正）
+     * 重新计算所有SKU的库存（根据入库-出库-次品进行修正）
      *
-     * <p>返回包含 totalSkus、fixed、unchanged 和 details 的 Map，便于调用方统计。
+     * <p>⚠️ D-849 修正口径：原实现**只按入库单汇总**，不减出库、不减次品——
+     * 2026-10-23 实证：BR24XQ0098E 出库 300 件已 approved，本方法会把库存
+     * 从 0 刷回 300（入库总量），等于把已发货的货重新记成在库，对账永远不平。
+     * 现改为与巡检/前端同款口径：<b>期望库存 = 合格入库 − 出库 − 次品</b>。
      *
      * @return 修正结果汇总
      */
@@ -557,6 +575,7 @@ public class ProductSkuOrchestrator {
                 .filter(s -> s != null && !s.isEmpty())
                 .collect(Collectors.toSet());
         Map<String, List<ProductWarehousing>> recordMap = new HashMap<>();
+        Map<String, Integer> outstockMap = new HashMap<>();
         if (!styleNos.isEmpty()) {
             List<ProductWarehousing> allRecords = productWarehousingService.lambdaQuery()
                     .in(ProductWarehousing::getStyleNo, styleNos)
@@ -566,11 +585,25 @@ public class ProductSkuOrchestrator {
             recordMap = allRecords.stream()
                     .collect(Collectors.groupingBy(
                             r -> r.getStyleNo() + "|" + r.getColor() + "|" + r.getSize()));
+
+            // D-849：出库也要参与重算（冲销用负数记录，SUM 自然抵消）
+            List<com.fashion.supplychain.production.entity.ProductOutstock> outRecords =
+                    productOutstockService.lambdaQuery()
+                            .in(com.fashion.supplychain.production.entity.ProductOutstock::getStyleNo, styleNos)
+                            .eq(com.fashion.supplychain.production.entity.ProductOutstock::getDeleteFlag, 0)
+                            .eq(com.fashion.supplychain.production.entity.ProductOutstock::getTenantId, tenantId)
+                            .list();
+            for (com.fashion.supplychain.production.entity.ProductOutstock o : outRecords) {
+                String k = o.getStyleNo() + "|" + o.getColor() + "|" + o.getSize();
+                outstockMap.merge(k, o.getOutstockQuantity() == null ? 0 : o.getOutstockQuantity(), Integer::sum);
+            }
         }
 
         List<ProductSku> toUpdate = new ArrayList<>();
         for (ProductSku sku : allSkus) {
             int inboundTotal = 0;
+            int defectTotal = 0;
+            int outTotal = 0;
             // 原始查询用 .eq(field, null) 返回 0 行（SQL 中 NULL != NULL），此处保持一致
             if (sku.getStyleNo() != null && sku.getColor() != null && sku.getSize() != null) {
                 String key = sku.getStyleNo() + "|" + sku.getColor() + "|" + sku.getSize();
@@ -580,13 +613,19 @@ public class ProductSkuOrchestrator {
                         if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {
                             inboundTotal += pw.getQualifiedQuantity();
                         }
+                        if (pw.getUnqualifiedQuantity() != null && pw.getUnqualifiedQuantity() > 0) {
+                            defectTotal += pw.getUnqualifiedQuantity();
+                        }
                     }
                 }
+                outTotal = outstockMap.getOrDefault(key, 0);
             }
+            // D-849：期望库存 = 合格入库 − 出库 − 次品（与巡检/前端对账公式同口径）
+            int expectedStock = computeExpectedStock(inboundTotal, outTotal, defectTotal);
 
             int oldStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-            if (oldStock != inboundTotal) {
-                sku.setStockQuantity(inboundTotal);
+            if (oldStock != expectedStock) {
+                sku.setStockQuantity(expectedStock);
                 toUpdate.add(sku);
                 fixed++;
                 Map<String, Object> d = new HashMap<>();
@@ -595,11 +634,14 @@ public class ProductSkuOrchestrator {
                 d.put("color", sku.getColor());
                 d.put("size", sku.getSize());
                 d.put("oldStock", oldStock);
-                d.put("newStock", inboundTotal);
+                d.put("newStock", expectedStock);
+                d.put("inbound", inboundTotal);
+                d.put("outstock", outTotal);
+                d.put("defect", defectTotal);
                 details.add(d);
-                log.info("[ProductSkuOrchestrator] SKU库存修正: {} {} {} {} {} -> {}",
+                log.info("[ProductSkuOrchestrator] SKU库存修正: {} {} {} {} {} -> {}（入库{}-出库{}-次品{}）",
                         sku.getSkuCode(), sku.getStyleNo(), sku.getColor(), sku.getSize(),
-                        oldStock, inboundTotal);
+                        oldStock, expectedStock, inboundTotal, outTotal, defectTotal);
             } else {
                 unchanged++;
             }
