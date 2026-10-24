@@ -25,6 +25,10 @@ const SHORT_MAP: Record<string, PlatformTag> = {
   SFY: { label: 'Shopify', color: 'var(--color-primary)' },
   SY:  { label: '希音',   color: 'var(--color-coral)' },
   JST: { label: '聚水潭', color: 'var(--color-orange-600)' },
+  // D-862：出库单 platformCode 还会落 POS / SHOP（来自收银台与线上店铺），
+  // 此前不在映射里 → 列表统一显示「未知平台」，用户以为渠道信息丢了。
+  POS:  { label: '门店收银', color: 'var(--color-blue-500)' },
+  SHOP: { label: '线上店铺', color: 'var(--color-emerald-500)' },
 };
 
 /** 全大写编码 → 简写编码 */

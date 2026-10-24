@@ -12,7 +12,10 @@ import { describeToolName, describeThinkingStage, needsRiskAnalysis, needsOverdu
 import { upsertMessage, buildMessageData } from './utils';
 import type { BuildMessageDataOptions } from './utils';
 
-const SSE_INACTIVITY_TIMEOUT_MS = 30_000;
+// D-861：30s 太短。后端单轮 LLM 约 15s、QuickPath 输出跑满 25-35s，
+// 30s 内若没有任何事件就会被误判为「思考超时」并放弃仍在跑的回答。
+// 60s 与后端 agent timeout(90s) / quickPath(25s) 形成合理缓冲。
+const SSE_INACTIVITY_TIMEOUT_MS = 60_000;
 
 export interface LiveStatus {
   mood?: XiaoyunMood;

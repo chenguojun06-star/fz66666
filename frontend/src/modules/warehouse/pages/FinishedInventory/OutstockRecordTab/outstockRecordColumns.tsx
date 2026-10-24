@@ -108,7 +108,11 @@ export function getGroupedOutstockColumns(handlers: {
       title: '客户名称',
       dataIndex: 'customerName',
       width: 120,
-      render: (text) => text || <span style={{ color: 'var(--neutral-text-disabled)' }}>未填写</span>,
+      render: (text: string, group: GroupedOutstock) => text || (
+        <span style={{ color: 'var(--neutral-text-disabled)' }}>
+          {group.platformCode === 'POS' ? '散客' : '未填写'}
+        </span>
+      ),
     },
     {
       title: '联系电话',
@@ -136,7 +140,12 @@ export function getGroupedOutstockColumns(handlers: {
       width: 180,
       render: (_, group) => {
         if (!group.trackingNo && !group.expressCompany) {
-          return <span style={{ color: 'var(--neutral-text-disabled)' }}>未填写</span>;
+          // D-862：POS 零售是门店自提，本来就没有物流；显示「未填写」会被误读为漏填
+          return (
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>
+              {group.platformCode === 'POS' ? '门店自提' : '未填写'}
+            </span>
+          );
         }
         return (
           <div className="u-fs-12">
@@ -158,9 +167,11 @@ export function getGroupedOutstockColumns(handlers: {
     },
     {
       title: '关联订单',
-      dataIndex: 'productionOrderNo',
-      width: 140,
-      render: (text) => text || '-',
+      key: 'orderNo',
+      width: 170,
+      // D-862：POS/店铺出库的 order_no 是 POS/店铺单号，此前只读 productionOrderNo → 一律显示「-」，
+      // 用户看不出这批货来自哪笔销售。
+      render: (_, group) => group.orderNo || group.productionOrderNo || '-',
     },
     {
       title: '操作人',

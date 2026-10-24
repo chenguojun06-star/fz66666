@@ -612,6 +612,11 @@ export const intelligenceApi = {
           buf = lines.pop() || '';
           for (const line of lines) {
             if (line.startsWith(':')) {
+              // D-861：后端心跳是 SSE comment（": heartbeat <ts>"），此前直接 continue 丢弃，
+              // 前端的 inactivity 计时器永远得不到重置 → 长回答被误判为「小云思考时间较长」。
+              if (line.includes('heartbeat')) {
+                onEvent({ type: 'heartbeat', data: {} });
+              }
               continue;
             } else if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();

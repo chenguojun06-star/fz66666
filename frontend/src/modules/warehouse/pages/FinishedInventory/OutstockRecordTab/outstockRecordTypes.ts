@@ -1,6 +1,8 @@
 export interface OutstockRecord {
   id: number;
   outstockNo: string;
+  /** D-862：业务单号（POS 单号 / 店铺单号 / 生产单号），后端 orderNo 字段 */
+  orderNo?: string;
   productionOrderNo?: string;
   styleNo?: string;
   styleName?: string;
@@ -39,6 +41,13 @@ export const outstockTypeMap: Record<string, { label: string; color: string }> =
   qrcode: { label: '扫码出库', color: 'green' },
   batch: { label: '批量出库', color: 'purple' },
   shipment: { label: '物流出库', color: 'cyan' },
+  // D-862：后端规范出库类型此前全部漏映射，列表直接显示英文原值（free_outbound）。
+  free_outbound: { label: '自由出库', color: 'blue' },
+  scan_outbound: { label: '扫码出库', color: 'green' },
+  sample_out: { label: '样衣出库', color: 'gold' },
+  damage_out: { label: '报废出库', color: 'red' },
+  transfer_out: { label: '调拨出库', color: 'purple' },
+  other_out: { label: '其他出库', color: 'default' },
 };
 
 /**
@@ -50,6 +59,8 @@ export interface GroupedOutstock {
   outstockNo: string;
   lines: OutstockRecord[];
   outstockType?: string;
+  /** D-862：业务单号（POS/店铺/生产） */
+  orderNo?: string;
   productionOrderNo?: string;
   platformCode?: string;
   styleNos: string[];
@@ -86,6 +97,7 @@ export function groupOutstockByNo(records: OutstockRecord[]): GroupedOutstock[] 
         outstockNo: key,
         lines: [],
         outstockType: r.outstockType,
+        orderNo: r.orderNo,
         productionOrderNo: r.productionOrderNo,
         platformCode: r.platformCode,
         styleNos: [],
@@ -118,6 +130,7 @@ export function groupOutstockByNo(records: OutstockRecord[]): GroupedOutstock[] 
     if (!g.trackingNo && r.trackingNo) g.trackingNo = r.trackingNo;
     if (!g.expressCompany && r.expressCompany) g.expressCompany = r.expressCompany;
     if (!g.paymentStatus && r.paymentStatus) g.paymentStatus = r.paymentStatus;
+    if (!g.orderNo && r.orderNo) g.orderNo = r.orderNo;
     if (!g.productionOrderNo && r.productionOrderNo) g.productionOrderNo = r.productionOrderNo;
     if (!g.platformCode && r.platformCode) g.platformCode = r.platformCode;
     if (r.createTime && (!g.createTime || r.createTime > g.createTime)) g.createTime = r.createTime;

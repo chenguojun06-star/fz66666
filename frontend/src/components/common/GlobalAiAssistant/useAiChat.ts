@@ -5,7 +5,7 @@ import type { ChatHistoryMessage } from '@/services/intelligence/intelligenceApi
 import { useUser } from '@/utils/AuthContext';
 import type { AiTraceCardData } from './AgentCards';
 import type { Message } from './types';
-import { genSessionId, saveSession, loadSession } from './sessionUtils';
+import { genSessionId, saveSession, loadSession, saveMessages, loadMessages } from './sessionUtils';
 import { INITIAL_MSG } from './constants';
 import { buildReportInsight } from './helpers';
 import { buildContextualText, detectReportType } from './helpers';
@@ -20,7 +20,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const isSuperAdmin = (user as any)?.isSuperAdmin === true;
   const location = useLocation();
 
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
+  // D-861：从 localStorage 恢复上次对话，关闭弹窗/刷新后不再「问完就没了」
+  const [messages, setMessages] = useState<Message[]>(() => loadMessages(loadSession(), [INITIAL_MSG]));
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -47,6 +48,12 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { streamAbortRef.current?.abort(); };
   }, [streamAbortRef]);
+
+  // D-861：对话落 localStorage（按 sessionId 关联，最多 40 条 / 7 天）
+  useEffect(() => {
+    const dialog = messages.filter((m) => m !== INITIAL_MSG);
+    if (dialog.length > 0) saveMessages(advisorSessionId, dialog);
+  }, [messages, advisorSessionId]);
 
   const fetchBriefing = useCallback(() => {
     if (briefingFetchedRef.current) return;
