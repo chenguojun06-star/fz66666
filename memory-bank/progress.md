@@ -2,9 +2,136 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-19（补记 10-10~10-19 门店零售对接线全部 79 个提交：D-816/D-817 收银台专业化补齐 + D-814/D-815 发票台账纠偏 + D-809~D-813 顾客端详情画布/真实销量 + 信封泄漏框架治理 + D-778~D-807 shop 大系列；三份主文件此前停在 D-777 的缺口已补齐）
+> 最后更新：2026-10-24 11:00（✅ D-858 收尾：决策卡租户校验显式化 + 输出上限口径守护（新增 8 用例）+ unwired 文档 157→155 订正；已推送 a387e4acc，intelligence 包 262 测试全绿，三道门禁通过）
+> 上一版：2026-10-24 10:30（✅ 当日 D-856/D-857 核实完成：QuickPath 输出 2048→1024 + 软约束 + `[Perf]` 埋点 + 性能分析报告；已推送 9f685fe76、CI 全绿、mvn compile 0、intelligence 包 254 测试本地实跑全绿。**耗时改善与埋点日志待部署实测**）
+> 上一版：2026-10-24（补记 10-21~10-24 全部 57 个提交：D-831~D-855——库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处核实与门禁（D-848/851/852）+ AI 建议闭环（D-853/854）+ 小云跨域修复（D-855）+ 扫码通（D-836）+ 口径审计（D-833/837）+ 入库库位硬闸（D-843）+ 报废出清（D-844）+ 库存双轨（D-838）；代码已全部推送 3a8416e3a，本条为事后补记）
 
 ## 已完成
+
+### 2026-10-24 D-858 补 D-856/D-857 遗漏——租户校验显式化 + 输出上限守护（已推送 a387e4acc）
+
+- [x] D-856 遗漏：抽 `DEFAULT_MAX_TOKENS=2048`，null 与未知 scene 共用；新增 4 用例锁死 `ai-advisor=1024` / `agent-loop=3072` / null 与未知同值 / 配置注入生效
+- [x] 修正审查结论：项目有 `TenantInterceptor` 自动补 tenant_id，跨租户实际已被拦住；真正缺陷是 `updateById` 命中 0 行不报错（静默无效）+ `UserContext` 为 null 的后台线程被放行
+- [x] `feedback` 先 `selectById` 校验存在性与归属，不符则 warn + return；`recentForCurrentTenant` 无租户上下文直接返回空
+- [x] 新增 4 个租户隔离用例（查不到不更新 / 跨租户不更新 / 同租户正常更新 / 无租户上下文不查库）
+- [x] `docs/unwired-inventory.md` 157→155（164−8−1），预留 123 / 运维 18，与 baseline 实测一致
+- [x] 验证：mvn compile 0；新增 8 用例全绿；intelligence 包 **262 测试全绿**；unwired 155/155、信封 0 新增、silent-catch 0 新增
+
+### 2026-10-24 D-857 小云性能埋点 + 全系统性能分析报告（已推送 9f685fe76，CI 绿）
+
+- [x] `SpringAiInferenceAdapter.chatStream` 增加 `[Perf] scene/model/firstChunkMs/generateMs/totalMs/chars/toolCalls` 结构化日志
+- [x] `firstChunkMs` = 首字耗时（真正决定「用户等多久」）；`generateMs` = 首字→完成（区分检索慢 vs 生成慢）
+- [x] 新增 `docs/performance-analysis-20261024.md`（133 行）：诊断 / 建议 / 验证方式 / 方法论，每条结论带生产数据或代码证据
+- [x] 诊断：系统无资源瓶颈（负载 0.06 / CPU 7% / 内存 797MB/2GB / 库 808MB）；`t_intelligence_audit_log` 42.7 万行 493MB 占全库 61%，清理任务**已接**且每天 4:50 跑（非「做了没接」）；5 张 bak 表 51MB；慢查询日志可能未启用
+- [x] 验证：mvn compile 0、intelligence 包 254 测试全绿、CI success
+- [ ] **未完成（P1/P2，需业务确认）**：审计表压缩+保留期 90→60 天、清 5 张 bak 表、开慢查询日志、AI 建议入口扩到生产看板；工具并行、成本配额、155 处未接线分批清理
+- [ ] **未验证（必须部署后做）**：`grep "[Perf]"` 能否看到字段；取 7 天 `latency_ms` 分布与基线（16/17 次 56-82s）对比
+
+### 2026-10-24 D-856 小云提速——QuickPath 输出上限 2048→1024（已推送 cc69ea977，CI 绿）
+
+- [x] 数据定位：`t_agent_execution_log` 近 17 次执行 **16 次 56-82 秒**，scene 全 `quick`；逐段排除上下文构建（≤4s）/工具轮次（QuickPath 无工具）/流式（真流式）→ **真凶是输出跑满 2048 token**（约 30-45 token/s → 50-70s）
+- [x] `ai-advisor` 2048→**1024**（≈700 字）、`agent-loop` 4096→**3072**；改为可配置 `xiaoyun.scene-max-tokens.*`（用两个 int 注入，**不用 Map**——首版 `@Value` 默认空串转 Map 直接启动失败）
+- [x] 系统提示追加【回答风格】：先结论后依据、常规问答 300 字内、不复述原始 JSON、无数据明说查不到（只压 maxTokens 会硬截断断句，软硬配合）
+- [x] 验证：mvn compile 0、254 测试全绿、CI success
+- [ ] **未验证（关键）**：预期 56-82s→25-35s，**必须部署后实测**，单测无法证明
+- [ ] **遗漏（本次审查发现）**：`resolveMaxTokens` 的 `if (scene == null) return 2048;` 未同步改；1024/3072 无单测守护
+
+### 2026-10-24 D-855 小云跨域工具缺失修复（已推送 3a8416e3a，本次补记）
+
+- [x] 根因：`AgentLoopContextBuilder` 对 `routeMulti` 多领域结果**只取 `get(0)`** 裁剪工具 → 「这批料够不够生产这个单」（仓储+生产）只拿到仓储工具 → 答不全/答偏
+- [x] 改 `collectDomains` 多领域全取（LinkedHashSet 去重保序，空则不裁剪）；`routeMulti` 已 `limit(3)`，全取后工具量仍可控
+- [x] 速度结论（未盲调）：每轮迭代 = 1 次 LLM 往返 ≈ 15s，5 轮最坏 75s；`agent_execution_log` 平均 61s 是**完成时间**非首字时间——调轮次/超时是拿准确性换速度（违背 D-702）
+- [x] intelligence 包 254 测试全绿（+新增 4，双向验证：改回 `get(0)` → 3 红）
+
+### 2026-10-23 D-853/D-854 AI 建议闭环——58 张决策卡 0 采纳的真因是「没有端点」（已推送 67ddc0b86 / f24ce240e）
+
+- [x] 核实：AI 工具层完全对齐（注册 99 = 实现 99）；但 Agent 近 30 天仅执行 17 次、`t_ai_decision_card` 58 张建议 **adopted 全 0、人工反馈 0 条**
+- [x] 根因：`recentForCurrentTenant()` / `feedback()` 写好但**无任何 Controller 端点** → 前端拉不到 → 人看不到也点不了
+- [x] 补 2 端点于 `IntelligencePanelController`（全员可达）；首版错放 `PlatformIntelligenceController`（仅超管）已纠正
+- [x] 展示位（用户拍板方案 A）：订单列表页顶部 `AiSuggestionBar`（Tabs 之上）；无建议**完全不渲染**；接口失败静默降级但 `console.warn` 留痕
+- [x] vitest 5/5（双向验证）、tsc 0、eslint 0
+- [ ] **遗留（本次审查新增）**：`feedback(cardId)` 裸 `updateById` 无租户校验（可跨租户改写）；`recentForCurrentTenant` 在 `tenantId==null` 时不加租户条件返回全租户 —— 待修
+
+### 2026-10-23 D-848/D-851/D-852「做了没接」治理 + baseline 门禁（已推送 a17a17df7 / e3c5d1946 / 1e4f716e3）
+
+- [x] `scripts/check-unwired.py`：空壳方法 **0 处**（首版判据写反致 812 误报，改正向白名单）；未接线方法 **164 处**
+- [x] 真缺陷 **8 处已接线**（全是「注入了 helper 却从未调用」）：`CuttingBom.delete`、`Payable.generateFromOrder`/`createFromBill`（**凭空多一笔应付**）、`PurchaseCart.updateItem`/`clearCart`、`SampleStock.loan`、`StyleBom.generatePurchase`、`InventoryCheck.applyStockAdjustments`（**盘点直接改三种库存**）
+- [x] 分类定稿（见 `docs/unwired-inventory.md`）：预留 ~123（AI 能力库 81 为主）/ 废弃 3 / 运维 ~20 / 待业务确认 3
+- [x] 门禁：`unwired-baseline.txt` 只减不增 + CI `quality-gate` 接入（注入探针 → 拦下，恢复 → 绿）
+- [x] 澄清非缺陷：`DataPermissionHelper.applyOperatorFilter` 已被 `@DataScope` + `DataPermissionInterceptor`（`MybatisPlusConfig` 已注册）取代 → **非权限缺失**
+- [x] 门禁键 = `文件::方法签名`（**不用行号**——D-840 行号做键致中部改动集体误报；签名需压平换行）
+- [ ] **遗留**：`docs/unwired-inventory.md` 数字对不上（头写 157、实测 baseline 155、分类加总 123 却写约 110）——待订正
+
+### 2026-10-23 D-845~D-850 库存对账四层闭环 + 口径定稿（已推送 6dca30ba8 / 55bf66090 / a66f69598 / 90027c519 / 146169dbb）
+
+- [x] D-845 闭环四层：`updateStock` 补写 `StockChangeLog`（手工调整此前是流水盲区）；填实两个**空壳检查**；新增「有库存无入库单」+「库存≠入库总量」；超管看板 `SystemIssueCollector` 显形
+- [x] D-846 修正首版假阳性洪水：对账判定必须扣减出库与次品；生产实跑出 9 个真实差异款
+- [x] D-847 直发幽灵出库：`BR24XQ0098E` 入库300/出库300 但库存仍 300 → 新增 `assertDirectShipAllowed` 守卫（直发且库存>0 拒绝）+ `writeOutstockStockLog`（出库三条路径全写流水）
+- [x] D-849 **重算工具自己制造幽灵库存**：`recalculateSkuStock` 只汇总合格入库、不减出库 → 重算一次把已发货的货刷回在库（昨天清零今天变 300 的真因）
+- [x] D-850 口径定稿：**期望 = 合格入库 − 出库**（次品不参与，因系统入库只加合格数、历史库存已含次品）；三处统一（`computeExpectedStock` / `DataConsistencyChecker` / `check-stock-reconcile.sql`）
+- [x] 生产实跑：有库存无入库单 **0 款**、库存≠入库−出库 **0 款**（30 个有库存款全闭合）；累计修复 BR24XQ0098E 300 件、HHY00001 1 件、5 个重算刷回款、H0002/hyy111111 次品 4 件
+
+### 2026-10-23 D-844 报废款出清 + 差额补齐（已推送 495bdebe9）
+
+- [x] BR25CQ0573B（3 单全 scrapped）状态 ENABLED→SCRAPPED + 补 1 件次品报废出库单销账（库存 1→0）
+- [x] 上架列表传 `excludeScrapped=true`（后端早支持，待办模块在用）→ 21 个 SCRAPPED 款 + 该报废款不再出现
+- [x] 差额补齐：补 3 张期初单（H0002 白 S/XS 各 +1、hyy111111 白 L +2），只补单不动库存
+- [x] 直发客户 20 条保留数据、确认闭环（`warehouse='直发客户'` 是合法特殊值，白名单放行）
+- [x] **P0 事故已恢复**：迁移第三版手工执行漏 `--default-character-set=utf8mb4` → 中文乱码 → `NOT IN('直发客户')` 条件恒真 → **20 条直发被误订正**；已从 03:30 备份按 id 精确恢复（字节级验证）+ 写入 `loc_fix_log` 留痕
+- [x] 根治：迁移内中文条件改 **UNHEX 字面量**；两个迁移文件头加执行前提声明
+- [ ] **遗留（本次审查新增，阻塞部署）**：`V202710230004` 17:13 创建后 18:57 **内容被改写**，而 `validate-on-migrate: true` → 若生产已执行该版本，下次部署 **checksum mismatch 启动失败**。需查 `flyway_schema_history`
+
+### 2026-10-23 D-843 入库库位全面对齐仓库地图（已推送 69a433ee4）
+
+- [x] 核实：**88 条入库单库位在地图外**（默认仓 44 / NULL 12 / 手输 A-002 9、A仓 3；直发客户 20 不动）
+- [x] 服务端硬闸：`freeInbound` 库位必填 + 必须命中 `t_warehouse_location`（按租户），地图外拒绝（直发白名单放行）；`batchInbound`/`scanInbound` 拆掉默认仓兜底；出库容量扣减加 null 保护
+- [x] 前端三入口（上架页补录/自由入库/扫码入库）全改地图下拉，补录加小窗（数量/库区/库位）
+- [x] 存量订正（迁移 `V202710230004`，已对生产执行）：按租户分支（租户2→A-01-1-1、租户106→A-001），原值落 `t_product_warehousing_loc_fix_log`（按单幂等）；订正后地图外 0 条、留痕 68 条干净
+- [x] 踩坑：SQL 三值逻辑 `NULL <> '直发客户'` 不成立 → NULL 行漏订正，须写 `(IS NULL OR NOT IN(...))`
+- [ ] **遗留**：迁移的 `NOT EXISTS(t_warehouse_location)` 子查询未按租户过滤，与文件注释「location_code 跨租户重复，必须按租户选」自相矛盾——存量隐患，重跑前需补 `l.tenant_id = w.tenant_id`
+
+### 2026-10-23 D-841 成品库存对账治理——无单款补单闭合（已推送 fc346651b）
+
+- [x] 核实「质检入库数据都没了」**非数据丢失**：库存与入库单是两条独立路径，11 个款走了无单路径（建款/导入直写 `stock_quantity`）
+- [x] 生产补 44 条 backfill 入库单（10 个无单款 / 345 件，只补单不动库存）→ 对账闭合；软删 08-12 测试单（款号 123456）；执行前 mysqldump 备份 + 本地容器先验证（幂等复跑 0 新增）
+- [x] 前端对账不平提示改为可自解释（「差额 N 件…单据链不完整不是数据丢失」），不再让用户对着 `0 = 110 + 0 + 0` 以为数据丢了
+- [x] `updateStock` 补操作日志（商品编码/款号/库存 旧→新 ±delta）
+
+### 2026-10-22 D-839 出库日志明细补齐（已推送 5cc440122）
+
+- [x] 探针实证：**当前 AOP 链路没坏**（真实 Tomcat 复现落库完整）；生产近 14 天仅 1 条出库（10-08），疑为当时容器跑旧 jar，不可确证
+- [x] 补 `keyFields`：`outboundType/outboundReason/customerPhone/shippingAddress/qrCode/bundleCode` + 中文标签；items 摘要 sku 键扩 `qrCode/bundleCode`；`extractReason` 认 `outboundReason`
+- [x] AOP 加「详情为空诊断」INFO——把下次排查成本提前付掉
+
+### 2026-10-22 D-836 扫码通——一个货一个码（已推送 4c94bb508 / 27618eb79）
+
+- [x] 核实：`t_product_sku.barcode`（机读码）**全库 NULL 是死字段**；合格证 CODE128 打 `{款号}{颜色}{码数}` 且剔除中文颜色 → 与 skuCode 差一个颜色段 → 收银台 LIKE 失配扫不进
+- [x] 口径：`barcode` = `SKU`+主键补 6 位（纯 ASCII、主键不变→码终身稳定）；`skuCode` 退居人读；商家手填的 barcode 永不覆盖
+- [x] `scanBarcode()` 覆盖 6 个调用点，顺带修「编辑保存把 barcode 抹成 NULL」存量 bug；标签接口带出 barcode（按款 IN 查询不 N+1，失败降级不阻断打印）
+- [x] 迁移 `V202710210003` 存量回填**已在生产执行：216 个 SKU 全部回填、0 个为空**；老模板含中文**自动回落**机读码（存量配置零改动也能扫）
+
+### 2026-10-22 D-838 商品上架库存双轨 + 轮播批量加图（已推送 059267887 / d07a06de9，decisionLog 已有）
+
+- [x] 实际仓库库存 = `t_product_warehousing` 按 sku_code 聚合合格数（只读、零迁移）；可售库存 = `stock_quantity`（用户可编辑虚拟库存）
+- [x] 一键同步走既有 batchSaveSku delta 链路，不直写库；实际库存全 0 时**禁止同步**（防呆，补丁4）
+- [x] 轮播批量加图三方式（点击/拖拽/Ctrl+V 粘贴），共用 `doUpload`
+- [x] 补丁：实际库存列全 0 的历史横线编码兜底匹配、详情长图保存后重开为空
+
+### 2026-10-21~22 D-831/D-833/D-837 CI 假绿 + 口径审计（已推送 55f9d31f0 / 7bde6dd6b / 25f9e18d3）
+
+- [x] D-831：CI 连红 15 个 run 无人处理（红叉只在 GitHub 页面 + autodeploy 不看 CI）；notify job `needs` **只列 3 个 job → quality-gate/frontend-lint 红时整体显示「全绿」的假绿**；扩为 5 个 job + 失败主动推送（`notify-ci.sh`，通知失败**任何情况返回 0**）
+- [x] D-833：订单列表「实际X天」从下单起算 → 改节点真实起止（PO20260930163102 车缝显示 15 天，真实 1 天多）
+- [x] D-837 口径审计 4 处「名不副实」：产能速度用 `createTime`（超产能误报）/ 下单排行累计=单数 vs 今日=款数（改文案明示）/ 无 startTime 静默虚高（改为不展示「实际」）/ **健康分缺失数据静默加分**（无交期 +20 比"3天内" +8 还高 → 改为缺失不加分）
+- [x] 删 `progressColumnHelpers.ts`（零引用死文件，携带过时口径是漂移源）
+
+### 2026-10-21 收银台全屏 + 小票 + 详情长图编辑器（已推送，本次补记）
+
+- [x] 收银台独立全屏（脱离后台框架 + 返回按钮）、真全屏隐藏地址栏、宫格图铺满、分类页签中文化
+- [x] 小票独立文档打印不再出 2 张纸、成功弹窗合一、今日单据报错可见、选货区加高 + 快捷键语音播报；统一电子小票为带二维码版式（修一次出 2 张单）
+- [x] `/api/pos/today` 500：拦截器给**派生表**拼 `tenant_id` 导致 SQL 语法错误
+- [x] D-835 详情长图编辑器烘焙逐页方案（decisionLog 已有）；D-836 编辑器批量导入三方式 + 缩略图独立成列 + ESC 不关弹窗
+- [x] 修 4 个存量红测试类（D-817 组合收款改签名后测试没跟上，阻塞 CI）+ 白屏测试包 MemoryRouter
+- [x] 店铺商品局部保存 400「请输入款号」：校验移到 D-225 回落之后
 
 ### 2026-10-18~19 D-816/D-817 收银台专业化补齐：退货/换货 + 交接班/钱箱 + 会员 + 58mm 小票 + 挂账授权（已推送，本次补记）
 

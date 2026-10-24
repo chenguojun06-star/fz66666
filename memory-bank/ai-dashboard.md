@@ -2,7 +2,33 @@
 
 > 让 AI 的每一步操作都透明可见
 > 每次会话自动更新：记录调用的工具、修改的文件、Token消耗
-> 最后更新：2026-07-08
+> 最后更新：2026-10-24（长期未维护后的首次补记：本次为「代码审查 + 记忆库补记」会话，无代码改动）
+> 上一版：2026-07-08
+
+---
+
+## 📊 会话速览（2026-10-24）——代码审查 + 记忆库补记（无代码改动）
+
+| 指标 | 值 | 状态 |
+|------|-----|------|
+| 日期 | 2026-10-24 | — |
+| 当日主题 | 审查 10-21~10-24 全部 57 个提交 + 补记三份主文件 | — |
+| 涉及提交 | 61 个（10-21: 22 / 10-22: 15 / 10-23: 19 / 10-24: **4**），D-831~D-858 | ✅ 已全部推送（a387e4acc = origin/main） |
+| 当日代码变更 | D-856（SpringAiInferenceAdapter/AiAgentPromptHelper/application.yml）+ D-857（埋点 + docs/performance-analysis-20261024.md）+ D-858（租户校验/兜底常量 + 8 个守护用例 + 文档订正），11 文件 +466/−16 行 | ✅ 本地 262 测试全绿 |
+| 修改文件数 | 3（memory-bank/activeContext.md / progress.md / decisionLog.md） | ✅ 仅文档 |
+| 本地门禁 | unwired 155/155 无新增 / 信封泄漏 0 新增 / silent-catch 无新增 | ✅ 通过 |
+| 发现问题 | 6 项（1 个 P0 待核实 + 2 个跨租户 + 1 个迁移跨租户 + 1 个文档数字 + 1 个已恢复事故存档） | ⚠️ 待处理 |
+
+**操作日志**：
+- `git log --since=2026-10-21` 通读 57 个提交主体，逐条读 body 还原根因与验证结论
+- 核对推送状态：`git ls-remote origin main` = 本地 HEAD，确认无未推送提交
+- 逐类核实 `docs/unwired-inventory.md` 与 `scripts/unwired-baseline.txt` 实际条数（文档 157 / 实测 155，不一致）
+- 本地跑三道门禁：`check-unwired.py --check`、`check-api-envelope-leak.py`、`check-silent-catch.py --check`
+- 代码审查新端点：发现 `DecisionCardOrchestrator.feedback` 裸 `updateById` 无租户校验、`recentForCurrentTenant` 在 tenantId 为 null 时不过滤租户
+- 迁移审查：`git log` 定位 `V202710230004` 被改写（17:13→18:57），结合 `validate-on-migrate: true` 判定有 checksum mismatch 风险
+- 补记 decisionLog 10 条（D-836/837/839/841/843/844/847~855）、progress 9 个章节、activeContext 当前状态 + 8 项已知问题 + 5 项下一步
+
+**遗留（需用户决策后再动代码）**：① 核实生产 `flyway_schema_history` 的 202710230004 记录；② 修 2 处跨租户；③ 订正 unwired 文档数字
 
 ---
 
