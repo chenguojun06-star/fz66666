@@ -2,11 +2,22 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-24 11:00（✅ D-858 收尾：决策卡租户校验显式化 + 输出上限口径守护（新增 8 用例）+ unwired 文档 157→155 订正；已推送 a387e4acc，intelligence 包 262 测试全绿，三道门禁通过）
+> 最后更新：2026-10-24 18:40（✅ D-859：生产 health DEGRADED 根因修复（LiteLLM 未启用被误判 DOWN→UNKNOWN）；已推送 74811c721，intelligence 包 264 测试全绿。生产 SSH 核实：已部署 6b507231、Flyway 1425 迁移 validate 通过、`202710230004` success=1 → checksum 风险解除）
+> 上一版：2026-10-24 11:00（✅ D-858 收尾：决策卡租户校验显式化 + 输出上限口径守护（新增 8 用例）+ unwired 文档 157→155 订正；已推送 a387e4acc，intelligence 包 262 测试全绿，三道门禁通过）
 > 上一版：2026-10-24 10:30（✅ 当日 D-856/D-857 核实完成：QuickPath 输出 2048→1024 + 软约束 + `[Perf]` 埋点 + 性能分析报告；已推送 9f685fe76、CI 全绿、mvn compile 0、intelligence 包 254 测试本地实跑全绿。**耗时改善与埋点日志待部署实测**）
 > 上一版：2026-10-24（补记 10-21~10-24 全部 57 个提交：D-831~D-855——库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处核实与门禁（D-848/851/852）+ AI 建议闭环（D-853/854）+ 小云跨域修复（D-855）+ 扫码通（D-836）+ 口径审计（D-833/837）+ 入库库位硬闸（D-843）+ 报废出清（D-844）+ 库存双轨（D-838）；代码已全部推送 3a8416e3a，本条为事后补记）
 
 ## 已完成
+
+### 2026-10-24 D-859 生产 health DEGRADED 根因修复（已推送 74811c721）
+
+- [x] 逐组件排除：Qdrant healthz 通过 / DeepSeek 网络可达 / Langfuse provider=none→UNKNOWN / memoryArchive→UNKNOWN
+- [x] 根因：`ai.gateway.litellm.enabled` 默认 false，`ping()` 对「未启用」返回 false → 被 `checkLiteLLM()` 判成 DOWN
+- [x] 修复：未启用 → `HealthResult.unknown(...)`；启用但编排器未注入 → UNKNOWN
+- [x] 新增 2 用例守护；intelligence 包 **264 测试全绿**；pre-push 8 项 PASS
+- [x] 生产 SSH 核实：已部署 `6b507231`（18:09 启动 healthy）；**Flyway validate 1425 个迁移通过**、`202710230004` success=1 → checksum 风险解除
+- [ ] 待验证：本批部署后 `/actuator/health` 应变 UP
+- [ ] `[Perf]` 日志仍为 0 条（部署后尚无人使用小云），需实际对话触发
 
 ### 2026-10-24 D-858 补 D-856/D-857 遗漏——租户校验显式化 + 输出上限守护（已推送 a387e4acc）
 

@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-24 11:00（✅ **D-858 收尾**：决策卡 `feedback` 增加存在性+归属校验、`recentForCurrentTenant` 无租户上下文直接返回空；`resolveMaxTokens` 兜底抽常量并新增 8 个守护用例；`docs/unwired-inventory.md` 157→155 订正。已推送 `a387e4acc`，intelligence 包 **262 测试全绿**。⚠️ 关键指标仍未验证：D-856 耗时改善与 D-857 埋点日志都必须部署后实测）
+> 最后更新：2026-10-24 18:40（✅ **D-859**：生产 health DEGRADED 根因 = LiteLLM 未启用被误判为 DOWN → 改为 UNKNOWN；已推送 `74811c721`，intelligence 包 **264 测试全绿**。**生产 SSH 已核实**：`/opt/fz66666` 部署 `6b507231`、backend 18:09 启动 healthy、**Flyway validate 1425 迁移通过**、`202710230004` success=1 → checksum 风险解除）
+> 上一版：2026-10-24 11:00（✅ **D-858 收尾**：决策卡 `feedback` 增加存在性+归属校验、`recentForCurrentTenant` 无租户上下文直接返回空；`resolveMaxTokens` 兜底抽常量并新增 8 个守护用例；`docs/unwired-inventory.md` 157→155 订正。已推送 `a387e4acc`，intelligence 包 **262 测试全绿**。⚠️ 关键指标仍未验证：D-856 耗时改善与 D-857 埋点日志都必须部署后实测）
 > 上一版：2026-10-24 10:30（✅ **当日新增 D-856/D-857**：QuickPath 输出上限 2048→1024 + 回答风格软约束（D-856）+ `[Perf]` 首字/生成/总耗时埋点 + 全系统性能分析报告（D-857）；已推送 `9f685fe76`、CI 全绿、intelligence 包 254 测试本地实跑全绿、mvn compile 0。**关键指标未验证**：耗时改善与埋点日志都必须部署后实测，报告已如实标注）
 > 上一版：2026-10-24（✅ **补记** D-836~D-855：库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处逐类核实与门禁（D-848/851/852）+ AI 建议闭环「生成→可见→采纳→反馈」（D-853/854）+ 小云跨域工具缺失修复（D-855）+ 扫码通（D-836）；10-22~10-24 共 57 个提交**已全部推送**（HEAD 3a8416e3a = origin/main），三份主文件此前停在 D-835 的缺口已补齐；同时记录 4 项待核实风险，见本节「已知问题」）
 > 上一版：2026-10-21（✅ D-835 详情长图编辑器重做为竞品同款逐页编辑器：每图一页+烘焙导出，D-834 方案整体替换，推送 b08bdfd9c；「85% 侧滑弹窗」「三栏堆叠预览」两条旧约束被用户推翻）
@@ -34,7 +35,7 @@
 
 **进行中 / 已知问题（2026-10-24 审查新增，需处理）**：
 
-1. **【P0·待核实】迁移 `V202710230004` 被改写 → 可能触发 Flyway checksum mismatch**：该文件 17:13（D-843）创建后，18:57（D-844）**内容又被改写**（中文条件改 UNHEX）。全局 `application.yml` `validate-on-migrate: true` → 若生产 `flyway_schema_history` 已记录 `202710230004`，**下次部署 backend 会 validate 失败、启动不起来**。核查：`SELECT version, checksum, success, installed_on FROM flyway_schema_history WHERE version='202710230004';`（有记录且 success=1 → 必须新建 `V202710230006` 修正版，不能改原文件）
+1. ~~**【P0·待核实】迁移 `V202710230004` 被改写 → checksum mismatch**~~ ✅ **已核实解除（2026-10-24 SSH 生产库）**：`flyway_schema_history` 中 `202710230004` success=1（checksum 121050929），本次部署日志 **"Successfully validated 1425 migrations"**，未出现 mismatch。原因：`FlywayRepairConfig` 的异常路径会自动 `repair()` 对齐 checksum（历史上某次 mismatch 已被兜底修复，未惊动业务）。教训：**不要依赖兜底**——以后改迁移必须新建版本号
 2. ~~**【原判断过重，已修正】** `feedback` 裸 `updateById`~~ ✅ **已修（D-858，a387e4acc）**：核实发现 `TenantInterceptor` 会自动补 `tenant_id`，跨租户实际已被拦住，**不是敞开的漏洞**。真正缺陷是 ①`updateById` 命中 0 行不报错 → 前端仍显示采纳成功（静默无效）；②`UserContext` 整体为 null 的后台线程会被拦截器直接放行。现改为 `selectById` 先校验存在性与归属，不符则 warn + return
 3. ~~**`recentForCurrentTenant` 在 tenantId 为 null 时返回全租户**~~ ✅ **已修（D-858）**：`tenantId == null` 时直接返回空列表，不再依赖拦截器 `1=0` 隐式兜底（与 D-811 同族陷阱，显式判空防后台线程放行）
 4. **【P1·迁移跨租户】`V202710230004` 的 `NOT EXISTS (SELECT 1 FROM t_warehouse_location l WHERE l.location_code = w.warehouse)` 未按租户过滤**，而文件注释自己写着「location_code 跨租户重复，必须按租户选」——自相矛盾。迁移已执行完且验证 0 条，属存量隐患；若将来重跑或新增租户需先补 `l.tenant_id = w.tenant_id`
@@ -43,11 +44,11 @@
 7. 未跟踪文件 `scripts/check-tdz-sync.cjs` 未提交（疑为并行会话残留），按纪律不要被 `git add -A` 卷进别人的批次
 8. 本地 db-query-mcp（3308）仍未起，无法直接跑生产库巡检；`scripts/check-stock-reconcile.sql` 需连生产库手工执行
 9. ~~**【P2·D-856 遗漏】兜底硬编码 + 无单测守护**~~ ✅ **已修（D-858）**：抽出 `DEFAULT_MAX_TOKENS=2048`，null 与未知场景共用；新增 4 个用例锁死 `ai-advisor=1024` / `agent-loop=3072` / null 与未知同值 / 配置注入生效
-10. **【⚠️ 生产健康】`curl https://api.webyszl.cn/actuator/health` 返回 `status=DEGRADED`**（2026-10-24 10:30 实测）：`/liveness`、`/readiness` 均 UP，DEGRADED 来自 `AiComponentHealthIndicator`（deepseek / qdrant / 视觉 / litellm / langfuse / memoryArchive 任一 DOWN）。设计上 AI 组件故障不拖垮服务（HTTP 200），但需看组件明细确认是哪个 AI 依赖挂了；当日改动与 health 无关
-11. **【待确认·部署】生产是否已拉到 `9f685fe76` 未核实**：CI 只有质量门禁/测试/构建/发布标签，**没有 deploy job**，部署依赖服务器 `autodeploy.sh` 拉 main。D-856 效果与 D-857 埋点都必须部署后才可验证——建议部署后执行：`docker compose logs backend --since 30m | grep "\[Perf\]"`，以及对比 `latency_ms` 分布
+10. ~~**【⚠️ 生产健康 DEGRADED】**~~ ✅ **已定位并修复（D-859，74811c721）**：根因是 `ai.gateway.litellm.enabled` 默认 false，而 `ping()` 对「未启用」返回 false → `checkLiteLLM()` 判成 DOWN。改为未启用返回 UNKNOWN。**待本批部署后复查 health 应回到 UP**
+11. **【部署已确认，指标仍待实测】** 生产 `/opt/fz66666` 已部署 `6b507231`（D-858 批次，18:09:33 启动 healthy），说明 `autodeploy.sh` 工作正常。D-859 部署后还需验证：① `curl /actuator/health` 是否变 UP；② `[Perf]` 日志（当前 0 条，因为尚无人使用小云）——需要实际发起一次小云对话后 `docker logs backend | grep "\[Perf\]"`；③ latency 分布与基线（16/17 次 56-82s）对比
 
 **下一步（按优先级）**：
-1. 核实第 1 条 Flyway checksum（**阻塞部署，最高优先**）
+1. ~~核实第 1 条 Flyway checksum~~ ✅ **已完成（SSH 生产库）**：validate 1425 迁移通过、`202710230004` success=1，风险解除
 2. ~~修第 2/3 条跨租户~~ ✅ **D-858 已完成**（显式校验 + 8 个守护用例；intelligence 262 测试全绿）
 3. ~~订正第 5 条文档数字~~ ✅ **D-858 已完成**（155，与 baseline 一致）
 4. 库存对账：口径已定稿，观察一个巡检周期（每日 2:00 `DataConsistencyChecker`）确认不再复现；关注「重算库存」入口是否还有人误用（D-849 幽灵库存来源）

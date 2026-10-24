@@ -2,13 +2,42 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-24（D-858 补 D-856/D-857 遗漏：决策卡租户校验显式化 + 输出上限口径守护 + `docs/unwired-inventory.md` 数字订正；已推送 a387e4acc，intelligence 包 262 测试全绿）
+> 最后更新：2026-10-24（D-859 生产 health DEGRADED 根因修复：LiteLLM 未启用被误判为 DOWN → 改 UNKNOWN；已推送 74811c721，intelligence 包 264 测试全绿。另确认生产已部署 6b5072313、Flyway 1425 个迁移 validate 通过）
+> 上一版：2026-10-24（D-858 补 D-856/D-857 遗漏：决策卡租户校验显式化 + 输出上限口径守护 + `docs/unwired-inventory.md` 数字订正；已推送 a387e4acc，intelligence 包 262 测试全绿）
 > 上一版：2026-10-24（D-857 小云性能埋点 + 全系统性能与架构分析报告；D-856 QuickPath 输出上限 2048→1024（生产实测 60 秒真凶）+ 软约束；已推送 9f685fe76，CI 全绿，**耗时改善待部署实测**）
 > 上一版：2026-10-24（**补记** D-839~D-855：库存对账四层闭环与口径三处统一（D-841/845~850）+「做了没接」164 处逐类核实与门禁（D-848/851/852）+ AI 建议闭环「生成→可见→采纳→反馈」（D-853/854）+ 小云跨域工具缺失修复（D-855）+ 入库库位硬闸与迁移事故（D-843/844）；代码 10-23 已全部推送，本条为事后补记）
 > 上一版：2026-10-22（D-838 商品上架库存双轨：实际仓库库存只读聚合 + 一键同步库存 + 轮播图批量加图三方式；已推送 059267887 + d07a06de9）
 > 上一版：2026-10-21（D-835 详情长图编辑器改烘焙逐页方案：每图一页+html2canvas 烘焙导出，D-834 堆叠三栏被用户否决替换，「85% 侧滑弹窗」旧约束一并推翻；已推送 b08bdfd9c）
 > 上一版：2026-10-19（D-823 裁剪用料台账 + 余料回库闭环：新表五态台账 + 完工自动快照 + 极简登记 + 一键回库 + 全链路穿透；16 文件代码完成待提交）
 > 上一版：2026-10-19（**补记** 门店零售对接线 10-10~10-19：D-817 收银台信封泄漏治理 / D-785+D-811 顾客端 UserContext 空陷阱（第二次同款）/ D-815 AI 不许报「开票成功」/ D-808 编号撞号更正 + D-800 迁移索引超限；代码均已推，本条为事后补记）
+
+---
+
+## D-859：生产 health DEGRADED 根因——LiteLLM 未启用被误判为 DOWN（2026-10-24，已推送 74811c721）
+
+**现象**：生产 `https://api.webyszl.cn/actuator/health` 长期返回 `DEGRADED`，但 `/liveness`、`/readiness` 都是 UP。
+
+**逐组件排除（实测）**：
+| 组件 | 结论 |
+|---|---|
+| Qdrant | 容器内 `http://qdrant:6333/healthz` → healthz check passed |
+| DeepSeek | `api.deepseek.com` 网络可达（无 key 的裸测返回 401，属正常） |
+| Langfuse | `ai.observability.provider` 默认 none → UNKNOWN（不参与判定） |
+| memoryArchive | 代码里恒为 UNKNOWN（空壳检查） |
+| **LiteLLM** | `ai.gateway.litellm.enabled` 默认 **false**；`ping()` 对「未启用」也返回 **false** → `checkLiteLLM()` 判成 **DOWN** |
+
+**根因**：未配置的可选组件被当成故障。类注释自己写的第 3 条原则是「组件未配置时返回 UNKNOWN（不视为 DOWN，避免误告警）」，但 LiteLLM 分支没遵守。
+
+**修复**：`checkLiteLLM()` 先判 `liteLLMEnabled`，false → `HealthResult.unknown(...)`；再看 orchestrator 是否注入。
+
+**理由**：可选组件没部署 ≠ 故障。永久 DEGRADED 会让「真实故障」与「一切正常」显示同一状态，**监控彻底失去分辨能力**（这与 2026-08-16 Docker 健康检查误判事故同一类）。
+
+**验证**：新增 2 用例（未启用→UNKNOWN、启用但未注入→UNKNOWN）；intelligence 包 **264 测试全绿**；pre-push 8 项 PASS。
+
+**顺带核实（生产 SSH）**：
+- 生产 `/opt/fz66666` 已部署 `6b507231`（D-858 批次），backend 18:09:33 启动 healthy
+- **Flyway validate 通过 1425 个迁移**，`202710230004` success=1 → checksum mismatch 风险解除
+- `[Perf]` 日志暂无（0 条），因部署后尚无人使用小云
 
 ---
 
