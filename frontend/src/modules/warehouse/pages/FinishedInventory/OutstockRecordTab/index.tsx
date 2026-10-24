@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Descriptions, Space, Select, App, Button, Modal } from 'antd';
+import { Card, Descriptions, Space, Select, App, Button, Modal, Tooltip } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -16,7 +16,7 @@ import { getGroupedOutstockColumns, getOutstockLineColumns } from './outstockRec
 import { useColumnSettings } from '@/components/common/ColumnSettings/useColumnSettings';
 import { ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 import type { GroupedOutstock, OutstockRecord } from './outstockRecordTypes';
-import { groupOutstockByNo, isReturnedTransferLine } from './outstockRecordTypes';
+import { groupOutstockByNo, isReturnedTransferLine, outstockTypeMap } from './outstockRecordTypes';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 
@@ -298,6 +298,48 @@ const OutstockRecordTab: React.FC = () => {
     [keyedColumns, columnSettings.visibleColumns],
   );
 
+  // ===== D-867：行展开——双击任意一行看该单全部字段（含默认隐藏列），不必先去改列设置 =====
+  const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
+  const toggleRowExpand = useCallback((outstockNo: string) => {
+    setExpandedRowKeys((prev) =>
+      prev.includes(outstockNo) ? prev.filter((k) => k !== outstockNo) : [...prev, outstockNo],
+    );
+  }, []);
+
+  const renderExpandedRow = (group: GroupedOutstock) => (
+    <div style={{ padding: '4px 8px 8px' }}>
+      <Descriptions
+        size="small"
+        column={{ xs: 1, sm: 2, md: 3 }}
+        items={[
+          { key: 'phone', label: '联系电话', children: group.customerPhone || '-' },
+          {
+            key: 'logistics',
+            label: '物流信息',
+            children: group.trackingNo
+              ? `${group.expressCompany || ''} ${group.trackingNo}`
+              : (group.platformCode === 'POS' ? '门店自提' : '未填写'),
+          },
+          {
+            key: 'type',
+            label: '出库类型',
+            children: outstockTypeMap[group.outstockType || '']?.label || group.outstockType || '-',
+          },
+          { key: 'order', label: '关联订单', children: group.orderNo || group.productionOrderNo || '-' },
+          { key: 'creator', label: '操作人', children: group.creatorName || '-' },
+          { key: 'time', label: '出库时间', children: group.createTime ? formatDateTime(group.createTime) : '-' },
+        ]}
+      />
+      <Space style={{ marginTop: 8 }}>
+        <Button size="small" type="primary" onClick={() => setDetailGroup(group)}>查看明细</Button>
+        {group.status === 'pending' && (
+          <Button size="small" onClick={() => handleApproveGroup(group)}>审核</Button>
+        )}
+        <Button size="small" onClick={() => void handlePrint(group)}>打印</Button>
+      </Space>
+    </div>
+  );
+
   return (
     <Card
       styles={{ body: { padding: '16px 20px' } }}
@@ -353,7 +395,9 @@ const OutstockRecordTab: React.FC = () => {
           </Space>
         }
         right={
-          <Button onClick={() => setColumnDrawerOpen(true)}>列设置</Button>
+          <Tooltip title="双击任意一行可展开查看该单全部字段（含默认隐藏列）">
+            <Button onClick={() => setColumnDrawerOpen(true)}>列设置</Button>
+          </Tooltip>
         }
       />
       <ResizableTable
@@ -366,6 +410,18 @@ const OutstockRecordTab: React.FC = () => {
             disabled: group.status !== 'pending',
           }),
         }}
+        expandable={{
+          expandedRowKeys,
+          onExpand: (expanded, record) => toggleRowExpand(record.outstockNo),
+          expandedRowRender: renderExpandedRow,
+          rowExpandable: () => true,
+          // 不占展开图标列（16 列已经很挤）——用双击触发，提示放在「列设置」按钮的 Tooltip 里
+          showExpandColumn: false,
+        }}
+        onRow={(record) => ({
+          onDoubleClick: () => toggleRowExpand(record.outstockNo),
+          style: { cursor: 'pointer' },
+        })}
         columns={tableColumns}
         dataSource={groups}
         loading={loading}
