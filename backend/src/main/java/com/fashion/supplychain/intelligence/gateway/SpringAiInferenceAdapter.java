@@ -94,6 +94,11 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                 ChatResponse response = chatModel.call(new Prompt(messages, buildOptions(scene)));
                 IntelligenceInferenceResult result = convertResult(response, start);
                 recordTokenUsage(result);
+                // D-868：非流式单轮此前没有任何耗时日志——QuickPath（直查快路径）命中时走这里，
+                // 生产排查「小云为什么慢」只能看到流式的 [Perf]，非流式这条路是盲区。
+                log.info("[Perf][chat] scene={} model={} totalMs={} chars={}",
+                        scene, modelName, System.currentTimeMillis() - start,
+                        result.getContent() == null ? 0 : result.getContent().length());
                 return result;
             } catch (Exception e) {
                 lastError = e;

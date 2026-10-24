@@ -86,7 +86,11 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
           text: m.content ?? '',
         }));
-        setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
+        // D-868：原写法 `prev.length <= 1` 永远不成立——挂载时 messages 已有 INITIAL_MSG，
+        // 若同时拉到「今日智能简报」/问候语就是 2 条以上 → 历史一次都没恢复过
+        // （生产 t_hyper_advisor_session 明明有 152 条记录，用户却看不到任何历史）。
+        // restoreHistory 只在挂载时调用一次，此时用户尚未发言，直接铺开是安全的。
+        setMessages([INITIAL_MSG, ...restored]);
       })
       .catch(() => {});
   }, [advisorSessionId]);

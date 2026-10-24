@@ -60,7 +60,15 @@ public class IntelligenceInferenceOrchestrator {
 
     private static final int MIN_TIMEOUT_SECONDS = 5;
     private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 300;
-    private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
+    /**
+     * ai-advisor（小云对话）超时封顶。
+     *
+     * <p>D-868：从 20s 提到 45s。原因——D-856 把 QuickPath 输出上限压到 1024 token 后，
+     * 生产实测单次预期 25-35 秒；而这里仍封顶 20s，等于「刚优化完就被砍断」：
+     * 请求在模型返回前就被判超时，用户看到的是失败/无响应，而不是变快。
+     * 45s = 预期上限 35s + 10s 余量；仍然远小于默认 300s，不会让用户无限等。
+     */
+    private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 45;
     private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
     private static final int DAILY_BRIEF_MAX_TIMEOUT_SECONDS = 5;
     private static final int CRITIC_REVIEW_MAX_TIMEOUT_SECONDS = 30;
