@@ -11,8 +11,7 @@ import { t } from '../../i18n';
 import SmartGuideBar from '@/smart/components/SmartGuideBar';
 import { isSmartFeatureEnabled, triggerSmartFeatureRefresh } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
-import SmartAlertBell from './SmartAlertBell';
-import AiSuggestionBell from './AiSuggestionBell';
+import MessageCenter from './MessageCenter';
 import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 const GlobalAiAssistant = React.lazy(() => import('../common/GlobalAiAssistant'));
@@ -258,9 +257,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             ) : null}
           </div>
           <div className="header-user">
-            <SmartAlertBell />
-            {/* D-863：AI 建议顶栏入口——生产端用户不打开下单列表，建议必须全局可见 */}
-            <AiSuggestionBell />
+            {/* D-869：今日预警 + AI 建议合并为「消息中心」一个入口 */}
+            <MessageCenter />
             {auth.isFactoryAccount && (
               <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 15 }}>
                  {auth.factoryName || '外发工厂'}

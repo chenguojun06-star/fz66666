@@ -35,7 +35,7 @@ const RISK_COLOR: Record<string, string> = {
   low: 'green',
 };
 
-const AiSuggestionBell: React.FC = () => {
+const AiSuggestionBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 'button' }) => {
   const { message } = App.useApp();
   const [cards, setCards] = useState<AiDecisionCard[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -77,36 +77,12 @@ const AiSuggestionBell: React.FC = () => {
     }
   };
 
-  if (cards.length === 0) return null;
+  if (cards.length === 0 && variant === 'button') return null;
 
-  return (
+  // D-869：抽屉内容抽成变量——panel 模式（消息中心内嵌）只渲染内容，
+  // 按钮与抽屉外壳由父容器提供；默认 button 模式行为完全不变
+  const content = (
     <>
-      <button
-        className="smart-alert-btn"
-        title={`AI 建议 ${cards.length} 条，点击查看`}
-        onClick={() => setDrawerOpen(true)}
-      >
-        <span className="smart-alert-btn-icon">
-          <BulbOutlined style={{ fontSize: 15 }} />
-          {cards.length > 0 && <span className="smart-alert-dot" style={{ background: '#722ed1' }} />}
-        </span>
-        <span className="smart-alert-btn-label">
-          <span className="smart-alert-btn-main">AI 建议</span>
-        </span>
-        <Badge
-          count={cards.length}
-          style={{ marginLeft: 4, background: '#722ed1', boxShadow: 'none' }}
-        />
-      </button>
-
-      <Drawer
-        title={<Space><BulbOutlined /> AI 建议（{cards.length}）</Space>}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        placement="right"
-        width={420}
-        extra={<Button size="small" type="link" onClick={() => void load()}>刷新</Button>}
-      >
         {cards.length === 0 ? (
           <Empty description="暂无待处理的 AI 建议" />
         ) : (
@@ -158,6 +134,41 @@ const AiSuggestionBell: React.FC = () => {
             );
           })
         )}
+    </>
+  );
+
+  // D-869：panel 模式——消息中心内嵌时只渲染内容，按钮与抽屉由 MessageCenter 提供
+  if (variant === 'panel') return content;
+
+  return (
+    <>
+      <button
+        className="smart-alert-btn"
+        title={`AI 建议 ${cards.length} 条，点击查看`}
+        onClick={() => setDrawerOpen(true)}
+      >
+        <span className="smart-alert-btn-icon">
+          <BulbOutlined style={{ fontSize: 15 }} />
+          {cards.length > 0 && <span className="smart-alert-dot" style={{ background: '#722ed1' }} />}
+        </span>
+        <span className="smart-alert-btn-label">
+          <span className="smart-alert-btn-main">AI 建议</span>
+        </span>
+        <Badge
+          count={cards.length}
+          style={{ marginLeft: 4, background: '#722ed1', boxShadow: 'none' }}
+        />
+      </button>
+
+      <Drawer
+        title={<Space><BulbOutlined /> AI 建议（{cards.length}）</Space>}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        placement="right"
+        width={420}
+        extra={<Button size="small" type="link" onClick={() => void load()}>刷新</Button>}
+      >
+        {content}
       </Drawer>
     </>
   );

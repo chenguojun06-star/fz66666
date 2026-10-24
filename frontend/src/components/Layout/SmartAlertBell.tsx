@@ -19,7 +19,7 @@ import { choose, getEventNav } from './SmartAlertBell/helpers';
 import UrgeReplyInline from './SmartAlertBell/components/UrgeReplyInline';
 import OneClickActionInline from './SmartAlertBell/components/OneClickActionInline';
 
-const SmartAlertBell: React.FC = () => {
+const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 'button' }) => {
   const navigate = useNavigate();
   const {
     open,
@@ -48,47 +48,10 @@ const SmartAlertBell: React.FC = () => {
   const { insights: proactiveInsights, markRead: markInsightRead } = useProactiveInsights();
   const totalWithInsights = alertCount + proactiveInsights.length;
 
-  return (
-    <div className="smart-alert-wrap">
-      {/* ── 按钮 ── */}
-      <button
-        onClick={handleToggle}
-        className={`smart-alert-btn${open ? ' open' : ''}`}
-        title="今日跟踪预警"
-      >
-        <span className="smart-alert-btn-icon">
-          <ThunderboltOutlined style={{ fontSize: 15 }} />
-          {totalWithInsights > 0 && (
-            <span className="smart-alert-dot" style={{ background: dotColor }} />
-          )}
-        </span>
-        <span className="smart-alert-btn-label">
-          <span className="smart-alert-btn-main">今日预警</span>
-        </span>
-        {totalWithInsights > 0 && (
-          <Badge
-            count={totalWithInsights}
-            style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
-          />
-        )}
-      </button>
-
-      {/* ── 侧滑抽屉（D-626：原为悬浮下滑面板，收窄易误关、信息放不开，改为右侧侧滑） ── */}
-      <Drawer
-        open={open}
-        onClose={() => setOpen(false)}
-        placement="right"
-        width="min(460px, 94vw)"
-        rootClassName="smart-alert-drawer"
-        styles={{ body: { padding: '12px 16px', background: 'var(--color-bg-page, #f7f8fa)' } }}
-        title={
-          <div className="sap-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
-            <span>今日跟踪预警</span>
-            {brief?.date && <span className="sap-date">{brief.date}</span>}
-          </div>
-        }
-      >
+  // D-869：抽屉内容抽成变量——panel 模式（消息中心内嵌）只渲染内容，
+  // 按钮与抽屉外壳由父容器提供；默认 button 模式行为完全不变
+  const drawerBody = (
+    <>
 
         {loading && (
           <div className="sap-loading">
@@ -444,6 +407,54 @@ const SmartAlertBell: React.FC = () => {
 
           </div>
         )}
+    </>
+  );
+
+  // D-869：panel 模式——消息中心内嵌时只渲染内容，按钮与抽屉由 MessageCenter 提供
+  if (variant === 'panel') return drawerBody;
+
+  return (
+    <div className="smart-alert-wrap">
+      {/* ── 按钮 ── */}
+      <button
+        onClick={handleToggle}
+        className={`smart-alert-btn${open ? ' open' : ''}`}
+        title="今日跟踪预警"
+      >
+        <span className="smart-alert-btn-icon">
+          <ThunderboltOutlined style={{ fontSize: 15 }} />
+          {totalWithInsights > 0 && (
+            <span className="smart-alert-dot" style={{ background: dotColor }} />
+          )}
+        </span>
+        <span className="smart-alert-btn-label">
+          <span className="smart-alert-btn-main">今日预警</span>
+        </span>
+        {totalWithInsights > 0 && (
+          <Badge
+            count={totalWithInsights}
+            style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
+          />
+        )}
+      </button>
+
+      {/* ── 侧滑抽屉（D-626：原为悬浮下滑面板，收窄易误关、信息放不开，改为右侧侧滑） ── */}
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        placement="right"
+        width="min(460px, 94vw)"
+        rootClassName="smart-alert-drawer"
+        styles={{ body: { padding: '12px 16px', background: 'var(--color-bg-page, #f7f8fa)' } }}
+        title={
+          <div className="sap-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
+            <span>今日跟踪预警</span>
+            {brief?.date && <span className="sap-date">{brief.date}</span>}
+          </div>
+        }
+      >
+        {drawerBody}
       </Drawer>
     </div>
   );
