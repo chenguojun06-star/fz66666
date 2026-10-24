@@ -77,6 +77,7 @@ const MessageCenter: React.FC = () => {
         }
       >
         <Tabs
+          className="mc-center-tabs"
           activeKey={tab}
           onChange={setTab}
           items={[

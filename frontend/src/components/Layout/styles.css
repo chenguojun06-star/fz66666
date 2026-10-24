@@ -1226,6 +1226,36 @@
   background: rgba(0, 0, 0, 0.22);
 }
 
+/* ── D-872：消息中心 Tabs 内的滚动收口 ─────────────────────────────────────
+   症状（用户报障）：D-869 把「今日预警/ AI 建议」合进 Tabs 后，面板滑不动。
+   根因：.sap-body-scroll 的滚动规则只在 .smart-alert-drawer/.smart-alert-panel
+   这两个选择器下生效，且写死 height:100%；套进 ant-tabs-tabpane 后父级是
+   auto 高度，100% 解析不出 → 元素高度随内容增长，overflow-y:auto 无从触发。
+   修复：外层 tabpane 做唯一滚动容器，内层 sap-body-scroll 交出滚动（height:auto），
+   避免两层都能滚导致的"滚一下到底/回弹"。
+   ──────────────────────────────────────────────────────────────────────── */
+.mc-center-tabs .ant-tabs-content-holder {
+  min-height: 0;
+}
+.mc-center-tabs .ant-tabs-tabpane {
+  height: calc(100vh - 210px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.mc-center-tabs .ant-tabs-tabpane::-webkit-scrollbar {
+  width: 4px;
+}
+.mc-center-tabs .ant-tabs-tabpane::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+/* 特异性必须高于下方 .smart-alert-drawer .sap-body-scroll（两个类），否则会被它覆盖回去 */
+.mc-center-tabs .ant-tabs-tabpane .sap-body-scroll {
+  height: auto;
+  overflow: visible;
+}
+
 /* ── D-626：面板改为右侧侧滑抽屉（.smart-alert-drawer），内容区块复用 sap-* 类 ── */
 .smart-alert-drawer .ant-drawer-header {
   border-bottom: 1px solid var(--color-bg-stripe);
