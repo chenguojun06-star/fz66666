@@ -775,7 +775,31 @@ public class AiAgentOrchestrator {
                 }
             }
 
-            if (isQuickPathEligible(userMessage)) {
+            // D-870：QuickPath 闸门必须看用户原话，不能看含页面建议的 userMessage。
+            // 与 D-755（直查只看 rawQuestion）是同族遗漏：userMessage 里被拼进了
+            // 「[当前页面:生产管理模块] + [页面快捷操作建议：查看今日生产进度/预测订单交期/检测生产异常]」，
+            // 这些建议词全是业务关键词 → isBusinessKeyword 恒真 → 在生产页问任何问题
+            // （包括"咋回事啊"这种闲聊）都被判成业务查询，全部降级到 Agent 循环。
+            // 生产实证（2026-10-25 00:16）：一句闲聊触发 agent-loop + SelfCritic + ReflectionEngine(30s)
+            // + quality-retry，线程池被后处理占满，表现为"发什么都要半天"。
+            String quickPathJudgeInput = (rawQuestion != null && !rawQuestion.isBlank())
+                    ? rawQuestion : userMessage;
+
+            // D-870：纯闲聊/表情/极短寒暄 → 模板秒回，一次 LLM 都不调。
+            // 用户原话「不管问什么问题都要半天，发一个表情都是半天」——表情这类消息
+            // 即便走 QuickPath 也要 25-35 秒（1024 token × 30-45 token/s），体感仍然是"半天"。
+            // 16 字以内 + 无业务关键词 + 非知识问 = 闲聊/表情/测试，长度本身就是最强信号。
+            if (isSmallTalkFastReply(quickPathJudgeInput)) {
+                String reply = buildSmallTalkReply(quickPathJudgeInput);
+                log.info("[SmallTalk] 模板秒回，跳过 LLM: \"{}\"", quickPathJudgeInput);
+                emitSse(emitter, "answer", java.util.Map.of(
+                        "content", reply, "commandId", "smalltalk-" + System.currentTimeMillis()));
+                emitSse(emitter, "done", java.util.Map.of());
+                emitter.complete();
+                return;
+            }
+
+            if (isQuickPathEligible(quickPathJudgeInput)) {
                 boolean quickOk = tryQuickPath(userMessage, pageContext, emitter, cacheKey, requestStartAt);
                 if (quickOk) {
                     return;
@@ -1496,6 +1520,28 @@ public class AiAgentOrchestrator {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * D-870：纯闲聊/表情/极短寒暄 → 模板秒回（一次 LLM 都不调）。
+     *
+     * <p>判定用「长度 + 无业务词 + 非知识问」三条件，不依赖意图分类——
+     * 意图分类对「咋回事啊」「哈哈哈」这类并不可靠，而 16 字以内且不含业务关键词的消息，
+     * 长度本身就是最强信号（业务问题几乎都带款号/订单号/工序名，必然超过 16 字）。
+     */
+    private boolean isSmallTalkFastReply(String msg) {
+        if (msg == null) return false;
+        String t = msg.trim();
+        if (t.isEmpty() || t.length() > 16) return false;
+        if (XiaoyunPatterns.isBusinessKeyword(t)) return false;
+        if (XiaoyunPatterns.isKnowledgeOnlyQuestion(t)) return false;
+        return true;
+    }
+
+    /** D-870：闲聊秒回话术——顺手把能问什么说清楚，把闲聊转成第一次有效提问 */
+    private String buildSmallTalkReply(String msg) {
+        return "我在呢～我是小云，订单、生产、仓库、财务的问题都可以直接问我。\n"
+                + "比如：「今天生产进度怎么样」「哪些订单要延期了」「BR26CB0201E 库存还有多少」。";
     }
 
     private boolean isQuickPathEligible(String userMessage) {
