@@ -126,7 +126,32 @@ public final class XiaoyunPatterns {
         // 复杂操作/分析：保持较高轮次
         if (COMPLEX_OP_PATTERN.matcher(trimmed).matches()) return 6;
         if (COMPLEX_ANALYSIS_PATTERN.matcher(trimmed).matches()) return 4;
+        // D-873：纯计数/统计类问题（"延期的有多少"这类）一次查询就能回答，
+        // 不需要反复核实。生产实测（2026-10-25 01:07）该类型跑满 5 轮耗时 66 秒：
+        // 第 1 轮工具已拿到数字，后 4 轮全是重复求证。压到 2 轮（查一次 + 收尾一次）。
+        // 只匹配「计数问句」形态，不含任何写操作词，不影响分析类与操作类问题的轮次。
+        if (isCountingQuestion(trimmed)) return 2;
         // 默认：3轮（原5轮，响应慢根因TOP1优化）
         return 3;
+    }
+
+    /**
+     * D-873：计数/统计类问句判定。
+     *
+     * <p>形态特征：以「多少/几」提问 + 出现统计对象（订单/款/件/单/人/厂），
+     * 且**不含**写操作词（改/删/建/审/退/取消/同步/导入）。这类问题一次工具调用
+     * 就能给出数字，多轮迭代属于重复求证，是生产实测 66 秒的主要来源。
+     */
+    private static final java.util.regex.Pattern COUNTING_Q =
+            java.util.regex.Pattern.compile("(多少|几[名个台条款件单人厂])");
+    private static final java.util.regex.Pattern WRITE_OP =
+            java.util.regex.Pattern.compile("(修改|删除|新建|创建|审核|审批|退回|取消|作废|同步|导入|导出|补录|调整)");
+
+    public static boolean isCountingQuestion(String msg) {
+        if (msg == null || msg.isBlank()) return false;
+        String t = msg.trim();
+        if (t.length() > 60) return false;              // 长句通常是复合分析，不压
+        if (WRITE_OP.matcher(t).find()) return false;   // 含写操作一律不压
+        return COUNTING_Q.matcher(t).find();
     }
 }

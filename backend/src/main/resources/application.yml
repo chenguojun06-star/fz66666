@@ -512,6 +512,14 @@ intelligence:
     enabled: ${INTELLIGENCE_PERCEPTION_ENABLED:true}
     rollout-tenants: ${INTELLIGENCE_PERCEPTION_ROLLOUT_TENANTS:}
 
+# 系统级参数（运维可调）
+system:
+  auditLog:
+    # D-873：审计日志保留期 90 → 60 天。
+    # 生产实测 t_intelligence_audit_log 226MB / 42.7 万行，是库里最大的表；
+    # 保留期 60 天 + 失败记录 365 天（AuditLogCleanupJob 内置两级保留）足够追溯又不无限膨胀。
+    retentionDays: ${AUDIT_LOG_RETENTION_DAYS:60}
+
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:
   agent:

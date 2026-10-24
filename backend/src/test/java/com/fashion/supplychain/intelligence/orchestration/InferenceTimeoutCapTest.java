@@ -39,7 +39,10 @@ class InferenceTimeoutCapTest {
     @Test
     @DisplayName("已有场景封顶不被影响")
     void existingSceneCapsUnchanged() {
-        assertThat(cap("ai-advisor", 90)).isEqualTo(20);
+        // D-868：ai-advisor 封顶 20s → 45s。原 20s 与 D-856 的 1024 token 输出自相矛盾
+        // （生产预期 25-35s），请求在模型返回前就被判超时 → 用户看到失败而不是变快。
+        // 45s = 预期上限 35s + 10s 余量，仍远小于默认 300s。
+        assertThat(cap("ai-advisor", 90)).isEqualTo(45);
         assertThat(cap("nl-intent", 90)).isEqualTo(12);
         assertThat(cap("daily-brief", 90)).isEqualTo(5);
         assertThat(cap("critic_review", 90)).isEqualTo(30);
