@@ -14,10 +14,26 @@ import { outstockTypeMap, isReturnedTransferLine } from './outstockRecordTypes';
 export type { OutstockRecord } from './outstockRecordTypes';
 
 /** D-437：审核状态统一渲染——returned=全部明细已回入库的调拨单 */
-function ApprovalTag({ status }: { status: GroupedOutstock['status'] }) {
+function ApprovalTag({ status, onApprove }: { status: GroupedOutstock['status']; onApprove?: () => void }) {
   if (status === 'returned') return <Tag color="cyan">已回入库</Tag>;
   if (status === 'approved') return <Tag color="green">已审核</Tag>;
-  return <Tag color="orange">待审核</Tag>;
+  // D-866：单条审核入口从「更多」二级菜单里提到状态列旁——出库记录是每天要对的账，
+  // 待审核就应当能一键处理（点击仍走 Modal.confirm，不会误触）
+  return (
+    <span style={{ whiteSpace: 'nowrap' }}>
+      <Tag color="orange">待审核</Tag>
+      {onApprove ? (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: '0 0 0 2px', height: 'auto' }}
+          onClick={onApprove}
+        >
+          审核
+        </Button>
+      ) : null}
+    </span>
+  );
 }
 
 /**
@@ -183,7 +199,12 @@ export function getGroupedOutstockColumns(handlers: {
       key: 'approvalStatus',
       width: 100,
       align: 'center',
-      render: (_, group) => <ApprovalTag status={group.status} />,
+      render: (_, group) => (
+        <ApprovalTag
+          status={group.status}
+          onApprove={group.status === 'pending' ? () => handlers.handleApproveGroup(group) : undefined}
+        />
+      ),
     },
     {
       title: '出库时间',

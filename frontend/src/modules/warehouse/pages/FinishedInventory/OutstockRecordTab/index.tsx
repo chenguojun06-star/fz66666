@@ -13,6 +13,8 @@ import RecordLogDrawer, { type RecordLogDrawerFilter } from '@/components/common
 import ShareLinkModal from '../ShareLinkModal';
 import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { getGroupedOutstockColumns, getOutstockLineColumns } from './outstockRecordColumns';
+import { useColumnSettings } from '@/components/common/ColumnSettings/useColumnSettings';
+import { ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 import type { GroupedOutstock, OutstockRecord } from './outstockRecordTypes';
 import { groupOutstockByNo, isReturnedTransferLine } from './outstockRecordTypes';
 import { formatDateTime } from '@/utils/datetime';
@@ -24,6 +26,11 @@ import { formatMoney } from '@/utils/format';
  * - 审核/打印按单操作（审核走 batch-approve 打包该单全部待审明细 id）
  * - 勾选多个单 → 批量审核 / 批量回库（映射到该批单的明细 id）
  */
+/** D-866：部分列既无 key 也无 dataIndex（款式图 / 物流信息），按 title 兜底生成稳定 key */
+const TITLE_KEY_MAP: Record<string, string> = { '款式图': 'image', '物流信息': 'logistics' };
+/** D-866：默认收起的低频列（收款状态 / 审核状态 / 出库时间保留默认可见——每天要对账） */
+const DEFAULT_HIDDEN_KEYS = ['customerPhone', 'logistics', 'outstockType', 'orderNo', 'creatorName'];
+
 const OutstockRecordTab: React.FC = () => {
   const { message } = App.useApp();
   const [records, setRecords] = useState<OutstockRecord[]>([]);
@@ -260,6 +267,37 @@ const OutstockRecordTab: React.FC = () => {
     handlePrint,
   }, { imageMap: styleImageMap });
 
+  // ===== D-866：接入系统已有的列设置（此前出库记录 16 列全量铺开，窄屏只能横向滚）=====
+  const keyedColumns = useMemo(
+    () => columns.map((c: any) => ({
+      ...c,
+      key: String(c.key || c.dataIndex || TITLE_KEY_MAP[String(c.title)] || c.title || ''),
+    })),
+    [columns],
+  );
+  const columnOptions = useMemo(
+    () => keyedColumns.map((c: any) => ({ key: c.key as string, label: String(c.title || '') })),
+    [keyedColumns],
+  );
+  // 默认收起低频列（见模块顶部 DEFAULT_HIDDEN_KEYS）
+  const defaultVisible = useMemo(() => {
+    const obj: Record<string, boolean> = {};
+    columnOptions.forEach((c) => { obj[c.key] = !DEFAULT_HIDDEN_KEYS.includes(c.key); });
+    return obj;
+  }, [columnOptions]);
+
+  const [columnDrawerOpen, setColumnDrawerOpen] = useState(false);
+  const columnSettings = useColumnSettings({
+    pageKey: 'finished-inventory-outstock-records',
+    allColumns: columnOptions,
+    defaultVisible,
+    bizType: 'warehouse',
+  });
+  const tableColumns = useMemo(
+    () => keyedColumns.filter((c: any) => columnSettings.visibleColumns[c.key] !== false),
+    [keyedColumns, columnSettings.visibleColumns],
+  );
+
   return (
     <Card
       styles={{ body: { padding: '16px 20px' } }}
@@ -280,10 +318,14 @@ const OutstockRecordTab: React.FC = () => {
               value={outstockTypeFilter || undefined}
               onChange={(v) => { setOutstockTypeFilter(v ?? ''); pagination.onChange(1, pagination.pagination.pageSize); }}
             >
-              <Select.Option value="normal">普通出库</Select.Option>
-              <Select.Option value="qrcode">扫码出库</Select.Option>
-              <Select.Option value="batch">批量出库</Select.Option>
+              {/* D-866：补全后端规范出库类型（此前只有 4 个老值，free_outbound 等选不到 → 筛不出 POS/自由出库） */}
               <Select.Option value="shipment">物流出库</Select.Option>
+              <Select.Option value="free_outbound">自由出库</Select.Option>
+              <Select.Option value="scan_outbound">扫码出库</Select.Option>
+              <Select.Option value="sample_out">样衣出库</Select.Option>
+              <Select.Option value="damage_out">报废出库</Select.Option>
+              <Select.Option value="transfer_out">调拨出库</Select.Option>
+              <Select.Option value="other_out">其他出库</Select.Option>
             </Select>
             <Select
               allowClear
@@ -310,6 +352,9 @@ const OutstockRecordTab: React.FC = () => {
             </Button>
           </Space>
         }
+        right={
+          <Button onClick={() => setColumnDrawerOpen(true)}>列设置</Button>
+        }
       />
       <ResizableTable
         storageKey="finished-inventory-outstock-records-grouped"
@@ -321,7 +366,7 @@ const OutstockRecordTab: React.FC = () => {
             disabled: group.status !== 'pending',
           }),
         }}
-        columns={columns}
+        columns={tableColumns}
         dataSource={groups}
         loading={loading}
         emptyDescription="暂无出库记录"
@@ -336,6 +381,17 @@ const OutstockRecordTab: React.FC = () => {
         total={total}
         wrapperStyle={{ paddingTop: 12 }}
         onChange={pagination.onChange}
+      />
+
+      {/* D-866：列设置抽屉（显隐 + 顺序，按用户持久化到 t_user_preference，与生产列表等页面同一套能力） */}
+      <ColumnSettingsDrawer
+        open={columnDrawerOpen}
+        onClose={() => setColumnDrawerOpen(false)}
+        columnOptions={columnOptions}
+        visibleColumns={columnSettings.visibleColumns}
+        onToggle={(key, visible) => columnSettings.setVisible(key, visible)}
+        onReset={columnSettings.reset}
+        title="显示字段"
       />
 
       {/* 单据详情抽屉：一张出库单的全部明细 */}
@@ -365,10 +421,12 @@ const OutstockRecordTab: React.FC = () => {
                 { key: 'no', label: '出库单号', children: <span style={{ fontFamily: 'var(--font-family-mono, monospace)', fontWeight: 600 }}>{detailGroup.outstockNo}</span> },
                 { key: 'type', label: '出库类型', children: detailGroup.outstockType || '-' },
                 { key: 'count', label: '明细', children: `${detailGroup.styleNos.length} 款 · ${detailGroup.skuCount} 个商品编码` },
-                { key: 'customer', label: '客户名称', children: detailGroup.customerName || '未填写' },
+                // D-866：空态文案按场景给意义——POS 散客本来就没客户、门店零售本来就没快递单号，
+                // 统一显示「未填写」会被读成「漏填」，进而触发无谓排查
+                { key: 'customer', label: '客户名称', children: detailGroup.customerName || (detailGroup.platformCode === 'POS' ? '散客' : '未填写') },
                 { key: 'phone', label: '联系电话', children: detailGroup.customerPhone || '-' },
-                { key: 'tracking', label: '物流', children: detailGroup.trackingNo ? `${detailGroup.expressCompany || ''} ${detailGroup.trackingNo}` : '未填写' },
-                { key: 'order', label: '关联订单', children: detailGroup.productionOrderNo || '-' },
+                { key: 'tracking', label: '物流', children: detailGroup.trackingNo ? `${detailGroup.expressCompany || ''} ${detailGroup.trackingNo}` : (detailGroup.platformCode === 'POS' ? '门店自提' : '未填写') },
+                { key: 'order', label: '关联订单', children: detailGroup.orderNo || detailGroup.productionOrderNo || '-' },
                 { key: 'creator', label: '操作人', children: detailGroup.creatorName || '-' },
                 { key: 'time', label: '出库时间', children: detailGroup.createTime ? formatDateTime(detailGroup.createTime) : '-' },
                 { key: 'qty', label: '出库总量', children: <strong style={{ color: 'var(--primary-color)' }}>{detailGroup.totalQuantity} 件</strong> },
