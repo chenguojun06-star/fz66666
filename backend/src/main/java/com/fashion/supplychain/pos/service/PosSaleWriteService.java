@@ -186,6 +186,20 @@ public class PosSaleWriteService {
         }
         saleMapper.updateById(patch);
 
+        // D-860：当场收款后回写出库单的收款状态。
+        // 此前 freeOutbound 把出库单写死 unpaid 之后就再没有任何地方更新它 →
+        // 收银台现金已收，库存管理「出库记录」却显示「未收款」，账实不符
+        // （2026-10-24 生产实证：4 条 POS 出库单 pay_status 全 PAID、payment_status 全 unpaid）。
+        // 挂账（UNPAID）不回写：那部分由应收单跟踪，写成 paid 等于把没收到钱的单标记为已收。
+        if ("PAID".equals(payStatus) && !outstockNos.isEmpty()) {
+            try {
+                finishedWarehouseOperationOrchestrator.markOutstockPaid(outstockNos);
+            } catch (Exception ex) {
+                // 钱和出库单都已成立，回写失败不能反过来把整笔交易回滚——留痕等补偿
+                log.warn("[POS] 回写出库单收款状态失败(不阻断结算) saleNo={}", sale.getSaleNo(), ex);
+            }
+        }
+
         // 电子小票：结算即出票（幂等）。失败只记日志，绝不阻断开单/出库主交易
         try {
             ticketOrchestrator.ensureTicket(sale.getTenantId(), TicketTypes.POS_SALE,

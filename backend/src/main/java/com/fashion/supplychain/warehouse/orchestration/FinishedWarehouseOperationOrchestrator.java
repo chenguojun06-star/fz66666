@@ -575,6 +575,32 @@ public class FinishedWarehouseOperationOrchestrator {
         return newSku;
     }
 
+    /**
+     * D-860：把一批出库单标记为已收款。
+     *
+     * <p>场景：POS 收银台当场收款后调用。出库单由 {@link #freeOutbound} 创建时写死
+     * {@code payment_status=unpaid}，此前除冲销外没有任何地方更新它 →
+     * 「出库记录」显示未收款，但钱其实已经收了（2026-10-24 生产实证 4/4 条）。
+     *
+     * <p>为什么放在编排器而不是让 PosSaleWriteService 直接操作 Service：
+     * 架构规则禁止 service → service 依赖（ArchitectureRulesTest#servicesShouldNotDependOnServices），
+     * 而出库单的写入口本就该收口在这里。
+     *
+     * @param outstockNos 出库单号；空集合直接返回
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void markOutstockPaid(List<String> outstockNos) {
+        if (outstockNos == null || outstockNos.isEmpty()) {
+            return;
+        }
+        productOutstockService.lambdaUpdate()
+                .in(ProductOutstock::getOutstockNo, outstockNos)
+                .set(ProductOutstock::getPaymentStatus, "paid")
+                .set(ProductOutstock::getSettlementTime, LocalDateTime.now())
+                .setSql("paid_amount = total_amount")
+                .update();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public ProductOutstock freeOutbound(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
