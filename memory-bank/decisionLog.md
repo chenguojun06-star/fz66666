@@ -2,7 +2,8 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-24（D-860 POS 收款后回写出库单收款状态：生产 4 条出库单 pay_status=PAID 但 payment_status=unpaid，已修 + 历史回填 4 条；已推送 062006bba，POS 29 测试 + ArchUnit 全绿）
+> 最后更新：2026-10-24（D-861/D-862 小云心跳超时+历史丢失修复、出库台账口径修复：SSE comment 心跳被丢弃致 30s 误判超时、消息不落 localStorage、平台/出库类型漏映射、关联订单读错字段；已推送 b0be1a01b，tsc/ESLint 0、11 单测通过）
+> 上一版：2026-10-24（D-860 POS 收款后回写出库单收款状态：生产 4 条出库单 pay_status=PAID 但 payment_status=unpaid，已修 + 历史回填 4 条；已推送 062006bba，POS 29 测试 + ArchUnit 全绿）
 > 上一版：2026-10-24（D-859 生产 health DEGRADED 根因修复：LiteLLM 未启用被误判为 DOWN → 改 UNKNOWN；已推送 74811c721，intelligence 包 264 测试全绿。另确认生产已部署 6b5072313、Flyway 1425 个迁移 validate 通过）
 > 上一版：2026-10-24（D-858 补 D-856/D-857 遗漏：决策卡租户校验显式化 + 输出上限口径守护 + `docs/unwired-inventory.md` 数字订正；已推送 a387e4acc，intelligence 包 262 测试全绿）
 > 上一版：2026-10-24（D-857 小云性能埋点 + 全系统性能与架构分析报告；D-856 QuickPath 输出上限 2048→1024（生产实测 60 秒真凶）+ 软约束；已推送 9f685fe76，CI 全绿，**耗时改善待部署实测**）
@@ -11,6 +12,47 @@
 > 上一版：2026-10-21（D-835 详情长图编辑器改烘焙逐页方案：每图一页+html2canvas 烘焙导出，D-834 堆叠三栏被用户否决替换，「85% 侧滑弹窗」旧约束一并推翻；已推送 b08bdfd9c）
 > 上一版：2026-10-19（D-823 裁剪用料台账 + 余料回库闭环：新表五态台账 + 完工自动快照 + 极简登记 + 一键回库 + 全链路穿透；16 文件代码完成待提交）
 > 上一版：2026-10-19（**补记** 门店零售对接线 10-10~10-19：D-817 收银台信封泄漏治理 / D-785+D-811 顾客端 UserContext 空陷阱（第二次同款）/ D-815 AI 不许报「开票成功」/ D-808 编号撞号更正 + D-800 迁移索引超限；代码均已推，本条为事后补记）
+
+---
+
+## D-861：小云「一直思考」与「关弹窗消息丢失」（2026-10-24，已推送 b0be1a01b）
+
+**报障**：问「延期有多少」长期无结果，提示「小云思考时间较长，请稍后再问一次」；关闭弹窗后对话全部消失、没有历史。
+
+**根因 1（心跳被丢弃）**：后端心跳走 SSE comment（`: heartbeat <ts>`），前端 `intelligenceApi.aiAdvisorChatStream` 解析器遇到 `line.startsWith(':')` 直接 `continue` → `onHeartbeat` 永不触发 → `resetInactivityTimer` 永不重置 → **30 秒一到就把仍在跑的回答判死**。后端其实还在正常算（生产记录 18:02 那次 70.5 秒最终 SUCCESS）。
+
+**根因 2（阈值太短）**：`SSE_INACTIVITY_TIMEOUT_MS=30s`。后端单轮 LLM 约 15s、QuickPath 输出跑满 25-35s，30s 必踩线。
+
+**根因 3（历史不落盘）**：`sessionUtils` 只存 `sessionId`，消息只在 React state → 组件卸载即丢。
+
+**修复**：
+1. 解析器识别 comment 中的 heartbeat → `onEvent({type:'heartbeat'})`
+2. 超时 30s → **60s**（与后端 agent timeout 90s 留缓冲）
+3. 新增 `saveMessages/loadMessages`：按 sessionId 落 localStorage，最多 40 条、7 天过期
+
+**验证**：tsc --noEmit 0；ESLint 0；小云相关 11 单测通过。
+
+**未验证**：真实点击后的首字/总耗时仍需部署后取 `[Perf]` 与 `t_agent_execution_log`。
+
+---
+
+## D-862：出库台账口径（2026-10-24，已推送 b0be1a01b）
+
+**报障（用户截图）**：出库记录里「平台=未知平台、客户=未填写、物流=未填写、关联订单=-、出库类型=free_outbound 英文」。
+
+**逐项核实**：
+| 现象 | 结论 |
+|---|---|
+| 未知平台 | 数据 `platform_code=POS/SHOP`，`utils/platform.ts` 只映射电商平台 → 缺映射 |
+| 出库类型英文 | `outstockTypeMap` 只有 normal/qrcode/batch/shipment，后端规范值全漏 |
+| 关联订单 `-` | 后端 `order_no` 存的是 POS/店铺单号，前端只读 `productionOrderNo` |
+| 客户未填写 | POS 散客，`t_pos_sale.customer_name` 本身为空（非 bug） |
+| 物流未填写 | POS 零售门店自提，本来无物流（显示文案误导） |
+| 待审核 | **有审批入口**（行操作「更多 → 审核」，`POST /outstock/approve`），不是死状态 |
+
+**修复**：平台映射补 `POS=门店收银 / SHOP=线上店铺`；出库类型补齐 6 个规范值；关联订单改读 `orderNo`；POS 无客户显示「散客」、无物流显示「门店自提」。
+
+**验证**：tsc --noEmit 0；ESLint 0。
 
 ---
 
