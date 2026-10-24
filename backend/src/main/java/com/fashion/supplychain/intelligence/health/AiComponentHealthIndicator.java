@@ -102,6 +102,15 @@ public class AiComponentHealthIndicator implements HealthIndicator {
     @Autowired(required = false)
     private LiteLLMAdminOrchestrator liteLLMAdminOrchestrator;
 
+    /**
+     * D-859：LiteLLM 是否启用（默认 false）。
+     *
+     * <p>未启用的可选组件必须返回 UNKNOWN，而不是 DOWN —— 否则所有没部署 LiteLLM 的环境
+     * （当前生产就是）会永久 DEGRADED，真实故障与「一切正常」显示同一个状态，监控失去分辨能力。
+     */
+    @Value("${ai.gateway.litellm.enabled:false}")
+    private boolean liteLLMEnabled;
+
     @Autowired(required = false)
     @Lazy
     private LangfuseTraceOrchestrator langfuseTraceOrchestrator;
@@ -251,6 +260,12 @@ public class AiComponentHealthIndicator implements HealthIndicator {
 
     /** LiteLLM：复用 LiteLLMAdminOrchestrator.ping() */
     private HealthResult checkLiteLLM() {
+        // D-859：未启用 → UNKNOWN（不参与 anyDown 判定）。
+        // 此前直接落到 ping()，而 ping() 对「未启用」也返回 false → 被当成 DOWN →
+        // 生产 /actuator/health 永久 DEGRADED（2026-10-24 实测）。
+        if (!liteLLMEnabled) {
+            return HealthResult.unknown("LiteLLM 未启用（ai.gateway.litellm.enabled=false）");
+        }
         if (liteLLMAdminOrchestrator == null) {
             return HealthResult.unknown("LiteLLMAdminOrchestrator 未注入");
         }
