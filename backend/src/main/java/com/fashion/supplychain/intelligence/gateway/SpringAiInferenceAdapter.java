@@ -519,8 +519,14 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         };
     }
 
+    /** D-858：未知/未指定场景的兜底输出上限（与 default 分支共用，避免两处口径分裂） */
+    private static final int DEFAULT_MAX_TOKENS = 2048;
+
     private int resolveMaxTokens(String scene) {
-        if (scene == null) return 2048;
+        // D-858：null 与未知 scene 统一走 DEFAULT_MAX_TOKENS。
+        // 此前 null 分支单独硬编码 2048、与 default 分支重复；将来调整兜底值容易只改一处
+        // （D-856 刚踩过「只改已知场景、漏掉兜底」的口径分裂）。
+        if (scene == null) return DEFAULT_MAX_TOKENS;
         return switch (scene) {
             // D-856：QuickPath 场景（ai-advisor）输出上限从 2048 → 1024。
             // 生产实测：scene=quick 的 17 次执行中 16 次耗时 56-82 秒——瓶颈不是
@@ -536,7 +542,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             case "memory_summarize" -> 256;
             case "history-compact" -> 256;
             case "memory-extract" -> 256;
-            default -> 2048;
+            default -> DEFAULT_MAX_TOKENS;
         };
     }
 

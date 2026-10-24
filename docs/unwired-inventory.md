@@ -1,6 +1,7 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852）
 
-> 生成：2026-10-23｜当前存量 **157 处**（原始 164，已接线 8 处）
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜当前存量 **155 处**
+> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；实测 `baseline: 155 条 / 当前: 155 条`）
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
 
@@ -25,7 +26,7 @@
 
 **这解释了「操作日志内容全是 -」的另一半根因**：不只是 AOP 键名单缺键，而是这些细粒度日志方法压根没接线。
 
-## 二、预留能力（保留，约 110 处）
+## 二、预留能力（保留，123 处）
 
 | 类别 | 数量 | 核实结论 |
 |---|---|---|
@@ -43,7 +44,7 @@
 | `DataPermissionHelper.applyOperatorFilter` + `applyOwnFilter` | `DataScopeAspect`（`@DataScope` 注解）+ `DataPermissionInterceptor`（SQL 改写，`MybatisPlusConfig` 已注册）——链路完整，非权限缺失 |
 | `MaterialPickupReceivableOrchestrator.syncAfterApproval` | **D-133 方案**：面料费用统一走「扣款抵扣」，不再推应收（代码注释明确） |
 
-## 四、运维/批量入口（保留，约 20 处）
+## 四、运维/批量入口（保留，18 处）
 
 `DatabaseMigrationHelper.viewExists`、`ProductionCleanupOrchestrator.cleanupOrphanData/deleteFullLinkByOrderKey`、`DeliverySlaOrchestrator.batchRefreshSla`、`OrderCostSummaryHelper.summaryAllInternalOrders`、`TemplateStyleOrchestrator.batchApplyBomTemplate/batchApplyProcessTemplate`、`MaterialReconciliationSyncOrchestrator.syncFromPurchase/syncByDateRange` 等——均为「阶段性批量/修复」入口，由运维脚本或后台调用。
 
@@ -57,6 +58,6 @@
 
 ## 六、防复发机制
 
-1. `scripts/unwired-baseline.txt`：157 条存量锁死，**只允许减少**
+1. `scripts/unwired-baseline.txt`：155 条存量锁死，**只允许减少**
 2. CI `quality-gate` 新增门禁步骤，新增未接线即红（已双向验证：注入探针→拦下，恢复→绿）
 3. baseline 键 = `文件::方法签名`（**不用行号**——D-840 已踩过行号做键导致集体误报；签名必须压平换行，否则一条拆成多条造成假新增）
