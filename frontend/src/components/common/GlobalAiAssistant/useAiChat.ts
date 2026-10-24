@@ -78,21 +78,28 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const restoreHistory = useCallback(() => {
     if (historyFetchedRef.current) return;
     historyFetchedRef.current = true;
-    intelligenceApi.hyperAdvisorHistory(advisorSessionId)
-      .then((list: ChatHistoryMessage[]) => {
-        if (!Array.isArray(list) || list.length === 0) return;
-        const restored = list.map((m, i) => ({
-          id: `hist-${i}-${m.id}`,
-          role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
-          text: m.content ?? '',
-        }));
-        // D-868：原写法 `prev.length <= 1` 永远不成立——挂载时 messages 已有 INITIAL_MSG，
-        // 若同时拉到「今日智能简报」/问候语就是 2 条以上 → 历史一次都没恢复过
-        // （生产 t_hyper_advisor_session 明明有 152 条记录，用户却看不到任何历史）。
-        // restoreHistory 只在挂载时调用一次，此时用户尚未发言，直接铺开是安全的。
-        setMessages([INITIAL_MSG, ...restored]);
-      })
-      .catch(() => {});
+    const apply = (list: ChatHistoryMessage[]) => {
+      if (!Array.isArray(list) || list.length === 0) return;
+      const restored = list.map((m, i) => ({
+        id: `hist-${i}-${m.id}`,
+        role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+        text: m.content ?? '',
+      }));
+      // D-868：原写法 `prev.length <= 1` 永远不成立——挂载时 messages 已有 INITIAL_MSG，
+      // 若同时拉到「今日智能简报」/问候语就是 2 条以上 → 历史一次都没恢复过。
+      // restoreHistory 只在挂载时调用一次，此时用户尚未发言，直接铺开是安全的。
+      // D-871：后端为空时 return，保留 D-861 从 localStorage 恢复的消息。
+      setMessages([INITIAL_MSG, ...restored]);
+    };
+    // D-871：先按用户拉最近对话（主对话历史，跨 session 可见）；
+    // 拿不到再退回按 sessionId 查（hyper-advisor 链路的历史）
+    intelligenceApi.recentAdvisorHistory(60)
+      .then(apply)
+      .catch(() => {
+        intelligenceApi.hyperAdvisorHistory(advisorSessionId)
+          .then(apply)
+          .catch(() => {});
+      });
   }, [advisorSessionId]);
 
   const handleAdvisorFeedback = useCallback((msg: Message, score: number) => {

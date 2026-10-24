@@ -68,6 +68,22 @@ public class HyperAdvisorController {
     }
 
     /**
+     * D-871：按当前用户拉最近对话（不限 sessionId）。
+     *
+     * <p>主对话历史此前按 localStorage 的 sessionId 查，换 session/清缓存就全空；
+     * 改为按 tenantId + userId 拉最近 N 条，打开小云即可看到历史。
+     * 注意必须放在 /history/{sessionId} 之前，否则 recent 会被当成 sessionId。
+     */
+    @GetMapping("/history/recent")
+    public Result<List<HyperAdvisorSession>> recentHistory(
+            @RequestParam(defaultValue = "60") int limit) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        String userId = UserContext.userId();
+        return Result.success(advisorSessionOrchestrator.listRecentMessages(tenantId, userId, limit));
+    }
+
+    /**
      * GET /api/hyper-advisor/history/{sessionId}
      * 获取指定会话的消息列表
      */

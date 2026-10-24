@@ -70,6 +70,47 @@ public class AdvisorSessionOrchestrator {
                         .orderByAsc(HyperAdvisorSession::getCreateTime));
     }
 
+    /**
+     * D-871：主对话统一会话标识（每个用户一条，不依赖前端 sessionId）。
+     *
+     * <p>此前主对话（AiAgentOrchestrator）从未写入本表，且前端按 localStorage 的
+     * sessionId 拉历史——sessionId 一旦变化就查不到，用户看到「每次打开都是新界面」。
+     * 统一用「chat-{userId}」作为会话键：持久化与历史恢复都按用户走，不再受 sessionId 影响。
+     */
+    public String chatSessionId(String userId) {
+        return "chat-" + userId;
+    }
+
+    /**
+     * D-871：保存一轮主对话（用户问题 + AI 回答）。
+     * 空内容自动跳过，任何失败只留痕、绝不影响主链路。
+     */
+    public void saveConversationTurn(Long tenantId, String userId, String question, String answer) {
+        if (userId == null || userId.isBlank()) return;
+        String sid = chatSessionId(userId);
+        if (question != null && !question.isBlank()) {
+            saveMessage(tenantId, userId, sid, "user", question, null);
+        }
+        if (answer != null && !answer.isBlank()) {
+            saveMessage(tenantId, userId, sid, "assistant", answer, null);
+        }
+    }
+
+    /**
+     * D-871：按用户拉最近消息（跨会话，按时间倒序，供前端打开小云时恢复历史）。
+     * 与 {@link #listSessionMessages} 的区别：不限 sessionId，换设备/换 session 也能看到。
+     */
+    public List<HyperAdvisorSession> listRecentMessages(Long tenantId, String userId, int limit) {
+        int n = Math.max(1, Math.min(limit, 200));
+        return sessionMapper.selectList(
+                new LambdaQueryWrapper<HyperAdvisorSession>()
+                        .eq(HyperAdvisorSession::getTenantId, tenantId)
+                        .eq(HyperAdvisorSession::getUserId, userId)
+                        .eq(HyperAdvisorSession::getDeleteFlag, 0)
+                        .orderByDesc(HyperAdvisorSession::getCreateTime)
+                        .last("LIMIT " + n));
+    }
+
     /** 保存一条消息到会话 */
     public void saveMessage(Long tenantId, String userId, String sessionId,
                             String role, String content, String metadataJson) {

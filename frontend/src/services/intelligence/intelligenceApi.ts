@@ -835,6 +835,18 @@ export const intelligenceApi = {
     return Array.isArray(resp?.data) ? resp.data : [];
   },
 
+  /**
+   * D-871：按当前用户拉最近对话（不限 sessionId，后端返回时间倒序）。
+   * 主对话历史此前按 localStorage sessionId 查，换 session/清缓存就全空——
+   * 打开小云看到「新界面」的真因就在这里，与后端是否存了历史是两件事。
+   */
+  recentAdvisorHistory: async (limit = 60): Promise<ChatHistoryMessage[]> => {
+    const resp = await api.get<ApiResult<ChatHistoryMessage[]>>('/hyper-advisor/history/recent', { params: { limit } });
+    const list = Array.isArray(resp?.data) ? resp.data : [];
+    // 后端按 create_time 倒序取最近 N 条，前端展示要按时间正序
+    return list.slice().reverse();
+  },
+
   /** 小云全域待办任务聚合：裁剪/质检/返修/物料/逾期订单/异常/样衣/工资/对账/报销 */
   getMyPendingTasks: async () =>
     unwrapApiData<import('./intelligenceTypes').PendingTaskDTO[]>(await api.get('/intelligence/pending-tasks/my', { retry: 0 } as ApiRequestConfig), '智能服务请求失败'),

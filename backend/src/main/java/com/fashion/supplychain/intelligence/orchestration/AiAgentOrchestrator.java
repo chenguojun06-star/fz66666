@@ -72,6 +72,9 @@ public class AiAgentOrchestrator {
     private long advancedReasoningBudgetMs;
 
     @Autowired private AiAgentMemoryHelper memoryHelper;
+    /** D-871：主对话历史持久化（此前主链路从未写入 t_hyper_advisor_session） */
+    @Autowired(required = false)
+    private AdvisorSessionOrchestrator advisorSessionOrchestrator;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
@@ -665,6 +668,24 @@ public class AiAgentOrchestrator {
     }
 
     /** 流式对话中同样反转优先级（四参数版本，兼容流式接口） */
+    /**
+     * D-871：保存一轮主对话到 t_hyper_advisor_session（会话键 = chat-{userId}）。
+     *
+     * <p>此前主链路（AiAgentOrchestrator）从未写入历史表，只有 HyperAdvisor 另一条链路在写，
+     * 导致用户每次打开小云都是新界面。保存失败只留痕，绝不影响回答主流程。
+     */
+    private void persistConversationTurn(String question, String answer) {
+        if (advisorSessionOrchestrator == null) return;
+        if (answer == null || answer.isBlank()) return;
+        try {
+            advisorSessionOrchestrator.saveConversationTurn(
+                    UserContext.tenantId(), UserContext.userId(),
+                    question == null ? "" : question, answer);
+        } catch (Exception e) {
+            log.warn("[AiAgent-Stream] 保存对话历史失败（不影响主流程）: {}", e.getMessage());
+        }
+    }
+
     public void executeAgentStreaming(String userMessage, String pageContext, AgentMode mode, SseEmitter emitter) {
         executeAgentStreaming(userMessage, pageContext, emitter, null);
     }
@@ -708,7 +729,9 @@ public class AiAgentOrchestrator {
             // 模型未启用：降级为模板回答（但不中断流）
             if (!contextBuilder.isModelEnabled()) {
                 String simpleCommandId = "cmd-" + System.currentTimeMillis();
-                emitSse(emitter, "answer", java.util.Map.of("content", getDefaultAnswer(userMessage), "commandId", simpleCommandId));
+                String fallback = getDefaultAnswer(userMessage);
+                persistConversationTurn(userMessage, fallback);
+                emitSse(emitter, "answer", java.util.Map.of("content", fallback, "commandId", simpleCommandId));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
@@ -724,6 +747,7 @@ public class AiAgentOrchestrator {
             if (cached != null) {
                 log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.length());
                 AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+                persistConversationTurn(userMessage, cached);
                 emitSse(emitter, "answer", java.util.Map.of("content", cached, "commandId", ctx.getCommandId()));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
@@ -757,6 +781,7 @@ public class AiAgentOrchestrator {
                     if (direct != null) {
                         long costMs = System.currentTimeMillis() - requestStartAt;
                         log.info("[DirectQuery] 命中直查，耗时 {}ms（未经 LLM）: {}", costMs, directInput);
+                        persistConversationTurn(userMessage, direct.text());
                         emitSse(emitter, "data_card", java.util.Map.of(
                                 "type", direct.cardType(),
                                 "title", direct.cardTitle(),
@@ -792,6 +817,7 @@ public class AiAgentOrchestrator {
             if (isSmallTalkFastReply(quickPathJudgeInput)) {
                 String reply = buildSmallTalkReply(quickPathJudgeInput);
                 log.info("[SmallTalk] 模板秒回，跳过 LLM: \"{}\"", quickPathJudgeInput);
+                persistConversationTurn(userMessage, reply);
                 emitSse(emitter, "answer", java.util.Map.of(
                         "content", reply, "commandId", "smalltalk-" + System.currentTimeMillis()));
                 emitSse(emitter, "done", java.util.Map.of());
@@ -937,6 +963,7 @@ public class AiAgentOrchestrator {
 
             // P0-4: 净化输出 — 剥离 prompt 内部标记，确保后处理与记忆存储的是干净内容
             String sanitizedFinal = sanitizeAssistantResponse(cb.getFinalContent());
+            persistConversationTurn(userMessage, sanitizedFinal);
             triggerPostTurnHooks(ctx, userMessage, sanitizedFinal, cb.getExecRecords(), false);
 
         } catch (Exception e) {
@@ -1754,6 +1781,7 @@ public class AiAgentOrchestrator {
             answer = sanitizeAssistantResponse(answer);
 
             // 发送最终 answer 事件，确保前端能解析卡片等结构化内容
+            persistConversationTurn(userMessage, answer);
             emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));
             emitSse(emitter, "done", java.util.Map.of());
             emitter.complete();
