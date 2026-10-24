@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-24 21:00（✅ **D-861/D-862**：小云 SSE comment 心跳被前端丢弃 → 30s 误判「思考超时」，已识别心跳并提到 60s；对话消息按 sessionId 落 localStorage；出库台账补 POS/SHOP 平台映射、6 个出库类型中文、关联订单改读 orderNo、散客/门店自提文案。已推送 `b0be1a01b`）
+> 最后更新：2026-10-24 21:30（✅ **D-863/D-864**：AI 建议挂顶栏（悬停 Popover 摘要 + 点击抽屉采纳/忽略，全局含生产端）；慢查询核实「本就开启」→ 补 9.0s 巡检查询联合索引 + 新增 `scripts/check-slow-query.sh`。已推送 `a88d6f137`）
+> 上一版：2026-10-24 21:00（✅ **D-861/D-862**：小云 SSE comment 心跳被前端丢弃 → 30s 误判「思考超时」，已识别心跳并提到 60s；对话消息按 sessionId 落 localStorage；出库台账补 POS/SHOP 平台映射、6 个出库类型中文、关联订单改读 orderNo、散客/门店自提文案。已推送 `b0be1a01b`）
 > 上一版：2026-10-24 20:45（✅ **D-860**：POS 收款后回写出库单收款状态——生产 4 条 `pay_status=PAID` 但出库单 `payment_status=unpaid`，已修 + 历史回填 4 条；已推送 `062006bba`，POS 29 测试 + ArchUnit 全绿。✅ D-859 的 health 修复已在生产验证恢复 `UP`）
 > 上一版：2026-10-24 18:40（✅ **D-859**：生产 health DEGRADED 根因 = LiteLLM 未启用被误判为 DOWN → 改为 UNKNOWN；已推送 `74811c721`，intelligence 包 **264 测试全绿**。**生产 SSH 已核实**：`/opt/fz66666` 部署 `6b507231`、backend 18:09 启动 healthy、**Flyway validate 1425 迁移通过**、`202710230004` success=1 → checksum 风险解除）
 > 上一版：2026-10-24 11:00（✅ **D-858 收尾**：决策卡 `feedback` 增加存在性+归属校验、`recentForCurrentTenant` 无租户上下文直接返回空；`resolveMaxTokens` 兜底抽常量并新增 8 个守护用例；`docs/unwired-inventory.md` 157→155 订正。已推送 `a387e4acc`，intelligence 包 **262 测试全绿**。⚠️ 关键指标仍未验证：D-856 耗时改善与 D-857 埋点日志都必须部署后实测）
