@@ -2,12 +2,23 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-24 18:40（✅ D-859：生产 health DEGRADED 根因修复（LiteLLM 未启用被误判 DOWN→UNKNOWN）；已推送 74811c721，intelligence 包 264 测试全绿。生产 SSH 核实：已部署 6b507231、Flyway 1425 迁移 validate 通过、`202710230004` success=1 → checksum 风险解除）
+> 最后更新：2026-10-24 20:45（✅ D-860：POS 收款后回写出库单收款状态（生产 4 条 unpaid→paid 已修+回填）；已推送 062006bba，POS 29 测试 + ArchUnit 全绿。D-859 的 health 修复已在生产验证 `UP`）
+> 上一版：2026-10-24 18:40（✅ D-859：生产 health DEGRADED 根因修复（LiteLLM 未启用被误判 DOWN→UNKNOWN）；已推送 74811c721，intelligence 包 264 测试全绿。生产 SSH 核实：已部署 6b507231、Flyway 1425 迁移 validate 通过、`202710230004` success=1 → checksum 风险解除）
 > 上一版：2026-10-24 11:00（✅ D-858 收尾：决策卡租户校验显式化 + 输出上限口径守护（新增 8 用例）+ unwired 文档 157→155 订正；已推送 a387e4acc，intelligence 包 262 测试全绿，三道门禁通过）
 > 上一版：2026-10-24 10:30（✅ 当日 D-856/D-857 核实完成：QuickPath 输出 2048→1024 + 软约束 + `[Perf]` 埋点 + 性能分析报告；已推送 9f685fe76、CI 全绿、mvn compile 0、intelligence 包 254 测试本地实跑全绿。**耗时改善与埋点日志待部署实测**）
 > 上一版：2026-10-24（补记 10-21~10-24 全部 57 个提交：D-831~D-855——库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处核实与门禁（D-848/851/852）+ AI 建议闭环（D-853/854）+ 小云跨域修复（D-855）+ 扫码通（D-836）+ 口径审计（D-833/837）+ 入库库位硬闸（D-843）+ 报废出清（D-844）+ 库存双轨（D-838）；代码已全部推送 3a8416e3a，本条为事后补记）
 
 ## 已完成
+
+### 2026-10-24 D-860 POS 收款后回写出库单收款状态（已推送 062006bba）
+
+- [x] 生产核实：4 条 POS 出库单 `payment_status=unpaid`，对应 `t_pos_sale.pay_status=PAID`（现金已收）→ 台账与实收不符
+- [x] 根因：`freeOutbound` 写死 unpaid 后全后端再无更新点（只有冲销写 reversed）
+- [x] 修复：`FinishedWarehouseOperationOrchestrator.markOutstockPaid()`（收口出库单写入口，规避 service→service 架构违规）+ `settle()` 仅 PAID 时回写
+- [x] 挂账 UNPAID 不回写（由应收单跟踪）；回写失败只留痕不回滚交易
+- [x] 历史数据回填 4 条：paid_amount 按 POS 实收（4391/1680/2200/1679.10）、settlement_time 按 paid_time；回读确认全 paid
+- [x] 客户名「未填写」核实为散客（POS 单本身无客户），非 bug
+- [x] 验证：新增 2 用例；POS 模块 29 测试全绿；ArchUnit 8 项全绿
 
 ### 2026-10-24 D-859 生产 health DEGRADED 根因修复（已推送 74811c721）
 

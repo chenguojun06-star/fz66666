@@ -2,7 +2,8 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-24（D-859 生产 health DEGRADED 根因修复：LiteLLM 未启用被误判为 DOWN → 改 UNKNOWN；已推送 74811c721，intelligence 包 264 测试全绿。另确认生产已部署 6b5072313、Flyway 1425 个迁移 validate 通过）
+> 最后更新：2026-10-24（D-860 POS 收款后回写出库单收款状态：生产 4 条出库单 pay_status=PAID 但 payment_status=unpaid，已修 + 历史回填 4 条；已推送 062006bba，POS 29 测试 + ArchUnit 全绿）
+> 上一版：2026-10-24（D-859 生产 health DEGRADED 根因修复：LiteLLM 未启用被误判为 DOWN → 改 UNKNOWN；已推送 74811c721，intelligence 包 264 测试全绿。另确认生产已部署 6b5072313、Flyway 1425 个迁移 validate 通过）
 > 上一版：2026-10-24（D-858 补 D-856/D-857 遗漏：决策卡租户校验显式化 + 输出上限口径守护 + `docs/unwired-inventory.md` 数字订正；已推送 a387e4acc，intelligence 包 262 测试全绿）
 > 上一版：2026-10-24（D-857 小云性能埋点 + 全系统性能与架构分析报告；D-856 QuickPath 输出上限 2048→1024（生产实测 60 秒真凶）+ 软约束；已推送 9f685fe76，CI 全绿，**耗时改善待部署实测**）
 > 上一版：2026-10-24（**补记** D-839~D-855：库存对账四层闭环与口径三处统一（D-841/845~850）+「做了没接」164 处逐类核实与门禁（D-848/851/852）+ AI 建议闭环「生成→可见→采纳→反馈」（D-853/854）+ 小云跨域工具缺失修复（D-855）+ 入库库位硬闸与迁移事故（D-843/844）；代码 10-23 已全部推送，本条为事后补记）
@@ -10,6 +11,33 @@
 > 上一版：2026-10-21（D-835 详情长图编辑器改烘焙逐页方案：每图一页+html2canvas 烘焙导出，D-834 堆叠三栏被用户否决替换，「85% 侧滑弹窗」旧约束一并推翻；已推送 b08bdfd9c）
 > 上一版：2026-10-19（D-823 裁剪用料台账 + 余料回库闭环：新表五态台账 + 完工自动快照 + 极简登记 + 一键回库 + 全链路穿透；16 文件代码完成待提交）
 > 上一版：2026-10-19（**补记** 门店零售对接线 10-10~10-19：D-817 收银台信封泄漏治理 / D-785+D-811 顾客端 UserContext 空陷阱（第二次同款）/ D-815 AI 不许报「开票成功」/ D-808 编号撞号更正 + D-800 迁移索引超限；代码均已推，本条为事后补记）
+
+---
+
+## D-860：POS 收款后回写出库单收款状态（2026-10-24，已推送 062006bba）
+
+**现象（用户截图报障）**：库存管理「出库记录」里 POS 出库单「收款状态」全部显示**未收款**，客户名称显示「未填写」。
+
+**生产核实（SSH + SQL）**：
+| 出库单 | 出库单 payment_status | POS 单 pay_status | POS 实收 |
+|---|---|---|---|
+| FO...0632FF | unpaid | **PAID** | 4391.00 |
+| FO...3552EA | unpaid | **PAID** | 1680.00 |
+| FO...070A9 | unpaid | **PAID** | 2200.00 |
+| FO...735E3 | unpaid | **PAID** | 1679.10 |
+
+**根因**：`freeOutbound` 创建出库单时写死 `payment_status=unpaid`，之后**全后端再无任何地方更新该字段**（只有冲销写 `reversed`）。POS 结算只更新 `t_pos_sale.pay_status`，没有回写出库单 → 钱已收、台账显示未收。
+
+**修复**：
+- `FinishedWarehouseOperationOrchestrator.markOutstockPaid(outstockNos)`：出库单写入口收口在这里（**不能**让 service 直接依赖 service —— ArchUnit `servicesShouldNotDependOnServices` 会拦）
+- `PosSaleWriteService.settle()`：仅当 `payStatus=PAID` 时回写 `payment_status=paid / paid_amount=total_amount / settlement_time=now`；**挂账 UNPAID 不回写**（那部分由应收单跟踪，标 paid 等于把没收到钱的单标记为已收）
+- 回写失败只 `log.warn`，不回滚已成立的交易
+
+**历史数据**：按 POS 实收金额回填 4 条（`paid_amount` 用 `t_pos_sale.total_amount`，含抹零差异 4400→4391；`settlement_time` 用 POS `paid_time`），回读确认全 paid。
+
+**客户名「未填写」不是 bug**：这 4 条对应 POS 单本身 `customer_name` 也是 NULL（散客销售），出库单如实继承。若要更好读，可让前端在 POS 渠道且无客户时显示「散客」（待业务确认）。
+
+**验证**：新增 2 用例（PAID 必回写、UNPAID 不得回写）；POS 模块 29 测试全绿；ArchUnit 8 项全绿；pre-push 8 项 PASS。
 
 ---
 
