@@ -519,6 +519,17 @@ system:
     # 生产实测 t_intelligence_audit_log 226MB / 42.7 万行，是库里最大的表；
     # 保留期 60 天 + 失败记录 365 天（AuditLogCleanupJob 内置两级保留）足够追溯又不无限膨胀。
     retentionDays: ${AUDIT_LOG_RETENTION_DAYS:60}
+  jobRunLog:
+    # D-874：AI 定时任务执行日志保留期 90 → 60 天（失败记录仍 365 天）。
+    # 生产实测 t_ai_job_run_log 74MB / 67 万行；该表 99.98% 是 SUCCESS 流水，
+    # 失败记录（唯一的排障价值）体量极小，按 365 天保留几乎不占空间。
+    retentionDays: ${JOB_RUN_LOG_RETENTION_DAYS:60}
+    failedRetentionDays: ${JOB_RUN_LOG_FAILED_RETENTION_DAYS:365}
+  reflection:
+    # D-874：反思引擎按用户节流（毫秒）。一轮对话曾触发 5 次 reflection 共 35.8 秒，
+    # 全跑在 fashion-async 线程池上；反思是异步后处理，不参与已发出的回答，
+    # 冷却期内跳过零风险，只影响「少学一次」。0 表示不节流。
+    minIntervalMs: ${REFLECTION_MIN_INTERVAL_MS:30000}
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:

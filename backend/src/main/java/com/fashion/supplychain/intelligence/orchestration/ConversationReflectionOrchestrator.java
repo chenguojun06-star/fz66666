@@ -30,9 +30,47 @@ public class ConversationReflectionOrchestrator {
     @Lazy
     private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
+    /**
+     * D-874：反思引擎按「用户」节流（默认 30 秒内同一用户只反思一次）。
+     *
+     * <p>为什么安全：反思是**异步后处理**，结果只用于长期记忆与技能演进，
+     * **完全不参与本次已经发给用户的回答**。跳过一次不影响用户看到的任何内容。
+     *
+     * <p>生产实证（2026-10-25 01:06）：一轮对话在 20 秒内触发 5 次 reflection，
+     * 合计 35.8 秒 LLM 调用（scene=reflection，2.4/5.5/5.5/12.7/9.7s），
+     * 全部跑在 fashion-async-* 线程池上——这些线程被占满后，后续请求的异步任务只能排队，
+     * 是「小云整体变慢」的放大器。
+     */
+    @org.springframework.beans.factory.annotation.Value("${system.reflection.minIntervalMs:30000}")
+    private long reflectionMinIntervalMs;
+
+    private final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> lastReflectAtByUser =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** D-874：节流判定——同一用户在冷却期内只放一次 */
+    public boolean shouldSkipByThrottle(Long tenantId, String sessionId) {
+        if (reflectionMinIntervalMs <= 0) return false;
+        String key = tenantId + ":" + (sessionId == null ? "-" : sessionId);
+        java.util.concurrent.atomic.AtomicLong holder =
+                lastReflectAtByUser.computeIfAbsent(key, k -> new java.util.concurrent.atomic.AtomicLong(0));
+        long now = System.currentTimeMillis();
+        long last = holder.get();
+        if (last != 0 && now - last < reflectionMinIntervalMs) {
+            return true;
+        }
+        // CAS：并发下只有一个线程能通过，避免同一瞬间重复触发
+        return !holder.compareAndSet(last, now);
+    }
+
     @Async
     public void reflectAsync(Long tenantId, String conversationId, String sessionId,
                               String userMessage, String assistantResponse, String toolResults) {
+        // D-874：冷却期内直接跳过。反思不影响本次回答，跳过的代价只是少学一次。
+        if (shouldSkipByThrottle(tenantId, sessionId)) {
+            log.debug("[Reflection] 冷却期内跳过反思（interval={}ms, session={}）",
+                    reflectionMinIntervalMs, sessionId);
+            return;
+        }
         try {
             ConversationReflection reflection = new ConversationReflection();
             reflection.setId("rf_" + UUID.randomUUID().toString().replace("-", "").substring(0, 20));
