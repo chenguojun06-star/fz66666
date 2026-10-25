@@ -390,6 +390,10 @@ public class ProductWarehousingOrchestrator {
         // 注意：SKU 库存同步由 ServiceImpl 批量保存链路单点负责，此处不得重复调用（D-228）。
 
         postActionHelper.triggerPostBatchSaveActions(oid, list.size());
+
+        // 与单条入库（appendSingleWarehousing）对称：批量入库也要在订单时间轴留痕。
+        // 此前只有单条记、批量不记——同一订单混用两种入库方式时时间轴会缺段。
+        logAppendHelper.appendBatchWarehousing(oid, list.size());
         return true;
     }
 

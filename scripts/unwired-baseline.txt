@@ -106,7 +106,6 @@ backend/src/main/java/com/fashion/supplychain/production/helper/MaterialDatabase
 backend/src/main/java/com/fashion/supplychain/production/helper/MaterialDatabaseLogAppendHelper.java::void appendStockOut(String materialId, Integer quantity)
 backend/src/main/java/com/fashion/supplychain/production/helper/MaterialInboundLogAppendHelper.java::void appendQualityCheck(String inboundId, String result)
 backend/src/main/java/com/fashion/supplychain/production/helper/OrderCostSummaryHelper.java::int summaryAllInternalOrders()
-backend/src/main/java/com/fashion/supplychain/production/helper/ProductWarehousingLogAppendHelper.java::void appendBatchWarehousing(String orderId, int itemCount)
 backend/src/main/java/com/fashion/supplychain/production/helper/ProductionOrderLogAppendHelper.java::void appendCreateFromStyle(String orderId, String styleNo)
 backend/src/main/java/com/fashion/supplychain/production/helper/PurchaseCartLogAppendHelper.java::void appendUpdateQuantity(String cartId, Integer quantity)
 backend/src/main/java/com/fashion/supplychain/production/orchestration/DeliverySlaOrchestrator.java::void batchRefreshSla()
