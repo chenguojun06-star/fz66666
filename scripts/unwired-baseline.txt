@@ -50,7 +50,6 @@ backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/OnnxMod
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PlatformIntelligenceOrchestrator.java::void writeAggregate(String metricKey, String metricDim, String period, )
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/ProcessRewardOrchestrator.java::List<Map<String, Object>> aggregateForCurrentTenant(LocalDateTime since)
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/QdrantAdminOrchestrator.java::int clearTenantVectors(Long tenantId)
-backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/QuickAnswerOrchestrator.java::int cleanExpiredWithTransaction()
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/QuickAnswerOrchestrator.java::void savePrebuiltWithTransaction(Long tenantId, String questionPattern, )
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/SkillChainExecutionOrchestrator.java::void buildToolIndex(List<AgentTool> tools)
 backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/SmartWorkflowOrchestrator.java::Map<String, Object> queryWorkflowHistory(String commandId)

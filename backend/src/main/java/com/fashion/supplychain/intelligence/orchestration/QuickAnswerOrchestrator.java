@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.service.QuickAnswerCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,8 +50,16 @@ public class QuickAnswerOrchestrator {
     }
 
     /**
-     * 清理过期缓存（带事务）
+     * 清理过期缓存（带事务）。
+     *
+     * <p>D-882 接调度前此方法零调用——清理逻辑写好了（软删过期行 + 硬删已软删
+     * 1 天以上的行）但没人执行，本地库实测 t_quick_answer 积了 387 行软删僵尸
+     * （390 条 SNAPSHOT 里 387 条 delete_flag=1，硬删步骤从未跑过）。
+     * 快照每次刷新都会软删旧行，僵尸行只增不减。
+     *
+     * <p>每小时 47 分执行（错开已占用的 0/10/15/20/23/25/30 分档）。
      */
+    @Scheduled(cron = "0 47 * * * ?")
     @Transactional(rollbackFor = Exception.class)
     public int cleanExpiredWithTransaction() {
         return quickAnswerCacheService.cleanExpired();
