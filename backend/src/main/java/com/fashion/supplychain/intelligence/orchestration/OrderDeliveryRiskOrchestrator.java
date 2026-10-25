@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.dto.DeliveryRiskRequest;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse.DeliveryRiskItem;
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
+import com.fashion.supplychain.intelligence.entity.OrderRiskTracking;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -234,25 +235,83 @@ public class OrderDeliveryRiskOrchestrator {
     }
 
     private void trackHighRiskOrdersSafely(DeliveryRiskResponse response) {
-        if (orderRiskTrackingOrchestrator == null) return;
+        if (orderRiskTrackingOrchestrator == null || response == null || response.getOrders() == null) return;
         try {
-            for (DeliveryRiskItem item : response.getOrders()) {
-                if ("overdue".equals(item.getRiskLevel()) || "danger".equals(item.getRiskLevel())) {
-                    try {
-                        orderRiskTrackingOrchestrator.createRisk(
-                                item.getOrderNo(),
-                                item.getRiskLevel(),
-                                List.of(item.getRiskDescription()),
-                                null
-                        );
-                    } catch (Exception e) {
-                        log.debug("[RiskTracking] 风险追踪创建失败(不阻断): orderNo={}, {}",
-                                item.getOrderNo(), e.getMessage());
-                    }
-                }
-            }
+            reconcileRiskTracking(response);
         } catch (Exception e) {
             log.debug("[RiskTracking] 风险追踪批量处理失败(不阻断): {}", e.getMessage());
         }
+    }
+
+    /**
+     * 风险表自维护（D-879）：去重 / 复现重开 / 风险解除自动闭环。
+     *
+     * <p>修复三个问题：
+     * <ol>
+     *   <li><b>表无限膨胀</b>：原实现每次评估都给同一订单插入一条新的 pending 记录
+     *       （评估由行动中心/小云/接口随时触发），同一订单几十条重复风险</li>
+     *   <li><b>统计恒 0</b>：风险解除（预测完工回到交期前）后旧记录永远 pending，
+     *       resolutionRate 永远是 0%，这个指标等于没有</li>
+     *   <li><b>历史断裂</b>：风险复现时又插新记录，看不出「这个订单反复出险」</li>
+     * </ol>
+     *
+     * <p><b>安全边界</b>：只对**本次评估结果里出现过的订单**做解除。assess 支持按工厂/
+     * 条件过滤，不在结果里 ≠ 风险已解除——绝不能因为没查它就把它关了。
+     */
+    void reconcileRiskTracking(DeliveryRiskResponse response) {
+        List<DeliveryRiskItem> items = response.getOrders();
+        Map<String, DeliveryRiskItem> byOrderNo = new LinkedHashMap<>();
+        for (DeliveryRiskItem item : items) {
+            if (item != null && item.getOrderNo() != null) {
+                byOrderNo.put(item.getOrderNo(), item);
+            }
+        }
+        if (byOrderNo.isEmpty()) return;
+
+        Map<String, OrderRiskTracking> openByOrderNo = new HashMap<>();
+        for (OrderRiskTracking open : orderRiskTrackingOrchestrator.listOpenRisks()) {
+            openByOrderNo.putIfAbsent(open.getOrderNo(), open);
+        }
+
+        for (Map.Entry<String, DeliveryRiskItem> entry : byOrderNo.entrySet()) {
+            String orderNo = entry.getKey();
+            DeliveryRiskItem item = entry.getValue();
+            OrderRiskTracking open = openByOrderNo.get(orderNo);
+            try {
+                if (isHighRisk(item.getRiskLevel())) {
+                    List<String> factors = List.of(
+                            item.getRiskDescription() == null ? "" : item.getRiskDescription());
+                    if (open != null) {
+                        // 已有未闭环风险：只刷新等级/因子，绝不重复插入
+                        if (!item.getRiskLevel().equals(open.getRiskLevel())) {
+                            orderRiskTrackingOrchestrator.refreshOpenRisk(
+                                    open.getId(), item.getRiskLevel(), factors);
+                        }
+                    } else {
+                        OrderRiskTracking latest =
+                                orderRiskTrackingOrchestrator.findLatestByOrderNo(orderNo);
+                        if (latest != null && ("resolved".equals(latest.getHandlingStatus())
+                                || "cancelled".equals(latest.getHandlingStatus()))) {
+                            // 复现：重开原记录，保留「反复出险」的历史
+                            orderRiskTrackingOrchestrator.reopenRisk(latest.getId(),
+                                    "风险复现：" + item.getRiskLevel());
+                        } else {
+                            orderRiskTrackingOrchestrator.createRisk(
+                                    orderNo, item.getRiskLevel(), factors, null);
+                        }
+                    }
+                } else if (open != null) {
+                    // 本单已回到安全区间 → 自动闭环，处理人记「系统」而非当前操作人
+                    orderRiskTrackingOrchestrator.resolveRisk(open.getId(), "自动解除",
+                            "订单已回到安全区间（当前 " + item.getRiskLevel() + "）", "系统(自动)");
+                }
+            } catch (Exception e) {
+                log.debug("[RiskTracking] 订单 {} 风险同步失败(不阻断): {}", orderNo, e.getMessage());
+            }
+        }
+    }
+
+    private static boolean isHighRisk(String level) {
+        return "overdue".equals(level) || "danger".equals(level);
     }
 }

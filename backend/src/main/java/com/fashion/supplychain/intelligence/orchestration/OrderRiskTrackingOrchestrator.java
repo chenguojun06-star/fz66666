@@ -57,18 +57,96 @@ public class OrderRiskTrackingOrchestrator {
         }
     }
 
+    /**
+     * 当前租户所有未闭环风险（pending / escalated）。
+     *
+     * <p>D-879：供风险表自维护使用——一次查全量再内存比对，避免逐单查库。
+     */
+    public List<OrderRiskTracking> listOpenRisks() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return List.of();
+        }
+        LambdaQueryWrapper<OrderRiskTracking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderRiskTracking::getTenantId, tenantId);
+        wrapper.in(OrderRiskTracking::getHandlingStatus, "pending", "escalated");
+        wrapper.orderByDesc(OrderRiskTracking::getCreatedAt);
+        return riskTrackingMapper.selectList(wrapper);
+    }
+
+    /**
+     * 同一订单最近一条风险记录（任意状态）。
+     *
+     * <p>D-879：用于区分「首次出险」与「复现」——复现要重开原记录保留历史，
+     * 不能再插一条新记录。
+     */
+    public OrderRiskTracking findLatestByOrderNo(String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null || orderNo == null || orderNo.isBlank()) {
+            return null;
+        }
+        LambdaQueryWrapper<OrderRiskTracking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderRiskTracking::getTenantId, tenantId);
+        wrapper.eq(OrderRiskTracking::getOrderNo, orderNo);
+        wrapper.orderByDesc(OrderRiskTracking::getCreatedAt);
+        wrapper.last("LIMIT 1");
+        return riskTrackingMapper.selectOne(wrapper);
+    }
+
+    /**
+     * 风险等级/因子变化时刷新未闭环记录。
+     *
+     * <p>D-879：同一订单反复评估时，表里显示的应是**当前**严重程度，
+     * 而不是第一次出险时的等级（danger 升级成 overdue 必须看得见）。
+     * 已闭环（resolved/cancelled）的记录不刷新，保留处理时的原貌。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean refreshOpenRisk(Long riskId, String riskLevel, List<String> riskFactors) {
+        try {
+            OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);
+            if (tracking == null) {
+                return false;
+            }
+            if (!"pending".equals(tracking.getHandlingStatus())
+                    && !"escalated".equals(tracking.getHandlingStatus())) {
+                return false;
+            }
+            tracking.setRiskLevel(riskLevel);
+            if (riskFactors != null) {
+                tracking.setRiskFactors(MAPPER.writeValueAsString(riskFactors));
+            }
+            riskTrackingMapper.updateById(tracking);
+            log.info("[订单风险闭环] 风险等级已刷新: id={}, level={}", riskId, riskLevel);
+            return true;
+        } catch (Exception e) {
+            log.warn("[订单风险闭环] 刷新风险失败: id={}, error={}", riskId, e.getMessage(), e);
+            return false;
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean resolveRisk(Long riskId, String handlingAction, String handlingResult) {
+        return resolveRisk(riskId, handlingAction, handlingResult, UserContext.username());
+    }
+
+    /**
+     * 处理风险（指定处理人）。
+     *
+     * <p>D-879：自动解除场景要落「系统」而不是当前操作人——风险是评估引擎
+     * 判定已恢复后自动关闭的，记到碰巧在查看页面的用户名下会误导审计。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean resolveRisk(Long riskId, String handlingAction, String handlingResult, String handledBy) {
         try {
             OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);
             if (tracking == null) return false;
             tracking.setHandlingStatus("resolved");
             tracking.setHandlingAction(handlingAction);
             tracking.setHandlingResult(handlingResult);
-            tracking.setHandledBy(UserContext.username());
+            tracking.setHandledBy(handledBy);
             tracking.setHandledAt(LocalDateTime.now());
             riskTrackingMapper.updateById(tracking);
-            log.info("[订单风险闭环] 风险已处理: id={}, status=resolved", riskId);
+            log.info("[订单风险闭环] 风险已处理: id={}, status=resolved, by={}", riskId, handledBy);
             return true;
         } catch (Exception e) {
             log.warn("[订单风险闭环] 处理风险失败: id={}, error={}", riskId, e.getMessage(), e);
