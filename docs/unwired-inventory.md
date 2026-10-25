@@ -1,7 +1,8 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852 → D-877 复核修订）
 
-> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3 / D-881 业务日志甄别 4 / D-882 秒答缓存清理 1**｜当前存量 **140 处**
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3 / D-881 业务日志甄别 4 / D-882 秒答缓存清理 1 / D-883 剩余 4 组核实**｜当前存量 **140 处**
 > （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 →149；D-879 →145；D-880 →142；D-881 →141；D-882 →140；实测 `baseline: 140 条 / 当前: 140 条`）
+> ✅ **D-877 的 26 处「真缺口」已全部有结论**：接线 15 处 + 核实不接 10 处 + 前置条件 1 处（sessionId 贯通）。剩余 140 处存量 = 外部对接预留约 21 + 真死代码约 10 + 款式域批量/脱敏/运维入口约 32 + intelligence 待下批复核约 66 + 其他，均非 D-877 口径的「半接线缺口」。
 > ⚠️ **本门禁是字面量统计**：方法名出现在注释里也会被当成「已接线」（D-875/D-880 两次踩到）。写注释时**不要写出未接线方法的完整方法名**，否则门禁假绿。
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
@@ -85,7 +86,7 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 
 共同形态：**核心动作接了，生命周期/收尾动作没接**。删掉它们不会让系统更健康，只会让「记录了却永远关不掉/清不掉/没日志」的状态永久化。
 
-> 原 26 处中：资金审计 6（D-878）、订单风险 4（D-879）、任务追踪 3（D-880）、批量入库日志 1（D-881）、秒答缓存清理 1（D-882）已接线；业务日志另 3 处经 D-881 核实为「业务动作不存在/已被取代」，判定不接（见 2.2）。余约 8 处待排期。
+> 原 26 处中：资金审计 6（D-878）、订单风险 4（D-879）、任务追踪 3（D-880）、批量入库日志 1（D-881）、秒答缓存清理 1（D-882）已接线；其余经 D-881/D-883 逐个核实——业务日志 3 处、AI 生命周期 6 处、秒答预构建 1 处共 10 处判定「业务动作不存在/已被取代/整体休眠/需主链路改造」，**均不接**（依据见 2.2/2.3）。D-877 的「真缺口」清单到此全部有结论。
 
 ### 2.1 AI 子系统生命周期缺口（8 处）
 
@@ -98,6 +99,23 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 | `AdvisorSessionOrchestrator` | `saveConversationTurn`/`list*Messages` | `buildProfilePrompt`/`loadSessionContext` |
 
 > QuickAnswer 的 `cleanExpiredWithTransaction` 已由 **D-882** 接线（见 1.5）。
+
+### 2.3 D-883 剩余 4 组逐个核实（2026-10-25）——**全部不接，且原「缺口」定性全部不成立**
+
+| 方法 | D-877 原判定 | D-883 核实结论 | 处置 |
+|---|---|---|---|
+| `clearWorkingMemory` | 缓存只写不清 | 工作记忆在 **Redis**，`setWorkingMemory` 写入即带 **24h TTL**（`WORKING_MEMORY_TTL_HOURS`），过期自动清，无堆积路径 | **不接**（TTL 自维护） |
+| `deleteCoreMemory` | 记忆只进不出 | `t_agent_memory_core` **0 行**。核心记忆整套只有超管手动端点（`IntelligenceAdminController.setCoreMemory`），主对话链路用的是 `MemoryBankService` 那套。写路径从未被真实使用 | **不接**（整体休眠，删留待业务拍板） |
+| `loadSessionContext` | 会话上下文未加载 | 零调用实锤，但暴露更大的事实：**主对话只写历史（`saveConversationTurn`）不注入 prompt**——读路径只有前端展示（`HyperAdvisorController.listRecent/SessionMessages`）。小云每轮对话对 AI 本身是无记忆的，D-871 修的是「前端看得到历史」不是「AI 有记忆」 | **暂不接**（接它 = 改主对话 prompt 组装，影响每轮 token 成本与回答稳定性，需专项评估 + 用户拍板） |
+| `buildProfilePrompt` | 画像未注入 | 零调用。画像表 3 行历史数据（最近一条 2026-10-01）从未被注入；画像写入走的是另一条路径 `UserProfileEvolutionOrchestrator.evolveProfile`（挂在主对话 postTurnTasks），`appendBehavior` 才是零调用的那个 | **不接**（画像读链路整体未启用） |
+| `acceptNudge`/`dismissNudge` | 用户无法响应提醒 | 零调用，但底层先崩：**`t_memory_nudge` 0 行**——`analyzeAndNudge` 挂在主对话每轮 postTurnTasks 上（还调一次 LLM 做记忆审查），本地库 182 条对话对应 0 条提醒。**提醒功能整体空转，接了也没有数据可操作** | **不接**（无响应对象）；「零产出根因」单列待查 |
+| `listPendingTasksBySession` | 任务查不了 | D-880 结论仍成立：Agent 工具执行链路无 sessionId，绑定方法也无调用方 | **不接**（需前置改造） |
+
+**本轮纠正的归属错误**：D-877 文档写的「`AgentMemoryService.purgeExpired` 在用」——实际 `purgeExpired` 属于 `SharedAgentMemoryService`，且已被 `SharedAgentMemoryCleanupJob`（每日 04:00，带分布式锁）调度。结论（清理在工作）碰巧正确，但归属是错的。
+
+**本轮新发现的待查事项**（非 unwired 范畴，建议单独立项）：
+1. **MemoryNudge 零产出**：每轮对话花一次 LLM 调用做记忆审查，本地库 182 条对话产出 0 条提醒。需查是 `chatSimple` 失败被 catch 吞了、还是 LLM 每次都判 NONE。若是前者 = 真 bug；若是后者 = 设计失效且**纯成本浪费**（呼应 AI 成本关注点）。生产库需 SSH 查。
+2. **主对话无 prompt 记忆注入**（loadSessionContext 那条）：影响小云多轮对话体验，属主链路改造，需排期评估。
 
 ### 2.2 业务日志族零散缺口（4 处）——D-881 已逐个甄别：**仅 1 处真缺口，其余 3 处不接**
 
