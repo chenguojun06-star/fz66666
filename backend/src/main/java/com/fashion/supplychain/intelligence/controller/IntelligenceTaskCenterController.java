@@ -1,10 +1,12 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import com.fashion.supplychain.intelligence.orchestration.AiMetricsOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.TaskCenterOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.TaskOrderMonitorOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.TaskTrackerOrchestrator;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +24,37 @@ public class IntelligenceTaskCenterController {
     private final TaskCenterOrchestrator taskCenterOrchestrator;
     private final AiMetricsOrchestrator aiMetricsOrchestrator;
     private final TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
+    private final TaskTrackerOrchestrator taskTrackerOrchestrator;
 
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> getDashboard() {
         return Result.success(taskCenterOrchestrator.getDashboard());
+    }
+
+    /**
+     * AI 执行待验证任务（D-880）。
+     *
+     * <p>`AiTaskTracker` 此前只有写入口：高风险/写操作工具执行成功后由
+     * `HighRiskAuditHook` 记一条 PENDING，但全系统没有任何查询路径，
+     * 任务既看不到也不会过期。这里按「执行人」列出待验证动作——默认查当前登录人
+     * （hook 记录时 assignedTo 就是操作人用户名）。
+     *
+     * <p>⚠️ 会话维度的待办列表暂不可用：Agent 工具执行链路没有贯通 sessionId，
+     * 任务与会话的绑定方法也没有调用方，接了只会永远返回空。
+     * （D-880 留作待办：需要把 sessionId 从 Agent 循环一路传到工具钩子。）
+     */
+    @GetMapping("/ai-tasks")
+    public Result<?> listAiTasks(@RequestParam(required = false) String agentName) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("缺少租户上下文");
+        }
+        String target = (agentName == null || agentName.isBlank())
+                ? UserContext.username() : agentName;
+        if (target == null || target.isBlank()) {
+            return Result.fail("无法确定执行人（请传 agentName）");
+        }
+        return Result.success(taskTrackerOrchestrator.listPendingTasksByAgent(tenantId, target));
     }
 
     @GetMapping("/tasks")

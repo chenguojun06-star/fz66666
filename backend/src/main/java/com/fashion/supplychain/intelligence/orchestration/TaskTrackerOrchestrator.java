@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -62,12 +63,22 @@ public class TaskTrackerOrchestrator {
 
     /**
      * 工具执行后记录追踪任务。
+     *
+     * <p>D-880：同一目标重复执行时，先把该目标下更早的 PENDING 任务标记完成
+     * （「已被后续操作取代」）——否则同一订单被 AI 反复操作会堆出几十条永远
+     * PENDING 的记录，而 completeTask 没有任何调用方。
+     *
      * @return 任务ID，后续用于标记完成
      */
     public Long recordTask(String toolName, String taskType, String targetType,
                            String targetId, String summary, String assignedTo) {
+        Long tenantId = UserContext.tenantId();
+        // D-880：先收口同目标的旧 PENDING，避免只增不减
+        if (tenantId != null && targetId != null && !targetId.isBlank()) {
+            supersedeStaleTasks(tenantId, targetType, targetId, toolName);
+        }
         AiTaskTracker t = new AiTaskTracker()
-                .setTenantId(UserContext.tenantId())
+                .setTenantId(tenantId)
                 .setTaskSourceTool(toolName)
                 .setTaskType(taskType)
                 .setTargetType(targetType)
@@ -82,6 +93,22 @@ public class TaskTrackerOrchestrator {
         // P1-3：双写 Redis（失败不阻塞主流程）
         cacheTaskToRedis(t);
         return t.getId();
+    }
+
+    /** 把同一目标下更早的 PENDING 任务标记完成（被后续操作取代） */
+    private void supersedeStaleTasks(Long tenantId, String targetType, String targetId, String toolName) {
+        try {
+            List<AiTaskTracker> stale = mapper.selectList(new QueryWrapper<AiTaskTracker>()
+                    .eq("tenant_id", tenantId)
+                    .eq("target_type", targetType)
+                    .eq("target_id", targetId)
+                    .eq("status", "PENDING"));
+            for (AiTaskTracker old : stale) {
+                completeTask(old.getId(), "已被后续操作取代（" + toolName + "）");
+            }
+        } catch (Exception e) {
+            log.debug("[TaskTracker] 收口旧任务失败(不阻断): {}", e.getMessage());
+        }
     }
 
     /**
@@ -101,7 +128,11 @@ public class TaskTrackerOrchestrator {
 
     /**
      * 定时扫描超时未完成的任务（默认超过24小时标记为EXPIRED）。
+     *
+     * <p>D-880：原实现只有方法没有调度——任务写入后永远不会过期，表只增不减。
+     * 每小时 :23 扫一次（错开其他整点任务）。
      */
+    @Scheduled(cron = "0 23 * * * ?")
     public void expireStaleTasks() {
         LocalDateTime threshold = LocalDateTime.now().minusHours(24);
         long count = mapper.selectCount(new QueryWrapper<AiTaskTracker>()
