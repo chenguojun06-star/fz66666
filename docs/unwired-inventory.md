@@ -1,7 +1,8 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852 → D-877 复核修订）
 
-> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 处 / D-879 风险闭环 4 处**｜当前存量 **145 处**
-> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 接线 6 → 149；D-879 接线 4 → 145；实测 `baseline: 145 条 / 当前: 145 条`）
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3**｜当前存量 **142 处**
+> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 →149；D-879 →145；D-880 →142；实测 `baseline: 142 条 / 当前: 142 条`）
+> ⚠️ **本门禁是字面量统计**：方法名出现在注释里也会被当成「已接线」（D-875/D-880 两次踩到）。写注释时**不要写出未接线方法的完整方法名**，否则门禁假绿。
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
 
@@ -62,17 +63,27 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 
 **未做（待产品决定）**：前端入口。当前可通过接口/小云处理；是否在行动中心加「风险处理」按钮需单独排期（避免重犯 D-853「端点有了但人看不到」）。
 
-## 二、真缺口：半接线子系统（约 16 处，**该补不该删**）——D-877 复核结论
+### 1.4 D-880 AI 任务追踪（3 处，2026-10-25）
+
+| 方法 | 接入方式 | 此前状态 |
+|---|---|---|
+| `expireStaleTasks` | `@Scheduled(cron="0 23 * * * ?")` 每小时扫一次 | 只有方法没有调度，任务永不过期 |
+| `completeTask` | `recordTask` 内收口同目标的旧 PENDING（「已被后续操作取代」） | 无任何调用方，同一订单被反复操作会堆几十条 PENDING |
+| `listPendingTasksByAgent` | `GET /api/intelligence/task-center/ai-tasks?agentName=`（默认当前登录人） | 全系统无读取路径 |
+
+**未接（1 处，需前置条件）**：会话维度待办列表——Agent 工具执行链路没有贯通 sessionId，任务与会话的绑定方法也无调用方；接了只会永远返回空。前置工作是把 sessionId 从 Agent 循环一路传到工具钩子。
+
+## 二、真缺口：半接线子系统（约 13 处，**该补不该删**）——D-877 复核结论
 
 共同形态：**核心动作接了，生命周期/收尾动作没接**。删掉它们不会让系统更健康，只会让「记录了却永远关不掉/清不掉/没日志」的状态永久化。
 
-> 原 26 处中：资金审计 6 处已由 D-878 接线（见 1.2），订单风险 4 处已由 D-879 接线（见 1.3），余约 16 处待排期。
+> 原 26 处中：资金审计 6（D-878）、订单风险 4（D-879）、任务追踪 3（D-880）已接线，余约 13 处待排期。
 
-### 2.1 AI 子系统生命周期缺口（12 处）
+### 2.1 AI 子系统生命周期缺口（9 处）
 
 | 类 | 在用的方法 | 未接的方法（后果） |
 |---|---|---|
-| `TaskTrackerOrchestrator` | `recordTask` | `completeTask`/`expireStaleTasks`/`listPendingTasksByAgent`/`listPendingTasksBySession`——任务只记不销、查不了 |
+| `TaskTrackerOrchestrator` | `recordTask`（含 D-880 收口旧任务） | 会话维度待办列表——**需 sessionId 从 Agent 循环贯通到工具钩子**，当前无数据源，接了只会永远返回空 |
 | `MemoryNudgeOrchestrator` | `analyzeAndNudge` | `acceptNudge`/`dismissNudge`——用户对 AI 提醒无响应入口 |
 | `QuickAnswerOrchestrator` | `saveSnapshotWithTransaction` | `cleanExpiredWithTransaction`（缓存只写不清）/ `savePrebuiltWithTransaction`（无预热） |
 | `AgentMemoryService` | `purgeExpired`/`setCoreMemory` | `clearWorkingMemory`/`deleteCoreMemory` |
