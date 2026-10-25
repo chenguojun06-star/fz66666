@@ -72,6 +72,14 @@ jobs:
     - name: 禁止新增「写了没接线」的方法（baseline 只减不增）
       run: python3 scripts/check-unwired.py --check
 
+    # D-876：TDZ 高危前向引用守护。2026-10-20 顾客点「报价单打印」白屏，
+    # 根因是 .map() 回调（同步执行）引用了同作用域更晚才声明的 const，
+    # 抛 ReferenceError: Cannot access 'y' before initialization。
+    # ESLint 现成的 no-use-before-define 会把 166 处安全形态全报出来，
+    # 噪音淹没真问题；本脚本只报「同步执行位置上的前向引用」这一类。
+    - name: TDZ 高危前向引用检查（同步位置引用后声明的 let/const）
+      run: node scripts/check-tdz-sync.cjs
+
     - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
       run: |
         echo "🔍 核对原生 SQL 里的列名是否真的存在于数据库..."
