@@ -18,22 +18,113 @@ import Register from './pages/Register';
 import { PurchaseCartProvider, usePurchaseCartContext } from './context/PurchaseCartContext';
 import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
-import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, SalaryConfig, DeductionManage, FinanceCenter, ExpenseAdvanceCenter, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow, AccountingVoucher } from './modules/finance';
-import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
-import { SelectionCenter } from './modules/selection';
-import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
-import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
-import { EcommerceCenter, PlatformDetail, ShopManage, ShopListing, PlatformShopOverview, ShopSalesRanking } from './modules/ecommerce';
+// D-875：页面级懒加载——此前 10 个业务模块（81 个页面）全部同步 import，
+// 首屏必须下载所有页面代码（用户只打开一个页面，却付了全站加载代价）。
+// 每个路由已包在 <Suspense fallback={routeFallback}> 里，改 lazy 是安全的：
+// 组件实现零改动，变的只是「什么时机下载这份代码」。
+// 返回 ComponentType<Record<string, unknown>>：部分页面带可选 props（initialTab / embedded），
+// 用具体 props 类型会在调用处报不匹配；而这里只做「按名取组件」的搬运，不改变其类型契约。
+// 刻意不用 any：前端质量基线（ratchet）锁死 any 行数与规则禁用注释，只减不增。
+type AnyPage = React.ComponentType<Record<string, unknown>>;
+const lazyPage = (loader: () => Promise<unknown>, name: string): AnyPage =>
+  React.lazy(() =>
+    loader().then((m) => ({ default: (m as Record<string, AnyPage>)[name] })),
+  );
+
+// basic
+const StyleInfo = lazyPage(() => import('./modules/basic'), 'StyleInfo');
+const StyleInfoList = lazyPage(() => import('./modules/basic'), 'StyleInfoList');
+const OrderManagement = lazyPage(() => import('./modules/basic'), 'OrderManagement');
+const DataCenter = lazyPage(() => import('./modules/basic'), 'DataCenter');
+const TemplateCenter = lazyPage(() => import('./modules/basic'), 'TemplateCenter');
+const PatternRevisionManagement = lazyPage(() => import('./modules/basic'), 'PatternRevisionManagement');
+const MaintenanceCenter = lazyPage(() => import('./modules/basic'), 'MaintenanceCenter');
+// finance
+const MaterialReconciliation = lazyPage(() => import('./modules/finance'), 'MaterialReconciliation');
+const PayrollOperatorSummary = lazyPage(() => import('./modules/finance'), 'PayrollOperatorSummary');
+const SalaryConfig = lazyPage(() => import('./modules/finance'), 'SalaryConfig');
+const DeductionManage = lazyPage(() => import('./modules/finance'), 'DeductionManage');
+const FinanceCenter = lazyPage(() => import('./modules/finance'), 'FinanceCenter');
+const ExpenseAdvanceCenter = lazyPage(() => import('./modules/finance'), 'ExpenseAdvanceCenter');
+const WagePayment = lazyPage(() => import('./modules/finance'), 'WagePayment');
+const EcSalesRevenue = lazyPage(() => import('./modules/finance'), 'EcSalesRevenue');
+const TaxExport = lazyPage(() => import('./modules/finance'), 'TaxExport');
+const FinanceDashboard = lazyPage(() => import('./modules/finance'), 'FinanceDashboard');
+const PaymentSchedule = lazyPage(() => import('./modules/finance'), 'PaymentSchedule');
+const DailyFlow = lazyPage(() => import('./modules/finance'), 'DailyFlow');
+const AccountingVoucher = lazyPage(() => import('./modules/finance'), 'AccountingVoucher');
+// crm / selection / dashboard
+const CrmDashboard = lazyPage(() => import('./modules/crm'), 'CrmDashboard');
+const CrmReceivableList = lazyPage(() => import('./modules/crm'), 'ReceivableList');
+const SelectionCenter = lazyPage(() => import('./modules/selection'), 'SelectionCenter');
+const Dashboard = lazyPage(() => import('./modules/dashboard'), 'Dashboard');
+// warehouse
+const MaterialInventory = lazyPage(() => import('./modules/warehouse'), 'MaterialInventory');
+const MaterialDatabase = lazyPage(() => import('./modules/warehouse'), 'MaterialDatabase');
+const FinishedInventory = lazyPage(() => import('./modules/warehouse'), 'FinishedInventory');
+const SampleInventory = lazyPage(() => import('./modules/warehouse'), 'SampleInventory');
+const EcommerceOrders = lazyPage(() => import('./modules/warehouse'), 'EcommerceOrders');
+const InventoryCheck = lazyPage(() => import('./modules/warehouse'), 'InventoryCheck');
+const LabelPrint = lazyPage(() => import('./modules/warehouse'), 'LabelPrint');
+const ProductInfo = lazyPage(() => import('./modules/warehouse'), 'ProductInfo');
+const WarehouseLocationMap = lazyPage(() => import('./modules/warehouse'), 'WarehouseLocationMap');
+const CombinedProduct = lazyPage(() => import('./modules/warehouse'), 'CombinedProduct');
+// system
+const UserList = lazyPage(() => import('./modules/system'), 'UserList');
+const UserApproval = lazyPage(() => import('./modules/system'), 'UserApproval');
+const RoleList = lazyPage(() => import('./modules/system'), 'RoleList');
+const OrganizationTree = lazyPage(() => import('./modules/system'), 'OrganizationTree');
+const PartnerManagement = lazyPage(() => import('./modules/system'), 'PartnerManagement');
+const FactoryList = lazyPage(() => import('./modules/system'), 'FactoryList');
+const FactoryWorkerList = lazyPage(() => import('./modules/system'), 'FactoryWorkerList');
+const LoginLogList = lazyPage(() => import('./modules/system'), 'LoginLogList');
+const SystemLogs = lazyPage(() => import('./modules/system'), 'SystemLogs');
+const JobRunLog = lazyPage(() => import('./modules/system'), 'JobRunLog');
+const Profile = lazyPage(() => import('./modules/system'), 'Profile');
+const DictManage = lazyPage(() => import('./modules/system'), 'DictManage');
+const Tutorial = lazyPage(() => import('./modules/system'), 'Tutorial');
+const TenantManagement = lazyPage(() => import('./modules/system'), 'TenantManagement');
+const CustomerManagement = lazyPage(() => import('./modules/system'), 'CustomerManagement');
+const AppStore = lazyPage(() => import('./modules/system'), 'AppStore');
+const DataImport = lazyPage(() => import('./modules/system'), 'DataImport');
+const SystemIssueBoard = lazyPage(() => import('./modules/system'), 'SystemIssueBoard');
+const OrphanDataPage = lazyPage(() => import('./modules/system'), 'OrphanDataPage');
+const FieldConfigPage = lazyPage(() => import('./modules/system'), 'FieldConfigPage');
+const PrintTemplateList = lazyPage(() => import('./modules/system'), 'PrintTemplateList');
+// ecommerce
+const EcommerceCenter = lazyPage(() => import('./modules/ecommerce'), 'EcommerceCenter');
+const PlatformDetail = lazyPage(() => import('./modules/ecommerce'), 'PlatformDetail');
+const ShopManage = lazyPage(() => import('./modules/ecommerce'), 'ShopManage');
+const ShopListing = lazyPage(() => import('./modules/ecommerce'), 'ShopListing');
+const PlatformShopOverview = lazyPage(() => import('./modules/ecommerce'), 'PlatformShopOverview');
+const ShopSalesRanking = lazyPage(() => import('./modules/ecommerce'), 'ShopSalesRanking');
 // 收银台：菜单入口挂在「电商运营」组下（不单独占主菜单），
 // 但页面代码留在 modules/pos —— 它动的是库存与应收，与店铺运营不是一个域，
 // 混进 ecommerce 目录只会让依赖关系变糊。权限码也独立（MENU_POS）。
 const PosTerminal = React.lazy(() => import('./modules/pos/pages/PosTerminal'));
 // 电子小票台账：POS/店铺订单/批发出库统一小票（与收银台同域同权限码 MENU_POS）
 const TicketList = React.lazy(() => import('./modules/pos/pages/TicketList'));
-import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
-import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
+// intelligence
+const AiAgentTraceCenter = lazyPage(() => import('./modules/intelligence'), 'AiAgentTraceCenter');
+const CockpitPage = lazyPage(() => import('./modules/intelligence'), 'CockpitPage');
+const IntelligenceCenter = lazyPage(() => import('./modules/intelligence'), 'IntelligenceCenter');
+const PatrolActionCenter = lazyPage(() => import('./modules/intelligence'), 'PatrolActionCenter');
+const PlatformDashboard = lazyPage(() => import('./modules/intelligence'), 'PlatformDashboard');
+// production
+const ProductionList = lazyPage(() => import('./modules/production'), 'ProductionList');
+const CuttingManagement = lazyPage(() => import('./modules/production'), 'CuttingManagement');
+const MaterialPurchase = lazyPage(() => import('./modules/production'), 'MaterialPurchase');
+const MaterialPurchaseDetail = lazyPage(() => import('./modules/production'), 'MaterialPurchaseDetail');
+const ProductWarehousing = lazyPage(() => import('./modules/production'), 'ProductWarehousing');
+const InspectionDetail = lazyPage(() => import('./modules/production'), 'InspectionDetail');
+const OrderTransfer = lazyPage(() => import('./modules/production'), 'OrderTransfer');
+const OrderFlow = lazyPage(() => import('./modules/production'), 'OrderFlow');
+const ProgressDetail = lazyPage(() => import('./modules/production'), 'ProgressDetail');
+const MaterialPicking = lazyPage(() => import('./modules/production'), 'MaterialPicking');
+const ExternalFactory = lazyPage(() => import('./modules/production'), 'ExternalFactory');
+const AttendanceAdmin = lazyPage(() => import('./modules/production'), 'AttendanceAdmin');
+const ExceptionReport = lazyPage(() => import('./modules/production'), 'ExceptionReport');
+const ScanRecordManage = lazyPage(() => import('./modules/production'), 'ScanRecordManage');
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
