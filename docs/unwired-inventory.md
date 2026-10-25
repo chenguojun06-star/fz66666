@@ -1,7 +1,7 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852 → D-877 复核修订）
 
-> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3**｜当前存量 **142 处**
-> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 →149；D-879 →145；D-880 →142；实测 `baseline: 142 条 / 当前: 142 条`）
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3 / D-881 业务日志甄别 4**｜当前存量 **141 处**
+> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 →149；D-879 →145；D-880 →142；D-881 →141；实测 `baseline: 141 条 / 当前: 141 条`）
 > ⚠️ **本门禁是字面量统计**：方法名出现在注释里也会被当成「已接线」（D-875/D-880 两次踩到）。写注释时**不要写出未接线方法的完整方法名**，否则门禁假绿。
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
@@ -73,11 +73,11 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 
 **未接（1 处，需前置条件）**：会话维度待办列表——Agent 工具执行链路没有贯通 sessionId，任务与会话的绑定方法也无调用方；接了只会永远返回空。前置工作是把 sessionId 从 Agent 循环一路传到工具钩子。
 
-## 二、真缺口：半接线子系统（约 13 处，**该补不该删**）——D-877 复核结论
+## 二、真缺口：半接线子系统（约 9 处，**该补不该删**）——D-877 复核结论
 
 共同形态：**核心动作接了，生命周期/收尾动作没接**。删掉它们不会让系统更健康，只会让「记录了却永远关不掉/清不掉/没日志」的状态永久化。
 
-> 原 26 处中：资金审计 6（D-878）、订单风险 4（D-879）、任务追踪 3（D-880）已接线，余约 13 处待排期。
+> 原 26 处中：资金审计 6（D-878）、订单风险 4（D-879）、任务追踪 3（D-880）、批量入库日志 1（D-881）已接线；业务日志另 3 处经 D-881 核实为「业务动作不存在/已被取代」，判定不接（见 2.2）。余约 9 处待排期。
 
 ### 2.1 AI 子系统生命周期缺口（9 处）
 
@@ -89,14 +89,18 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 | `AgentMemoryService` | `purgeExpired`/`setCoreMemory` | `clearWorkingMemory`/`deleteCoreMemory` |
 | `AdvisorSessionOrchestrator` | `saveConversationTurn`/`list*Messages` | `buildProfilePrompt`/`loadSessionContext` |
 
-### 2.2 业务日志族零散缺口（4 处）
+### 2.2 业务日志族零散缺口（4 处）——D-881 已逐个甄别：**仅 1 处真缺口，其余 3 处不接**
 
-| 类 | 在用的兄弟方法 | 未接的方法 |
-|---|---|---|
-| `MaterialInboundLogAppendHelper` | `appendInbound`/`appendOperation` | `appendQualityCheck`（质检结果无日志） |
-| `ProductWarehousingLogAppendHelper` | 7 个方法在用 | `appendBatchWarehousing`（批量入库无日志，单条有） |
-| `ProductionOrderLogAppendHelper` | `appendOperation` | `appendCreateFromStyle` |
-| `StockChangeLogOrchestrator` | `list`（读接口在用） | `logChange`（**写侧零调用**——需核实变更日志表是否空转，或写走 Mapper 直连） |
+| 类 | 原判定 | D-881 核实结论 | 处置 |
+|---|---|---|---|
+| `MaterialInboundLogAppendHelper` | `appendQualityCheck` 质检无日志 | **物料入库质检功能在后端不存在**：`MaterialInbound` 实体无质检字段，`MaterialInboundOrchestrator` 无质检方法（只有到货/补录/手工入库） | **不接**（无调用场景），方法休眠留档 |
+| `ProductWarehousingLogAppendHelper` | `appendBatchWarehousing` 批量入库无日志 | **真缺口实锤**：`batchSave` 批量入库 N 个裁捆，只走了财务/进度后动作，**没写操作日志**；而单条 `save` 调了 `appendSingleWarehousing`。同一订单混用两种入库方式时时间轴缺批量那几段 | **已接**（D-881）：`batchSave` 成功后按 `list.size()` 记「批量成品入库 / 共 N 个裁捆」 |
+| `ProductionOrderLogAppendHelper` | `appendCreateFromStyle` | **「从款式创建订单」路径不存在**：创建只走 `saveOrUpdateOrder`（已记 `appendCreate`），前端无「从款式建单」入口，排产采纳也不建单 | **不接**，休眠留档 |
+| `StockChangeLogOrchestrator` | `logChange` 写侧零调用 | **真实写路径已存在且在工作**：`WarehousingWriteHelper`（成品入库）与 `ProductSkuOrchestrator`（SKU 库存）直连 `StockChangeLogService` 构造实体写库，本地库 `t_stock_change_log` 已有 57 条数据。`logChange` 是没人用的备用写入口 | **不接**（接了会双写，同一变更记两条）。归入「已被取代」 |
+
+> 教训：「兄弟方法在用 = 这个也该接」只对了一半——还必须确认**对应的业务动作真的存在**。
+> 4 处里 3 处的业务动作在后端根本不存在（质检无字段无方法 / 建单无此路径 / 写库已走别的通道），
+> 为凑数接线只会给不存在的功能写日志、或造成双写。
 
 ## 三、真死代码（可删，约 10 处）——有明确取代者或整体休眠
 
@@ -105,6 +109,11 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 | `DataPermissionHelper.applyOperatorFilter` + `applyOwnFilter` | 被 `DataScopeAspect` + `DataPermissionInterceptor` 完全取代，链路完整 |
 | `MaterialPickupReceivableOrchestrator.syncAfterApproval` | D-133 方案明确不再推应收（代码注释） |
 | `PurchaseCartLogAppendHelper.appendUpdateQuantity` | 同 helper 内 `appendUpdateItem` 已在 `PurchaseCartOrchestrator` 使用，此为重复方法 |
+| `StockChangeLogOrchestrator.logChange` | D-881 核实：真实写路径是 `WarehousingWriteHelper` / `ProductSkuOrchestrator` 直连 `StockChangeLogService` 写库（表已有数据），此方法是没人用的备用写入口，接了反而双写 |
+| `MaterialInboundLogAppendHelper.appendQualityCheck` | D-881 核实：物料入库质检功能在后端不存在（实体无字段、编排器无方法），无调用场景。**功能若将来建设，此方法可直接启用，不建议删** |
+| `ProductionOrderLogAppendHelper.appendCreateFromStyle` | D-881 核实：「从款式创建订单」路径不存在（创建走 `saveOrUpdateOrder` 已记 `appendCreate`）。**同上，休眠留档不删** |
+
+> 注意区分三类：「已被取代」= 有替代实现，可删；「整体休眠」= 整条功能线未启用，删留需业务拍板；「功能未建设」= 业务动作不存在所以方法没接（质检/从款式建单），**方法先留着，功能上线时直接用**。
 | 整体休眠类（类名全文 0 外部引用） | `EcRefundOrchestrator`（电商退款编排器）、`CostVarianceOrchestrator`、`ProductionCleanupOrchestrator`、`ProductionStyleOrchestrator`、`SecondaryProcessServiceImpl`、`StyleProcessServiceImpl`——整条功能线未启用，删或留需业务拍板 |
 
 ## 四、外部对接预留（约 21 处，留）
