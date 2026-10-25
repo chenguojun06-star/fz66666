@@ -36,8 +36,16 @@ public class WagePaymentLogAppendHelper extends AbstractOperationLogAppendHelper
         return WagePayment::setPaymentRemark;
     }
 
-    public void appendSaveAccount(String ownerId, String ownerType, String accountType) {
-        appendOperation(ownerId, "新增收款账户", "账户类型：" + accountType + "，所有者：" + ownerType);
+    /**
+     * 收款账户保存审计（D-878 接线）。
+     *
+     * @param accountId 账户主键——审计 targetId 必须指向被操作的账户实体，
+     *                  不能传 ownerId（那是收款人，日志会挂错对象）
+     * @param isUpdate  true=修改已有账户，false=新增账户
+     */
+    public void appendSaveAccount(String accountId, String ownerType, String accountType, boolean isUpdate) {
+        appendOperation(accountId, isUpdate ? "修改收款账户" : "新增收款账户",
+                "账户类型：" + accountType + "，所有者：" + ownerType);
     }
 
     public void appendRemoveAccount(String ownerId, String ownerType, String accountId) {
@@ -67,11 +75,21 @@ public class WagePaymentLogAppendHelper extends AbstractOperationLogAppendHelper
         appendOperation(paymentId, "退回付款", detail);
     }
 
-    public void appendCreatePendingPayable(String payeeId, String amount) {
-        appendOperation(payeeId, "创建待付工资单", "金额：" + amount);
+    /**
+     * 创建待付工资单审计（D-878 接线）。
+     *
+     * @param paymentId 支付记录主键（不是 payeeId——日志要挂到被创建的单据上）
+     */
+    public void appendCreatePendingPayable(String paymentId, String amount) {
+        appendOperation(paymentId, "创建待付工资单", "金额：" + amount);
     }
 
-    public void appendRejectPayable(String payeeId, String reason) {
-        appendOperation(payeeId, "拒绝付款", "原因：" + reason);
+    /**
+     * 驳回待付款审计（D-878 接线）。
+     *
+     * @param paymentId 支付记录主键（不是 payeeId——日志要挂到被驳回的单据上）
+     */
+    public void appendRejectPayable(String paymentId, String reason) {
+        appendOperation(paymentId, "拒绝付款", "原因：" + reason);
     }
 }

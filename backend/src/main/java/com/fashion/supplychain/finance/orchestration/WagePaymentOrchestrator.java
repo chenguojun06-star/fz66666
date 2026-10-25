@@ -102,9 +102,13 @@ public class WagePaymentOrchestrator {
             account.setStatus("active");
         }
 
+        boolean wasUpdate = StringUtils.hasText(account.getId());
         paymentAccountService.saveOrUpdate(account);
         log.info("[工资支付] 保存收款账户: ownerType={}, ownerId={}, type={}",
                  account.getOwnerType(), account.getOwnerId(), account.getAccountType());
+        // D-878：收款账户新增/修改落审计（此前 saveAccount 无任何操作日志）
+        logAppendHelper.appendSaveAccount(account.getId(), account.getOwnerType(),
+                account.getAccountType(), wasUpdate);
         return account;
     }
 
@@ -210,6 +214,8 @@ public class WagePaymentOrchestrator {
 
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 确认线下支付: id={}, no={}", paymentId, payment.getPaymentNo());
+        // D-878：确认线下支付落审计（此前无任何操作日志）
+        logAppendHelper.appendConfirmOfflinePayment(payment.getId(), payment.getPaymentNo());
 
         return payment;
     }
@@ -263,6 +269,8 @@ public class WagePaymentOrchestrator {
 
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 取消支付: id={}, no={}, reason={}", paymentId, payment.getPaymentNo(), reason);
+        // D-878：取消支付落审计（此前无任何操作日志）
+        logAppendHelper.appendCancelPayment(payment.getId(), payment.getPaymentNo(), reason);
 
         return payment;
     }
@@ -295,6 +303,8 @@ public class WagePaymentOrchestrator {
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 退回已付款项: id={}, no={}, reason={}, operator={}",
                  paymentId, payment.getPaymentNo(), reason, UserContext.username());
+        // D-878：退回已付款项落审计（此前无任何操作日志）
+        logAppendHelper.appendRefundPayment(payment.getId(), payment.getPaymentNo(), reason);
 
         callbackHelper.callbackRefundUpstream(payment);
 

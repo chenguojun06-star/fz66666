@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.helper.WagePaymentLogAppendHelper;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.PayableItemDTO;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentRequest;
 import com.fashion.supplychain.finance.service.PayableService;
@@ -30,7 +31,7 @@ public class PayableAggregationHelper {
     private final WagePaymentService wagePaymentService;
     private final WagePaymentCallbackHelper callbackHelper;
     private final PaymentNoGenerator paymentNoGenerator;
-
+    private final WagePaymentLogAppendHelper logAppendHelper;
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     public List<PayableItemDTO> listPendingPayables(String bizType, String startDate, String endDate) {
@@ -181,6 +182,9 @@ public class PayableAggregationHelper {
         log.info("[付款中心] 创建待付款记录: no={}, payee={}, bizType={}, amount={}",
                  payment.getPaymentNo(), payment.getPayeeName(),
                  payment.getBizType(), payment.getAmount());
+        // D-878：创建待付工资单落审计（此前无任何操作日志）
+        logAppendHelper.appendCreatePendingPayable(payment.getId(),
+                payment.getAmount() != null ? payment.getAmount().toPlainString() : "0");
 
         return payment;
     }
@@ -269,6 +273,8 @@ public class PayableAggregationHelper {
             wp.setUpdateTime(LocalDateTime.now());
             wagePaymentService.updateById(wp);
             log.info("[付款中心] 驳回待付款: id={}", paymentId);
+            // D-878：驳回待付款落审计（此前无任何操作日志）
+            logAppendHelper.appendRejectPayable(wp.getId(), reason);
         }
     }
 
@@ -287,6 +293,8 @@ public class PayableAggregationHelper {
             wp.setUpdateTime(LocalDateTime.now());
             wagePaymentService.updateById(wp);
             log.info("[付款中心] 驳回待付款(按bizId): bizType={}, bizId={}", bizType, bizId);
+            // D-878：按 bizId 驳回同样落审计
+            logAppendHelper.appendRejectPayable(wp.getId(), reason);
         }
     }
 }
