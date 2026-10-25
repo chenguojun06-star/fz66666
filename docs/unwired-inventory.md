@@ -1,8 +1,8 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852 → D-877 复核修订）
 
-> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3 / D-881 业务日志甄别 4 / D-882 秒答缓存清理 1 / D-883 剩余 4 组核实**｜当前存量 **140 处**
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核 / D-878 工资审计 6 / D-879 风险闭环 4 / D-880 任务追踪 3 / D-881 业务日志甄别 4 / D-882 秒答缓存清理 1 / D-883 剩余 4 组核实 / D-884 生产库实锤修正**｜当前存量 **140 处**
 > （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 →149；D-879 →145；D-880 →142；D-881 →141；D-882 →140；实测 `baseline: 140 条 / 当前: 140 条`）
-> ✅ **D-877 的 26 处「真缺口」已全部有结论**：接线 15 处 + 核实不接 10 处 + 前置条件 1 处（sessionId 贯通）。剩余 140 处存量 = 外部对接预留约 21 + 真死代码约 10 + 款式域批量/脱敏/运维入口约 32 + intelligence 待下批复核约 66 + 其他，均非 D-877 口径的「半接线缺口」。
+> ✅ **D-877 的 26 处「真缺口」已全部有结论**：接线 15 处 + 核实不接 9 处 + 真缺口待前端入口 1 处（MemoryNudge 响应，D-884 生产实锤）+ 前置条件 1 处（sessionId 贯通）。剩余 140 处存量 = 外部对接预留约 21 + 真死代码约 10 + 款式域批量/脱敏/运维入口约 32 + intelligence 待下批复核约 66 + 其他，均非 D-877 口径的「半接线缺口」。
 > ⚠️ **本门禁是字面量统计**：方法名出现在注释里也会被当成「已接线」（D-875/D-880 两次踩到）。写注释时**不要写出未接线方法的完整方法名**，否则门禁假绿。
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
@@ -93,7 +93,7 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 | 类 | 在用的方法 | 未接的方法（后果） |
 |---|---|---|
 | `TaskTrackerOrchestrator` | `recordTask`（含 D-880 收口旧任务） | 会话维度待办列表——**需 sessionId 从 Agent 循环贯通到工具钩子**，当前无数据源，接了只会永远返回空 |
-| `MemoryNudgeOrchestrator` | `analyzeAndNudge` | `acceptNudge`/`dismissNudge`——用户对 AI 提醒无响应入口 |
+| `MemoryNudgeOrchestrator` | `analyzeAndNudge`（生产正常：18 条提醒/115 次 reflection 调用） | `acceptNudge`/`dismissNudge`——**生产 5 条 PENDING 提醒无人能响应，真缺口待前端入口**（D-884 实锤） |
 | `QuickAnswerOrchestrator` | `saveSnapshotWithTransaction` | `savePrebuiltWithTransaction`——**已被取代**：预构建能力由 `QuickAnswerInitializer` 启动导入公共模板（6 条 PREBUILT），此方法零调用 |
 | `AgentMemoryService` | `purgeExpired`/`setCoreMemory` | `clearWorkingMemory`/`deleteCoreMemory` |
 | `AdvisorSessionOrchestrator` | `saveConversationTurn`/`list*Messages` | `buildProfilePrompt`/`loadSessionContext` |
@@ -108,14 +108,21 @@ D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / 
 | `deleteCoreMemory` | 记忆只进不出 | `t_agent_memory_core` **0 行**。核心记忆整套只有超管手动端点（`IntelligenceAdminController.setCoreMemory`），主对话链路用的是 `MemoryBankService` 那套。写路径从未被真实使用 | **不接**（整体休眠，删留待业务拍板） |
 | `loadSessionContext` | 会话上下文未加载 | 零调用实锤，但暴露更大的事实：**主对话只写历史（`saveConversationTurn`）不注入 prompt**——读路径只有前端展示（`HyperAdvisorController.listRecent/SessionMessages`）。小云每轮对话对 AI 本身是无记忆的，D-871 修的是「前端看得到历史」不是「AI 有记忆」 | **暂不接**（接它 = 改主对话 prompt 组装，影响每轮 token 成本与回答稳定性，需专项评估 + 用户拍板） |
 | `buildProfilePrompt` | 画像未注入 | 零调用。画像表 3 行历史数据（最近一条 2026-10-01）从未被注入；画像写入走的是另一条路径 `UserProfileEvolutionOrchestrator.evolveProfile`（挂在主对话 postTurnTasks），`appendBehavior` 才是零调用的那个 | **不接**（画像读链路整体未启用） |
-| `acceptNudge`/`dismissNudge` | 用户无法响应提醒 | 零调用，但底层先崩：**`t_memory_nudge` 0 行**——`analyzeAndNudge` 挂在主对话每轮 postTurnTasks 上（还调一次 LLM 做记忆审查），本地库 182 条对话对应 0 条提醒。**提醒功能整体空转，接了也没有数据可操作** | **不接**（无响应对象）；「零产出根因」单列待查 |
+| `acceptNudge`/`dismissNudge` | 用户无法响应提醒 | D-883 时误判（本地库 0 行→「空转」）；**D-884 生产库实锤：功能正常，原判定成立** | **是真缺口**（生产 5 条 PENDING 挂着无人能响应），需前端入口，待排期 |
 | `listPendingTasksBySession` | 任务查不了 | D-880 结论仍成立：Agent 工具执行链路无 sessionId，绑定方法也无调用方 | **不接**（需前置改造） |
 
 **本轮纠正的归属错误**：D-877 文档写的「`AgentMemoryService.purgeExpired` 在用」——实际 `purgeExpired` 属于 `SharedAgentMemoryService`，且已被 `SharedAgentMemoryCleanupJob`（每日 04:00，带分布式锁）调度。结论（清理在工作）碰巧正确，但归属是错的。
 
 **本轮新发现的待查事项**（非 unwired 范畴，建议单独立项）：
-1. **MemoryNudge 零产出**：每轮对话花一次 LLM 调用做记忆审查，本地库 182 条对话产出 0 条提醒。需查是 `chatSimple` 失败被 catch 吞了、还是 LLM 每次都判 NONE。若是前者 = 真 bug；若是后者 = 设计失效且**纯成本浪费**（呼应 AI 成本关注点）。生产库需 SSH 查。
-2. **主对话无 prompt 记忆注入**（loadSessionContext 那条）：影响小云多轮对话体验，属主链路改造，需排期评估。
+1. **主对话无 prompt 记忆注入**（loadSessionContext 那条）：影响小云多轮对话体验，属主链路改造，需排期评估。
+2. **D-882 清理调度生产验证**：`t_quick_answer` 生产现有 485 条软删僵尸 + 0 条过期未清；D-882 的 `@Scheduled(47 分)` 需等今晚生产跑过后验证硬删生效（软删数应下降）。
+
+> 🔴 **D-884 生产库实锤修正（本地库误判教训）**：D-883 据本地库判定「MemoryNudge 整体空转、零产出疑成本浪费」——**上生产库核实后完全推翻**：
+> - `t_memory_nudge` **18 条**（13 EXPIRED + **5 PENDING**），最近生成 2026-10-25 09:08，类型 INSIGHT/FACT，confidence 0.80~0.90
+> - 成本表 `reflection` scene **115 次调用（113 成功）**——chatSimple 真实在工作并产生成本
+> - 生产对话节奏：10-25 十二条、10-24 四条、10-07/08 各几条——**小量真实用户**（与「慢慢来」吻合）
+> - 本地库 0 条的真因：**本地 10-23 重启后 0 用户对话 + LLM 未配置**（日志：所有模型失败走关键词兜底，调用全来自定时任务线程）
+> - **铁律新增：本地库无数据 ≠ 功能坏了。用户量小时，「零数据/零产出」必须上生产库核实再下结论。**
 
 ### 2.2 业务日志族零散缺口（4 处）——D-881 已逐个甄别：**仅 1 处真缺口，其余 3 处不接**
 
