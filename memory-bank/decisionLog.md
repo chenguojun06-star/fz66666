@@ -2,7 +2,9 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-25（D-876 TDZ 高危前向引用守护：提交 10-20 报价单打印白屏事故的检查脚本（此前一直是未跟踪文件）+ 接入 CI 质量门禁；顺带修复本地 db-query-mcp（mcp_readonly 密码重置 + 配置去掉未设置的 ${MCP_DB_PASSWORD} 占位）；已推送 2ef639e42）
+> 最后更新：2026-10-25（D-878 工资支付审计接线：D-877 查出的首批 6 处真缺口全部接线（取消支付/退回付款/驳回应付/确认线下支付/创建待付工资单/保存收款账户），顺带修正 3 个方法的 targetId 语义错误；8 用例守护 + baseline 155→149）
+> 上一版：2026-10-25（D-877 155 处未接线逐类复核：结论翻转——约 26 处真缺口、约 10 处真死代码、约 21 处外部预留；纠错原文档「List<AiTool> 注入」说法不成立）
+> 上一版：2026-10-25（D-876 TDZ 高危前向引用守护：白屏事故检查脚本入库 + 接入 CI 门禁；本地 db-query-mcp 修复（mcp_readonly 密码重置 + 去掉未设置的 ${MCP_DB_PASSWORD} 占位）；已推送 2ef639e42）
 > 上一版：2026-10-25（D-875 首屏瘦身：81 个业务页面改按需加载（此前全量同步 import）+ 慢查询巡检加时间窗口；**核实后确认「补索引/图片懒加载/虚拟滚动」三项不需要做**；已推送 4649657ea）
 > 上一版：2026-10-25（D-874 **零风险提速**：反思引擎按用户节流（异步不参与回答，省 35.8s 线程占用）+ job_run_log 保留期 90→60；已推送 825e37974，intelligence 包 272 测试全绿）
 > 上一版：2026-10-25（D-872 消息中心滑不动（Tabs 内 height:100% 失效）；D-873 提速第二轮：计数问句 5 轮→2 轮 + 审计保留期 60 天 + 生产清理 5 张 bak 表（已备份）；已推送 07ebee8c8）
@@ -23,6 +25,46 @@
 > 上一版：2026-10-21（D-835 详情长图编辑器改烘焙逐页方案：每图一页+html2canvas 烘焙导出，D-834 堆叠三栏被用户否决替换，「85% 侧滑弹窗」旧约束一并推翻；已推送 b08bdfd9c）
 > 上一版：2026-10-19（D-823 裁剪用料台账 + 余料回库闭环：新表五态台账 + 完工自动快照 + 极简登记 + 一键回库 + 全链路穿透；16 文件代码完成待提交）
 > 上一版：2026-10-19（**补记** 门店零售对接线 10-10~10-19：D-817 收银台信封泄漏治理 / D-785+D-811 顾客端 UserContext 空陷阱（第二次同款）/ D-815 AI 不许报「开票成功」/ D-808 编号撞号更正 + D-800 迁移索引超限；代码均已推，本条为事后补记）
+
+---
+
+## D-878：工资支付审计接线——D-877 首批 6 处真缺口（2026-10-25）
+
+**背景**：D-877 复核查出工资支付有 6 个资金动作零操作日志（取消支付/退回付款/驳回应付/确认线下支付/创建待付工资单/保存收款账户），而同模块「发起支付/确认收款/停用账户」早就在记。用户批准先补这批。
+
+**接线点（6 处）**：
+1. `WagePaymentOrchestrator.cancelPayment` → `appendCancelPayment`
+2. `WagePaymentOrchestrator.refundPayment` → `appendRefundPayment`（仅主管可操作，审计价值最高）
+3. `PayableAggregationHelper.rejectByPaymentId` / `rejectByBizId` → `appendRejectPayable`（两条驳回路径都接，避免按 bizId 驳回时漏记）
+4. `WagePaymentOrchestrator.confirmOfflinePayment` → `appendConfirmOfflinePayment`
+5. `PayableAggregationHelper.createPendingPayable` → `appendCreatePendingPayable`（只在真正新建后记，幂等命中已有记录时早返回不记，避免误报）
+6. `WagePaymentOrchestrator.saveAccount` → `appendSaveAccount`
+
+**接线前必须先修的两个语义错误**（方法零调用但参数语义是错的，直接接会挂错对象）：
+- `appendSaveAccount(ownerId, …)` → `appendSaveAccount(accountId, …, isUpdate)`：审计 targetId 必须是被操作的**账户**，不是收款人；并区分「新增/修改收款账户」（`saveAccount` 走 `saveOrUpdate`，同一接口两种语义）
+- `appendCreatePendingPayable(payeeId, …)` / `appendRejectPayable(payeeId, …)` → 首参改为 `paymentId`
+
+**验证**：`mvn -o compile` 0 错误；新增 `WagePaymentLogAppendHelperTest` **8 用例全绿**（行为 7：action/targetId/租户/空 id 保护/新增与修改区分；接线守护 1：源码断言 6 个调用点都在——helper 写好没人调正是本次要修的缺陷，只测 helper 测不出来）；finance 包回归全绿；`check-unwired --check` 155→**149**，无新增。
+
+**教训**：审计类接线不能只测「helper 能写日志」，必须同时断言「编排器真的调了」——否则 D-877 查出的那类缺陷会以测试全绿的形式复现。
+
+---
+
+## D-877：155 处未接线逐类复核（2026-10-25，已推送 dbcaaecd0）
+
+**背景**：用户质疑「为什么要删」——核实后确认原文档「预留 123 处」定性过于乐观。
+
+**复核方法（两项缺一不可，已留档）**：
+1. 按**实际字段名**搜调用（Spring 注入字段常叫 `logAppendHelper`/`taskTracker`，搜类名驼峰会漏判——初筛就因此把 3 个在用的 Helper 误判为「整体休眠」）
+2. 看同模块**兄弟方法是否在用**（在用=半接线缺口；不在用=整体休眠）
+
+**结论（155 处重新分类）**：
+- **约 26 处真缺口（该补）**：工资支付审计 6 + AI 生命周期 16（风险只增减不了/任务只记不销/提醒无响应入口/快答缓存只写不清/AgentMemory/AdvisorSession）+ 业务日志 4（质检/批量入库/从款式建单/库存变更写侧）
+- **约 10 处真死代码（可删）**：DataScopeAspect 已取代 2、D-133 废弃 1、重复方法 1、整体休眠类 6
+- **约 21 处外部对接预留（留）**：金蝶/用友、飞书、EC
+- **约 98 处待下批复核**：intelligence 剩余 66 + 款式域批量/脱敏/运维入口 32
+
+**纠错**：原文档称 AI 类「通过 List<AiTool> 注入」——实测**全后端 0 个类 implements AiTool**（工具在 `agent/tool/` 包且全部接线），该说法不成立。
 
 ---
 

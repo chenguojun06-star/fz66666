@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-25 09:30（✅ D-876 TDZ 高危前向引用守护：白屏事故检查脚本提交入库 + 接入 CI 质量门禁；本地 db-query-mcp 修复（mcp_readonly 密码重置 + 配置去环境变量占位 + 清临时脚本）；已推送 2ef639e42）
+> 最后更新：2026-10-25 10:45（✅ D-878 工资支付审计接线：D-877 首批 6 处真缺口（取消/退回/驳回/线下确认/建待付/存账户）全部接线 + 修正 3 个 targetId 语义错误；8 用例全绿、finance 回归全绿、baseline 155→149）
+> 上一版：2026-10-25 09:30（✅ D-876 TDZ 高危前向引用守护：白屏事故检查脚本提交入库 + 接入 CI 质量门禁；本地 db-query-mcp 修复（mcp_readonly 密码重置 + 配置去环境变量占位 + 清临时脚本）；已推送 2ef639e42）
 > 上一版：2026-10-24 23:20（✅ D-865 去掉 AI 建议悬停；D-866 出库记录接入列设置 + 审核入口露出 + 文案/筛选补全；已推送 fa0673123）
 > 上一版：2026-10-24 21:30（✅ D-863 AI 建议顶栏入口；D-864 慢查询巡检——日志本就开启（此前误判），补 9.0s 查询索引 + 分析脚本；已推送 a88d6f137）
 > 上一版：2026-10-24 21:00（✅ D-861/D-862：小云 SSE comment 心跳被丢弃致 30s 误判超时 + 消息不落盘 + 出库台账平台/类型/关联订单口径；已推送 b0be1a01b，tsc/ESLint 0、11 单测通过）
@@ -13,6 +14,17 @@
 > 上一版：2026-10-24（补记 10-21~10-24 全部 57 个提交：D-831~D-855——库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处核实与门禁（D-848/851/852）+ AI 建议闭环（D-853/854）+ 小云跨域修复（D-855）+ 扫码通（D-836）+ 口径审计（D-833/837）+ 入库库位硬闸（D-843）+ 报废出清（D-844）+ 库存双轨（D-838）；代码已全部推送 3a8416e3a，本条为事后补记）
 
 ## 已完成
+
+### 2026-10-25 D-878 工资支付审计接线——6 处资金动作不再静默
+
+- [x] `cancelPayment` → `appendCancelPayment`；`refundPayment` → `appendRefundPayment`（仅主管可操作，审计价值最高）
+- [x] `rejectByPaymentId` + `rejectByBizId` 两条驳回路径都接 `appendRejectPayable`（避免按 bizId 驳回时漏记）
+- [x] `confirmOfflinePayment` → `appendConfirmOfflinePayment`；`createPendingPayable` → `appendCreatePendingPayable`（仅真正新建时记，幂等命中不记）
+- [x] `saveAccount` → `appendSaveAccount`（先修语义：targetId 用账户主键而非 ownerId，并区分新增/修改）
+- [x] 顺带修正 `appendCreatePendingPayable` / `appendRejectPayable` 首参 `payeeId` → `paymentId`
+- [x] 新增 `WagePaymentLogAppendHelperTest` 8 用例（行为 7 + 接线守护 1）；mvn compile 0；finance 包回归全绿
+- [x] baseline 155→149，`check-unwired --check` 无新增
+- [ ] 剩余约 20 处真缺口待排期（AI 生命周期 16 + 业务日志 4）
 
 ### 2026-10-25 D-876 TDZ 高危前向引用守护 + db-query-mcp 本地修复（已推送 2ef639e42）
 

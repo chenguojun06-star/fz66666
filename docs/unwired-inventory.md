@@ -1,7 +1,7 @@
 # 「做了没接」未接线方法盘点与判定结论（D-851/D-852 → D-877 复核修订）
 
-> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核修订**｜当前存量 **155 处**
-> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；实测 `baseline: 155 条 / 当前: 155 条`）
+> 生成：2026-10-23｜更新：2026-10-24（D-858 口径订正）｜**2026-10-25 D-877 逐类复核修订 / D-878 首批缺口接线**｜当前存量 **149 处**
+> （原始 164 − 已接线 8 处 − 删除语义重复方法 1 处 = 155；D-878 接线 6 处 → 149；实测 `baseline: 149 条 / 当前: 149 条`）
 > 门禁：`python3 scripts/check-unwired.py --check`（baseline 只减不增，CI 已接入）
 > 全量明细：`python3 scripts/check-unwired.py --classify --all`
 
@@ -13,7 +13,9 @@
 
 ⚠️ **复核纠错**：原文档称 AI 类「通过 List<AiTool> 注入」——实测**全后端 0 个类 implements AiTool**（工具实现在 `agent/tool/` 包、全部接线），该说法不成立；原「预留」把大量半接线缺口（审计日志族、风险/任务生命周期）误定性为路线图能力。
 
-## 一、已接线（真缺陷，8 处）——历史修复，留档
+## 一、已接线（真缺陷，14 处）——历史修复 + D-878 首批
+
+### 1.1 D-848/851 历史修复（8 处）
 
 | 位置 | 缺失的审计 | 为什么必须记 |
 |---|---|---|
@@ -26,26 +28,30 @@
 | `StyleBomOrchestrator.generatePurchase` | 一键生成采购单 | 生成了多少单无记录 |
 | `InventoryCheckOrchestrator.applyStockAdjustments` | **盘点确认改库存** | 物料/成品/样衣三种库存直接改，此前零操作日志 |
 
-## 二、真缺口：半接线子系统（约 26 处，**该补不该删**）——D-877 复核新结论
+### 1.2 D-878 工资支付审计接线（6 处，2026-10-25）
+
+D-877 复核出的首批真缺口，已全部接到 `WagePaymentOrchestrator` / `PayableAggregationHelper` 的对应写操作之后，并新增 8 个用例守护（行为 7 + 接线守护 1）。
+
+| 方法 | 接入点 | 此前状态 |
+|---|---|---|
+| `appendCancelPayment` | `cancelPayment` | 取消支付零日志 |
+| `appendRefundPayment` | `refundPayment` | 退回付款零日志（仅主管可操作，风险更高） |
+| `appendRejectPayable` | `rejectByPaymentId` / `rejectByBizId` | 驳回应付零日志 |
+| `appendConfirmOfflinePayment` | `confirmOfflinePayment` | 确认线下支付零日志 |
+| `appendCreatePendingPayable` | `PayableAggregationHelper.createPendingPayable` | 创建待付工资单零日志 |
+| `appendSaveAccount` | `saveAccount` | 新增/修改收款账户零日志 |
+
+**顺带修正两个语义错误**（原方法虽零调用，但参数语义是错的，接线前必须先修，否则日志会挂错对象）：
+- `appendSaveAccount` 原第一参是 `ownerId`（收款人）→ 改为 `accountId`（账户主键），并新增 `isUpdate` 区分「新增/修改收款账户」
+- `appendCreatePendingPayable` / `appendRejectPayable` 原第一参名为 `payeeId` → 改为 `paymentId`（日志 targetId 必须指向被操作的单据）
+
+## 二、真缺口：半接线子系统（约 20 处，**该补不该删**）——D-877 复核结论
 
 共同形态：**核心动作接了，生命周期/收尾动作没接**。删掉它们不会让系统更健康，只会让「记录了却永远关不掉/清不掉/没日志」的状态永久化。
 
-### 2.1 资金审计断档（6 处，最优先）
+> 原 26 处中的资金审计 6 处已由 D-878 接线（见 1.2），余约 20 处待排期。
 
-`WagePaymentLogAppendHelper` 已接 `appendInitiatePayment`/`appendConfirmReceived`/`appendRemoveAccount`，**未接**：
-
-| 方法 | 缺失的动作 |
-|---|---|
-| `appendCancelPayment` | 取消支付 |
-| `appendRefundPayment` | 退款 |
-| `appendRejectPayable` | 驳回应付 |
-| `appendConfirmOfflinePayment` | 确认线下支付 |
-| `appendCreatePendingPayable` | 创建待应付 |
-| `appendSaveAccount` | 保存账号 |
-
-与第一节 8 处同族：工资页的取消/退款/驳回发生时，操作日志查不到。
-
-### 2.2 AI 子系统生命周期缺口（16 处）
+### 2.1 AI 子系统生命周期缺口（16 处）
 
 | 类 | 在用的方法 | 未接的方法（后果） |
 |---|---|---|
@@ -56,7 +62,7 @@
 | `AgentMemoryService` | `purgeExpired`/`setCoreMemory` | `clearWorkingMemory`/`deleteCoreMemory` |
 | `AdvisorSessionOrchestrator` | `saveConversationTurn`/`list*Messages` | `buildProfilePrompt`/`loadSessionContext` |
 
-### 2.3 业务日志族零散缺口（4 处）
+### 2.2 业务日志族零散缺口（4 处）
 
 | 类 | 在用的兄弟方法 | 未接的方法 |
 |---|---|---|
