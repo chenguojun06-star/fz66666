@@ -72,7 +72,15 @@ jobs:
     - name: 禁止新增「写了没接线」的方法（baseline 只减不增）
       run: python3 scripts/check-unwired.py --check
 
-    # D-876：TDZ 高危前向引用守护。2026-10-20 顾客点「报价单打印」白屏，
+    # D-885：禁止 React.lazy 二次包裹——2026-10-25/26 全站白屏事故根因。
+    # barrel（modules/*/index.tsx）早已把页面包成 React.lazy，再在 App.tsx 用
+    # lazyPage(() => import('./modules/x'), 'Name') 二次包裹 → React #306 →
+    # 全部业务页面崩溃约 33 小时。tsc --noEmit 全绿也拦不住（本次即如此），
+    # 只能静态拦截。已用 D-875 原始代码反向验证：能精准命中 81 处。
+    - name: 禁止 React.lazy 二次包裹（D-885 全站白屏事故门禁）
+      run: python3 scripts/check-lazy-wrapper.py
+
+    # D-885：TDZ 高危前向引用守护。2026-10-20 顾客点「报价单打印」白屏，
     # 根因是 .map() 回调（同步执行）引用了同作用域更晚才声明的 const，
     # 抛 ReferenceError: Cannot access 'y' before initialization。
     # ESLint 现成的 no-use-before-define 会把 166 处安全形态全报出来，

@@ -193,6 +193,20 @@ Controller → Orchestrator → Service → Mapper
   （例如仓库里的 `java-springboot` skill 就写了这条）。
   ArchUnit 架构守护会在 pre-push 每轮校验分层依赖，改成非分层结构会**直接卡住推送**。
   同理，本项目普遍使用字段注入（`@Autowired` 字段），改成构造器注入属大范围重构，需单独排期，不是随手可改项。
+- **⛔ 前端红线：barrel 里的页面已经是 `React.lazy`，绝不可再 `React.lazy` 二次包裹**
+  （2026-10-25→26 全站 P0 白屏，根因 D-875，修复 4d2fc724，事故持续约 33 小时）。
+  `frontend/src/modules/*/index.tsx` 这 10 个 barrel 早已把每个页面包成
+  `export const X = React.lazy(() => import('./pages/X'))`；
+  若再写 `lazyPage(() => import('./modules/basic'), 'MaintenanceCenter')`
+  或 `React.lazy(() => import('./modules/basic').then(m => ({ default: m.Name })))`，
+  就是 **lazy 套 lazy** → React 解析出 lazy 对象 → `Minified React error #306`
+  → **所有业务页面崩溃**。
+  正确做法：懒加载放在 barrel 里，App.tsx 按名导入即可；确需在 App.tsx 懒加载则用
+  **默认导出** `React.lazy(() => import('./pages/X'))`。
+  ⚠️ **`tsc --noEmit` 全绿也拦不住**（本次 tsc 通过但运行时全站崩）→ 已有静态门禁
+  `scripts/check-lazy-wrapper.py`（CI 已接，已用 D-875 原始代码反向验证命中 81 处）。
+  推论：**判断「某页面是否已懒加载」不能只看 App.tsx 的 import 形式，必须看
+  barrel（modules/*/index.tsx）的真实导出**。
 - **All test sources ARE committed** — 测试代码入库策略的权威说明在 `.gitignore` 的「测试代码入库策略」段落。
   Java 单元测试（`backend/src/test/`，2026-09-15 起入库）、前端单元测试（2026-09-19 起入库）、
   小程序单元测试（`miniprogram/test/`，2026-10-10 起入库）、Shell 集成测试（`scripts/test/`）、
