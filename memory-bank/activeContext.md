@@ -2124,3 +2124,26 @@ sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 
 ### 待用户拍板
 - 已上架但未推送的 3 款（含 BR26X1Q1011A）在上架列表将消失，但顾客端仍在售——是否需一并下架/补推送，待用户确认。
+
+## 2026-10-26 P0 事故：D-875 惰性加载双重包装导致全站 #306 白屏
+
+### 现象
+- 线上（`www.webyszl.cn`，2026-10-25T08:27:49 构建）**所有业务页面**崩溃。
+- 控制台：`Error: Minified React error #306`，参数为 `[object Object]`；路由错误边界文案「首页 page error」「维护中心开小差了」。
+
+### 根因（已实锤）
+- **React #306 官方含义**（react.dev/errors/306）：「Element type is invalid. Received a promise that resolves to: %s. Lazy element type must resolve to a class or function.」——即 `React.lazy` 解析出的不是组件。
+- `frontend/src/modules/*/index.tsx` 这 **10 个 barrel 早已把每个页面包成 `export const X = React.lazy(() => import('./pages/X'))`**（basic/finance/crm/selection/dashboard/warehouse/system/ecommerce/intelligence/production）。
+- D-875（`4649657ea`）误判为「81 个页面是同步导入」，在 App.tsx 用 `lazyPage(() => import('./modules/basic'), 'MaintenanceCenter')` **二次包裹** → `lazy` 套 `lazy` → React 解析出 lazy 对象（`[object Object]`）→ 81 个页面全部 #306。
+- 佐证：App.tsx 每条路由形如 `<RouteErrorBoundary pageName="首页"><Suspense><Dashboard/></Suspense></RouteErrorBoundary>`，报错文案与 pageName 逐字吻合。
+
+### 修复
+- `git checkout 4649657ea^ -- frontend/src/App.tsx` 还原为按 barrel 具名同步导入，删除 `lazyPage`/`AnyPage`（仅 App.tsx 使用）。D-875 的脚本改进（`check-slow-query.sh --since`）保留。
+- 提交 `4d2fc7249`；`npx tsc --noEmit` EXIT=0；`npm run build` 成功。
+- 线上已部署：服务器 HEAD=`4d2fc724`，前端镜像 2026-10-26T17:39:48，线上入口包由 `index-DiR3RprL.js` → `index-CGY6olCr.js`；实机访问登录页零控制台报错、底部版本号显示 4d2fc724。
+
+### 教训（写入红线）
+- **barrel 已返回 `React.lazy` 组件时，绝不可再用 `React.lazy` 二次包裹**；要 code-split 应改 barrel 或直接用默认导出 + `React.lazy(() => import('...'))`。
+- 判断「页面是否懒加载」不能只看 App.tsx 的 import 形式，必须看 **barrel（modules/*/index.tsx）的真实导出**。
+- `tsc --noEmit` 通过 ≠ 运行时正确（本次 tsc 全绿但运行时全站崩），P0 必须实机验证。
+- 复现方式：本地 `npm run build` 后开 dev/preview，任何走 `lazyPage` 二次包裹的路由都会立刻 #306。
