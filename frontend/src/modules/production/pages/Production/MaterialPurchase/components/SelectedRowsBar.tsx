@@ -1,8 +1,10 @@
 import React from 'react';
-import { Button, Dropdown, Space } from 'antd';
-import type { MenuProps } from 'antd';
-import { ShoppingCartOutlined, DownOutlined } from '@ant-design/icons';
-import { PURCHASE_ACTION_LABELS, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { Button, Space } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
+import PurchaseActionBar, {
+  getBatchActionDisabledReason,
+  type PurchaseActionButtonState,
+} from '@/components/common/purchase/PurchaseActionBar';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 
 interface SelectedRowsBarProps {
@@ -16,24 +18,12 @@ interface SelectedRowsBarProps {
 }
 
 /**
- * D-664：禁用菜单项的不可用原因渲染进标签（antd 禁用项悬停 tooltip 不生效）。
- */
-const withDisabledReason = (label: string, disabled: boolean, reason?: string): React.ReactNode => {
-  if (disabled && reason) {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
-        <span>{label}</span>
-        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{reason}</span>
-      </span>
-    );
-  }
-  return label;
-};
-
-/**
- * 选中行批量操作栏（清空 + 批量领取▾ + 加入购物车）。
- * 批量动作与采购节点弹窗/详情弹窗/样衣节点同一套统一按钮（D-360）：
- * 主按钮直点=批量领取，悬停出菜单：批量领取 / 回料确认 / 确认完成。
+ * 选中行操作条：只负责「已选计数 + 清空 + 加入购物车」，
+ * 批量动作（批量领取 / 登记到货 / 回料确认 / 确认完成）一律复用全站统一按钮
+ * PurchaseActionBar（D-360），与物料详情页 / 采购节点弹窗 / 采购弹窗详情同一套实现。
+ *
+ * 这里以前自己抄了一份下拉菜单，与统一按钮是两套实现、会各自漂移
+ * （"批量领取后没有后续动作"就同时存在于两套里）——已删除，只留统一入口。
  * 当 selectedRows 为空时返回 null。
  */
 const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
@@ -41,56 +31,21 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
 }) => {
   if (selectedRows.length === 0) return null;
 
-  // D-664b：禁用口径与原因全入口统一（getBatchActionDisabledReason，D-368 业务事实），
-  // 禁用时按真实状态动态生成原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不写死误导文案
-  const receiveReason = getBatchActionDisabledReason(selectedRows, 'receive');
-  const arrivalReason = getBatchActionDisabledReason(selectedRows, 'arrivalRegister');
-  const returnReason = getBatchActionDisabledReason(selectedRows, 'batchReturn');
-  const completeReason = getBatchActionDisabledReason(selectedRows, 'confirmComplete');
-  const receiveDisabled = !!receiveReason;
-  const arrivalDisabled = !!arrivalReason;
-  const returnDisabled = !!returnReason;
-  const completeDisabled = !!completeReason;
+  // D-664b：禁用口径与原因全入口统一（getBatchActionDisabledReason，D-368 业务事实）
+  const mk = (
+    reason: string | undefined,
+    handler?: (records: MaterialPurchaseType[]) => void,
+  ): PurchaseActionButtonState | undefined =>
+    (handler ? {
+      disabled: !!reason,
+      title: reason,
+      onClick: () => handler(selectedRows),
+    } : undefined);
 
-  const batchMenuItems: MenuProps['items'] = [
-    {
-      key: 'receive',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receiveDisabled, receiveReason),
-      disabled: receiveDisabled,
-      onClick: () => onBatchReceive?.(selectedRows),
-    },
-    {
-      key: 'arrival-register',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.arrivalRegister, arrivalDisabled, arrivalReason),
-      disabled: arrivalDisabled,
-      onClick: () => onBatchArrival?.(selectedRows),
-    },
-    {
-      key: 'batch-return',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReturn, returnDisabled, returnReason),
-      disabled: returnDisabled,
-      onClick: () => onBatchReturn?.(selectedRows),
-    },
-    {
-      key: 'confirm-complete',
-      label: withDisabledReason(PURCHASE_ACTION_LABELS.confirmComplete, completeDisabled, completeReason),
-      disabled: completeDisabled,
-      onClick: () => onBatchComplete?.(selectedRows),
-    },
-  ];
-
-  // 与 PurchaseActionBar 同口径：批量领取后 receive 必然禁用，
-  // 主按钮若跟着禁用，Dropdown 触发器失效 → 打不开下拉 → 看不出还有登记到货/回料/确认完成。
-  const canReceive = !receiveDisabled;
-  const hasOtherAction = (!!onBatchArrival && !arrivalDisabled)
-    || (!!onBatchReturn && !returnDisabled)
-    || (!!onBatchComplete && !completeDisabled);
-  const mainDisabled = !canReceive && !hasOtherAction;
-  const mainTitle = canReceive
-    ? receiveReason
-    : hasOtherAction
-      ? `批量领取不可用：${receiveReason || '所选记录无需领取'}，可从下拉选择其他批量操作`
-      : receiveReason;
+  const receive = mk(getBatchActionDisabledReason(selectedRows, 'receive'), onBatchReceive);
+  const arrivalRegister = mk(getBatchActionDisabledReason(selectedRows, 'arrivalRegister'), onBatchArrival);
+  const batchReturn = mk(getBatchActionDisabledReason(selectedRows, 'batchReturn'), onBatchReturn);
+  const confirmComplete = mk(getBatchActionDisabledReason(selectedRows, 'confirmComplete'), onBatchComplete);
 
   return (
     <div style={{
@@ -107,17 +62,13 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
         <Button size="small" onClick={onClear}>清空</Button>
       </Space>
       <Space>
-        <Dropdown menu={{ items: batchMenuItems }} trigger={['hover']}>
-          <Button
-            type="primary"
-            size="small"
-            disabled={mainDisabled}
-            title={mainTitle}
-            onClick={canReceive ? () => onBatchReceive?.(selectedRows) : undefined}
-          >
-            {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />
-          </Button>
-        </Dropdown>
+        <PurchaseActionBar
+          size="small"
+          receive={receive}
+          arrivalRegister={arrivalRegister}
+          batchReturn={batchReturn}
+          confirmComplete={confirmComplete}
+        />
         <Button
           icon={<ShoppingCartOutlined />}
           size="small"
