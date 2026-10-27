@@ -9,6 +9,8 @@ import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/m
 import { safePrint } from '@/utils/safePrint';
 import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
 import { useBatchArrival } from '@/components/common/purchase/useBatchArrival';
+import InvoiceUploadCard from '@/components/common/purchase/InvoiceUploadCard';
+import { useInvoiceManagement } from '@/components/common/purchase/useInvoiceManagement';
 import type { MaterialPurchase } from '@/types/production';
 import { InlinePurchasePanelProps, isConfirmCompleteAvailable } from './InlinePurchasePanel.helpers';
 import { isPurchaseRowComplete } from './utils';
@@ -174,6 +176,11 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     onSuccess: () => { loadData(); },
   });
 
+  // D-889：发票/单据上传（与物料采购弹窗同一套实现）——订单级聚合：
+  // 展示该订单全部采购行发票并集，写回第一条已保存行
+  const invoiceAnchor = purchases.find((p) => String(p.id ?? '').trim() !== '') || null;
+  const invoice = useInvoiceManagement({ anchor: invoiceAnchor, rows: purchases });
+
   return (
     <BrandLoading spinning={loading}>
       {/* D-360g：嵌入 NodeDetailModal 时统一头由 NodeDetailBody 渲染，这里不再重复 */}
@@ -329,6 +336,15 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           />
         )}
       </Card>
+
+      {/* D-889：发票/单据（财务留底）——与物料采购弹窗同一套组件与持久化口径 */}
+      <InvoiceUploadCard
+        invoiceUrls={invoice.invoiceUrls}
+        invoiceUploading={invoice.invoiceUploading}
+        disabled={!invoiceAnchor || editing}
+        onChange={invoice.handleInvoiceChange}
+        uploadFn={invoice.handleInvoiceUpload}
+      />
 
       <ConfirmCompleteModal
         visible={confirmCompleteModalVisible}

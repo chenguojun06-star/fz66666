@@ -40,13 +40,6 @@ export const confirmedRowStyle = `
   }
 `;
 
-// 解析发票 URL（JSON 字符串 → string[]）
-export const parseInvoiceUrls = (raw?: string | null): string[] => {
-  if (!raw) return [];
-  try { return JSON.parse(raw) as string[]; }
-  catch { return raw.split(',').map((s) => s.trim()).filter(Boolean); }
-};
-
 // 标准化状态字符串
 export const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) =>
   String(status || '').trim().toLowerCase();

@@ -12,7 +12,11 @@ interface InvoiceUploadCardProps {
   uploadFn: (file: File) => Promise<string>;
 }
 
-// 发票/单据上传 Card（财务留底）
+/**
+ * 发票/单据上传 Card（财务留底）——全站唯一实现（D-889）。
+ * 物料采购列表弹窗 / 生产管理节点弹窗 / 样衣采购抽屉共用本组件 + useInvoiceManagement，
+ * 禁止在任何入口再抄一份。
+ */
 const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
   invoiceUrls,
   invoiceUploading,
@@ -57,3 +61,4 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
 };
 
 export default InvoiceUploadCard;
+

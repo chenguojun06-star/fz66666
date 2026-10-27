@@ -17,7 +17,7 @@ import { usePurchaseDetailData } from './usePurchaseDetailData';
 import EditablePurchaseTable from './components/EditablePurchaseTable';
 import PurchaseDetailCollapse from './components/PurchaseDetailCollapse';
 import PurchaseDocDrawer from '../PurchaseDocDrawer';
-import InvoiceUploadCard from './components/InvoiceUploadCard';
+import InvoiceUploadCard from '@/components/common/purchase/InvoiceUploadCard';
 import ArrivalFormModal from './components/ArrivalFormModal';
 import RejectPurchaseModal from './components/RejectPurchaseModal';
 import MaterialSelectModal from './components/MaterialSelectModal';

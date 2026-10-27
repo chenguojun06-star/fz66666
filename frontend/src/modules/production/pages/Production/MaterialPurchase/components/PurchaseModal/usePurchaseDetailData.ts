@@ -6,7 +6,7 @@ import { confirmDelete } from '@/utils/confirm';
 import {
   PurchaseDocRecord,
 } from './PurchaseDetailView.helpers';
-import { useInvoiceManagement } from './useInvoiceManagement';
+import { useInvoiceManagement } from '@/components/common/purchase/useInvoiceManagement';
 import { useMaterialSearch } from './useMaterialSearch';
 import {
   createPurchaseRow,
@@ -55,8 +55,9 @@ export const usePurchaseDetailData = ({
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
+  // D-889：发票全站统一实现——展示为订单内所有采购行并集，写回锚点行
   const { invoiceUrls, invoiceUploading, handleInvoiceUpload, handleInvoiceChange } =
-    useInvoiceManagement({ currentPurchase });
+    useInvoiceManagement({ anchor: currentPurchase, rows: detailPurchases });
 
   const {
     materialModalOpen,
