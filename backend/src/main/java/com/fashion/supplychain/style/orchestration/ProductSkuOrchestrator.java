@@ -530,6 +530,7 @@ public class ProductSkuOrchestrator {
         if (style == null) {
             throw new IllegalArgumentException("款式不存在: " + styleId);
         }
+        TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
         Long tenantId = UserContext.tenantId();
         int updatedCount = 0;
         for (java.util.Map.Entry<String, String> entry : colorImageMap.entrySet()) {

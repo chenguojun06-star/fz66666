@@ -4744,3 +4744,22 @@ chip 可见人群对齐，否则"看得到点不进"。
 - 真实缺口：自研 6 件套（db-query/flyway/test-runner/memory-bank/change-impact/anti-pattern + Serena）配置与依赖齐备（`.trae/mcp.json`）但本会话仅 db-query-mcp 挂载 → 需用户在 Trae MCP 面板确认启用后重启会话
 - **db-query-mcp 实测故障**：`mcp_readonly` 账号在容器重建后连接被拒（`Access denied ... using password: YES`，密码对不上），`MCP_DB_PASSWORD` 也未设置 → 待办：重建 mcp_readonly 账号或重配密码；另有对系统表 SQL 的 "SELECT INTO" 误报拒查
 - 本会话全程按 P0 #23 降级规则用原生命令（mvn compile / docker exec mysql）并逐次告知
+
+## D-886 上架/采购/供应商/SKU 五项体验修复批次（2026-10-27）
+
+**背景**：用户实测反馈 5 个问题，主修复提交 `999336be1`（并行会话完成），本会话逐项复核并补租户断言后推送。
+
+**修复内容**：
+1. **上传 404**：`StyleSkuColorImages` 仍有两处裸 `/upload`（拼成 `/api/upload`）→ 改为后端真实路由 `/common/upload`。
+2. **供应商联系方式**：新增 `stores/supplierDirectoryStore`（`GET /system/factory/list` 租户内目录，id/名称双索引）+ `SupplierNameTooltip` 改蓝色可点、Popover 展示联系人/电话/地址；全站 48 处引用一次生效。目录按 supplierId 精确回查，找不到再按名称兜底。
+3. **采购批量断链**（两个根因）：
+   - 批量菜单缺「登记到货」→ 新增 `POST /production/material/inbound/batch-confirm-arrival` + `MaterialInboundBatchOrchestrator`（跨 Bean 调用保证逐条独立事务）；
+   - 批量领取后主按钮被禁用导致 Dropdown 打不开 → 改为只要还有任一可执行批量动作，主按钮保持可点；
+   - `MaterialTable` 数据刷新后把选中行替换为新数据同 id 行，避免按旧状态判定；
+   - 列表页/物料详情/订单采购节点/采购弹窗详情 4 入口统一接入 `useBatchArrival`。
+4. **二次工艺文案**：空阶段不再显示「未配置」，改为「无二次工艺」；款式页签空表文案同步。
+5. **SKU 颜色图片重复上传**：新增「同步颜色图片」按钮 + 行内同步，复用既有 `/style/sku/color-images` 接口，只写差异（源有图且目标缺失/不一致才更新，不清空）。
+
+**复核修正**：`ProductSkuOrchestrator.updateSkuColorImages` 补 `TenantAssert.assertBelongsToCurrentTenant`——原实现只按 tenant_id 过滤更新，但 selectById 查款式未做归属校验（IDOR 风险）。
+
+**验证**：前端 `tsc --noEmit` 0 错误；`eslint src` 0 error（20 条存量 warning）；`vitest run` 74 文件 / 849 用例全过；后端 `mvn -DskipTests compile` 通过。
