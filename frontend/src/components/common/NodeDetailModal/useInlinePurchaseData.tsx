@@ -289,6 +289,7 @@ const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
     sections: computed.sections,
     displayData: computed.displayData,
     loadData,
+    user,
     navigate,
     ...editActions,
     setMaterialModalOpen,

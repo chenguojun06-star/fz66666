@@ -27,14 +27,13 @@ export function buildFactoryColumns({
           <Space size={4} style={{ flexWrap: 'nowrap' }}>
             <FactoryTypeTag factoryType={factoryType} />
             {/* D-327：工厂名加胶囊外框，不再跟前面的类型标签形成"一裸一框"的落差 */}
-            <span style={{ ...CELL_CHIP_STYLE, cursor: 'pointer' }}>
+            <span style={{ ...CELL_CHIP_STYLE }}>
               <SupplierNameTooltip
                 name={v}
+                supplierId={record.factoryId}
                 contactPerson={record.factoryContactPerson}
                 contactPhone={record.factoryContactPhone}
                 label="工厂"
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
               />
             </span>
             {bizType && (

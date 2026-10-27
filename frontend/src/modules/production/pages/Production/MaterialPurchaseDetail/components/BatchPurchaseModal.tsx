@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Form, InputNumber } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { formatMaterialQuantity } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 
@@ -15,6 +16,10 @@ export interface BatchPurchaseItem {
   unit?: string;
   unitPrice?: number;
   supplierName?: string;
+  /** 供应商 id（t_factory.id）：用于按 id 精确回查联系人/电话/地址 */
+  supplierId?: string;
+  supplierContactPerson?: string;
+  supplierContactPhone?: string;
   /** 需求（默认采购）数量 */
   requiredQty: number;
 }
@@ -97,7 +102,14 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
       dataIndex: 'supplierName',
       width: 130,
       ellipsis: true,
-      render: (v: string) => v || '-',
+      render: (_: string, r: BatchPurchaseItem) => (
+        <SupplierNameTooltip
+          name={r.supplierName}
+          supplierId={r.supplierId}
+          contactPerson={r.supplierContactPerson}
+          contactPhone={r.supplierContactPhone}
+        />
+      ),
     },
     {
       title: '需求数量',

@@ -106,7 +106,9 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     const formData = new FormData();
     formData.append('file', file);
     formData.append('category', 'style-color-image');
-    const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
+    // D-360fix：后端通用上传是 /api/common/upload（CommonController），
+    // 这里原来写 '/upload' → 拼成 /api/upload → 生产 404
+    const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
     if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
     return res.data;
   }, []);
@@ -138,7 +140,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     formData.append('category', 'style-color-image');
 
     try {
-      const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
+      const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
       if (res.code === 200) {
         const imageUrl = res.data;
         const nextMap: Record<string, string> = {};

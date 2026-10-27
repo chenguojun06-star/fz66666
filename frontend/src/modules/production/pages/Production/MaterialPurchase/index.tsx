@@ -20,6 +20,7 @@ import { buildStatCards } from './statCardsConfig';
 import TitleExtraTooltip from './TitleExtraTooltip';
 import PurchaseModals from './PurchaseModals';
 import { getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { useBatchArrival } from '@/components/common/purchase/useBatchArrival';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { usePersistentTab } from '@/hooks/usePersistentTab';
 
@@ -237,6 +238,13 @@ const MaterialPurchase: React.FC = () => {
     openReturnConfirm(targets);
   }, [isOrderFrozen, openReturnConfirm]);
 
+  // 列表页批量登记到货：与单行「登记到货」同口径，弹窗与提交逻辑收在公共 Hook 里
+  const { openBatchArrival } = useBatchArrival<MaterialPurchaseType>({
+    user,
+    filterRow: (r) => !isOrderFrozen(r),
+    onSuccess: fetchMaterialPurchaseList,
+  });
+
   // 列表页批量确认完成：与详情页共用 ConfirmCompleteModal（物料去向选择）
   const handleBatchCompleteRows = useCallback((records: MaterialPurchaseType[]) => {
     const targets = records.filter((r) => !isOrderFrozen(r));
@@ -383,6 +391,7 @@ const MaterialPurchase: React.FC = () => {
                       onOpenDetail={openDetailPage}
                       onBatchAddToCart={handleBatchAddToCart}
                       onBatchReceive={handleBatchReceiveRows}
+                      onBatchArrival={openBatchArrival}
                       onBatchReturn={handleBatchReturnRows}
                       onBatchComplete={handleBatchCompleteRows}
                     />

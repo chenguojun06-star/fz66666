@@ -2147,3 +2147,33 @@ sample/scan-action 与 scan-result 的仓库 chip 超 N 项才有搜索。
 - 判断「页面是否懒加载」不能只看 App.tsx 的 import 形式，必须看 **barrel（modules/*/index.tsx）的真实导出**。
 - `tsc --noEmit` 通过 ≠ 运行时正确（本次 tsc 全绿但运行时全站崩），P0 必须实机验证。
 - 复现方式：本地 `npm run build` 后开 dev/preview，任何走 `lazyPage` 二次包裹的路由都会立刻 #306。
+
+## 2026-10-27 用户反馈 5 个问题批量修复（D-886）
+
+### 1) 生产上传 404（已修）
+- 现象：`POST https://www.webyszl.cn/api/upload` 404。
+- 根因：`StyleSkuColorImages.tsx` 调 `api.post('/upload')` → 拼成 `/api/upload`；后端真实路由是 `/api/common/upload`。
+- 修复：两处改为 `/common/upload`。
+
+### 2) 供应商要蓝色可点击看地址/联系方式（已完成）
+- 新建 `stores/supplierDirectoryStore.ts`（单一数据源）+ 改造 `components/common/SupplierNameTooltip.tsx`（23 文件 / 48 处引用的唯一杠杆点）→ 一次改造全站生效：供应商名蓝色可点，Popover 展示地址/联系人/电话。
+
+### 3) 采购批量领取后无后续批量动作（已完成，根因 2 处）
+- 根因 A：批量菜单只有 3 项（批量领取/回料确认/确认完成），**没有「登记到货」**，但回料/完成又都要求"先登记到货" → 死循环。
+- 根因 B：批量操作后列表刷新，但 `MaterialTable` 的 `selectedRows` 仍是操作前旧对象（仍 pending），菜单按旧状态判定 → 即使补了入口也点不动。
+- 修复：
+  - 后端新增 `POST /api/production/material/inbound/batch-confirm-arrival` + `MaterialInboundBatchOrchestrator`（独立 Bean 循环调 `confirmArrivalAndInbound`，逐条独立事务，单条失败不回滚其他条，返回 `{successCount,failCount,errors[]}`）。
+  - 前端 `PurchaseActionBar` 扩展 `BatchActionKey` 加 `arrivalRegister` + `isBatchArrivalRegistrableRow`（口径对齐单行的 received/partial/partial_arrival + 未回料确认 + 未到齐）。
+  - 新增公共 Hook `components/common/purchase/useBatchArrival.tsx`（弹窗+提交），在 4 个入口接线：列表页 `SelectedRowsBar`、`MaterialPurchaseDetail`、`InlinePurchasePanel`、`PurchaseDetailView`。
+  - `MaterialTable` 在 `dataSource` 变化时把选中行替换成同 id 的新行对象，保证批量领取后状态即时刷新。
+- 验证：`npx tsc --noEmit` EXIT=0；`mvn compile` 成功。
+
+### 4) 二次工艺空阶段文案误导（已修）
+- `StageTabs` 空阶段标记：`secondary` 由「未配置」改为「无二次工艺」。
+- `SampleProcessList` 空阶段 Alert：二次工艺显示「该款式无二次工艺」+ 说明（不影响车缝/尾部流转）。
+- `StyleSecondaryProcessTab` 空数据文案：已标记无二次工艺时显示「该款式无二次工艺」。
+
+### 5) SKU 商品编码图片要能同步颜色图片（已完成）
+- 复用既有后端三接口（未新增接口）：`GET /style/attachment/list`、`GET /style/sku/color-images/{styleNo}`、`PUT /style/sku/color-images/{styleId}`。
+- 新增 `colorImageSync.ts`（纯函数 + `diffColorImages` 只写差异）/ `useSkuColorImageSync.ts`（Hook）/ `SkuColorImageCell.tsx`（单元格同步按钮）；`SkuTable` 图片列接入；`StyleSkuTab` 工具栏加「同步颜色图片」。
+

@@ -14,6 +14,14 @@ export interface StageTabsProps {
   onTabChange: (key: string) => void;
 }
 
+/**
+ * 空阶段文案。二次工艺是"可没有"的工序（点了无二次工艺就是真的没有），
+ * 不能显示"未配置"——那是"该配没配"的语气，会让用户以为漏配了资料。
+ */
+const EMPTY_STAGE_LABELS: Record<string, string> = {
+  secondary: '无二次工艺',
+};
+
 const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange }) => {
   const renderStageTab = (stage: ProcessStageProgress) => {
     const isActive = activeTab === stage.key;
@@ -42,7 +50,9 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
         {isDone && <CheckCircleOutlined style={{ fontSize: 12 }} />}
         {stage.label}
         {isEmptyStage && (
-          <span className="u-fs-10 u-fw-400" style={{ color: 'var(--color-text-quaternary)' }}>未配置</span>
+          <span className="u-fs-10 u-fw-400" style={{ color: 'var(--color-text-quaternary)' }}>
+            {EMPTY_STAGE_LABELS[stage.key] || '未配置'}
+          </span>
         )}
         {stage.subProcesses.length > 0 && (
           <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: 2, fontSize: 11, padding: '0 4px', lineHeight: '16px' }}>

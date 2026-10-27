@@ -8,6 +8,7 @@ import api from '@/utils/api';
 import { buildStockMap } from '@/components/common/NodeDetailModal/utils';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { PurchaseActionBar, PurchaseEditActions, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { useBatchArrival } from '@/components/common/purchase/useBatchArrival';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocDrawer from '../MaterialPurchase/components/PurchaseDocDrawer';
 import { useUser } from '@/utils/AuthContext';
@@ -84,8 +85,15 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   // D-664b：批量按钮禁用原因统一动态生成（全入口共用 getBatchActionDisabledReason）。
   // 禁用时显示真实原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不再写死误导文案。
   const receiveReason = getBatchActionDisabledReason(purchaseList, 'receive', isPurchaseRowComplete);
+  const arrivalReason = getBatchActionDisabledReason(purchaseList, 'arrivalRegister');
   const returnReason = getBatchActionDisabledReason(purchaseList, 'batchReturn');
   const confirmCompleteReason = getBatchActionDisabledReason(purchaseList, 'confirmComplete');
+
+  // 批量登记到货：补齐「批量领取后没有后续批量动作」的断链，与列表页共用同一 Hook
+  const { openBatchArrival } = useBatchArrival<MaterialPurchase>({
+    user,
+    onSuccess: () => { loadData(); },
+  });
 
   const [docDrawerOpen, setDocDrawerOpen] = useState(false);
   // D-360h：确认完成时选择物料去向（入库到仓库/直接使用/暂不登记）
@@ -137,6 +145,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       unit: p.unit,
       unitPrice: p.unitPrice != null ? Number(p.unitPrice) : undefined,
       supplierName: p.supplierName,
+      supplierId: p.supplierId,
+      supplierContactPerson: p.supplierContactPerson,
+      supplierContactPhone: p.supplierContactPhone,
       requiredQty: Number(p.purchaseQuantity) || 0,
     })));
     setBatchPurchaseOpen(true);
@@ -366,6 +377,11 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   // D-664：原因直接显示在禁用菜单项里（antd 禁用项悬停 tooltip 不生效）
                   title: receiveReason || '打开可编辑确认弹窗，逐行核对数量后领取',
                   onClick: onBatchPurchase,
+                }}
+                arrivalRegister={{
+                  disabled: !!arrivalReason,
+                  title: arrivalReason,
+                  onClick: () => openBatchArrival(purchaseList),
                 }}
                 batchReturn={{
                   disabled: batchReturnLoading || !!returnReason,

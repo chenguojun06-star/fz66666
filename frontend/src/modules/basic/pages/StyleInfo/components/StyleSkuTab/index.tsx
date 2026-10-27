@@ -3,7 +3,7 @@ import {
   Modal, Switch, Button, Input, Space, Tooltip, Dropdown, Form, Alert, Badge, App,
 } from 'antd';
 import {
-  SyncOutlined, PlusOutlined, SaveOutlined, CloudUploadOutlined,
+  SyncOutlined, PlusOutlined, SaveOutlined, CloudUploadOutlined, CloudSyncOutlined,
   EditOutlined, RollbackOutlined, PictureOutlined,
   UndoOutlined, CheckCircleFilled,
 } from '@ant-design/icons';
@@ -11,6 +11,7 @@ import SmallModal from '@/components/common/SmallModal';
 import StyleSkuColorImages from '../StyleSkuColorImages';
 import type { StyleSkuTabProps } from './types';
 import { useStyleSkuTabData } from './useStyleSkuTabData';
+import { useSkuColorImageSync } from './useSkuColorImageSync';
 import SkuTable from './SkuTable';
 import type { ProductSku } from '@/types/style';
 import { getRowKey } from './helpers';
@@ -56,6 +57,14 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     getCellValue,
     onRefresh,
   } = useStyleSkuTabData(props);
+
+  // 颜色图片同步：开发样衣颜色图 → 商品编码行图片（无需重复上传）
+  const {
+    syncing: colorImageSyncing,
+    syncingColor: syncingColorImage,
+    syncAll: syncAllColorImages,
+    syncOne: syncOneColorImage,
+  } = useSkuColorImageSync({ styleId, styleNo, onRefresh: fetchSkus });
 
   // 批量选中的行 keys
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -207,6 +216,20 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
               颜色图片
             </Button>
           </Tooltip>
+          <Tooltip
+            title={isEditing
+              ? '编辑中请先保存或退回，再同步颜色图片'
+              : '把「开发样衣颜色图片」同步到下方商品编码，无需重复上传'}
+          >
+            <Button
+              icon={<CloudSyncOutlined />}
+              onClick={syncAllColorImages}
+              loading={colorImageSyncing}
+              disabled={isEditing}
+            >
+              同步颜色图片
+            </Button>
+          </Tooltip>
           <Tooltip title="同步到大货订单的商品编码/SKC/价格">
             <Button icon={<CloudUploadOutlined />} onClick={handleSyncToProduction} loading={syncing}>
               同步到大货
@@ -344,6 +367,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         onDeleteRow={handleDeleteRow}
         onReorder={handleReorder}
         onSelectedRowKeysChange={(keys) => setSelectedRowKeys(keys)}
+        onSyncColorImage={isEditing ? undefined : syncOneColorImage}
+        syncingColor={syncingColorImage}
       />
 
       {/* ─── 第五层：底部警示条（橙色Alert，对应图片底部「有 X 个SKU的成本价为空」） ─── */}

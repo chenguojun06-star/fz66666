@@ -1,13 +1,13 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Popover, Image, Button } from 'antd';
+import { Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Popover, Button } from 'antd';
 import type { TableRowSelection } from 'antd/es/table/interface';
-import { BarcodeOutlined, PictureOutlined, HolderOutlined } from '@ant-design/icons';
+import { BarcodeOutlined, HolderOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatMoney } from '@/utils/format';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import BarcodeSvg from '@/components/common/BarcodeSvg';
 import type { ProductSku } from '@/types/style';
 import { getRowKey } from './helpers';
+import SkuColorImageCell from './SkuColorImageCell';
 
 interface SkuTableProps {
   skus: ProductSku[];
@@ -23,6 +23,10 @@ interface SkuTableProps {
   onReorder?: (fromKey: number | string, toKey: number | string) => void;
   /** 批量选中变化回调 */
   onSelectedRowKeysChange?: (keys: React.Key[]) => void;
+  /** 从开发样衣同步该颜色的图片到本行（无图行才显示入口） */
+  onSyncColorImage?: (color: string) => void;
+  /** 正在同步的颜色（用于行内 loading 态） */
+  syncingColor?: string | null;
 }
 
 /** 带红色必填星号的列标题（统一格式：*字段名 + Tooltip 解释） */
@@ -46,6 +50,8 @@ const SkuTable: React.FC<SkuTableProps> = ({
   onDeleteRow,
   onReorder,
   onSelectedRowKeysChange,
+  onSyncColorImage,
+  syncingColor,
 }) => {
   // HTML5 原生行拖拽：按住把手 mousedown 后才置 draggable，避免干扰输入框内文本选择
   const [dragArmed, setDragArmed] = useState<number | string | null>(null);
@@ -151,34 +157,18 @@ const SkuTable: React.FC<SkuTableProps> = ({
         );
       },
     },
-    // ⑤ 图片（辅助视觉确认，靠在编码后）
+    // ⑤ 图片（辅助视觉确认，靠在编码后；无图时给「从开发样衣同步」入口）
     {
       title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 56,
-      render: (_: string, record: ProductSku) => {
-        if (record.skuColorImage) {
-          const fullUrl = getFullAuthedFileUrl(record.skuColorImage);
-          return (
-            <Image
-              src={fullUrl}
-              alt="商品图片"
-              width={32}
-              height={32}
-              style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer', background: 'var(--color-bg-subtle)' }}
-              preview={{ mask: <span className="u-fs-10">查看</span> }}
-            />
-          );
-        }
-        return (
-          <div style={{
-            width: 32, height: 32,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--color-bg-subtle)',
-            borderRadius: 4, color: 'var(--color-text-quaternary)',
-          }}>
-            <PictureOutlined style={{ fontSize: 15 }} />
-          </div>
-        );
-      },
+      render: (_: string, record: ProductSku) => (
+        <SkuColorImageCell
+          imageUrl={record.skuColorImage}
+          color={record.color}
+          canSync={!!onSyncColorImage}
+          syncing={syncingColor === record.color}
+          onSync={onSyncColorImage}
+        />
+      ),
     },
     // ⑥ 成本价（必填红星：保存后会反向同步到款式基础资料价格，为空有覆盖风险）
     {

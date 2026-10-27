@@ -113,7 +113,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
                     {
                       title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true,
                       render: (_: unknown, record: Record<string, unknown>) => (
-                        <SupplierNameTooltip name={record.supplierName} contactPerson={record.supplierContactPerson} contactPhone={record.supplierContactPhone} />
+                        <SupplierNameTooltip name={record.supplierName} supplierId={record.supplierId} contactPerson={record.supplierContactPerson} contactPhone={record.supplierContactPhone} />
                       ),
                     },
                     { title: '单价', dataIndex: 'unitPrice', width: 90, render: (value: unknown) => formatMoney((value as number | string) || 0) },

@@ -4,6 +4,8 @@ import { RollbackOutlined, ExclamationCircleOutlined, FileImageOutlined } from '
 import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { PurchaseActionBar, PurchaseEditActions, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { useBatchArrival } from '@/components/common/purchase/useBatchArrival';
+import { useUser } from '@/utils/AuthContext';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, getOrderQtyTotal } from '../../utils';
@@ -108,8 +110,17 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   // D-664b：批量按钮禁用原因统一动态生成（全入口共用 getBatchActionDisabledReason），
   // 禁用时显示真实原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不再写死误导文案
   const receiveReason = getBatchActionDisabledReason(detailPurchases, 'receive');
+  const arrivalReason = getBatchActionDisabledReason(detailPurchases, 'arrivalRegister');
   const returnReason = getBatchActionDisabledReason(detailPurchases, 'batchReturn');
   const confirmCompleteReason = getBatchActionDisabledReason(detailPurchases, 'confirmComplete');
+
+  // 批量登记到货：与列表页/物料详情页共用同一 Hook，补齐批量领取后的后续批量动作
+  const { user } = useUser();
+  const { openBatchArrival } = useBatchArrival<MaterialPurchaseType>({
+    user,
+    filterRow: (r) => !isOrderFrozenForRecord(r as unknown as Record<string, unknown>),
+    onSuccess: onRefresh,
+  });
 
   // D-586：库存补货/手动来源的采购行没有订单与款号，详情按订单/款号聚合必然是空集，
   // 之前误报「尚未创建面辅料信息（0项）」让用户以为单子坏了。改为直接展示该行自身。
@@ -183,6 +194,11 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 disabled: !!receiveReason || !data.canProcure,
                 title: receiveReason || (!data.canProcure ? '物料信息不全（缺编码/名称/单位）' : undefined),
                 onClick: onReceiveAll,
+              }}
+              arrivalRegister={{
+                disabled: !!arrivalReason,
+                title: arrivalReason,
+                onClick: () => openBatchArrival(detailPurchases),
               }}
               batchReturn={{
                 disabled: !!returnReason,

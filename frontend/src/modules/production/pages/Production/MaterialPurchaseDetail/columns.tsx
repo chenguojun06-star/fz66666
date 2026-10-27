@@ -267,7 +267,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
     },
     {
       title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: colWidth || 140, ellipsis: true,
-      render: (_: unknown, r: MaterialPurchase) => <SupplierNameTooltip name={r.supplierName} contactPerson={(r as any).supplierContactPerson} contactPhone={(r as any).supplierContactPhone} />,
+      render: (_: unknown, r: MaterialPurchase) => <SupplierNameTooltip name={r.supplierName} supplierId={r.supplierId} contactPerson={r.supplierContactPerson} contactPhone={r.supplierContactPhone} />,
     },
     { title: '采购日期', dataIndex: 'receivedTime', key: 'receivedTime', width: colWidth || 120, render: (v: string) => v ? formatDateTime(v) : '-' },
     // D-414：最新到货日期取 actualArrivalDate（每次到货回写的真实时间），

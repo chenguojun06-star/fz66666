@@ -150,15 +150,25 @@ export default function SampleProcessList({
         />
       ) : null}
 
-      {/* 当前阶段未配置子工序时提示去配置 */}
+      {/* 当前阶段无子工序时给出阶段级提示；二次工艺是"可没有"的工序，不能写成"未配置"以免误导 */}
       {currentStageEmpty ? (
-        <Alert
-          type="info"
-          showIcon
-          message={`「${currentStage?.label || '当前阶段'}」尚未配置子工序`}
-          description="该阶段未配置具体子工序，如需展示明细请在「款式工序配置」中为该阶段添加子工序。若该阶段无需子工序，可忽略此提示。"
-          style={{ marginBottom: 12 }}
-        />
+        currentStage?.key === 'secondary' ? (
+          <Alert
+            type="info"
+            showIcon
+            message="该款式无二次工艺"
+            description="已按无二次工艺处理，无需配置二次工艺子工序，不影响车缝/尾部正常流转。如需改为有二次工艺，请先在「二次工艺」页签重置后再配置。"
+            style={{ marginBottom: 12 }}
+          />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            message={`「${currentStage?.label || '当前阶段'}」尚未配置子工序`}
+            description="该阶段未配置具体子工序，如需展示明细请在「款式工序配置」中为该阶段添加子工序。若该阶段无需子工序，可忽略此提示。"
+            style={{ marginBottom: 12 }}
+          />
+        )
       ) : null}
 
       {/* 当前阶段未配置子工序时隐藏空表格，避免显示"暂无数据"造成误解 */}

@@ -8,6 +8,7 @@ import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import { safePrint } from '@/utils/safePrint';
 import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS, getBatchActionDisabledReason } from '@/components/common/purchase/PurchaseActionBar';
+import { useBatchArrival } from '@/components/common/purchase/useBatchArrival';
 import type { MaterialPurchase } from '@/types/production';
 import { InlinePurchasePanelProps, isConfirmCompleteAvailable } from './InlinePurchasePanel.helpers';
 import { isPurchaseRowComplete } from './utils';
@@ -87,6 +88,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     handleWarehousePick,
     handleQualityIssue,
     handleStartEdit,
+    user,
+    loadData,
   } = h;
 
   // D-366b：仓库/库位选择照抄「样衣入库」范式（Select + options + 空态提示）；
@@ -161,8 +164,15 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
 
   // D-664b：批量按钮禁用原因统一动态生成（全入口共用），禁用时显示真实原因，不再写死误导文案
   const receiveReason = getBatchActionDisabledReason(purchases, 'receive', isPurchaseRowComplete);
+  const arrivalReason = getBatchActionDisabledReason(purchases, 'arrivalRegister');
   const returnReason = getBatchActionDisabledReason(purchases, 'batchReturn');
   const confirmCompleteReason = getBatchActionDisabledReason(purchases, 'confirmComplete');
+
+  // 批量登记到货：与列表页/物料详情页共用同一 Hook（批量领取后的后续批量动作不再缺失）
+  const { openBatchArrival } = useBatchArrival<MaterialPurchase>({
+    user,
+    onSuccess: () => { loadData(); },
+  });
 
   return (
     <BrandLoading spinning={loading}>
@@ -222,6 +232,11 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                   // D-664：禁用原因显示在菜单项里（antd 禁用项悬停 tooltip 不生效）
                   title: receiveReason,
                   onClick: handleReceiveAll,
+                }}
+                arrivalRegister={{
+                  disabled: !!arrivalReason,
+                  title: arrivalReason,
+                  onClick: () => openBatchArrival(purchases),
                 }}
                 batchReturn={{
                   // D-368：按业务事实判定（已到货且未回料确认），不再用状态白名单

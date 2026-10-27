@@ -113,7 +113,9 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           dataSource={dataSource}
           rowKey="id"
           loading={loading}
-          emptyDescription="暂无数据"
+          emptyDescription={
+            secondaryCompletedTime && !loading ? '该款式无二次工艺' : '暂无数据'
+          }
           pagination={false}
           tableLayout={fitWidth ? 'auto' : undefined}
           scroll={fitWidth ? {} : { x: 1540 }}

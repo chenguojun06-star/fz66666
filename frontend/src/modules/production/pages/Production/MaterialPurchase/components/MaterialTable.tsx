@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Form } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -89,6 +89,7 @@ interface MaterialTableProps {
   onOpenDetail?: (styleNo: string, orderNo?: string) => void;
   onBatchAddToCart?: (records: MaterialPurchaseType[]) => void;
   onBatchReceive?: (records: MaterialPurchaseType[]) => void;
+  onBatchArrival?: (records: MaterialPurchaseType[]) => void;
   onBatchReturn?: (records: MaterialPurchaseType[]) => void;
   onBatchComplete?: (records: MaterialPurchaseType[]) => void;
 }
@@ -119,11 +120,25 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   onOpenDetail,
   onBatchAddToCart,
   onBatchReceive,
+  onBatchArrival,
   onBatchReturn,
   onBatchComplete,
 }) => {
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<MaterialPurchaseType[]>([]);
+
+  // 批量操作后列表会刷新，但 rowSelection 的回调只在用户重新勾选时触发，
+  // 选中行对象会停留在操作前的旧状态（如批量领取后仍是 pending），
+  // 导致批量菜单判定用旧状态 → 看起来"批量领取后没有后续批量操作"。
+  // 这里在数据刷新后把选中行替换为新数据里的同 id 行，保持选中不变、状态最新。
+  useEffect(() => {
+    setSelectedRows((prev) => {
+      if (!prev.length) return prev;
+      const byId = new Map(dataSource.map((r) => [String(r.id), r]));
+      const next = prev.map((r) => byId.get(String(r.id)) || r);
+      return next.some((r, i) => r !== prev[i]) ? next : prev;
+    });
+  }, [dataSource]);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
   const [arrivalForm] = Form.useForm();
@@ -208,6 +223,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         onClear={() => setSelectedRows([])}
         onBatchAddToCart={onBatchAddToCart}
         onBatchReceive={onBatchReceive}
+        onBatchArrival={onBatchArrival}
         onBatchReturn={onBatchReturn}
         onBatchComplete={onBatchComplete}
       />

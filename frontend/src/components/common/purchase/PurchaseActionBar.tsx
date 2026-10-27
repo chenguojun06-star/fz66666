@@ -69,6 +69,8 @@ interface PurchaseActionBarProps {
    * 批量领取/回料确认/确认完成三个批量动作集成进同一个悬停下拉（D-360b）。
    */
   receive?: PurchaseActionButtonState;
+  /** 批量登记到货（收进主按钮下拉；补齐「批量领取后无后续批量动作」的断链） */
+  arrivalRegister?: PurchaseActionButtonState;
   /** 批量回料确认（收进主按钮下拉） */
   batchReturn?: PurchaseActionButtonState;
   /** 确认回料完成（收进主按钮下拉） */
@@ -110,13 +112,14 @@ const withDisabledReason = (label: string, state?: PurchaseActionButtonState): R
 
 // ===================== D-664b：批量动作禁用原因（全入口唯一判定 + 动态文案） =====================
 
-export type BatchActionKey = 'receive' | 'batchReturn' | 'confirmComplete';
+export type BatchActionKey = 'receive' | 'arrivalRegister' | 'batchReturn' | 'confirmComplete';
 
 export interface BatchActionRow {
   id?: string | number;
   status?: string;
   returnConfirmed?: number | boolean | null;
   arrivedQuantity?: number | null;
+  purchaseQuantity?: number | null;
 }
 
 const normStatus = (s?: string) => String(s || '').trim().toLowerCase();
@@ -135,6 +138,22 @@ export const isBatchReturnableRow = (p: BatchActionRow): boolean =>
   normStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
   && Number(p.returnConfirmed || 0) !== 1
   && Number(p.arrivedQuantity || 0) > 0;
+
+/**
+ * 可「批量登记到货」= 与单行「登记到货」口径严格对齐（materialStatusActionColumns）：
+ * 已领取状态（received/partial/partial_arrival）、未回料确认、且尚未到齐。
+ * 未回料确认是必要条件：回料确认后不允许再追加到货，否则库存与对账口径会打架。
+ */
+export const isBatchArrivalRegistrableRow = (p: BatchActionRow): boolean => {
+  const s = normStatus(p.status);
+  if (!['received', 'partial', 'partial_arrival'].includes(s)) return false;
+  if (String(p.id ?? '').trim() === '') return false;
+  if (Number(p.returnConfirmed || 0) === 1) return false;
+  const purchase = Number(p.purchaseQuantity || 0);
+  const arrived = Number(p.arrivedQuantity || 0);
+  // 采购数量缺失时无法判定上限，保守放行（后端仍会校验不超采购量）
+  return purchase <= 0 || arrived < purchase;
+};
 
 /** D-368 可「确认完成」= 业务事实：非取消、未完成、已到货（不依赖状态白名单） */
 export const isConfirmCompleteRow = (p: BatchActionRow): boolean => {
@@ -170,6 +189,15 @@ export const getBatchActionDisabledReason = (
     return '没有待领取的物料';
   }
   if (!active.length) return '采购任务已取消';
+  if (action === 'arrivalRegister') {
+    if (rows.some(isBatchArrivalRegistrableRow)) return undefined;
+    if (active.every((p) => Number(p.returnConfirmed || 0) === 1)) return '已全部回料确认，无需再登记到货';
+    if (active.every((p) => Number(p.arrivedQuantity || 0) >= Number(p.purchaseQuantity || 0)
+      && Number(p.purchaseQuantity || 0) > 0)) {
+      return '已全部到齐，无需重复登记';
+    }
+    return '需先领取物料（批量领取后才可登记到货）';
+  }
   if (action === 'batchReturn') {
     if (rows.some(isBatchReturnableRow)) return undefined;
     if (active.every((p) => Number(p.returnConfirmed || 0) === 1)) return '已全部回料确认，无需重复';
@@ -189,6 +217,7 @@ export const getBatchActionDisabledReason = (
  */
 export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   receive,
+  arrivalRegister,
   batchReturn,
   confirmComplete,
   edit,
@@ -201,26 +230,42 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
 }) => {
   const batchMenuItems: MenuProps['items'] = [
     ...(receive ? [{ key: 'receive', label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receive), disabled: receive.disabled || receive.loading, onClick: receive.onClick }] : []),
+    ...(arrivalRegister ? [{ key: 'arrival-register', label: withDisabledReason(PURCHASE_ACTION_LABELS.arrivalRegister, arrivalRegister), disabled: arrivalRegister.disabled || arrivalRegister.loading, onClick: arrivalRegister.onClick }] : []),
     ...(batchReturn ? [{ key: 'batch-return', label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReturn, batchReturn), disabled: batchReturn.disabled || batchReturn.loading, onClick: batchReturn.onClick }] : []),
     ...(confirmComplete ? [{ key: 'confirm-complete', label: withDisabledReason(PURCHASE_ACTION_LABELS.confirmComplete, confirmComplete), disabled: confirmComplete.disabled || confirmComplete.loading, onClick: confirmComplete.onClick }] : []),
   ];
 
   return (
     <Space wrap size={8}>
-      {batchMenuItems.length > 0 && receive && (
-        <Dropdown menu={{ items: batchMenuItems }} trigger={['hover']}>
-          <Button
-            type="primary"
-            size={size}
-            disabled={receive.disabled}
-            loading={receive.loading}
-            title={receive.title}
-            onClick={receive.onClick}
-          >
-            {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />
-          </Button>
-        </Dropdown>
-      )}
+      {batchMenuItems.length > 0 && (() => {
+        // 关键：主按钮不能只看「批量领取」是否可用。
+        // 批量领取后 receive 必然禁用，若主按钮跟着禁用，Dropdown 触发器失效，
+        // 用户就再也打不开下拉 → 表现为"批量领取后没有后续批量操作"。
+        // 正确口径：只要还有任一批量动作可执行，主按钮就必须可点、可 hover 出菜单。
+        const canReceive = !!receive && !receive.disabled;
+        const hasOtherAction = [arrivalRegister, batchReturn, confirmComplete]
+          .some((a) => !!a && !a.disabled);
+        const mainDisabled = !canReceive && !hasOtherAction;
+        const mainTitle = canReceive
+          ? receive?.title
+          : hasOtherAction
+            ? `批量领取不可用：${receive?.title || '所选记录无需领取'}，可从下拉选择其他批量操作`
+            : receive?.title;
+        return (
+          <Dropdown menu={{ items: batchMenuItems }} trigger={['hover']}>
+            <Button
+              type="primary"
+              size={size}
+              disabled={mainDisabled}
+              loading={receive?.loading}
+              title={mainTitle}
+              onClick={canReceive ? receive?.onClick : undefined}
+            >
+              {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />
+            </Button>
+          </Dropdown>
+        );
+      })()}
       {edit && (
         <Button
           size={size}

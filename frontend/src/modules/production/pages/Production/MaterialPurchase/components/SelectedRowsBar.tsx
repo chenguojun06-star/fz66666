@@ -10,6 +10,7 @@ interface SelectedRowsBarProps {
   onClear: () => void;
   onBatchAddToCart?: (records: MaterialPurchaseType[]) => void;
   onBatchReceive?: (records: MaterialPurchaseType[]) => void;
+  onBatchArrival?: (records: MaterialPurchaseType[]) => void;
   onBatchReturn?: (records: MaterialPurchaseType[]) => void;
   onBatchComplete?: (records: MaterialPurchaseType[]) => void;
 }
@@ -36,16 +37,18 @@ const withDisabledReason = (label: string, disabled: boolean, reason?: string): 
  * 当 selectedRows 为空时返回 null。
  */
 const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
-  selectedRows, onClear, onBatchAddToCart, onBatchReceive, onBatchReturn, onBatchComplete,
+  selectedRows, onClear, onBatchAddToCart, onBatchReceive, onBatchArrival, onBatchReturn, onBatchComplete,
 }) => {
   if (selectedRows.length === 0) return null;
 
   // D-664b：禁用口径与原因全入口统一（getBatchActionDisabledReason，D-368 业务事实），
   // 禁用时按真实状态动态生成原因（已全部回料确认 / 已全部到货完成 / 需先登记到货…），不写死误导文案
   const receiveReason = getBatchActionDisabledReason(selectedRows, 'receive');
+  const arrivalReason = getBatchActionDisabledReason(selectedRows, 'arrivalRegister');
   const returnReason = getBatchActionDisabledReason(selectedRows, 'batchReturn');
   const completeReason = getBatchActionDisabledReason(selectedRows, 'confirmComplete');
   const receiveDisabled = !!receiveReason;
+  const arrivalDisabled = !!arrivalReason;
   const returnDisabled = !!returnReason;
   const completeDisabled = !!completeReason;
 
@@ -55,6 +58,12 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
       label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receiveDisabled, receiveReason),
       disabled: receiveDisabled,
       onClick: () => onBatchReceive?.(selectedRows),
+    },
+    {
+      key: 'arrival-register',
+      label: withDisabledReason(PURCHASE_ACTION_LABELS.arrivalRegister, arrivalDisabled, arrivalReason),
+      disabled: arrivalDisabled,
+      onClick: () => onBatchArrival?.(selectedRows),
     },
     {
       key: 'batch-return',
@@ -69,6 +78,19 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
       onClick: () => onBatchComplete?.(selectedRows),
     },
   ];
+
+  // 与 PurchaseActionBar 同口径：批量领取后 receive 必然禁用，
+  // 主按钮若跟着禁用，Dropdown 触发器失效 → 打不开下拉 → 看不出还有登记到货/回料/确认完成。
+  const canReceive = !receiveDisabled;
+  const hasOtherAction = (!!onBatchArrival && !arrivalDisabled)
+    || (!!onBatchReturn && !returnDisabled)
+    || (!!onBatchComplete && !completeDisabled);
+  const mainDisabled = !canReceive && !hasOtherAction;
+  const mainTitle = canReceive
+    ? receiveReason
+    : hasOtherAction
+      ? `批量领取不可用：${receiveReason || '所选记录无需领取'}，可从下拉选择其他批量操作`
+      : receiveReason;
 
   return (
     <div style={{
@@ -89,9 +111,9 @@ const SelectedRowsBar: React.FC<SelectedRowsBarProps> = ({
           <Button
             type="primary"
             size="small"
-            disabled={receiveDisabled}
-            title={receiveReason}
-            onClick={() => onBatchReceive?.(selectedRows)}
+            disabled={mainDisabled}
+            title={mainTitle}
+            onClick={canReceive ? () => onBatchReceive?.(selectedRows) : undefined}
           >
             {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />
           </Button>

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialInbound;
+import com.fashion.supplychain.production.orchestration.MaterialInboundBatchOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialInboundOrchestrator;
 import com.fashion.supplychain.production.service.MaterialInboundService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,6 +33,9 @@ public class MaterialInboundController {
 
     @Autowired
     private MaterialInboundOrchestrator materialInboundOrchestrator;
+
+    @Autowired
+    private MaterialInboundBatchOrchestrator materialInboundBatchOrchestrator;
 
     /**
      * 分页查询入库记录
@@ -71,6 +78,51 @@ public class MaterialInboundController {
             return Result.success(result);
         } catch (Exception e) {
             log.error("采购到货入库失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量登记到货（列表页批量菜单入口）。
+     * 逐条独立事务：单条失败只回滚该条，返回 successCount / failCount / errors 汇总。
+     */
+    @PostMapping("/batch-confirm-arrival")
+    public Result<?> batchConfirmArrival(@RequestBody Map<String, Object> params) {
+        try {
+            Object rawItems = params.get("items");
+            if (!(rawItems instanceof List<?> rawList) || rawList.isEmpty()) {
+                return Result.fail("没有可登记到货的采购任务");
+            }
+            List<Map<String, Object>> items = new ArrayList<>();
+            for (Object raw : rawList) {
+                if (!(raw instanceof Map<?, ?> row)) continue;
+                String purchaseId = row.get("purchaseId") == null ? null : String.valueOf(row.get("purchaseId")).trim();
+                BigDecimal arrivedQuantity;
+                try {
+                    arrivedQuantity = parseQuantity(row.get("arrivedQuantity"), "到货数量");
+                } catch (IllegalArgumentException ex) {
+                    // 单行数量非法只跳过该行，不影响其余条目（前端已做必填/数值校验）
+                    log.warn("跳过非法到货数量: purchaseId={}, reason={}", purchaseId, ex.getMessage());
+                    continue;
+                }
+                if (purchaseId == null || purchaseId.isEmpty() || arrivedQuantity == null) continue;
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("purchaseId", purchaseId);
+                item.put("arrivedQuantity", arrivedQuantity);
+                items.add(item);
+            }
+            if (items.isEmpty()) {
+                return Result.fail("没有可登记到货的采购任务");
+            }
+            Map<String, Object> result = materialInboundBatchOrchestrator.batchConfirmArrival(
+                    items,
+                    (String) params.get("warehouseLocation"),
+                    (String) params.get("operatorId"),
+                    (String) params.get("operatorName"),
+                    (String) params.get("remark"));
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("批量登记到货失败", e);
             return Result.fail(e.getMessage());
         }
     }
