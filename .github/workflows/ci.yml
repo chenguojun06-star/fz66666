@@ -80,13 +80,8 @@ jobs:
     - name: 禁止 React.lazy 二次包裹（D-885 全站白屏事故门禁）
       run: python3 scripts/check-lazy-wrapper.py
 
-    # D-885：TDZ 高危前向引用守护。2026-10-20 顾客点「报价单打印」白屏，
-    # 根因是 .map() 回调（同步执行）引用了同作用域更晚才声明的 const，
-    # 抛 ReferenceError: Cannot access 'y' before initialization。
-    # ESLint 现成的 no-use-before-define 会把 166 处安全形态全报出来，
-    # 噪音淹没真问题；本脚本只报「同步执行位置上的前向引用」这一类。
-    - name: TDZ 高危前向引用检查（同步位置引用后声明的 let/const）
-      run: node scripts/check-tdz-sync.cjs
+    # 注：TDZ 高危前向引用检查依赖 frontend/node_modules 里的 eslint/@typescript-eslint/parser，
+    # 本 job 不装前端依赖，故该步骤放在 frontend-lint job（装完依赖后执行）。
 
     - name: 原生 SQL 列名核对（拿生产库真实列快照比对）
       run: |
@@ -312,6 +307,16 @@ jobs:
     - name: TypeScript 类型检查
       working-directory: ./frontend
       run: npx tsc --noEmit
+
+    # D-885：TDZ 高危前向引用守护。2026-10-20 顾客点「报价单打印」白屏，
+    # 根因是 .map() 回调（同步执行）引用了同作用域更晚才声明的 const，
+    # 抛 ReferenceError: Cannot access 'y' before initialization。
+    # ESLint 现成的 no-use-before-define 会把 166 处安全形态全报出来，
+    # 噪音淹没真问题；本脚本只报「同步执行位置上的前向引用」这一类。
+    # 放在本 job：脚本通过 frontendRequire 加载 eslint/@typescript-eslint/parser，
+    # 依赖上面的「安装依赖」步骤（quality-gate 没装前端依赖，曾因找不到 eslint 直接红）。
+    - name: TDZ 高危前向引用检查（同步位置引用后声明的 let/const）
+      run: node scripts/check-tdz-sync.cjs
 
     # D-474：前端测试已入库（原被 .gitignore 排除，447 个测试 CI 完全没跑），
     # 这里作为门禁执行，防止断言悄悄过期（本次就发现 2 个过期断言）。

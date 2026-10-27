@@ -4763,3 +4763,19 @@ chip 可见人群对齐，否则"看得到点不进"。
 **复核修正**：`ProductSkuOrchestrator.updateSkuColorImages` 补 `TenantAssert.assertBelongsToCurrentTenant`——原实现只按 tenant_id 过滤更新，但 selectById 查款式未做归属校验（IDOR 风险）。
 
 **验证**：前端 `tsc --noEmit` 0 错误；`eslint src` 0 error（20 条存量 warning）；`vitest run` 74 文件 / 849 用例全过；后端 `mvn -DskipTests compile` 通过。
+
+## D-887 CI 质量门禁不再空转（TDZ 步骤迁到有前端依赖的 job）+ 部署分叉复位（2026-10-27）
+
+**背景**：D-886 推送后 CI 连续两次红在「TDZ 高危前向引用检查」：`Error: Cannot find module 'eslint'`。
+根因：`scripts/check-tdz-sync.cjs` 通过 `frontendRequire` 加载 `eslint` / `@typescript-eslint/parser`，
+而 quality-gate job 只装了 Python、不装前端依赖 —— 步骤一上线（D-885）就红，且门禁实际从未执行。
+
+**修复**：把 TDZ 步骤从 `quality-gate` 整体迁到 `frontend-lint`（在 `npm install` + `tsc` 之后执行），
+quality-gate 只留 Python/Node 原生脚本；门禁能力不降级，也不再假红。
+
+**部署分叉**：同一时段生产服务器 `/opt/fz66666` 存在本地提交 `ca337c80`（D-876 版 lazy 门禁），
+与 origin 的 `d01fb6b42`（D-885 版，同一改动、编号纠正）分叉，`git pull --ff-only` 每 2 分钟失败一次，
+线上因此停留在 `ca337c80`。核实两提交差异仅 D 编号与注释（ca337c80 为旧编号），无独有代码，
+将服务器复位到共同父提交 `2df5b1820` 后由 autodeploy 正常 ff 到 `b5e9b4f18` 并重建。
+
+**教训**：门禁步骤新增时必须在本 job 内跑通依赖；「CI 红但部署照跑」会掩盖线上不更新的真问题。
