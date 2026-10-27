@@ -955,6 +955,13 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-28 批量按钮收敛：删除 SelectedRowsBar 第二套实现（D-888，P0 #22 再犯）
+
+- [x] **用户痛斥**：系统早有全站统一批量按钮 `PurchaseActionBar`（D-360，12 处引用，含批量领取/登记到货/回料确认/确认完成），但物料采购列表页 `SelectedRowsBar` 自己抄了第二套下拉。做「批量登记到货」时没先查统一组件已有能力，两套里都加了一遍——违反 P0 #22（增加功能前必须核实系统已有能力）
+- [x] **修复**：重写 `SelectedRowsBar.tsx`（131→84 行），删除自实现下拉/禁用逻辑，批量动作一律复用 `<PurchaseActionBar>`，禁用口径统一走 `getBatchActionDisabledReason`；SelectedRowsBar 只保留「已选计数/清空/加入购物车」
+- [x] **验证**：npx tsc --noEmit 0 error、eslint 0、safe-push 4/0；已推送 `856bacf7c`，autodeploy 自动上线
+- [x] **教训（必须记住）**：① 批量动作只允许加在 `PurchaseActionBar` 一处，任何 `SelectedRowsBar` 类容器组件禁止自实现下拉菜单；② 动手前先 grep 组件目录（`components/common/purchase/`）确认是否已有统一实现，D-865 已经因「重复建设」被批评过一次，本次是同类再犯
+
 ### 2026-10-22 商品视频上传 10MB 硬伤修复 + 图文编辑重复入口治理（D-838 补丁）
 
 - [x] **用户疑问**：①「款式详情（图文介绍）」textarea 与「编辑详情长图（图文编辑器）」重复；②商品视频功能到底有没有实现、能不能上传与播放
