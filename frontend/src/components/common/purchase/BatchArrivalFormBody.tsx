@@ -45,6 +45,9 @@ const BatchArrivalFormBody: React.FC<Props> = ({ form, rows }) => {
   const { locations: materialLocations, loading: locationLoading } =
     useWarehouseLocationByArea('MATERIAL', hasInbound ? areaId : undefined);
 
+  // D-894：统一选择的初始值与行初始值同源——沿用上一次的去向选择，不再写死「入库」
+  const defaultAction = localStorage.getItem('purchase.confirmComplete.lastMovementAction') === 'direct_use' ? 'direct_use' : 'inbound';
+
   // D-891：统一选择——把去向一次性应用到所有行（保留各行已填数量）
   const applyAllMovementAction = (action: string) => {
     const cur = (form.getFieldValue('items') || []) as RowValue[];
@@ -63,7 +66,7 @@ const BatchArrivalFormBody: React.FC<Props> = ({ form, rows }) => {
       />
       <div className="u-d-flex u-ai-center u-gap-12" style={{ marginBottom: 8 }}>
         <span className="u-fw-600">到货去向（统一选择，行内可单独改）：</span>
-        <Radio.Group defaultValue="inbound" onChange={(e) => applyAllMovementAction(e.target.value)}>
+        <Radio.Group defaultValue={defaultAction} onChange={(e) => applyAllMovementAction(e.target.value)}>
           <Radio value="inbound">全部入库</Radio>
           <Radio value="direct_use">全部直采使用</Radio>
         </Radio.Group>

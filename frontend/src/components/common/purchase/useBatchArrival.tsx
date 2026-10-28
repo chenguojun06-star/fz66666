@@ -47,11 +47,14 @@ export const useBatchArrival = <T extends BatchArrivalRow>({
       return;
     }
 
+    // D-894：去向默认沿用用户上一次的选择（与确认完成弹窗同一记忆键），不再每次从「入库」开始
+    const lastAction = localStorage.getItem('purchase.confirmComplete.lastMovementAction');
+    const defaultAction = lastAction === 'direct_use' ? 'direct_use' : 'inbound';
     form.setFieldsValue({
       items: targets.map((r) => ({
         purchaseId: String(r.id || ''),
         arrivedQuantity: Math.max(0.01, Number(r.purchaseQuantity || 0) - Number(r.arrivedQuantity || 0)),
-        movementAction: 'inbound',
+        movementAction: defaultAction,
       })),
       warehouseLocation: '',
       remark: '',

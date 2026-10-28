@@ -957,6 +957,14 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-28 确认完成弹窗带出上次去向+布局重排、库位明细弹窗修正（D-894）
+
+- [x] **用户抱怨**：确认完成不继承前面选的去向还要再选一次、弹窗密密麻麻、库位明细弹窗横向滚动+大片空白
+- [x] **去向默认值**：已入库行（`inboundRecordId` 回写）默认「暂不登记」+Alert 说明；其余沿用 localStorage 记忆键 `purchase.confirmComplete.lastMovementAction`；去向改三张可点卡片，条件字段分区收拢，灰字缩为一行
+- [x] **批量登记到货同源**：useBatchArrival 行初始值 + BatchArrivalFormBody 统一选择 defaultValue 接同一记忆键
+- [x] **库位明细弹窗**：width 880 / initialHeight 460 / showIndex=false / disableFillScrollY / 列宽压缩——无横向滚动无大片空白
+- [x] **验证**：tsc 0 / eslint 0（test-runner-mcp 不可用，P0 #23 降级直跑）
+
 ### 2026-10-28 库位下拉统一显示容量+弹窗看货物明细（D-893）
 
 - [x] **用户需求**：所有库位下拉/显示处，库位名后统一蓝色字体显示「容量X·已用Y·剩Z」，点击弹窗看该库位实际存放货物明细；面料/成品/样衣全部一套逻辑

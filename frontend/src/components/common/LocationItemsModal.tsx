@@ -33,47 +33,51 @@ const num = (v: unknown) => Number(v ?? 0);
 const imageCol = {
   title: '图片',
   dataIndex: 'imageUrl',
-  width: 64,
+  width: 52,
   render: (v: string) => (v
-    ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} />
-    : <span style={{ display: 'inline-block', width: 40, height: 40, borderRadius: 4, background: 'var(--color-fill-secondary, #f5f5f5)' }} />),
+    ? <Image src={v} width={36} height={36} style={{ objectFit: 'cover', borderRadius: 4 }} />
+    : <span style={{ display: 'inline-block', width: 36, height: 36, borderRadius: 4, background: 'var(--color-fill-secondary, #f5f5f5)' }} />),
 };
 
-/** 按仓库类型生成明细列（面料/成品/样衣统一弹窗，列不同） */
+/**
+ * 按仓库类型生成明细列（面料/成品/样衣统一弹窗，列不同）。
+ * D-894：列宽必须能塞进弹窗宽度——只有小定宽列（类型/颜色/数量），
+ * 编码/名称列不设宽度自动分摊剩余空间，禁止出现左右滑动。
+ */
 function buildColumns(warehouseType: string): any[] {
   if (warehouseType === 'SAMPLE') {
     return [
       imageCol,
-      { title: '样衣编号', dataIndex: 'styleNo', width: 140 },
+      { title: '样衣编号', dataIndex: 'styleNo', width: 120 },
       { title: '样衣名称', dataIndex: 'styleName', ellipsis: true },
-      { title: '类型', dataIndex: 'sampleType', width: 90, render: (v: string) => v || '-' },
-      { title: '颜色', dataIndex: 'color', width: 90, render: (v: string) => v || '-' },
-      { title: '尺码', dataIndex: 'size', width: 70, render: (v: string) => v || '-' },
-      { title: '在库数量', dataIndex: 'stockQuantity', width: 90, render: (v: number) => num(v) },
-      { title: '借出数量', dataIndex: 'loanedQuantity', width: 90, render: (v: number) => num(v) },
+      { title: '类型', dataIndex: 'sampleType', width: 70, render: (v: string) => v || '-' },
+      { title: '颜色', dataIndex: 'color', width: 70, render: (v: string) => v || '-' },
+      { title: '尺码', dataIndex: 'size', width: 60, render: (v: string) => v || '-' },
+      { title: '在库', dataIndex: 'stockQuantity', width: 60, render: (v: number) => num(v) },
+      { title: '借出', dataIndex: 'loanedQuantity', width: 60, render: (v: number) => num(v) },
     ];
   }
   if (warehouseType === 'FINISHED') {
     return [
       imageCol,
-      { title: 'SKU编码', dataIndex: 'skuCode', width: 200, ellipsis: true },
-      { title: '款号', dataIndex: 'styleNo', width: 130 },
-      { title: '颜色', dataIndex: 'color', width: 90, render: (v: string) => v || '-' },
+      { title: '款号', dataIndex: 'styleNo', width: 120 },
+      { title: 'SKU编码', dataIndex: 'skuCode', ellipsis: true },
+      { title: '颜色', dataIndex: 'color', width: 80, render: (v: string) => v || '-' },
       { title: '尺码', dataIndex: 'size', width: 80, render: (v: string) => v || '-' },
-      { title: '库位剩余量', dataIndex: 'stockQuantity', width: 100, render: (v: number) => num(v) },
-      { title: '累计入库', dataIndex: 'warehousedQty', width: 90, render: (v: number) => num(v) },
+      { title: '剩余量', dataIndex: 'stockQuantity', width: 80, render: (v: number) => num(v) },
+      { title: '累计入库', dataIndex: 'warehousedQty', width: 80, render: (v: number) => num(v) },
     ];
   }
   // MATERIAL（面料/辅料等物料）
   return [
     imageCol,
-    { title: '物料编码', dataIndex: 'materialCode', width: 140, ellipsis: true },
+    { title: '物料编码', dataIndex: 'materialCode', ellipsis: true },
     { title: '物料名称', dataIndex: 'materialName', ellipsis: true },
-    { title: '类型', dataIndex: 'materialType', width: 90, render: (v: string) => v || '-' },
-    { title: '颜色', dataIndex: 'color', width: 90, render: (v: string) => v || '-' },
-    { title: '规格', dataIndex: 'specifications', width: 120, render: (v: string) => v || '-' },
-    { title: '库存量', dataIndex: 'stockQuantity', width: 90, render: (v: number, r: any) => `${num(v)}${r.unit || ''}` },
-    { title: '锁定量', dataIndex: 'lockedQuantity', width: 80, render: (v: number, r: any) => `${num(v)}${r.unit || ''}` },
+    { title: '类型', dataIndex: 'materialType', width: 70, render: (v: string) => v || '-' },
+    { title: '颜色', dataIndex: 'color', width: 70, render: (v: string) => v || '-' },
+    { title: '规格', dataIndex: 'specifications', width: 90, render: (v: string) => v || '-' },
+    { title: '库存量', dataIndex: 'stockQuantity', width: 85, render: (v: number, r: any) => `${num(v)}${r.unit || ''}` },
+    { title: '锁定量', dataIndex: 'lockedQuantity', width: 75, render: (v: number, r: any) => `${num(v)}${r.unit || ''}` },
   ];
 }
 
@@ -112,7 +116,8 @@ const LocationItemsModal: React.FC<Props> = ({ open, onClose, locationCode, loca
       open={open}
       onCancel={onClose}
       footer={null}
-      width={760}
+      width={880}
+      initialHeight={460}
       title={
         <span>
           库位明细 · {locationName || data?.locationName || locationCode}
@@ -131,11 +136,12 @@ const LocationItemsModal: React.FC<Props> = ({ open, onClose, locationCode, loca
       ) : (
         <ResizableTable
           size="small"
+          showIndex={false}
+          disableFillScrollY
           rowKey={(r: any, idx?: number) => String(r.skuCode || r.materialCode || r.styleNo || `row-${idx}`)}
           columns={columns}
           dataSource={data?.items || []}
           pagination={false}
-          scroll={{ y: 360 }}
           locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该库位暂无货物（或库位编码未匹配到库存记录）" /> }}
         />
       )}

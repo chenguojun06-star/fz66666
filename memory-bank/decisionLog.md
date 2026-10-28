@@ -4832,3 +4832,23 @@ quality-gate 只留 Python/Node 原生脚本；门禁能力不降级，也不再
 **验证**：tsc 0、eslint 0、vitest 852、build、safe-push 全过；commit `fe35c98e7` 已推送。
 
 **教训**：统一 UI 需求先建单一组件再铺调用点；antd Select 的自定义渲染（optionRender/labelRender）里放可点击元素时，弹窗必须渲染在 Select 层而非 popup 内。
+
+---
+
+## D-894 确认完成弹窗带出上次去向+布局重排、库位明细弹窗去横向滚动（2026-10-28）
+
+**背景**：用户（截图两张）抱怨：① 到货登记时已选过去向，「确认完成」弹窗还写死默认「入库到仓库」要再选一次；② 弹窗文字密密麻麻布局混乱；③ D-893 的库位明细弹窗信息不多却要左右滑动、下方大片空白；④「难道这些优化都要我反反复复提到吗」——要求排查同类垃圾设计。
+
+**根因**：
+1. `ConfirmCompleteModal` 打开时硬编码 `setMovementAction('inbound')`。后端链路：登记到货选「直采使用」的行会立即 confirm-complete 完成，不会停留在待确认完成；停留在「待确认完成」的行都是走过入库路径（`inboundRecordId` 已回写、库存已增）——所以正确默认值是「暂不登记」而非「入库」。
+2. `LocationItemsModal` 列全定宽总宽超弹窗宽度→横向滚动；ResizableModal 默认 82% 视口高→内容少时大片空白。
+
+**决策**：
+1. **去向默认值三级规则**（ConfirmCompleteModal 重写）：全部选中行 `inboundRecordId` 已回写→默认「暂不登记」+顶部成功 Alert 说明无需重复登记；否则沿用 localStorage 记忆键 `purchase.confirmComplete.lastMovementAction`（确认完成/批量登记到货共用）；无记忆→入库。
+2. **布局重排**：去向改三张可点卡片（选中 primary 边框+浅底）；条件字段（库位/领用人/数量）收进独立分区；大段灰字对账说明缩为一行 12px 小字。
+3. **批量登记到货同源**：`useBatchArrival` 行初始去向 + `BatchArrivalFormBody` 顶部统一选择 defaultValue 都接同一记忆键，不再写死 inbound。
+4. **库位明细弹窗修正**：width 760→880、`initialHeight={460}`、`showIndex={false}`、`disableFillScrollY` 去内滚、定宽列压缩、编码/名称列不设 width 自动分摊——禁止横向滚动。
+
+**验证**：tsc 0 / eslint 0；改动 4 文件（ConfirmCompleteModal / LocationItemsModal / useBatchArrival / BatchArrivalFormBody）。
+
+**教训**：① 流程性默认值必须延续用户已做的选择/系统已有的事实（已入库就别再让人选入库）；② 新弹窗列宽必须适配弹窗宽度，ResizableModal 内容少时必须显式 initialHeight；③ 这些是 D-893 就该做到的质量标准，不该等用户再提。
