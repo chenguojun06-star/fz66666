@@ -271,6 +271,9 @@ public class MaterialPurchaseOrchestratorHelper {
         map.put("receiverName", record.getReceiverName());
         map.put("receivedTime", record.getReceivedTime());
         map.put("remark", record.getRemark());
+        // D-889：发票/单据图片（财务留底）——白名单此前漏加，导致 /purchase/list 不返回，
+        // 前端上传后刷新读不出来（大货节点弹窗/样衣抽屉/采购详情弹窗三处同病）。
+        map.put("invoiceUrls", record.getInvoiceUrls());
         map.put("orderId", record.getOrderId());
         map.put("orderNo", record.getOrderNo());
         map.put("styleId", record.getStyleId());
