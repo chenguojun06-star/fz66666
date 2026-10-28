@@ -3,6 +3,7 @@ import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 
 interface FinishedScanOperationModalProps {
   open: boolean;
@@ -17,7 +18,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   const [warehouseLocation, setWarehouseLocation] = useState('');
   const [warehouseAreaId, setWarehouseAreaId] = useState('');
   const { selectOptions: areaOptions, loading: areaLoading } = useWarehouseAreaOptions('FINISHED');
-  const { selectOptions: locationOptions, loading: locationLoading } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
+  const { locations: locationList, loading: locationLoading } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
   const [operationType, setOperationType] = useState<'inbound' | 'outbound'>('inbound');
   const [sourceType, setSourceType] = useState('scan_inbound');
   const [outstockType, setOutstockType] = useState('scan_outbound');
@@ -175,11 +176,17 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
               </Col>
               <Col span={8}>
                 <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>库位</div>
-                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
-                  {locationOptions.map(opt => (
-                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
-                  ))}
-                </Select>
+                <WarehouseLocationSelect
+                  warehouseType="FINISHED"
+                  locations={locationList}
+                  style={{ width: '100%' }}
+                  placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
+                  loading={locationLoading}
+                  disabled={!warehouseAreaId}
+                  value={warehouseLocation}
+                  onChange={(v) => setWarehouseLocation(v || '')}
+                  notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'}
+                />
               </Col>
             </>
           ) : (
@@ -203,11 +210,17 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
               </Col>
               <Col span={8}>
                 <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>库位</div>
-                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
-                  {locationOptions.map(opt => (
-                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
-                  ))}
-                </Select>
+                <WarehouseLocationSelect
+                  warehouseType="FINISHED"
+                  locations={locationList}
+                  style={{ width: '100%' }}
+                  placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
+                  loading={locationLoading}
+                  disabled={!warehouseAreaId}
+                  value={warehouseLocation}
+                  onChange={(v) => setWarehouseLocation(v || '')}
+                  notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'}
+                />
               </Col>
             </>
           )}

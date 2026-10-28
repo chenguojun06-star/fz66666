@@ -6,6 +6,7 @@ import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import { useWarehouseAreaOptions } from '../../../../hooks/useWarehouseAreaOptions';
 import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import api from '@/utils/api';
 import type { FinishedInventoryRow } from './flattenBySku';
 
@@ -482,16 +483,11 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
               ? '当前条件下没有可用库位：请先在「仓库地图」建好库位，或换个库区'
               : undefined}
           >
-            <Select
-              showSearch
-              allowClear
+            <WarehouseLocationSelect
+              warehouseType="FINISHED"
+              locations={locationOptions}
               loading={locationsLoading}
               placeholder={locationsLoading ? '库位加载中…' : '选择库位（来自仓库地图）'}
-              optionFilterProp="label"
-              options={locationOptions.map((l) => ({
-                value: l.locationCode,
-                label: `${l.locationCode}${l.locationName ? ` · ${l.locationName}` : ''}`,
-              }))}
             />
           </Form.Item>
           <Form.Item name="remark" label="备注">

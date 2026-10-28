@@ -3,6 +3,7 @@ import { Alert, Button, Select } from 'antd';
 import { BrandLoading } from '@/components/common/loading';
 import { useNavigate } from 'react-router-dom';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import LocationCapacityText from '@/components/common/LocationCapacityText';
 
 interface Props {
   /** 库位编码（受控） */
@@ -90,8 +91,15 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
                     }}
                   >
                     <div className="u-fw-600 u-fs-13">{loc.locationCode}</div>
-                    <div className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>
-                      {full ? '已满' : `空余 ${(loc.capacity ?? 0) - used}`}
+                    <div className="u-fs-11">
+                      {full && <span style={{ color: 'var(--color-danger)' }}>已满 · </span>}
+                      <LocationCapacityText
+                        locationCode={loc.locationCode}
+                        locationName={loc.locationName}
+                        capacity={loc.capacity}
+                        usedCapacity={loc.usedCapacity}
+                        warehouseType={warehouseType}
+                      />
                     </div>
                   </div>
                 );

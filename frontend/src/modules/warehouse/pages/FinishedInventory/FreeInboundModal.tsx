@@ -8,6 +8,7 @@ import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { InboxOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import { safePrint } from '@/utils/safePrint';
 import { formatMoney } from '@/utils/format';
 import api from '@/utils/api';
@@ -95,7 +96,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const warehouseType = WAREHOUSE_TYPE_MAP[sourceType] || 'FINISHED';
 
   const { selectOptions: areaOptions, loading: areaLoading, areas } = useWarehouseAreaOptions(warehouseType as any);
-  const { selectOptions: locationOptions, loading: locationLoading } = useWarehouseLocationByArea(warehouseType, selectedAreaId);
+  const { locations: locationList, loading: locationLoading } = useWarehouseLocationByArea(warehouseType, selectedAreaId);
 
   const addByCode = async (code: string) => {
     if (!code.trim()) {
@@ -450,11 +451,15 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           </Col>
           <Col span={12}>
             <Form.Item name="warehouseLocation" label="库位">
-              <Select placeholder={selectedAreaId ? '选择库位' : '请先选择仓库'} size="large" allowClear showSearch loading={locationLoading} disabled={!selectedAreaId && locationOptions.length === 0} notFoundContent={locationLoading ? '加载中...' : selectedAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
-                {locationOptions.map((opt) => (
-                  <Select.Option key={opt.value} value={opt.value}>{opt.location.locationName || opt.location.locationCode}</Select.Option>
-                ))}
-              </Select>
+              <WarehouseLocationSelect
+                warehouseType={warehouseType}
+                locations={locationList}
+                placeholder={selectedAreaId ? '选择库位' : '请先选择仓库'}
+                size="large"
+                loading={locationLoading}
+                disabled={!selectedAreaId && locationList.length === 0}
+                notFoundContent={locationLoading ? '加载中...' : selectedAreaId ? '该仓库暂无库位' : '请先选择仓库'}
+              />
             </Form.Item>
           </Col>
         </Row>

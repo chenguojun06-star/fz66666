@@ -4,6 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { SampleTypeMap } from '../types';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useInboundModalData } from './useInboundModalData';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import StyleSnapshotPanel from './StyleSnapshotPanel';
 import InboundPlanTable from './InboundPlanTable';
 import { normalizeText } from './helpers';
@@ -22,7 +23,7 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
     showSmartErrorNotice,
     styleNoRef,
     sampleWarehouseOptions,
-    sampleLocationOptions,
+    sampleLocations,
     sampleLocationLoading,
     sampleSelectedAreaId,
     setSampleSelectedAreaId,
@@ -134,19 +135,14 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
           </Col>
           <Col span={8}>
             <Form.Item name="warehouseLocation" label="库位">
-              <Select
+              <WarehouseLocationSelect
+                warehouseType="SAMPLE"
+                locations={sampleLocations}
                 placeholder={sampleSelectedAreaId ? '请选择库位' : '请先选择仓库'}
-                allowClear
-                showSearch
                 loading={sampleLocationLoading}
                 disabled={!sampleSelectedAreaId}
                 notFoundContent={sampleLocationLoading ? '加载中...' : sampleSelectedAreaId ? '该仓库暂无库位' : '请先选择仓库'}
-                filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}
-              >
-                {sampleLocationOptions.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                ))}
-              </Select>
+              />
             </Form.Item>
           </Col>
           <Col span={16}>

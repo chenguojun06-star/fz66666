@@ -4,6 +4,7 @@ import type { FormInstance } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import { formatMaterialQuantityWithUnit } from '../../MaterialPurchase/utils';
 import type { MaterialPurchase } from '@/types/production';
 
@@ -68,7 +69,7 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
   const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const [areaId, setAreaId] = useState<string | undefined>(undefined);
   const movementAction = Form.useWatch('movementAction', form) || 'inbound';
-  const { selectOptions: materialLocationOptions, loading: locationLoading } =
+  const { locations: materialLocations, loading: locationLoading } =
     useWarehouseLocationByArea('MATERIAL', movementAction === 'inbound' ? areaId : undefined);
 
   useEffect(() => {
@@ -142,19 +143,14 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
               label="库位"
               rules={[{ required: true, message: '请选择库位' }]}
             >
-              <Select
+              <WarehouseLocationSelect
+                warehouseType="MATERIAL"
+                locations={materialLocations}
                 placeholder={areaId ? '请选择库位' : '请先选择物料仓库'}
-                allowClear
-                showSearch
                 loading={locationLoading}
                 disabled={!areaId}
                 notFoundContent={locationLoading ? '加载中...' : areaId ? '该仓库暂无库位' : '请先选择物料仓库'}
-                filterOption={(input, option) => String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
-              >
-                {materialLocationOptions.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                ))}
-              </Select>
+              />
             </Form.Item>
           </>
         ) : (

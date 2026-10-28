@@ -4,6 +4,7 @@ import { BrandLoading } from '@/components/common/loading';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import { safePrint } from '@/utils/safePrint';
@@ -99,7 +100,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
   const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const [inboundAreaId, setInboundAreaId] = useState<string | undefined>(undefined);
   const inboundMovement = Form.useWatch('movementAction', inboundForm) || 'inbound';
-  const { selectOptions: materialLocationOptions, loading: materialLocationLoading } =
+  const { locations: materialLocations, loading: materialLocationLoading } =
     useWarehouseLocationByArea('MATERIAL', inboundMovement === 'inbound' ? inboundAreaId : undefined);
   React.useEffect(() => {
     if (inboundModalVisible) {
@@ -451,19 +452,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                 name="warehouseLocation"
                 rules={[{ required: true, message: '请选择库位' }]}
               >
-                <Select
+                <WarehouseLocationSelect
+                  warehouseType="MATERIAL"
+                  locations={materialLocations}
                   placeholder={inboundAreaId ? '请选择库位' : '请先选择物料仓库'}
-                  allowClear
-                  showSearch
                   loading={materialLocationLoading}
                   disabled={!inboundAreaId}
                   notFoundContent={materialLocationLoading ? '加载中...' : inboundAreaId ? '该仓库暂无库位' : '请先选择物料仓库'}
-                  filterOption={(input, option) => String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
-                >
-                  {materialLocationOptions.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                  ))}
-                </Select>
+                />
               </Form.Item>
             </>
           ) : (

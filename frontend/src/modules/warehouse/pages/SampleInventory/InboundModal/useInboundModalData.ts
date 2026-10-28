@@ -23,7 +23,7 @@ export interface UseInboundModalDataResult {
   showSmartErrorNotice: boolean;
   styleNoRef: MutableRefObject<InputRef | null>;
   sampleWarehouseOptions: ReturnType<typeof useWarehouseAreaOptions>['selectOptions'];
-  sampleLocationOptions: ReturnType<typeof useWarehouseLocationByArea>['selectOptions'];
+  sampleLocations: ReturnType<typeof useWarehouseLocationByArea>['locations'];
   sampleLocationLoading: boolean;
   sampleSelectedAreaId: string;
   setSampleSelectedAreaId: (areaId: string) => void;
@@ -38,7 +38,7 @@ export const useInboundModalData = (
 ): UseInboundModalDataResult => {
   const { selectOptions: sampleWarehouseOptions } = useWarehouseAreaOptions('SAMPLE');
   const [sampleSelectedAreaId, setSampleSelectedAreaId] = useState<string>('');
-  const { selectOptions: sampleLocationOptions, loading: sampleLocationLoading } = useWarehouseLocationByArea('SAMPLE', sampleSelectedAreaId);
+  const { locations: sampleLocations, loading: sampleLocationLoading } = useWarehouseLocationByArea('SAMPLE', sampleSelectedAreaId);
   const [loading, setLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
@@ -212,7 +212,7 @@ export const useInboundModalData = (
     showSmartErrorNotice,
     styleNoRef,
     sampleWarehouseOptions,
-    sampleLocationOptions,
+    sampleLocations,
     sampleLocationLoading,
     sampleSelectedAreaId,
     setSampleSelectedAreaId,

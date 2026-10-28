@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AutoComplete } from 'antd';
 import { BrandLoader } from '@/components/common/loading';
 import { useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import LocationItemsModal from './LocationItemsModal';
+import { formatCapacityText } from './LocationCapacityText';
 import api from '@/utils/api';
 
 interface WarehouseLocationAutoCompleteProps {
@@ -33,7 +35,8 @@ const WarehouseLocationAutoComplete: React.FC<WarehouseLocationAutoCompleteProps
   const [dictOptions, setDictOptions] = useState<{ value: string; label: string }[]>([]);
   const [dictLoading, setDictLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [options, setOptions] = useState<{ value: string; label?: React.ReactNode }[]>([]);
+  const [options, setOptions] = useState<{ value: string; label?: React.ReactNode; entity?: any }[]>([]);
+  const [detail, setDetail] = useState<{ code: string; name?: string; type?: string } | null>(null);
 
   const hasLocationData = locationOptions.length > 0;
 
@@ -64,7 +67,11 @@ const WarehouseLocationAutoComplete: React.FC<WarehouseLocationAutoCompleteProps
     const filtered = keyword
       ? activeOptions.filter(item => (item.label || '').toString().includes(keyword) || (item.value || '').includes(keyword))
       : activeOptions;
-    return filtered.map(item => ({ value: item.value, label: item.label || item.value }));
+    return filtered.map(item => ({
+      value: item.value,
+      label: item.label || item.value,
+      entity: (item as { location?: { locationCode: string; locationName?: string; capacity?: number; usedCapacity?: number; warehouseType?: string } }).location,
+    }));
   }, [activeOptions]);
 
   useEffect(() => {
@@ -96,22 +103,51 @@ const WarehouseLocationAutoComplete: React.FC<WarehouseLocationAutoCompleteProps
   };
 
   return (
-    <AutoComplete
-      className={className}
-      value={value}
-      open={open}
-      onOpenChange={setOpen}
-      options={open ? options : []}
-      onChange={handleChange}
-      onSearch={handleSearch}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onSelect={handleSelect}
-      placeholder={placeholder || '请选择或输入仓位'}
-      filterOption={false}
-      notFoundContent={isLoading ? <BrandLoader size={40} /> : (activeOptions.length === 0 ? '暂无数据' : '无匹配项')}
-      style={style}
-    />
+    <>
+      <AutoComplete
+        className={className}
+        value={value}
+        open={open}
+        onOpenChange={setOpen}
+        options={open ? options : []}
+        onChange={handleChange}
+        onSearch={handleSearch}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onSelect={handleSelect}
+        placeholder={placeholder || '请选择或输入仓位'}
+        filterOption={false}
+        notFoundContent={isLoading ? <BrandLoader size={40} /> : (activeOptions.length === 0 ? '暂无数据' : '无匹配项')}
+        style={style}
+        optionRender={(opt) => {
+          const loc = (opt.data as { entity?: { locationCode: string; locationName?: string; capacity?: number; usedCapacity?: number; warehouseType?: string } }).entity;
+          if (!loc) return <span>{opt.data.label as React.ReactNode}</span>;
+          return (
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.locationName || loc.locationCode}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setDetail({ code: loc.locationCode, name: loc.locationName, type: loc.warehouseType || warehouseType });
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{ color: 'var(--color-primary)', fontSize: 12, flexShrink: 0, cursor: 'pointer' }}
+              >
+                {formatCapacityText(loc.capacity, loc.usedCapacity)}
+              </span>
+            </div>
+          );
+        }}
+      />
+      <LocationItemsModal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        locationCode={detail?.code || ''}
+        locationName={detail?.name}
+        warehouseType={detail?.type || 'MATERIAL'}
+      />
+    </>
   );
 };
 

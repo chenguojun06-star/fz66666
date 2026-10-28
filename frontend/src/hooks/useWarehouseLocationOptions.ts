@@ -14,6 +14,9 @@ export interface WarehouseLocationOption {
   areaId?: string;
   areaName?: string;
   status?: string;
+  /** D-893：库位容量与已用量（后端 /warehouse/location/search 实时返回） */
+  capacity?: number;
+  usedCapacity?: number;
 }
 
 export function useWarehouseLocationOptions(areaId?: string, warehouseType = 'FINISHED') {

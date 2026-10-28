@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Form, Input, InputNumber, Radio, Select } from 'antd';
 import type { FormInstance } from 'antd';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import type { BatchActionRow } from './PurchaseActionBar';
 
 /** 批量登记到货的行（在统一判定字段基础上带展示信息） */
@@ -41,7 +42,7 @@ const BatchArrivalFormBody: React.FC<Props> = ({ form, rows }) => {
   const [areaId, setAreaId] = useState<string | undefined>(undefined);
   const items = Form.useWatch<RowValue[]>('items', form) || [];
   const hasInbound = rows.some((_, idx) => (items[idx]?.movementAction || 'inbound') === 'inbound');
-  const { selectOptions: materialLocationOptions, loading: locationLoading } =
+  const { locations: materialLocations, loading: locationLoading } =
     useWarehouseLocationByArea('MATERIAL', hasInbound ? areaId : undefined);
 
   // D-891：统一选择——把去向一次性应用到所有行（保留各行已填数量）
@@ -146,13 +147,12 @@ const BatchArrivalFormBody: React.FC<Props> = ({ form, rows }) => {
             rules={[{ required: true, message: '请选择库位' }]}
             style={{ marginBottom: 8 }}
           >
-            <Select
+            <WarehouseLocationSelect
+              warehouseType="MATERIAL"
+              locations={materialLocations}
               placeholder={areaId ? '请选择库位' : '请先选择物料仓库'}
               loading={locationLoading}
               disabled={!areaId}
-              allowClear
-              showSearch
-              options={materialLocationOptions}
             />
           </Form.Item>
         </div>

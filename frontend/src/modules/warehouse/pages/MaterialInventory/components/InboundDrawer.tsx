@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import { ScanOutlined } from '@ant-design/icons';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import WarehouseLocationSelect from '@/components/common/WarehouseLocationSelect';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import { getMaterialTypeCategory } from '@/utils/materialType';
 
@@ -36,7 +37,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
 }) => {
   const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const [materialSelectedAreaId, setMaterialSelectedAreaId] = useState<string>('');
-  const { selectOptions: materialLocationOptions, loading: materialLocationLoading } = useWarehouseLocationByArea('MATERIAL', materialSelectedAreaId);
+  const { locations: materialLocations, loading: materialLocationLoading } = useWarehouseLocationByArea('MATERIAL', materialSelectedAreaId);
 
   return (
     <Drawer
@@ -182,19 +183,14 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
               name="warehouseLocation"
               rules={[{ required: true, message: '请选择库位' }]}
             >
-              <Select
+              <WarehouseLocationSelect
+                warehouseType="MATERIAL"
+                locations={materialLocations}
                 placeholder={materialSelectedAreaId ? '请选择库位' : '请先选择仓库'}
-                allowClear
-                showSearch
                 loading={materialLocationLoading}
                 disabled={!materialSelectedAreaId}
                 notFoundContent={materialLocationLoading ? '加载中...' : materialSelectedAreaId ? '该仓库暂无库位' : '请先选择仓库'}
-                filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}
-              >
-                {materialLocationOptions.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                ))}
-              </Select>
+              />
             </Form.Item>
           </Col>
         </Row>
