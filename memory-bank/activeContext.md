@@ -961,6 +961,8 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 - [x] **用户拍板**：订单级聚合——展示该订单全部采购行发票并集，变更整包写回锚点行并清空其余行（防删掉的图从另一行复活）
 - [x] **实现（单一套，吸取 D-888 教训）**：`InvoiceUploadCard` + `useInvoiceManagement` + `invoiceUtils` 全部抽到 `components/common/purchase/`，删除 PurchaseModal 下旧实现；InlinePurchasePanel 挂卡片（节点弹窗+样衣抽屉同时生效）；物料采购列表弹窗改引用公共实现
 - [x] **验证**：tsc 0、eslint 0、vitest 849/849、safe-push 4/0；已推送 `29ce538aa`，autodeploy 自动上线
+- [x] **补修（D-889 续，19e85406a）**：端到端核实发现 `MaterialPurchaseOrchestratorHelper.enrichRecord` 字段白名单漏加 `invoiceUrls` → `/production/purchase/list` 不返回发票，大货节点弹窗/样衣抽屉/采购详情弹窗三处上传后刷新都读不出（能存不能显）。补入白名单后闭环。样衣(sourceType=sample 按 patternId)与大货(按 orderNo)分别加载，发票按采购行天然隔离不串
+- [x] **全量验证**：后端 mvn compile+checkstyle ✅、993 单测 0 失败 ✅；前端 tsc 0 ✅、vitest 849/849 ✅、build ✅、madge 无循环 ✅；CI 门禁 audit-tenant-id/check-unwired(140/140)/check-native-sql-columns(391条)/check-silent-catch/check-api-envelope-leak 全 ✅；safe-push 8/0
 
 ### 2026-10-28 批量按钮收敛：删除 SelectedRowsBar 第二套实现（D-888，P0 #22 再犯）
 
