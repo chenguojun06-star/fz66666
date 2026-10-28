@@ -30,9 +30,18 @@ public class MaterialInboundBatchOrchestrator {
     private MaterialInboundOrchestrator materialInboundOrchestrator;
 
     /**
-     * 批量登记到货。
+     * D-890：直采使用（不进仓库）复用单条「登记到货」的同一后端实现
+     * （confirm-complete + movementAction=direct_use），保证批量与单条逻辑完全一致。
+     * 跨 Bean 调用同样保证每条独立事务。
+     */
+    @Autowired
+    private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
+
+    /**
+     * 批量登记到货（与单条「登记到货」同口径：每行可选入库到物料仓库 / 直采使用）。
      *
-     * @param items 已解析条目，每项含 purchaseId(String) 与 arrivedQuantity(BigDecimal)
+     * @param items 已解析条目，每项含 purchaseId(String)、arrivedQuantity(BigDecimal)、
+     *              movementAction(String: inbound 默认 / direct_use)
      * @return successCount / failCount / errors，与 batch-return-confirm 返回口径一致
      */
     public Map<String, Object> batchConfirmArrival(
@@ -53,12 +62,27 @@ public class MaterialInboundBatchOrchestrator {
         for (Map<String, Object> item : items) {
             String purchaseId = String.valueOf(item.get("purchaseId"));
             BigDecimal arrivedQuantity = new BigDecimal(String.valueOf(item.get("arrivedQuantity")));
+            String movementAction = item.get("movementAction") == null
+                    ? "inbound" : String.valueOf(item.get("movementAction")).trim();
             try {
-                materialInboundOrchestrator.confirmArrivalAndInbound(
-                        purchaseId, arrivedQuantity, warehouseLocation, operatorId, operatorName, remark);
+                if ("direct_use".equals(movementAction)) {
+                    // 直采使用：不进仓库、库存不变，完成采购并记一条采购直用流水（与单条完全同路径）
+                    Map<String, Object> body = new LinkedHashMap<>();
+                    body.put("purchaseId", purchaseId);
+                    body.put("movementAction", "direct_use");
+                    body.put("movementQuantity", arrivedQuantity);
+                    body.put("receiverId", operatorId);
+                    body.put("receiverName", operatorName);
+                    body.put("remark", remark);
+                    materialPurchaseOrchestrator.confirmComplete(body);
+                } else {
+                    materialInboundOrchestrator.confirmArrivalAndInbound(
+                            purchaseId, arrivedQuantity, warehouseLocation, operatorId, operatorName, remark);
+                }
                 successCount++;
             } catch (Exception e) {
-                log.warn("批量登记到货失败: purchaseId={}, reason={}", purchaseId, e.getMessage());
+                log.warn("批量登记到货失败: purchaseId={}, movementAction={}, reason={}",
+                        purchaseId, movementAction, e.getMessage());
                 errors.add(purchaseId + ": " + e.getMessage());
             }
         }

@@ -109,6 +109,11 @@ public class MaterialInboundController {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("purchaseId", purchaseId);
                 item.put("arrivedQuantity", arrivedQuantity);
+                // D-890：与单条「登记到货」同口径——每行可选去向：入库到物料仓库（inbound，默认）
+                // 或直采使用（direct_use，不进仓库）。仅识别 direct_use，其余一律按入库处理。
+                String movementAction = row.get("movementAction") == null
+                        ? "inbound" : String.valueOf(row.get("movementAction")).trim();
+                item.put("movementAction", "direct_use".equals(movementAction) ? "direct_use" : "inbound");
                 items.add(item);
             }
             if (items.isEmpty()) {

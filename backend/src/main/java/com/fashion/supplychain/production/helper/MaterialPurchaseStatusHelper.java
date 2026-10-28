@@ -665,7 +665,18 @@ public class MaterialPurchaseStatusHelper {
         if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
             throw new IllegalStateException("该采购单已取消，无法确认完成");
         }
-        if (!MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus)) {
+        // D-321b/D-890：movementAction 必须提前到状态门控之前解析。
+        // 「登记到货→直采使用」的行状态通常是 received/partial/partial_arrival（未到齐），
+        // 旧门控只放行 awaiting_confirm → 直采使用在刚领取的行上必报
+        // "仅待确认状态可确认完成"（单条与批量同源的隐性缺陷）。
+        // 放宽仅限 movementAction=direct_use（到货登记流）；不带 movementAction 的旧
+        // 「确认完成」入口（小程序 / 确认完成按钮 / movementAction=none 不下发）维持严格口径。
+        String movementAction = ParamUtils.toTrimmedString(body == null ? null : body.get("movementAction"));
+        boolean directUseFromArrival = "direct_use".equals(movementAction)
+                && (MaterialConstants.STATUS_RECEIVED.equals(currentStatus)
+                    || MaterialConstants.STATUS_PARTIAL.equals(currentStatus)
+                    || MaterialConstants.STATUS_PARTIAL_ARRIVAL.equals(currentStatus));
+        if (!MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus) && !directUseFromArrival) {
             throw new IllegalStateException("仅待确认状态可确认完成，当前状态: " + currentStatus);
         }
 
@@ -673,7 +684,7 @@ public class MaterialPurchaseStatusHelper {
 
         LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<>();
         uw.eq(MaterialPurchase::getId, purchaseId)
-          .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_AWAITING_CONFIRM)
+          .eq(MaterialPurchase::getStatus, currentStatus)
           .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED)
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         // D-273：确认完成 = 人工背书"这批货齐了"。到货量为 0 时按采购数量回写——
@@ -681,7 +692,14 @@ public class MaterialPurchaseStatusHelper {
         // 对账按"有效到货量>0"判定会把这批完成单全部挡在账外。
         java.math.BigDecimal pq = purchase.getPurchaseQuantity();
         BigDecimal currentArrived = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
-        if (currentArrived.compareTo(BigDecimal.ZERO) <= 0 && pq != null && pq.compareTo(BigDecimal.ZERO) > 0) {
+        // D-890：直采使用的登记到货带 movementQuantity = 本次实际到货量，
+        // 大于已到货量时精确回写（否则 2.04 米只到货 2 米却被 D-273 兜底成"全到齐"）；
+        // 未带数量或不大于已到货量时维持 D-273 兜底口径。
+        BigDecimal directUseQty = directUseFromArrival ? parseMovementQuantity(body) : null;
+        if (directUseQty != null && directUseQty.compareTo(currentArrived) > 0) {
+            uw.set(MaterialPurchase::getArrivedQuantity, directUseQty);
+            uw.set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now());
+        } else if (currentArrived.compareTo(BigDecimal.ZERO) <= 0 && pq != null && pq.compareTo(BigDecimal.ZERO) > 0) {
             uw.set(MaterialPurchase::getArrivedQuantity, pq);
             uw.set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now());
         }
@@ -707,9 +725,9 @@ public class MaterialPurchaseStatusHelper {
         }
         // D-321b: 物料去向选择——入库到仓库 / 直接使用，均写入物料仓储出入库流水；
         // 不传 movementAction 时维持原行为（仅完成，向后兼容小程序等旧调用方）。
-        // 必须先解析：movementAction=inbound 时，下面的 inboundOnComplete 会触发 syncFromInbound
-        // 自动生成物料对账，这里再 upsertFromPurchaseId 会同一次入库记两条对账（重复根因）。
-        String movementAction = ParamUtils.toTrimmedString(body == null ? null : body.get("movementAction"));
+        // movementAction 已在状态门控前解析（D-890）：movementAction=inbound 时，下面的
+        // inboundOnComplete 会触发 syncFromInbound 自动生成物料对账，这里再 upsertFromPurchaseId
+        // 会同一次入库记两条对账（重复根因）。
 
         // D-264：确认完成即生成/更新物料对账——对账编排器此前只注入未调用，
         // 内部工厂采购完成后从不入对账，全靠手动"补生成"兜底（用户："最近都没有进去"）
