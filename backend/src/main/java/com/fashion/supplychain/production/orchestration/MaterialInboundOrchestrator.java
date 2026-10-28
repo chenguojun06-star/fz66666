@@ -105,25 +105,23 @@ public class MaterialInboundOrchestrator {
         BigDecimal currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
         BigDecimal totalArrived = currentArrived.add(arrivedQuantity);
 
-        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(totalArrived) < 0) {
-            throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%s, 本次到货=%s, 采购数量=%s",
-                    currentArrived, arrivedQuantity,
-                    purchase.getPurchaseQuantity() == null ? "null" : purchase.getPurchaseQuantity().toPlainString()));
-        }
-
-        // D-362：入库防重总闸——累计入库(台账)+本次 不能超过采购数量。
-        // 此前只有"确认完成入库"路径有这道闸，登记到货/补录路径没有 → 同一采购可从
-        // 批量菜单、行上操作、更多菜单重复入库多倍库存。总闸装在账本层，入口全覆盖。
-        // D-410：防重总闸改用 BigDecimal 比较。此前用 int，采购 1.32 米时 purchaseQtyInt=1，
-        // 会导致"已入库 1 + 本次 1.32 > 1"被误拦 → 小数物料根本入不了库。
+        // D-891：用户多次明确要求——到货数量不设上限。采购数量只是推荐值，
+        // 面料按卷/按米来货，实际到货可多于或少于推荐采购量，按实际填即可。
+        // 原「到货数量超出采购数量」硬拦截与 D-362 防重总闸（累计入库≤采购数量）
+        // 都会把正常的超量到货误拦，现降级为告警日志（台账仍全量可查，便于事后核对）。
         String unitText = purchase.getUnit() == null ? "" : purchase.getUnit();
         BigDecimal purchaseQtyBd = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
         BigDecimal alreadyInboundQty = sumInboundQuantity(purchase.getId(), tenantId);
+        if (purchaseQtyBd.compareTo(totalArrived) < 0) {
+            log.warn("超量到货（允许，仅告警）: purchaseId={}, 已到货={}, 本次到货={}, 采购数量={}",
+                    purchaseId, currentArrived, arrivedQuantity, purchaseQtyBd.toPlainString());
+        }
         if (alreadyInboundQty.add(arrivedQuantity).compareTo(purchaseQtyBd) > 0) {
-            throw new RuntimeException(String.format(
-                    "重复入库被拦截：该采购单已登记入库 %s%s，累计入库不能超过采购数量 %s%s。如需调整请先核对【入库记录】，或用出库冲正多入部分。",
+            log.warn("累计入库超出采购数量（允许，仅告警，请自行核对是否重复登记）: purchaseId={}, 已入库={}{} + 本次={}{} > 采购数量={}{}",
+                    purchaseId,
                     alreadyInboundQty.stripTrailingZeros().toPlainString(), unitText,
-                    purchaseQtyBd.stripTrailingZeros().toPlainString(), unitText));
+                    arrivedQuantity.stripTrailingZeros().toPlainString(), unitText,
+                    purchaseQtyBd.stripTrailingZeros().toPlainString(), unitText);
         }
 
         // 3. 创建入库记录

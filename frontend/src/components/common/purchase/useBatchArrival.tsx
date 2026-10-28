@@ -59,7 +59,8 @@ export const useBatchArrival = <T extends BatchArrivalRow>({
 
     Modal.confirm({
       title: `批量登记到货（${targets.length} 项）`,
-      width: '52vw',
+      // D-891：加宽弹窗——行内要放物料信息 + 去向 + 数量，52vw 布局太挤
+      width: 860,
       content: <BatchArrivalFormBody form={form} rows={targets} />,
       okText: '确认登记',
       cancelText: '取消',
