@@ -192,6 +192,19 @@ SomeService service = SpringContextHolder.getBean(SomeService.class);
 **触发P0铁律**：#3 全链路一致性（间接）
 **后果**：样式不一致，维护困难，每个页面都有自己的 bug
 
+### AP-FE-04: Modal.confirm 独立 React 根里的表单组件漏 `<Form>` 包裹（D-891 实锤）
+**识别信号**：`Modal.confirm({ content: <SomeFormBody form={form} /> })`，而 `SomeFormBody` 内部只渲染 `Form.Item` 没有 `<Form>`；或 content 组件里用了 `useNavigate`（无 Router context 直接崩）
+**错误做法**：
+```tsx
+// ❌ 表单体没有 <Form>：Modal.confirm 是 document body 级独立 React 根，
+//    不继承任何 context，form 实例不挂载 → Radio 受控但写不回值（点不动）、
+//    setFieldsValue 预填无效、validateFields 拿不到值。编译/tsc 全不报。
+const Body = ({ form }) => <div><Form.Item name="x"><Radio.Group/></Form.Item></div>;
+```
+**正确做法**：表单体组件自带 `<Form form={form}>` 包裹；需要跳转的组件（含 useNavigate）不可放进 Modal.confirm content（参照 `MaterialWarehouseLocationPicker` 不可复用的教训，直接照抄 InboundModal 的 Select 级联范式）
+**验证方式**：必须真点一下（或写 vitest 渲染测试：fireEvent.click 后断言 form.getFieldValue 写回）——D-890 就是只过了编译/tsc 漏上线的
+**后果**：用户报"选项点击不了选不中"（D-891）
+
 ---
 
 ## 📱 小程序相关
