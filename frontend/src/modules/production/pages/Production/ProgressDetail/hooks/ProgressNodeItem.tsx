@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
+import dayjs from 'dayjs';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import DefectTracePopover from '../components/DefectTracePopover';
+import NodeScanTimelinePopover from '../components/NodeScanTimelinePopover';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
 import { NodeCalculationResult } from './nodeCalculations';
 import { colorWithAlpha } from './cellRendererHelpers';
-import { loadStageConfigBudget } from '@/utils/progressTimeBudget';
+import { loadStageConfigBudget, getConfigBudgetDays } from '@/utils/progressTimeBudget';
 
 interface ProgressNodeItemProps {
   node: ProgressNode;
@@ -62,6 +64,31 @@ export function ProgressNodeItem({
   const showConnector = index < total - 1;
   const lottieSize = nodeType === 'quality' ? 78 : 68;
   const labelTopOffset = nodeType === 'quality' ? 'calc(50% + 44px)' : 'calc(50% + 39px)';
+
+  // D-892：开始时间 = 订单环节字段或首次扫码兜底（calcNodeData 已合并进 startTime）
+  const startDisplay = startTime ? dayjs(startTime).format('MM-DD HH:mm') : '';
+  // D-892：未完成节点显示「已耗时」，超过环节配置预算天数标红
+  const elapsedInfo = (() => {
+    if (completionTime || !startTime) return null;
+    const start = dayjs(startTime).valueOf();
+    if (!Number.isFinite(start)) return null;
+    const diffMs = Date.now() - start;
+    if (diffMs < 0) return null;
+    const diffHours = Math.floor(diffMs / 3600000);
+    let text: string;
+    if (diffHours >= 24) {
+      const days = Math.floor(diffHours / 24);
+      const hours = diffHours % 24;
+      text = hours > 0 ? `${days}天${hours}小时` : `${days}天`;
+    } else if (diffHours > 0) {
+      text = `${diffHours}小时`;
+    } else {
+      text = `${Math.max(1, Math.floor(diffMs / 60000))}分钟`;
+    }
+    const budgetDays = getConfigBudgetDays(nodeName, (record as { styleId?: string | null }).styleId);
+    const over = budgetDays != null && diffMs > budgetDays * 24 * 3600000;
+    return { text, over };
+  })();
 
   const renderLottie = () => {
     const lottie = (
@@ -141,31 +168,55 @@ export function ProgressNodeItem({
           }}>
             {nodeLabel}
           </div>
-          {(operatorDisplay || completionTimeDisplay) && (
-            <div style={{
-              fontSize: 11,
-              color: 'var(--color-text-tertiary)',
-              lineHeight: 1.3,
-              textAlign: 'center',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {operatorDisplay && <span>{operatorDisplay}</span>}
-              {operatorDisplay && completionTimeDisplay && <span> · </span>}
-              {completionTimeDisplay && <span>{completionTimeDisplay}</span>}
-            </div>
+          {(startDisplay || operatorDisplay || completionTimeDisplay) && (
+            <NodeScanTimelinePopover orderId={String(record.id || '')} node={node} nodeName={nodeName}>
+              <div
+                style={{ cursor: 'pointer', maxWidth: '100%' }}
+                title="点击查看该环节全部扫码时间线"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {startDisplay && (
+                  <div style={{
+                    fontSize: 11,
+                    lineHeight: 1.3,
+                    textAlign: 'center',
+                    color: 'var(--color-primary)',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    开始 {startDisplay}
+                  </div>
+                )}
+                {(operatorDisplay || completionTimeDisplay) && (
+                  <div style={{
+                    fontSize: 11,
+                    color: 'var(--color-text-tertiary)',
+                    lineHeight: 1.3,
+                    textAlign: 'center',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {operatorDisplay && <span>{operatorDisplay}</span>}
+                    {operatorDisplay && completionTimeDisplay && <span> · </span>}
+                    {completionTimeDisplay && <span>{completionTimeDisplay}</span>}
+                  </div>
+                )}
+              </div>
+            </NodeScanTimelinePopover>
           )}
-          {durationDisplay && (
+          {(durationDisplay || elapsedInfo) && (
             <div style={{
               fontSize: 11,
               lineHeight: 1.3,
               textAlign: 'center',
-              color: durationOverThreshold ? 'var(--color-danger)' : 'var(--color-text-quaternary)',
-              fontWeight: durationOverThreshold ? 600 : 400,
+              color: (durationOverThreshold || elapsedInfo?.over) ? 'var(--color-danger)' : 'var(--color-text-quaternary)',
+              fontWeight: (durationOverThreshold || elapsedInfo?.over) ? 600 : 400,
             }}>
-              耗时 {durationDisplay}{durationOverThreshold ? '（超48h）' : ''}
+              {durationDisplay
+                ? `耗时 ${durationDisplay}${durationOverThreshold ? '（超48h）' : ''}`
+                : `已耗时 ${elapsedInfo?.text}${elapsedInfo?.over ? '（超预算）' : ''}`}
             </div>
           )}
           <BudgetDaysEditor

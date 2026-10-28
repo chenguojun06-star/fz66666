@@ -7,6 +7,8 @@ type BoardTimesByOrder = Record<string, Record<string, string>>;
 interface ProductionBoardState {
   boardStatsByOrder: BoardStatsByOrder;
   boardTimesByOrder: BoardTimesByOrder;
+  /** D-892：节点首次扫码时间（开始时间）：orderId → nodeName → minScanTime */
+  boardStartTimesByOrder: BoardTimesByOrder;
   boardStatsLoadingByOrder: Record<string, boolean>;
   /** 子工序粒度：processName → qty（直接从 processName 字段聚合，不经过节点匹配） */
   processStatsByOrder: Record<string, Record<string, number>>;
@@ -20,6 +22,7 @@ interface ProductionBoardState {
   processWorkerNamesByOrder: Record<string, Record<string, string[]>>;
   mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number> | null) => void;
   mergeBoardTimesForOrder: (orderId: string, times: Record<string, string>) => void;
+  mergeBoardStartTimesForOrder: (orderId: string, times: Record<string, string>) => void;
   setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
   mergeProcessDataForOrder: (
     orderId: string,
@@ -35,6 +38,7 @@ interface ProductionBoardState {
 export const useProductionBoardStore = create<ProductionBoardState>()((set) => ({
   boardStatsByOrder: {},
   boardTimesByOrder: {},
+  boardStartTimesByOrder: {},
   boardStatsLoadingByOrder: {},
   processStatsByOrder: {},
   processGroupsByOrder: {},
@@ -57,6 +61,16 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
     set((state) => ({
       boardTimesByOrder: {
         ...state.boardTimesByOrder,
+        [oid]: times,
+      },
+    }));
+  },
+  mergeBoardStartTimesForOrder: (orderId, times) => {
+    const oid = String(orderId || '').trim();
+    if (!oid) return;
+    set((state) => ({
+      boardStartTimesByOrder: {
+        ...state.boardStartTimesByOrder,
         [oid]: times,
       },
     }));
@@ -87,6 +101,8 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
       boardStatsByOrder: {},
       //  保留 boardTimesByOrder：刷新时时间不瞬间消失，新数据回来后自动覆盖
       boardTimesByOrder: state.boardTimesByOrder,
+      // D-892：开始时间同理保留，避免刷新时「开始」文案闪没
+      boardStartTimesByOrder: state.boardStartTimesByOrder,
       boardStatsLoadingByOrder: {},
       processStatsByOrder: {},
       processGroupsByOrder: {},

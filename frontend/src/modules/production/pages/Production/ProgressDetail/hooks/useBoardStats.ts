@@ -2,6 +2,7 @@ import { productionScanApi, materialPurchaseApi, processParentMappingApi } from 
 import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';
 import { getRecordStageName, stageNameMatches, getDynamicParentMapping, setDynamicParentMapping } from '../utils';
+import { useProductionBoardStore } from '@/stores/productionBoardStore';
 
 /**
  * boardStats 缓存 TTL：2 分钟后自动过期重新拉取。
@@ -66,6 +67,42 @@ const loadAllOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
   return all;
 };
 
+/**
+ * D-892：匹配扫码记录到节点（同时检查 progressStage 父节点和 processName 子工序名）。
+ * 从 ensureBoardStatsForOrder 内部提取为模块级导出，供节点扫码时间线弹窗复用，保证口径一致。
+ */
+export const recordMatchesNode = (node: ProgressNode, r: Record<string, unknown>) => {
+  const nName = String(node?.name || '').trim();
+  const rStageName = getRecordStageName(r);
+  const rProcessName = String(r?.processName || '').trim();
+  const nodeParent = String(node?.progressStage || '').trim();
+
+  if (nodeParent && nodeParent !== nName && rProcessName) {
+    return rProcessName === nName;
+  }
+
+  if (nodeParent && nodeParent !== nName && !rProcessName) {
+    if (stageNameMatches(nName, rStageName)) return true;
+    return false;
+  }
+
+  if (stageNameMatches(nName, rStageName)) return true;
+  if (rProcessName && rProcessName === nName) return true;
+  if (nodeParent && stageNameMatches(nodeParent, rStageName)) {
+    if (stageNameMatches(nName, rProcessName) || rProcessName === nName) return true;
+  }
+  return false;
+};
+
+/** 拉取订单全部有效扫码记录（success + qty>0 + 非 orchestration），供看板聚合与时间线弹窗复用 */
+export const loadValidOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
+  const records = await loadAllOrderScans(orderId);
+  return records
+    .filter((r) => String(r?.scanResult || '').trim() === 'success')
+    .filter((r) => (Number(r?.quantity) || 0) > 0)
+    .filter((r) => String(r?.scanType || '').trim() !== 'orchestration');
+};
+
 export const ensureBoardStatsForOrder = async ({
   order,
   nodes,
@@ -115,34 +152,7 @@ export const ensureBoardStatsForOrder = async ({
     setBoardLoadingForOrder(oid, true);
   }
   try {
-    const records: ScanRecord[] = await loadAllOrderScans(oid);
-    const valid = records
-      .filter((r) => String(r?.scanResult || '').trim() === 'success')
-      .filter((r) => (Number(r?.quantity) || 0) > 0)
-      .filter((r) => String(r?.scanType || '').trim() !== 'orchestration');
-    // 匹配扫码记录到节点：同时检查 progressStage（父节点）和 processName（子工序名）
-    const recordMatchesNode = (node: ProgressNode, r: Record<string, unknown>) => {
-      const nName = String(node?.name || '').trim();
-      const rStageName = getRecordStageName(r);
-      const rProcessName = String(r?.processName || '').trim();
-      const nodeParent = String(node?.progressStage || '').trim();
-
-      if (nodeParent && nodeParent !== nName && rProcessName) {
-        return rProcessName === nName;
-      }
-
-      if (nodeParent && nodeParent !== nName && !rProcessName) {
-        if (stageNameMatches(nName, rStageName)) return true;
-        return false;
-      }
-
-      if (stageNameMatches(nName, rStageName)) return true;
-      if (rProcessName && rProcessName === nName) return true;
-      if (nodeParent && stageNameMatches(nodeParent, rStageName)) {
-        if (stageNameMatches(nName, rProcessName) || rProcessName === nName) return true;
-      }
-      return false;
-    };
+    const valid = await loadValidOrderScans(oid);
     const stats: Record<string, number> = {};
     const hasScanByNode: Record<string, boolean> = {};
     const parentChildMap = new Map<string, string[]>();
@@ -267,6 +277,9 @@ export const ensureBoardStatsForOrder = async ({
     // 计算每个工序节点的最后完成时间（用于进度球下方显示）
     if (mergeBoardTimesForOrder) {
       const timeStats: Record<string, string> = {};
+      // D-892：同步聚合每个节点的首次扫码时间（= 节点开始时间），
+      // 修复「节点卡片没有开始时间 → 未完成节点算不出已耗时/超期」的问题
+      const startStats: Record<string, string> = {};
       for (const n of nodes || []) {
         const nodeName = String(n?.name || '').trim();
         if (!nodeName) continue;
@@ -274,21 +287,26 @@ export const ensureBoardStatsForOrder = async ({
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
         //  Bug5修复：scanTime 可能为 null（旧数据），兜底读 createTime
         let maxTime = '';
+        let minTime = '';
         for (const r of matchingRecords) {
           const t = String(r?.scanTime || r?.createTime || '');
           if (t && (!maxTime || t > maxTime)) maxTime = t;
+          if (t && (!minTime || t < minTime)) minTime = t;
         }
         // 采购节点时间：无扫码时用 actualArrivalDate（宽松匹配节点名）
         if (!maxTime && isProcureNodeName(nodeName) && procureArrivalTime) {
           maxTime = procureArrivalTime;
         }
         if (maxTime) timeStats[nodeName] = maxTime;
+        if (minTime) startStats[nodeName] = minTime;
       }
       //  模板无采购节点但有到货时间 → 写入哨兵键，供悬停卡/详情弹窗消费
       if (!hasProcureNode && procureArrivalTime) {
         timeStats['__procurement__'] = procureArrivalTime;
       }
       mergeBoardTimesForOrder(oid, timeStats);
+      // D-892：开始时间直接写全局 store（4 个调用点统一生效，不逐个透传参数）
+      useProductionBoardStore.getState().mergeBoardStartTimesForOrder(oid, startStats);
     }
 
     // 额外聚合：按 processName 建子工序维度（悬停卡展示真实扫码工序，不依赖节点配置）

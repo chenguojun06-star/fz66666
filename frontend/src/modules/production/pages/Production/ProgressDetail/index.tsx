@@ -93,6 +93,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
   const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
+  const boardStartTimesByOrder = useProductionBoardStore((s) => s.boardStartTimesByOrder);
   const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
@@ -269,7 +270,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const { columns } = useProgressColumns({
     orderSortField, orderSortOrder, handleOrderSort,
-    boardStatsByOrder: boardStatsByOrder as Record<string, Record<string, number>>, boardTimesByOrder, processWorkerNamesByOrder, progressNodesByStyleNo,
+    boardStatsByOrder: boardStatsByOrder as Record<string, Record<string, number>>, boardTimesByOrder, boardStartTimesByOrder, processWorkerNamesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, labelPrintLoading, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal, stagnantOrderIds, deliveryRiskMap,

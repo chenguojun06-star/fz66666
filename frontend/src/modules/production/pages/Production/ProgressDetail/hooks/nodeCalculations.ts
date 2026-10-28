@@ -36,6 +36,8 @@ export function calcNodeData(
   nodeWorkerNamesMap: Record<string, string[]> | undefined,
   isCompletedOrClosed: boolean,
   frozen: boolean,
+  /** D-892：节点首次扫码时间（orderId 维度的 nodeName→minScanTime），订单字段无开始时间时兜底 */
+  nodeStartTimesMap?: Record<string, string> | undefined,
 ): NodeCalculationResult {
   const nodeName = node.name || '-';
   const nodeType = (node.progressStage && node.progressStage.trim())
@@ -76,18 +78,21 @@ export function calcNodeData(
             return '';
           })())
       );
+  // D-892：订单字段常缺环节开始时间 → 用该节点首次扫码时间兜底，
+  // 让「开始时间 / 已耗时 / 超期标红」在只扫码不填时间的工厂也能生效
+  const scanStartFallback = nodeStartTimesMap?.[nodeName] || '';
   const startTime = isProcureNode
-    ? (record.procurementStartTime || '')
+    ? (record.procurementStartTime || scanStartFallback)
     : (() => {
         const stageKey = String(node.progressStage || '').trim().toLowerCase();
         const nameKey = nodeName.toLowerCase();
-        if (stageKey === 'cutting' || nameKey.includes('裁剪')) return record.cuttingStartTime || '';
-        if (stageKey === 'sewing' || stageKey === 'carsewing' || nameKey.includes('车缝')) return record.sewingStartTime || record.carSewingStartTime || '';
-        if (stageKey === 'secondaryprocess' || stageKey === 'secondary' || nameKey.includes('二次工艺')) return record.secondaryProcessStartTime || '';
-        if (stageKey === 'warehousing' || nameKey.includes('入库')) return record.warehousingStartTime || '';
-        if (stageKey === 'quality' || nameKey.includes('质检')) return record.qualityStartTime || '';
-        if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) return record.packagingStartTime || record.ironingStartTime || '';
-        return '';
+        if (stageKey === 'cutting' || nameKey.includes('裁剪')) return record.cuttingStartTime || scanStartFallback;
+        if (stageKey === 'sewing' || stageKey === 'carsewing' || nameKey.includes('车缝')) return record.sewingStartTime || record.carSewingStartTime || scanStartFallback;
+        if (stageKey === 'secondaryprocess' || stageKey === 'secondary' || nameKey.includes('二次工艺')) return record.secondaryProcessStartTime || scanStartFallback;
+        if (stageKey === 'warehousing' || nameKey.includes('入库')) return record.warehousingStartTime || scanStartFallback;
+        if (stageKey === 'quality' || nameKey.includes('质检')) return record.qualityStartTime || scanStartFallback;
+        if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) return record.packagingStartTime || record.ironingStartTime || scanStartFallback;
+        return scanStartFallback;
       })();
   const workerNames = nodeWorkerNamesMap?.[nodeName] || [];
   const operatorDisplay = workerNames.length > 0 ? workerNames.slice(0, 3).join('、') + (workerNames.length > 3 ? `等${workerNames.length}人` : '') : '';

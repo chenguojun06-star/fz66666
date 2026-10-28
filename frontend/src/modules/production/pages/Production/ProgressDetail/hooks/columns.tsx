@@ -15,6 +15,8 @@ interface UseProgressColumnsParams {
   handleOrderSort: (field: string, order: 'asc' | 'desc') => void;
   boardStatsByOrder: Record<string, Record<string, number>>;
   boardTimesByOrder: Record<string, Record<string, string>>;
+  /** D-892：节点首次扫码时间（开始时间） */
+  boardStartTimesByOrder?: Record<string, Record<string, string>>;
   processWorkerNamesByOrder: Record<string, Record<string, string[]>>;
   progressNodesByStyleNo: Record<string, import('../types').ProgressNode[]>;
   openNodeDetail: (
@@ -45,6 +47,7 @@ interface UseProgressColumnsParams {
 export const useProgressColumns = ({
   boardStatsByOrder,
   boardTimesByOrder,
+  boardStartTimesByOrder,
   processWorkerNamesByOrder,
   progressNodesByStyleNo,
   openNodeDetail,
@@ -86,6 +89,7 @@ export const useProgressColumns = ({
         progressNodesByStyleNo,
         boardStatsByOrder,
         boardTimesByOrder,
+        boardStartTimesByOrder,
         processWorkerNamesByOrder,
         openNodeDetail,
         setQuickEditRecord,
@@ -112,7 +116,7 @@ export const useProgressColumns = ({
       ),
     }] : []),
   ], [
-    boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo, processWorkerNamesByOrder,
+    boardStatsByOrder, boardTimesByOrder, boardStartTimesByOrder, progressNodesByStyleNo, processWorkerNamesByOrder,
     openNodeDetail, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, labelPrintLoading, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal,

@@ -176,7 +176,8 @@ export function computeStageBudgetHint(params: {
     if (actualDays <= budgetDays) {
       return { text: `预算${budgetDays}天 · 准时`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
     }
-    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
+    // D-892：已完成但超预算 → 标红（用户口径：预算2天实际超了必须一眼看到）
+    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: 'var(--color-danger)', budgetDays };
   }
 
   if (stageStartTime) {

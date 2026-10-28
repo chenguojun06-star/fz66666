@@ -17,6 +17,8 @@ export interface ProgressNodesContext {
   progressNodesByStyleNo: Record<string, ProgressNode[]>;
   boardStatsByOrder: Record<string, Record<string, number>>;
   boardTimesByOrder: Record<string, Record<string, string>>;
+  /** D-892：节点首次扫码时间（开始时间） */
+  boardStartTimesByOrder?: Record<string, Record<string, string>>;
   processWorkerNamesByOrder: Record<string, Record<string, string[]>>;
   openNodeDetail: (
     order: ProductionOrder,
@@ -46,6 +48,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     progressNodesByStyleNo,
     boardStatsByOrder,
     boardTimesByOrder,
+    boardStartTimesByOrder,
     processWorkerNamesByOrder,
     openNodeDetail,
     setQuickEditRecord,
@@ -70,6 +73,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
     const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
     const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
+    const nodeStartMap = boardStartTimesByOrder?.[String(record.id || '')];
     const nodeWorkerNamesMap = processWorkerNamesByOrder[String(record.id || '')];
     const progressTrackMinWidth = Math.max((ns.length + 1) * 92, 420);
 
@@ -90,7 +94,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
         progressNodesByStyleNo,
         getProcessesByNodeFromOrder,
       );
-      const nodeData = calcNodeData(node, record, totalQty, nodeDoneMap, nodeTimeMap, nodeWorkerNamesMap, isCompletedOrClosed, frozen);
+      const nodeData = calcNodeData(node, record, totalQty, nodeDoneMap, nodeTimeMap, nodeWorkerNamesMap, isCompletedOrClosed, frozen, nodeStartMap);
       openNodeDetail(
         record,
         effectiveNodeType,
@@ -144,6 +148,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
               nodeWorkerNamesMap,
               isCompletedOrClosed,
               frozen,
+              nodeStartMap,
             );
             const predictHint = getPredictHint(String(record.id || ''), nodeData.nodeName, nodeData.percent);
             return (
