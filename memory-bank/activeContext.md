@@ -955,6 +955,13 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-28 生产管理/样衣采购弹窗补发票上传，发票收敛单一实现（D-889）
+
+- [x] **核实结论（P0 #22 先查后做）**：发票上传全站只挂在物料采购列表弹窗（PurchaseDetailView「发票/单据」卡片）；生产管理节点弹窗（InlinePurchasePanel，截图红框处）、样衣开发 PurchaseDrawer（同复用 InlinePurchasePanel）、物料详情页均无入口。后端字段为行级 `t_material_purchase.invoice_urls`，接口 `/production/purchase/update-invoice-urls`
+- [x] **用户拍板**：订单级聚合——展示该订单全部采购行发票并集，变更整包写回锚点行并清空其余行（防删掉的图从另一行复活）
+- [x] **实现（单一套，吸取 D-888 教训）**：`InvoiceUploadCard` + `useInvoiceManagement` + `invoiceUtils` 全部抽到 `components/common/purchase/`，删除 PurchaseModal 下旧实现；InlinePurchasePanel 挂卡片（节点弹窗+样衣抽屉同时生效）；物料采购列表弹窗改引用公共实现
+- [x] **验证**：tsc 0、eslint 0、vitest 849/849、safe-push 4/0；已推送 `29ce538aa`，autodeploy 自动上线
+
 ### 2026-10-28 批量按钮收敛：删除 SelectedRowsBar 第二套实现（D-888，P0 #22 再犯）
 
 - [x] **用户痛斥**：系统早有全站统一批量按钮 `PurchaseActionBar`（D-360，12 处引用，含批量领取/登记到货/回料确认/确认完成），但物料采购列表页 `SelectedRowsBar` 自己抄了第二套下拉。做「批量登记到货」时没先查统一组件已有能力，两套里都加了一遍——违反 P0 #22（增加功能前必须核实系统已有能力）
