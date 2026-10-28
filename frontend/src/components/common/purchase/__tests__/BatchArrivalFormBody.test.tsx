@@ -24,6 +24,24 @@ const rows: BatchArrivalRow[] = [
   { id: 'p2', materialName: '好景出芽条', color: '黑金', purchaseQuantity: 6.06, arrivedQuantity: 0, unit: '米' },
 ] as BatchArrivalRow[];
 
+let capturedForm: FormInstance | null = null;
+
+const Harness: React.FC = () => {
+  const [form] = Form.useForm();
+  capturedForm = form;
+  return <BatchArrivalFormBody form={form} rows={rows} />;
+};
+
+const setup = () => {
+  capturedForm = null;
+  render(<Harness />);
+  const form = () => {
+    if (!capturedForm) throw new Error('form 实例未挂载');
+    return capturedForm;
+  };
+  return { form };
+};
+
 /**
  * D-891 回归：
  * 1) Radio 可点选——曾因表单体没有 <Form> 包裹（Modal.confirm 独立 React 根）
@@ -32,19 +50,6 @@ const rows: BatchArrivalRow[] = [
  * 3) 到货数量不设上限——超量填写校验必须通过（用户多次强调采购量只是推荐值）。
  */
 describe('BatchArrivalFormBody（D-891）', () => {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const setup = () => {
-    let formRef: FormInstance;
-    const Wrapper: React.FC = () => {
-      const [form] = Form.useForm();
-      formRef = form;
-      return <BatchArrivalFormBody form={form} rows={rows} />;
-    };
-    render(<Wrapper />);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return { form: () => formRef! };
-  };
-
   it('每行「直采使用」Radio 可点选并写回表单', async () => {
     const { form } = setup();
     // 顺序：全局(全部入库/全部直采) → 行0(入库/直采) → 行1(入库/直采)
