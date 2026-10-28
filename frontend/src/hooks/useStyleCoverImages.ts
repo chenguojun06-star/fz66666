@@ -20,7 +20,7 @@
  *   <StyleImageCell skuCode={r.skuCode} imageMap={imageMap} />
  *   // 「款号」列：briefBySku[r.skuCode]?.styleNo
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '@/utils/api';
 
 /**
@@ -97,8 +97,16 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
   const fetchedSkuRef = useRef<Set<string>>(new Set());
   const fetchedStyleRef = useRef<Set<string>>(new Set());
   const fetchedOrderRef = useRef<Set<string>>(new Set());
+  // 卸载守卫：组件销毁后（vitest teardown / 路由切换）迟到的异步回调
+  // 不再调用 setState，避免 "window is not defined" 形成 Unhandled Rejection。
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const fetchByStyleNos = useCallback(async (styleNos: Array<string | null | undefined>) => {
+    if (typeof window === 'undefined') return;
     const unique = Array.from(new Set(
       styleNos
         .map(s => (typeof s === 'string' ? s.trim() : ''))
@@ -129,7 +137,7 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
         setImageMap(prev => ({ ...prev, ...map }));
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
@@ -189,7 +197,7 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
     } catch {
       // 图片是锦上添花，失败不打断主流程（列表仍能显示文字信息）
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
@@ -234,6 +242,7 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
     orderNos: Array<string | null | undefined> = [],
     platformOrderNos: Array<string | null | undefined> = [],
   ) => {
+    if (typeof window === 'undefined') return;
     const clean = (arr: Array<string | null | undefined>) => Array.from(new Set(
       arr.map(s => (typeof s === 'string' ? s.trim() : '')).filter(Boolean)
     ));
@@ -292,7 +301,7 @@ export function useStyleCoverImages(): UseStyleCoverImagesReturn {
     } catch {
       // 图片是锦上添花，失败不打断主流程
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 

@@ -4852,3 +4852,20 @@ quality-gate 只留 Python/Node 原生脚本；门禁能力不降级，也不再
 **验证**：tsc 0 / eslint 0；改动 4 文件（ConfirmCompleteModal / LocationItemsModal / useBatchArrival / BatchArrivalFormBody）。
 
 **教训**：① 流程性默认值必须延续用户已做的选择/系统已有的事实（已入库就别再让人选入库）；② 新弹窗列宽必须适配弹窗宽度，ResizableModal 内容少时必须显式 initialHeight；③ 这些是 D-893 就该做到的质量标准，不该等用户再提。
+
+## D-895 CI 测试 teardown 的 Unhandled Rejection 收口（2026-10-28）
+
+**背景**：D-887 推送后 CI 前端测试仍红：849 用例全过但存在 1 条 unhandled rejection
+`ReferenceError: window is not defined`（`useStyleCoverImages.ts:192`），Vitest 因 unhandled error 以 exit 1 失败，
+导致前端构建 skipped、线上始终停在旧包。
+
+**根因**：`useStyleCoverImages` 三个 fetch 函数在 await 解析后仍调用 setState；
+组件卸载（vitest teardown）后 `window` 已被 jsdom 拆掉，迟到的异步回调再 setState 抛错。
+try 内的 setState 被空 catch 吞掉，但 `finally` 里的 `setLoading(false)` 抛出的错误无人捕获 → unhandled。
+
+**修复**：
+- 引入 `mountedRef` + useEffect 清理，卸载后置 false；
+- 三个 fetch 入口加 `typeof window === 'undefined'` 守卫；
+- 三个 finally 的 `setLoading(false)` 改为 `if (mountedRef.current) setLoading(false)`。
+
+**验证**：`tsc --noEmit` 0 错误；`vitest run` 75 文件 / 852 用例全过，0 unhandled error。
