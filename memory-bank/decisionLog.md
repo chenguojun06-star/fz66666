@@ -4779,3 +4779,16 @@ quality-gate 只留 Python/Node 原生脚本；门禁能力不降级，也不再
 将服务器复位到共同父提交 `2df5b1820` 后由 autodeploy 正常 ff 到 `b5e9b4f18` 并重建。
 
 **教训**：门禁步骤新增时必须在本 job 内跑通依赖；「CI 红但部署照跑」会掩盖线上不更新的真问题。
+
+## D-890 批量登记到货对齐单条逻辑 + confirmComplete 直采门控放宽（2026-10-28）
+
+**背景**：用户批评「为什么批量登记与单条登记到货逻辑不一样」——单条登记到货有「到货去向：入库到物料仓库 / 直采使用（不进仓库）」+ 物料仓库/库位/备注，批量登记到货只有数量输入+入库。要求批量与单条完全同逻辑。
+
+**决策**：
+1. **单一实现，不另起炉灶**：批量不复制一套直采逻辑——`MaterialInboundBatchOrchestrator` per-item 分流，direct_use 行跨 Bean 直接调 `materialPurchaseOrchestrator.confirmComplete`（与单条同一入口、同一事务语义），inbound 行走原 `confirmArrivalAndInbound`。Controller 每行解析 movementAction，仅识别 direct_use，其余一律按 inbound（防御脏参数）。
+2. **核实出的真缺陷一并修复**：`MaterialPurchaseStatusHelper.confirmComplete` 旧门控严格要求状态=awaiting_confirm，但登记到货行通常是 received/partial/partial_arrival → 单条/批量直采在已领取行**必报「仅待确认状态可确认完成」**。修复=仅当 movementAction=direct_use 且状态∈{received,partial,partial_arrival} 时放行；不带 movementAction 的旧「确认完成」入口（小程序/按钮/'none'）维持严格口径不受影响。update wrapper 乐观条件 `.eq(status, AWAITING_CONFIRM)` 改 `.eq(status, currentStatus)`；direct_use 且 movementQuantity>currentArrived 时按 movementQuantity 精确回写到货量+到货日期。
+3. **前端照抄单条 InboundModal 范式**：新建 `BatchArrivalFormBody.tsx`（141 行）——每行去向 Radio + 任一行 inbound 时全局物料仓库/库位级联 + 备注。⚠️ 不能复用 `MaterialWarehouseLocationPicker`：其内含 useNavigate，Modal.confirm content 无 Router context 会崩。
+
+**验证**：mvn compile ✅ / mvn test 993 全绿 ✅ / tsc 0 ✅ / eslint 0 ✅ / vitest 849 ✅ / build ✅ / madge 无循环 ✅；已推送 `911d7c399`。
+
+**教训**：① 批量操作的表单能力必须与单条同口径，新增批量入口前先对照单条弹窗字段清单逐项核实，缺一项就是逻辑分裂；② 门控条件放宽要按「入口」区分而不是按「方法」——同一方法服务多个入口时，放宽必须精确限定到新语义（direct_use），旧入口口径原样保留。

@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的内容已归档到 `archive/activeContext-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-25 15:20（✅ **D-884** 生产库实锤修正：MemoryNudge **生产正常**（18 条提醒 / 5 PENDING / reflection 115 次调用），本地 0 条系无人使用；**acceptNudge/dismissNudge 确认为真缺口**（生产 5 条 PENDING 无响应入口，待前端排期）；铁律：本地库无数据≠功能坏了。baseline **140 不变**）
+> 最后更新：2026-10-28 09:30（✅ **D-890** 批量登记到货对齐单条逻辑：每行可选「入库到物料仓库 / 直采使用」+ 全局仓库/库位级联/备注；后端 per-item movementAction 分流复用单条同一实现；**顺带修复隐性缺陷**——confirmComplete 旧门控严格要求 awaiting_confirm，导致「已领取」行直采必报错，现 direct_use + received/partial/partial_arrival 放行。mvn 993 全绿 / vitest 849 全绿，已推送 `911d7c399`）
+> 上一版：2026-10-25 15:20（✅ **D-884** 生产库实锤修正：MemoryNudge **生产正常**（18 条提醒 / 5 PENDING / reflection 115 次调用），本地 0 条系无人使用；**acceptNudge/dismissNudge 确认为真缺口**（生产 5 条 PENDING 无响应入口，待前端排期）；铁律：本地库无数据≠功能坏了。baseline **140 不变**）
 > 上一版：2026-10-25 11:05（✅ **D-879** 订单风险闭环：风险表自维护（去重/复现重开/自动解除）+ 补 list/stats/4 个人工动作端点；**修掉两个结构性问题**——每次评估插一条导致表无限膨胀、风险解除后处理率恒 0；14 用例 + intelligence 包 286 全绿，baseline **149→145**）
 > 上一版：2026-10-25 10:45（✅ **D-878** 工资支付审计接线：D-877 首批 6 处真缺口全部接线（取消支付/退回付款/驳回应付/确认线下支付/创建待付工资单/保存收款账户）+ 修正 3 个 targetId 语义错误；新增 8 用例全绿、finance 回归全绿、baseline **155→149**）
 > 上一版：2026-10-25 09:30（✅ **D-876** TDZ 高危前向引用守护：10-20 报价单打印白屏事故的检查脚本提交入库（此前一直未跟踪）+ 接入 CI 质量门禁（实测 1955 文件 0 高危）；**本地 db-query-mcp 修复**：mcp_readonly 密码重置 + 配置去掉未设置的 `${MCP_DB_PASSWORD}` 占位 + 清 2 个含 root 明文密码的临时脚本（同参数连接验证通过）。已推送 `2ef639e42`。**C 类待办 7/8 两项已完成**，剩第 9 项（unwired 拆分 + 教程口径）待排期）
@@ -954,6 +955,15 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-10-28 批量登记到货对齐单条逻辑：每行可选入库/直采使用（D-890）
+
+- [x] **用户批评**：批量登记到货只有数量输入+入库，而单条登记到货有「到货去向：入库到物料仓库 / 直采使用（不进仓库）」+ 物料仓库/库位/备注——两套逻辑不一致。要求批量与单条完全同逻辑
+- [x] **后端（单一实现，不另起炉灶）**：`MaterialInboundController.batch-confirm-arrival` 每行解析 movementAction（仅识别 direct_use，其余按 inbound）；`MaterialInboundBatchOrchestrator` per-item 分流——direct_use 跨 Bean 复用 `materialPurchaseOrchestrator.confirmComplete`（与单条同一实现），inbound 走原 `confirmArrivalAndInbound`，逐条独立事务不变
+- [x] **顺带修复隐性缺陷**：`MaterialPurchaseStatusHelper.confirmComplete` 旧门控严格要求状态=awaiting_confirm，但登记到货行通常是 received/partial/partial_arrival → 单条/批量直采在已领取行必报「仅待确认状态可确认完成」。修复=仅当 movementAction=direct_use 且状态∈{received,partial,partial_arrival} 时放行；不带 movementAction 的旧「确认完成」入口（小程序/按钮）维持严格口径；update wrapper 乐观条件改 currentStatus；direct_use 按 movementQuantity 精确回写到货量+到货日期
+- [x] **前端**：新建 `BatchArrivalFormBody.tsx`（141 行）——每行「到货去向」Radio + 任一行入库时全局物料仓库/库位级联 + 备注，照抄单条 InboundModal 范式（`useWarehouseAreaOptions('MATERIAL')`+`useWarehouseLocationByArea`）；`useBatchArrival.tsx` 瘦身 163→116 行。⚠️ `MaterialWarehouseLocationPicker` 含 useNavigate，Modal.confirm 无 Router context 不可复用
+- [x] **验证**：mvn compile ✅ / mvn test 993 全绿 ✅ / tsc 0 ✅ / eslint 0 ✅ / vitest 849 ✅ / build ✅ / madge 无循环 ✅ / safe-push 通过；已推送 `911d7c399`，autodeploy 自动上线
+- [x] **教训**：批量操作的表单能力必须与单条操作同口径（去向/仓库/库位/备注），新增批量入口前先对照单条弹窗字段清单逐项核实，缺一项就是逻辑分裂
 
 ### 2026-10-28 生产管理/样衣采购弹窗补发票上传，发票收敛单一实现（D-889）
 

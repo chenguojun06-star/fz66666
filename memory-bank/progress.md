@@ -17,6 +17,14 @@
 
 ## 已完成
 
+### 2026-10-28 D-890 批量登记到货对齐单条逻辑——每行可选入库/直采使用（已推送 911d7c399）
+
+- 用户批评：批量登记到货只有数量+入库，单条有「到货去向：入库到物料仓库/直采使用」+仓库/库位/备注，两套逻辑不一致
+- 后端：Controller 每行解析 movementAction → BatchOrchestrator per-item 分流，direct_use 跨 Bean 复用单条 `confirmComplete`（同一实现）；inbound 走原 `confirmArrivalAndInbound`，逐条独立事务
+- 顺带修复隐性缺陷：`confirmComplete` 旧门控严格要求 awaiting_confirm，已领取行直采必报错——现 direct_use + received/partial/partial_arrival 放行，旧「确认完成」入口维持严格口径；update 乐观条件改 currentStatus；direct_use 按 movementQuantity 精确回写到货量
+- 前端：新建 `BatchArrivalFormBody.tsx`（每行去向 Radio + 全局仓库/库位级联/备注，照抄单条 InboundModal 范式）；`useBatchArrival` 瘦身 163→116 行
+- 验证：mvn compile/test 993 全绿、tsc 0、eslint 0、vitest 849、build、madge 全过；safe-push 通过
+
 ### 2026-10-25 D-884 生产库实锤——MemoryNudge 误判修正（纯核实，无代码改动）
 
 - 用户提醒「数据很少得慢慢来」→ 上生产库核实：`t_memory_nudge` 18 条（5 PENDING 挂着）、`reflection` scene 115 次 LLM 调用（113 成功）——**功能正常在工作**；本地 0 条真因是重启后 0 用户对话 + LLM 未配置
