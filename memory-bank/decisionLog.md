@@ -4806,3 +4806,29 @@ quality-gate 只留 Python/Node 原生脚本；门禁能力不降级，也不再
 **验证**：mvn compile/test 993 全绿、tsc 0、eslint 0、vitest 852（+3）、build、safe-push 全过；已推送 `db20b0cde`+`f25febb74`。
 
 **教训**：① 独立 React 根（Modal.confirm/notification）里的受控表单组件必须自带 `<Form>`，否则字段全部冻结且无任何报错；② "不要限制数量"是用户反复强调的业务红线，任何门控设计（含防重闸）都不得与业务事实冲突——误拦正常业务的保护等于故障；③ 新增测试文件也要过 ratchet（eslint-disable 算劣化）。
+
+## D-892 大货生产看板节点补开始/完成时间与扫码时间线（2026-10-28）
+
+**背景**：用户看生产进度看板（如「大货生产 10-23 66/165 40% 预算2天·超1天·实际3天1小时」）指出：节点没有开始扫码时间/完成时间；未完成节点看不到该环节全部扫码时间线；超预算没有醒目红色；「这个开始就什么都没有了，节点延期这些都没有」。
+
+**决策**：
+1. **开始时间口径**：节点开始时间 = 该节点匹配的全部有效扫码里最早的 scanTime（`useBoardStats` 新增 `startStats`，按订单合并进 store `boardStartTimesByOrder`；`nodeCalculations.calcNodeData` 第 9 参兜底）。完成时间 = 节点达标（数量满）时最后一条扫码时间。
+2. **未完成节点看全时间线**：新建 `NodeScanTimelinePopover`——点击开始/完成时间弹出该节点全部扫码记录（谁/何时/多少），数据源复用 `loadValidOrderScans` + `recordMatchesNode`。
+3. **超期标红**：已完成节点「实际耗时超预算」从原色改 `var(--color-danger)`（progressTimeBudget L180 + ProgressNodeItem 已耗时/超预算），未完成且已超预算同样红色，一眼定位延期环节。
+4. **开始时间蓝色可点**：`var(--color-primary)` 与库位容量文案同一视觉语言（可点击=蓝色）。
+
+**验证**：tsc 0、eslint 0、vitest 852、build、safe-push 全过；commit `33fd6d03d` 已推送。
+
+## D-893 库位下拉统一显示实际容量并弹窗看货物明细（2026-10-28）
+
+**背景**：用户要求（截图：批量登记到货库位下拉只有名字）：库位显示后面统一加上「实际库位容量/当前已用/剩余」，蓝色字体，点击弹窗能看到该库位实际存的是什么货物——面料/成品/样衣全部统一一套逻辑，不许各做一份。
+
+**决策**：
+1. **单一共享组件三件套**（`components/common/`）：`WarehouseLocationSelect`（Select 封装：optionRender 名称+蓝色容量、labelRender 选中值带蓝色容量、透传 value/onChange 兼容 Form.Item）、`LocationCapacityText`（蓝色文案 + `formatCapacityText` 统一口径：cap>0 显示「容量X·已用Y·剩Z」否则「已用Y」）、`LocationItemsModal`（ResizableModal+ResizableTable，按 warehouseType 出 MATERIAL/SAMPLE/FINISHED 三套列，自取数 `/warehouse/location/items`）。
+2. **后端零改动**：`/warehouse/location/search` 已实时返回 capacity/usedCapacity；`/warehouse/location/items` 已返回明细。`useWarehouseLocationOptions` 接口补 `capacity?/usedCapacity?` 声明。
+3. **全量替换调用点（12 处）**：批量登记到货/单条登记到货/节点弹窗内联采购/样衣入库/自由入库/成品扫码出入库/物料扫码出入库/物料入库抽屉/SKU详情补录/店铺SKU补录（以上换 WarehouseLocationSelect）+ WarehouseLocationAutoComplete（optionRender 注入容量）+ MaterialWarehouseLocationPicker 卡片网格（LocationCapacityText）。children `<Option>` 形态全部改 options+optionRender，filterOption 统一 optionFilterProp="label"。
+4. **交互细节**：下拉里点蓝色文字 stopPropagation+preventDefault——只弹明细不换库位；弹窗实例挂在 Select 组件顶层（不挂 dropdown 内，防收起时被卸载）。
+
+**验证**：tsc 0、eslint 0、vitest 852、build、safe-push 全过；commit `fe35c98e7` 已推送。
+
+**教训**：统一 UI 需求先建单一组件再铺调用点；antd Select 的自定义渲染（optionRender/labelRender）里放可点击元素时，弹窗必须渲染在 Select 层而非 popup 内。

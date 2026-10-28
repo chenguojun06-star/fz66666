@@ -17,6 +17,19 @@
 
 ## 已完成
 
+### 2026-10-28 D-893 库位下拉统一显示容量+弹窗看货物明细（已推送 fe35c98e7）
+
+- 用户需求：所有库位下拉/显示处，库位名后统一蓝色字体显示「容量X·已用Y·剩Z」，点击弹窗看该库位实际存放货物明细；面料/成品/样衣全部一套逻辑
+- 新建单一共享组件三件套：`WarehouseLocationSelect`（optionRender+labelRender 蓝色容量、兼容 Form.Item）、`LocationCapacityText`（+`formatCapacityText`）、`LocationItemsModal`（ResizableModal+ResizableTable，按 warehouseType 三套列，自取数 `/warehouse/location/items`）
+- 12 处调用点全替换（采购到货/样衣入库/自由入库/扫码出入库/入库抽屉/SKU补录/AutoComplete/卡片网格）；后端零改动；`useWarehouseLocationOptions` 接口补 capacity/usedCapacity
+- 验证：tsc 0、eslint 0、vitest 852、build、safe-push 全过
+
+### 2026-10-28 D-892 大货生产看板节点开始/完成时间与扫码时间线（已推送 33fd6d03d）
+
+- 用户需求：节点卡片补开始扫码时间/完成时间；未完成节点点开看该环节全部扫码时间线；预算超期标红
+- 开始时间=节点最早扫码（store `boardStartTimesByOrder` + `calcNodeData` 兜底）；新建 `NodeScanTimelinePopover` 点击弹出全部扫码；超预算改 `var(--color-danger)` 红色；开始时间蓝色可点
+- 验证：tsc 0、eslint 0、vitest 852、build、safe-push 全过
+
 ### 2026-10-28 D-891 批量登记到货三修——Radio点不动/统一选择/到货数量不设上限（已推送 f25febb74）
 
 - 用户报：① 去向 Radio 点不动；② 要统一选择按钮；③ 弹窗太小布局丑；④ 重申——到货数量不要限制（采购量只是推荐值）

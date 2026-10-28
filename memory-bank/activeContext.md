@@ -957,6 +957,20 @@ GET /api/ec/stock/combo-list、pushStockToPlatform 推组合套数、前端订�
 
 ## 最近变更（Latest Changes）
 
+### 2026-10-28 库位下拉统一显示容量+弹窗看货物明细（D-893）
+
+- [x] **用户需求**：所有库位下拉/显示处，库位名后统一蓝色字体显示「容量X·已用Y·剩Z」，点击弹窗看该库位实际存放货物明细；面料/成品/样衣全部一套逻辑
+- [x] **单一共享组件**：新建 `WarehouseLocationSelect`（optionRender 名称+蓝色容量、labelRender 选中值带容量、兼容 Form.Item）、`LocationCapacityText`（+`formatCapacityText` 统一口径）、`LocationItemsModal`（ResizableModal+ResizableTable，按类型三套列，自取数 `/warehouse/location/items`）
+- [x] **12 处调用点全替换**：批量/单条登记到货、节点弹窗内联采购、样衣入库、自由入库、成品/物料扫码出入库×4、物料入库抽屉、SKU详情/店铺SKU补录；AutoComplete 用 optionRender 注入；卡片网格挂 LocationCapacityText；children Option 形态全改 options
+- [x] **后端零改动**：search 接口已实时返回 capacity/usedCapacity；`useWarehouseLocationOptions` 接口补容量字段声明
+- [x] **验证**：tsc 0 / eslint 0 / vitest 852 / build / safe-push 全绿；commit `fe35c98e7` 已推送
+
+### 2026-10-28 大货生产看板节点开始/完成时间与扫码时间线（D-892）
+
+- [x] **用户需求**：节点卡片要有开始扫码时间/完成时间；未完成节点点开看该环节全部扫码时间线；预算超期标红
+- [x] **实现**：开始时间=节点最早扫码（store `boardStartTimesByOrder` + `calcNodeData` 兜底）；新建 `NodeScanTimelinePopover` 点击时间弹出全部扫码；超预算「实际X」改 `var(--color-danger)` 红色；开始时间蓝色可点
+- [x] **验证**：tsc 0 / eslint 0 / vitest 852 / build / safe-push 全绿；commit `33fd6d03d` 已推送
+
 ### 2026-10-28 批量登记到货三修：Radio点不动/统一选择/到货数量不设上限（D-891）
 
 - [x] **用户报三个问题**：① 弹窗里「入库/直采使用」Radio 点击不了选不中；② 要有统一的去向选择按钮；③ 弹窗太小布局丑；④（重申多次的历史要求）到货数量不要限制——采购数量只是推荐值，面料实际到货可多可少
