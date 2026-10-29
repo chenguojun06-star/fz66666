@@ -4944,3 +4944,19 @@ Canvas/SVG 渲染器不解析 CSS 变量，这些颜色会画成黑色/透明。
 - 建议分支：无真逾期但有待关单逾期时给 warning 级提示"尽快确认关单"。
 
 **口径**：completedPendingClosure = productionProgress>=100（与 OrderWorkloadHelper 一致）。
+
+## D-900 已完成待关单提示扩展到 ProgressDetail 智能分析与悬浮卡片（2026-10-29）
+
+**背景**：D-898 只覆盖了工厂详情抽屉（FactoryInsightDrawer）。生产进度详情页的智能分析
+（progressIntelligence）与悬浮卡片（SmartOrderHoverCard）仍把已完成待关单的订单按"已逾期 X 天（进度 100%）"
+alarms，用户无法区分真逾期与待关单逾期。
+
+**改进**：
+- `progressIntelligence.tsx`：交期风险分支中，progress≥100 时改为"生产已完成并入库，等待关单；已逾期 X 天（按计划交期）"，
+  verdict 降为 warn（而非 critical）。
+- `useSmartOrderHoverCardData.ts`：新增 `isPendingClosure` 派生；deadline 显示"已完成待关单"（info 色）+
+  逾期天数；risk 显示"待关单"/"待关单逾期"；stuckNode 与 progressInsight 跳过待关单订单。
+
+**口径**：completedPendingClosure = productionProgress≥100 且未结案（与 OrderWorkloadHelper 一致），纯前端派生，无后端改动。
+
+**验证**：tsc 0 错误，eslint 0 error。

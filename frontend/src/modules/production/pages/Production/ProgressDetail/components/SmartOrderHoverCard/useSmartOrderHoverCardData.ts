@@ -72,6 +72,8 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
   const directCutting = isDirectCuttingOrder(order as any);
   // 已完成 / 已关单 / 已报废等终态订单均不显示悬浮卡
   const isCompleted = isOrderTerminal(order);
+  // 已完成待关单：进度100%但状态未流转（生产做完、只等关单）
+  const isPendingClosure = !isCompleted && (Number((order as any)?.productionProgress) || 0) >= 100;
   const now         = dayjs();
   const planEnd     = order.plannedEndDate ? dayjs(order.plannedEndDate) : null;
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
@@ -175,7 +177,7 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
 
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
-    if (isCompleted) return null;
+    if (isCompleted || isPendingClosure) return null;
     const entries = Object.entries(boardTimes).filter(([k]) => !isSentinelKey(k));
     if (!entries.length) return null;
     const [node, time] = entries.reduce((a, b) =>
@@ -183,28 +185,36 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
     );
     const days = now.diff(dayjs(time), 'day');
     return days >= 3 ? { node: normalizeNodeLabel(node), days } : null;
-  }, [boardTimes, isCompleted, now]);
+  }, [boardTimes, isCompleted, isPendingClosure, now]);
 
   /* 交期标签 */
   const deadline = useMemo(() => {
     if (isCompleted) return { text: '已完成', color: 'var(--color-success)' };
+    if (isPendingClosure) {
+      if (daysLeft !== null && daysLeft < 0) return { text: `已完成待关单 · 逾期 ${-daysLeft} 天`, color: 'var(--color-info)' };
+      return { text: '已完成待关单', color: 'var(--color-info)' };
+    }
     if (daysLeft === null) return null;
     if (daysLeft < 0) return { text: `逾期 ${-daysLeft} 天`, color: 'var(--color-danger)' };
     if (daysLeft === 0) return { text: '今天交货', color: 'var(--color-danger)' };
     if (daysLeft <= 3) return { text: `还剩 ${daysLeft} 天`, color: 'var(--color-warning)' };
     return { text: `还剩 ${daysLeft} 天`, color: 'var(--color-success)' };
-  }, [isCompleted, daysLeft]);
+  }, [isCompleted, isPendingClosure, daysLeft]);
 
   /* 风险标签 */
   const risk = useMemo(() => {
-    if (isCompleted) return null;
+    if (isCompleted || isPendingClosure) return null;
+    if (isPendingClosure) {
+      if (daysLeft !== null && daysLeft < 0) return { text: '待关单逾期', color: 'var(--color-warning)', bg: 'var(--status-warning-bg, var(--color-warning-bg))' };
+      return { text: '待关单', color: 'var(--color-info)', bg: 'var(--status-info-bg, var(--color-info-bg))' };
+    }
     if (daysLeft === null) return null;
     if (daysLeft < 0) return { text: '已逾期', color: 'var(--color-danger)', bg: 'var(--status-success-bg)' };
     if (daysLeft <= 3 && prog < 80) return { text: ' 高风险', color: 'var(--color-danger)', bg: 'var(--status-success-bg)' };
     if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6' };
     if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6' };
     return null;
-  }, [isCompleted, daysLeft, prog]);
+  }, [isCompleted, isPendingClosure, daysLeft, prog]);
 
   /* 速度：取单工序最大件数 / 开工天数
    * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高
@@ -310,7 +320,7 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
 
   /* 智能进度分析（瓶颈/人员/资源/风险） */
   const progressInsight = useMemo(() => {
-    if (isCompleted) return null;
+    if (isCompleted || isPendingClosure) return null;
     const snapshots = stages.map(s => ({
       name: s.label,
       qty: s.qty,
@@ -318,7 +328,7 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
       lastTime: s.lastTime,
     }));
     return analyzeProgress(order, snapshots, boardTimes, speed);
-  }, [order, stages, boardTimes, speed, isCompleted]);
+  }, [order, stages, boardTimes, speed, isCompleted, isPendingClosure]);
 
   return {
     total,

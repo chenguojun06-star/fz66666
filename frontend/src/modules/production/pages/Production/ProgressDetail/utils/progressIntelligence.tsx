@@ -206,18 +206,24 @@ export function analyzeProgress(
   // 交期风险（结合实际情况组合智能化建议）
   if (daysLeft !== null) {
     if (daysLeft < 0) {
-      verdict = 'critical';
-      let msg = `已逾期 ${-daysLeft} 天（进度 ${prog}%）`;
-      if (stagnantStage && maxStagnantDays >= 2) {
-        msg += `，${stagnantStage} 停滞 ${maxStagnantDays} 天，建议下厂核实。`;
-      } else if (bottleneck) {
-        msg += `，卡在 ${bottleneck.stage}，建议加急或外发。`;
-      } else if (speed > 0) {
-        msg += `，当前 ${speed.toFixed(1)}件/天，违约风险高。`;
+      // 生产已完成但未关单：不算真逾期风险，单独提示待关单
+      if (prog >= 100) {
+        if (verdict === 'good') verdict = 'warn';
+        riskPredictions.push(`生产已完成并入库，等待关单；已逾期 ${-daysLeft} 天（按计划交期）`);
       } else {
-        msg += `，建议确认交付计划。`;
+        verdict = 'critical';
+        let msg = `已逾期 ${-daysLeft} 天（进度 ${prog}%）`;
+        if (stagnantStage && maxStagnantDays >= 2) {
+          msg += `，${stagnantStage} 停滞 ${maxStagnantDays} 天，建议下厂核实。`;
+        } else if (bottleneck) {
+          msg += `，卡在 ${bottleneck.stage}，建议加急或外发。`;
+        } else if (speed > 0) {
+          msg += `，当前 ${speed.toFixed(1)}件/天，违约风险高。`;
+        } else {
+          msg += `，建议确认交付计划。`;
+        }
+        riskPredictions.push(msg);
       }
-      riskPredictions.push(msg);
     } else if (daysLeft === 0 && prog < 100) {
       verdict = 'critical';
       riskPredictions.push(`今日交货，进度仅 ${prog}%，请确认是否加班赶工`);
