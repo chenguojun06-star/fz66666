@@ -4916,3 +4916,17 @@ try 内的 setState 被空 catch 吞掉，但 `finally` 里的 `setLoading(false
 - 三个 finally 的 `setLoading(false)` 改为 `if (mountedRef.current) setLoading(false)`。
 
 **验证**：`tsc --noEmit` 0 错误；`vitest run` 75 文件 / 852 用例全过，0 unhandled error。
+
+## D-897 FactoryInsightDrawer 布局微调 + MiniChartWidget ECharts CSS 变量修复（2026-10-29）
+
+**背景**：D-896 抽屉已六段式 + 双 ECharts 走势/进度图，视觉基线已对齐 24px 节奏。
+本次继续扫同类问题，发现 `MiniChartWidget` 的 ECharts option 里仍用 CSS 变量作颜色值
+（`CHART_COLORS`、gauge 的 `axisLine`/`progress`/`pointer`/`detail`、ring 的 rich 文本、radar 的 `splitArea`/`axisName`），
+Canvas/SVG 渲染器不解析 CSS 变量，这些颜色会画成黑色/透明。
+
+**修复**：
+- `MiniChartWidget` 全部 ECharts 颜色值改为具体 hex（与 design-system.css 令牌一致），
+  DOM 层（progress 条、CSS 渐变）保留 CSS 变量不变。
+- 抽屉结论块与 KPI 条底部间距 16→20，与 24px 主节奏拉开层次。
+
+**验证**：`tsc --noEmit` 0 错误；eslint 0 error；构建通过。

@@ -23,7 +23,7 @@ export interface ChartSpec {
   indicators?: Array<{ name: string; max: number }>; // radar 图维度定义
 }
 
-const CHART_COLORS = ['var(--color-info)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-red-400)', 'var(--color-accent-purple)', 'var(--color-accent-cyan)', 'var(--color-magenta)'];
+const CHART_COLORS = ['#722ed1', '#52c41a', '#faad14', '#f87171', '#722ed1', '#13c2c2', '#eb2f96'];
 
 const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
   // ── progress：纯 CSS，无 ECharts，最轻量 ───────────────────────────────
@@ -55,7 +55,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     const val = chart.value ?? 0;
     const maxVal = chart.target ?? 100;
     const pctOfMax = maxVal > 0 ? val / maxVal : 0;
-    const gaugeColor = pctOfMax >= 0.8 ? 'var(--color-success)' : pctOfMax >= 0.6 ? 'var(--color-warning)' : 'var(--color-danger)';
+    const gaugeColor = pctOfMax >= 0.8 ? '#52c41a' : pctOfMax >= 0.6 ? '#faad14' : '#ff4d4f';
     option = {
       series: [{
         type: 'gauge',
@@ -65,7 +65,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         min: 0,
         max: maxVal,
         progress: { show: true, width: 10, itemStyle: { color: gaugeColor } },
-        axisLine: { lineStyle: { width: 10, color: [[1, 'var(--color-border-light)']] } },
+        axisLine: { lineStyle: { width: 10, color: [[1, '#f0f0f0']] } },
         axisTick: { show: false },
         splitLine: { show: false },
         axisLabel: { fontSize: 9, distance: 14 },
@@ -78,7 +78,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           color: gaugeColor,
           offsetCenter: [0, '28%'],
         },
-        title: { fontSize: 15, color: 'var(--color-text-tertiary)', offsetCenter: [0, '48%'] },
+        title: { fontSize: 15, color: '#9ca3af', offsetCenter: [0, '48%'] },
         data: [{ value: val, name: chart.subtitle ?? '' }],
       }],
     };
@@ -102,8 +102,8 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           position: 'center',
           formatter: () => `{val|${chart.highlight}}\n{subval|${chart.unit ?? ''}}`,
           rich: {
-            val: { fontSize: 18, fontWeight: 'bold', color: 'var(--color-gray-800)', lineHeight: 24 },
-            subval: { fontSize: 15, color: 'var(--color-text-tertiary)', lineHeight: 18 },
+            val: { fontSize: 18, fontWeight: 'bold', color: '#333333', lineHeight: 24 },
+            subval: { fontSize: 15, color: '#9ca3af', lineHeight: 18 },
           },
         } : { show: false },
         data: ringData,
@@ -143,8 +143,8 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         indicator: indicators,
         radius: '55%',
         center: ['50%', (chart.series ?? []).length > 1 ? '58%' : '52%'],
-        splitArea: { areaStyle: { color: ['var(--color-bg-base)', 'var(--color-indigo-50)'] } },
-        axisName: { fontSize: 15, color: 'var(--color-gray-700)' },
+        splitArea: { areaStyle: { color: ['#ffffff', '#eef2ff'] } },
+        axisName: { fontSize: 15, color: '#595959' },
       },
       series: [{
         type: 'radar',

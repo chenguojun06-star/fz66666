@@ -686,7 +686,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
         {conclusion && (
           <div
             style={{
-              marginBottom: 16,
+              marginBottom: 20,
               padding: '9px 12px',
               borderRadius: 6,
               background: conclusion.bg,
@@ -710,7 +710,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
             gap: 8,
-            marginBottom: 16,
+            marginBottom: 20,
           }}
         >
           <Kpi label="在产订单" value={`${m.orderCount} 单`} hint={`共 ${fmt(m.totalQty)} 件`} />
