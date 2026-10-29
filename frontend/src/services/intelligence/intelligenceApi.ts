@@ -30,6 +30,7 @@ import type {
   PreOrderDeliveryPredictionResponse,
   CapacityGapResponse,
   FactoryActiveOrderDTO,
+  FactoryDailyOutputResponse,
   DailyBriefing,
   PredictionDeliveryRiskItem,
   PredictionRestockSuggestionItem,
@@ -382,6 +383,13 @@ export const intelligenceApi = {
   /** ③c 工厂在产订单明细（下单页详情抽屉用） */
   getFactoryActiveOrders: async (factoryName: string) =>
     unwrapApiData<FactoryActiveOrderDTO[]>(await api.get('/intelligence/factory-active-orders', { params: { factoryName } }), '智能服务请求失败'),
+
+  /** ③d 工厂逐日产出（产能走势图，2026-10-29）— 口径同预下单预测 factoryDailyVelocity */
+  getFactoryDailyOutput: async (factoryName: string, days = 14) =>
+    unwrapApiData<FactoryDailyOutputResponse>(
+      await api.get('/intelligence/factory-daily-output', { params: { factoryName, days } }),
+      '智能服务请求失败',
+    ),
 
   /** ④ 订单利润预估 */
   estimateProfit: async (payload: { orderId: string }) =>

@@ -175,6 +175,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
         orderQuantity={orderQuantity ?? 0}
         plannedDeadline={plannedEndDate}
         styleNo={form.getFieldValue('styleNo') as string | undefined}
+        stat={selectedFactoryStat}
       />
     );
   };

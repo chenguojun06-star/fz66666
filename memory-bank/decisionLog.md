@@ -2,7 +2,8 @@
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的条目已归档到 `archive/decisionLog-202608.md`（首次归档 2026-10-01，归档 200 条 / 本文件留 163 条）
-> 最后更新：2026-10-25（D-884 生产库实锤修正 D-883：MemoryNudge「空转」系本地库误判——生产 t_memory_nudge 18 条（5 PENDING 挂着）、reflection scene 115 次 LLM 调用真实在工作；本地 0 条真因是重启后 0 用户对话 + LLM 未配置。**acceptNudge/dismissNudge 因此确认为真缺口**（生产 5 条 PENDING 无人能响应，待前端入口）。铁律：本地库无数据 ≠ 功能坏了，用户量小时必须上生产库核实）
+> 最后更新：2026-10-29（D-896 工厂详情产能走势图 + 布局重排：新增后端 `GET /api/intelligence/factory-daily-output`（逐日产量/峰谷/连续零产出），前端抽屉改「结论→KPI→走势→预测/缺口两列→进度分布→明细」六段式；**核实并纠正"两个日均差 2 倍"的误解**——277.3 是近30天口径、549.7 是近14天口径，两个都对，页面此前没写窗口；现在窗口与口径全部显式标注）
+> 上一版：2026-10-25（D-884 生产库实锤修正 D-883：MemoryNudge「空转」系本地库误判——生产 t_memory_nudge 18 条（5 PENDING 挂着）、reflection scene 115 次 LLM 调用真实在工作；本地 0 条真因是重启后 0 用户对话 + LLM 未配置。**acceptNudge/dismissNudge 因此确认为真缺口**（生产 5 条 PENDING 无人能响应，待前端入口）。铁律：本地库无数据 ≠ 功能坏了，用户量小时必须上生产库核实）
 > 上一版：2026-10-25（D-879 订单风险闭环：风险表自维护（去重/复现重开/自动解除）+ 补 list/stats/处理/升级/撤销/重开端点；修掉「每次评估插一条」导致表无限膨胀 + 处理率恒 0 两个结构性问题；14 用例全绿、intelligence 包 286 全绿、baseline 149→145）
 > 上一版：2026-10-25（D-878 工资支付审计接线：D-877 查出的首批 6 处真缺口全部接线（取消支付/退回付款/驳回应付/确认线下支付/创建待付工资单/保存收款账户），顺带修正 3 个方法的 targetId 语义错误；8 用例守护 + baseline 155→149）
 > 上一版：2026-10-25（D-877 155 处未接线逐类复核：结论翻转——约 26 处真缺口、约 10 处真死代码、约 21 处外部预留；纠错原文档「List<AiTool> 注入」说法不成立）
@@ -27,6 +28,52 @@
 > 上一版：2026-10-21（D-835 详情长图编辑器改烘焙逐页方案：每图一页+html2canvas 烘焙导出，D-834 堆叠三栏被用户否决替换，「85% 侧滑弹窗」旧约束一并推翻；已推送 b08bdfd9c）
 > 上一版：2026-10-19（D-823 裁剪用料台账 + 余料回库闭环：新表五态台账 + 完工自动快照 + 极简登记 + 一键回库 + 全链路穿透；16 文件代码完成待提交）
 > 上一版：2026-10-19（**补记** 门店零售对接线 10-10~10-19：D-817 收银台信封泄漏治理 / D-785+D-811 顾客端 UserContext 空陷阱（第二次同款）/ D-815 AI 不许报「开票成功」/ D-808 编号撞号更正 + D-800 迁移索引超限；代码均已推，本条为事后补记）
+
+---
+
+## D-896：工厂详情「产能走势图」+ 布局重排 + 两个日均口径核实（2026-10-29）
+
+背景：用户看工厂全动态详情（截图）提三点：
+① 17 个指标平铺，"一眼看不出这厂行不行"；② 只有汇总数字，**没有走势图**，
+"最高什么时候、最低什么时候完全看不出来，这样看一点意义都没有"；
+③ 发现两个日均数字打架（卡片 277.3 vs 预测 549.7，差 2 倍）。
+
+### 核实结论（先查证再动手）
+| 疑点 | 核实结果 |
+|---|---|
+| 两个日均"算错了" | **没算错，是窗口不同**：`FactoryCapacityOrchestrator` 用**近30天** total÷活跃天数（277.3）；`FactoryVelocityCalculator` 用**近14天** total÷活跃天数（549.7）。两个都是"有产出日均"，差别全在窗口 |
+| 为什么用户觉得错 | 页面上**没写窗口**，两个数字并排看就像系统自相矛盾 |
+| 推荐指数/历史评级/品质分/综合评分 | 都在**工厂卡片**（`OrderFactorySelector` ← `FactoryCapacityItem`），抽屉里原本没有，所以用户看抽屉时这些信息是"消失"的 |
+| 逐日产量数据有没有 | 只有全局 `GET /dashboard/scan-count-chart`（无 factoryName 参数，30 天）；**没有按工厂的逐日接口** → 必须新增 |
+
+### 后端（新增，不改存量行为）
+- `FactoryDailyOutputResponse`：points(date/label/qty/active) + totalQty + activeDays +
+  `avgPerActiveDay`（有产出日均）+ `avgPerCalendarDay`（日历日均）+ peak/low + `zeroStreak`
+- `FactoryVelocityCalculator.computeDailySeries(factoryName, days)`：
+  **口径与 computeVelocitySample 逐字对齐**（同订单集合、同过滤条件、同窗口 today-N ~ today-1），
+  保证图上均线与预测的 factoryDailyVelocity 同值；性能上把"逐日 14 次查询"合并成**一次分组查询**
+- `FactoryDailyOutputOrchestrator`：窗口收敛 [7,60]（默认 14）、算峰谷/连续零产出/两个日均
+- `GET /api/intelligence/factory-daily-output?factoryName=&days=14`
+
+### 前端
+- 抽屉重排为六段（按决策优先级，不按数据分类）：
+  **结论条 → KPI 条 → 产能走势 → 交期预测 / 产能缺口（两列）→ 订单进度分布 → 订单明细**
+- 走势图：柱=日产量、灰底纹=无生产记录日、虚线=有产出日均、markPoint 标最高/最低（含日期）
+- KPI 条：在产单/件、整体完成、逾期、**近14天日均（显式写窗口+活跃天数）**、在手负载、推荐指数+评级
+- 抽屉新增可选 `stat` 入参（`FactoryCapacityItem`），把卡片的推荐指数/评级带进抽屉，口径一致
+- 走势接口单独 `.catch(()=>null)`：它挂了不影响预测/缺口/订单三块
+
+### 踩坑
+- **ECharts 不解析 CSS 变量**：`itemStyle.color` 传 `var(--color-success)` 会画成黑色，
+  必须给 hex（新增 `progressHex`，DOM 侧仍用 `progressColor` 走 CSS 变量）
+- markPoint 最低值 `position:'bottom'` 会压进柱体 → 改 `'right'` + distance 8
+- 灰底纹 0.13 太重像斑马纹 → 0.075
+- 工具类 `u-ws-nowrap`/`u-fw-wrap` **不存在**（实际是 `u-fwrap-wrap`，nowrap 要 inline style）
+
+### 验证
+后端 `mvn compile` 0 错；`ArchitectureRulesTest` 通过；前端 `tsc --noEmit` 0 错、
+ESLint 0、`vite build` 通过；CI 脚本 `check-lazy-wrapper`/`check-api-envelope-leak`/
+`audit-tenant-id` 全绿；图表用真实 echarts 渲染截图核对过标签不重叠。
 
 ---
 

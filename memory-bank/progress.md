@@ -1212,4 +1212,13 @@
 - [x] D-829 店铺订单可视闭环：打印拦截修复（同步开窗）/ 列表款式图+商品列（firstItems）/ 详情款式图+签收状态（signInfo 只读查票）/ 冗余商品上架 tab 移除（016837b71 已推送）
 - [ ] 待用户：真机扫码验收；MCP 面板启用 6 件套 + MCP_DB_PASSWORD=changeme；线上账号 POS 开单验收 P1-2 生效
 
+## 2026-10-29 D-896 工厂详情产能走势图 + 布局重排（本会话完成）
+- [x] 核实「两个日均差 2 倍」：**不是算错，是窗口不同**（卡片近30天 277.3 / 预测近14天 549.7），页面此前没写窗口
+- [x] 后端新增 `GET /api/intelligence/factory-daily-output`（逐日产量 + 峰谷 + 连续零产出 + 两种日均口径）
+- [x] `FactoryVelocityCalculator.computeDailySeries`：口径与 computeVelocitySample 逐字对齐，14 次查询合并为 1 次分组查询
+- [x] 前端抽屉六段式重排（结论→KPI→走势→预测/缺口两列→进度分布→明细），新增走势图（峰谷标注/无产出日底纹/均线）
+- [x] 抽屉新增可选 `stat` 入参，把卡片的推荐指数/历史评级带进来
+- [x] 验证：mvn compile 0 错 + ArchUnit 通过 + tsc 0 错 + ESLint 0 + vite build 通过 + 三个 CI 脚本全绿 + 图表真实渲染截图核对
+- [ ] 待用户：线上点开一家有历史扫码的工厂，确认走势图形状与实际生产记录一致
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md

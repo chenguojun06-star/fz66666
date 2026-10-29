@@ -124,6 +124,42 @@ export interface FactoryActiveOrderDTO {
   completedPendingClosure?: boolean;
 }
 
+// ─── 工厂逐日产出（产能走势，2026-10-29 新增） ───
+export interface FactoryDailyOutputPoint {
+  /** 完整日期 yyyy-MM-dd */
+  date: string;
+  /** 短标签 MM-dd */
+  label: string;
+  /** 当日产出件数 */
+  qty: number;
+  /** 当日是否有生产记录 */
+  active: boolean;
+}
+
+/**
+ * 工厂逐日产出（产能走势图数据）
+ *
+ * 口径（与预下单预测 factoryDailyVelocity 一致）：窗口 = 近 N 个完整日（截至昨天）。
+ * avgPerActiveDay = 总件数 ÷ 有产出天数；avgPerCalendarDay = 总件数 ÷ 窗口天数。
+ */
+export interface FactoryDailyOutputResponse {
+  factoryName: string;
+  days: number;
+  windowStart: string;
+  windowEnd: string;
+  points: FactoryDailyOutputPoint[];
+  totalQty: number;
+  activeDays: number;
+  avgPerActiveDay: number;
+  avgPerCalendarDay: number;
+  peakDate?: string;
+  peakQty: number;
+  lowDate?: string;
+  lowQty: number;
+  /** 窗口末尾连续无产出天数（最近停摆信号） */
+  zeroStreak: number;
+}
+
 export interface ProfitEstimationResponse {
   orderId: string;
   orderNo: string;

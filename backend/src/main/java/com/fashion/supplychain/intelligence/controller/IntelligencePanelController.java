@@ -36,6 +36,7 @@ public class IntelligencePanelController {
     private final AiPatrolOrchestrator aiPatrolOrchestrator;
     private final PreOrderDeliveryPredictionOrchestrator preOrderDeliveryPredictionOrchestrator;
     private final FactoryActiveOrderOrchestrator factoryActiveOrderOrchestrator;
+    private final FactoryDailyOutputOrchestrator factoryDailyOutputOrchestrator;
     private final DecisionCardOrchestrator decisionCardOrchestrator;
 
     @PostMapping("/live-pulse")
@@ -167,6 +168,26 @@ public class IntelligencePanelController {
     public Result<java.util.List<FactoryActiveOrderDTO>> factoryActiveOrders(
             @RequestParam String factoryName) {
         return Result.success(factoryActiveOrderOrchestrator.getActiveOrdersByFactory(factoryName));
+    }
+
+    /**
+     * 工厂逐日产出（产能走势图，2026-10-29 新增）。
+     *
+     * <p>为什么加：工厂详情抽屉原来只有汇总数字，"日均 277 件/天"看不出是稳定 277
+     * 还是 14 天只干了 3 天，用户无法判断该催单还是转单。本端点给出逐日序列 +
+     * 峰谷 + 连续零产出天数，让产能稳定性可见。
+     *
+     * <p>口径与预下单预测的 factoryDailyVelocity 完全一致（近 N 个完整日，截至昨天），
+     * 因此图上均线与预测数字不会互相打架。
+     *
+     * @param factoryName 工厂名
+     * @param days        窗口天数（7~60，默认 14）
+     */
+    @GetMapping("/factory-daily-output")
+    public Result<FactoryDailyOutputResponse> factoryDailyOutput(
+            @RequestParam String factoryName,
+            @RequestParam(required = false, defaultValue = "14") Integer days) {
+        return Result.success(factoryDailyOutputOrchestrator.build(factoryName, days));
     }
 
     /**

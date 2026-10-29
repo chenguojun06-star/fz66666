@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -115,6 +116,98 @@ public class FactoryVelocityCalculator {
      */
     public double computeFactoryVelocity(String factoryName) {
         return computeVelocitySample(factoryName).velocity();
+    }
+
+    /**
+     * 逐日产出序列（2026-10-29 新增）— 供「工厂全动态详情」产能走势图使用。
+     *
+     * <p>与 {@link #computeVelocitySample} 的**口径完全对齐**（同一订单集合、同一过滤条件、
+     * 同一窗口 today-{@code days} ~ today-1），因此由本序列算出的「有产出日均」
+     * 与预下单预测里的 factoryDailyVelocity 是同值 —— 避免同一抽屉里出现两个"日均"。
+     *
+     * <p>性能：原逐日算法是「一天一次查询」（14 次），这里合并成**一次分组查询**。
+     *
+     * @param factoryName 工厂名
+     * @param days        窗口天数（近 N 个完整日，截至昨天）
+     * @return 日期序列 + 每日件数
+     */
+    public DailySeries computeDailySeries(String factoryName, int days) {
+        int window = Math.max(1, Math.min(90, days));
+        List<LocalDate> dateList = new ArrayList<>(window);
+        LocalDate today = LocalDate.now();
+        for (int i = window; i >= 1; i--) {
+            dateList.add(today.minusDays(i));
+        }
+        int[] qty = new int[window];
+        if (factoryName == null || factoryName.isBlank() || UserContext.tenantId() == null) {
+            return new DailySeries(dateList, qty);
+        }
+
+        // 1. 该工厂的订单集合（与 computeVelocitySample 一致：按 factory_name + 未删除）
+        QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
+        oqw.eq("tenant_id", UserContext.tenantId())
+           .eq("factory_name", factoryName)
+           .eq("delete_flag", 0);
+        List<ProductionOrder> orders = productionOrderService.list(oqw);
+        if (orders.isEmpty()) return new DailySeries(dateList, qty);
+
+        Set<String> orderIds = orders.stream()
+                .map(o -> String.valueOf(o.getId()))
+                .collect(Collectors.toSet());
+
+        // 2. 一次分组查询取逐日产量（过滤条件与 computeVelocitySample 逐字对齐）
+        LocalDateTime start = dateList.get(0).atStartOfDay();
+        LocalDateTime end = dateList.get(window - 1).plusDays(1).atStartOfDay();
+        try {
+            QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
+            sqw.select("DATE(scan_time) as d", "COALESCE(SUM(COALESCE(quantity, 0)), 0) as total")
+               .in("order_id", orderIds)
+               .eq("scan_result", "success")
+               .ne("scan_type", "orchestration")
+               .gt("quantity", 0)
+               .ge("scan_time", start)
+               .lt("scan_time", end)
+               .groupBy("DATE(scan_time)");
+            List<Map<String, Object>> rows = scanRecordService.getBaseMapper().selectMaps(sqw);
+            Map<String, Integer> byDate = new HashMap<>();
+            for (Map<String, Object> row : rows) {
+                Object d = row.get("d") != null ? row.get("d") : row.get("D");
+                Object t = row.get("total") != null ? row.get("total") : row.get("TOTAL");
+                if (d == null || t == null) continue;
+                byDate.put(String.valueOf(d), ((Number) t).intValue());
+            }
+            for (int i = 0; i < window; i++) {
+                qty[i] = byDate.getOrDefault(dateList.get(i).toString(), 0);
+            }
+        } catch (Exception e) {
+            log.warn("[工厂逐日产出] 查询失败，返回空序列: {}", e.getMessage());
+        }
+        return new DailySeries(dateList, qty);
+    }
+
+    /**
+     * 逐日产出序列值对象。
+     *
+     * @param dates      日期（升序，最后一个通常是昨天）
+     * @param quantities 与 dates 一一对应的每日件数
+     */
+    public record DailySeries(List<LocalDate> dates, int[] quantities) {
+
+        /** 窗口内总件数 */
+        public long total() {
+            long sum = 0;
+            for (int q : quantities) sum += q;
+            return sum;
+        }
+
+        /** 有产出的天数 */
+        public int activeDays() {
+            int n = 0;
+            for (int q : quantities) {
+                if (q > 0) n++;
+            }
+            return n;
+        }
     }
 
     /**
