@@ -4973,3 +4973,11 @@ alarms，用户无法区分真逾期与待关单逾期。
 **口径**：纯前端派生，与 OrderWorkloadHelper 一致。
 
 **验证**：tsc 0 错误，eslint 0 error。
+
+## D-902 ExternalFactory 布局/样式清理（2026-10-29）
+
+**修复**：
+- `externalFactory.css` 的 `.ef-delivery-badge--warning/--danger` 背景用 `var(--color-bg-base)7e6` / `...1f0`（CSS 变量后追加 hex alpha，浏览器不解析，背景透明/失效）→ 改为 `var(--status-warning-bg)` / `var(--status-error-bg)`。
+- `StagePopoverContent.tsx`：`' 已逾期'` 前导空格 + 不存在的 `--color-error` token → `'已逾期'` + `--color-danger`。
+
+**验证**：tsc 0 错误，eslint 0 error。

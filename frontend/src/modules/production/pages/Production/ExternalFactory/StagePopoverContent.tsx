@@ -36,7 +36,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
     const target = expectedShipDate || plannedEndDate;
     const deliveryLeft = target ? dayjs(target).diff(dayjs(), 'day') : null;
     if (deliveryLeft !== null && deliveryLeft < 0) {
-      aiLabel = ' 已逾期'; aiColor = 'var(--color-error)';
+      aiLabel = '已逾期'; aiColor = 'var(--color-danger)';
     } else if (scanData.dailyRate7d > 0 && leftQty > 0) {
       const daysNeeded = Math.ceil(leftQty / scanData.dailyRate7d);
       if (deliveryLeft !== null) {

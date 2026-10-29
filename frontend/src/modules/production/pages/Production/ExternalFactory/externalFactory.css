@@ -85,8 +85,8 @@
   white-space: nowrap;
 }
 .ef-delivery-badge--normal  { background: var(--status-processing-bg); color: var(--color-primary); }
-.ef-delivery-badge--warning { background: var(--color-bg-base)7e6; color: var(--color-warning); }
-.ef-delivery-badge--danger  { background: var(--color-bg-base)1f0; color: var(--color-danger); }
+.ef-delivery-badge--warning { background: var(--status-warning-bg); color: var(--color-warning); }
+.ef-delivery-badge--danger  { background: var(--status-error-bg); color: var(--color-danger); }
 .ef-delivery-badge--success { background: var(--status-success-bg); color: var(--color-success); }
 .ef-delivery-badge--scrapped { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
 
