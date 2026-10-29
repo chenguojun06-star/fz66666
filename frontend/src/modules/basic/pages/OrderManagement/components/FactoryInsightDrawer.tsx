@@ -296,6 +296,10 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
 
     const overdueList = orders.filter((o) => !o.completedPendingClosure && (o.daysToDeadline ?? 0) < 0);
     const maxOverdue = overdueList.reduce((mx, o) => Math.max(mx, -(o.daysToDeadline ?? 0)), 0);
+    // 已完成待关单：生产做完、只等关单。单独统计，避免和"真逾期"混在一起 alarms
+    const pendingClosureList = orders.filter((o) => o.completedPendingClosure);
+    const pendingClosureOverdueList = pendingClosureList.filter((o) => (o.daysToDeadline ?? 0) < 0);
+    const maxPendingClosureOverdue = pendingClosureOverdueList.reduce((mx, o) => Math.max(mx, -(o.daysToDeadline ?? 0)), 0);
 
     // 日均产能：优先用走势图同口径（近14个完整日），再退预测值 / 缺口分析值
     const velocity =
@@ -313,6 +317,9 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
       progress,
       overdueCount: overdueList.length,
       maxOverdue,
+      pendingClosureCount: pendingClosureList.length,
+      pendingClosureOverdueCount: pendingClosureOverdueList.length,
+      maxPendingClosureOverdue,
       velocity,
       activeDays,
       pending,
@@ -330,6 +337,13 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
     } else {
       parts.push('暂无逾期');
     }
+    if (m.pendingClosureCount > 0) {
+      const overdueHint =
+        m.pendingClosureOverdueCount > 0
+          ? `（其中 ${m.pendingClosureOverdueCount} 单已逾期 ${m.maxPendingClosureOverdue} 天，但生产已完成，仅待关单）`
+          : '';
+      parts.push(`${m.pendingClosureCount} 单已完成待关单${overdueHint}`);
+    }
     if (m.daysToClear != null) {
       parts.push(`按近14天日均 ${fmt(m.velocity, 1)} 件/天 估算，清完在手 ${fmt(m.pending)} 件需 ${m.daysToClear} 天`);
     } else if (m.velocity <= 0) {
@@ -341,6 +355,9 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
     if (m.overdueCount > 0) {
       level = 'danger';
       advice = `建议优先催 ${m.overdueCount} 单逾期订单${m.overdueCount >= 2 ? '，必要时转单' : ''}`;
+    } else if (m.pendingClosureOverdueCount > 0) {
+      level = 'warning';
+      advice = `${m.pendingClosureOverdueCount} 单已完成生产并入库但逾期 ${m.maxPendingClosureOverdue} 天未关单，请尽快确认关单`;
     } else if (gapList && (gapList.gapLevel === 'gap' || gapList.gapLevel === 'critical')) {
       level = 'danger';
       advice = '产能缺口，建议协调加班或转单';
@@ -608,9 +625,29 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
       key: 'daysToDeadline',
       width: 110,
       render: (v: number, record: FactoryActiveOrderDTO) => {
-        // 已完成待关单：进度100%但状态未流转，不再按逾期展示（2026-10-09 数据口径修复）
+        // 已完成待关单：进度100%但状态未流转。生产已做完，只是等关单 ——
+        // 不再按"逾期高危" alarms，但把逾期天数与"待关单"状态说清楚，避免用户误解。
         if (record.completedPendingClosure) {
-          return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 600 }}>已完成待关单</span>;
+          const overdue = (v ?? 0) < 0 ? -(v ?? 0) : 0;
+          return (
+            <Tooltip
+              title={
+                <div style={{ lineHeight: 1.6 }}>
+                  <div>生产已完成并入库，等待关单确认</div>
+                  {overdue > 0 ? <div style={{ color: '#fca5a5' }}>已逾期 {overdue} 天（按计划交期 {dayjs(record.plannedEndDate).format('MM-DD')}）</div> : null}
+                </div>
+              }
+            >
+              <div className="u-d-flex u-fd-column u-ai-center" style={{ lineHeight: 1.2 }}>
+                <span style={{ color: 'var(--color-info)', fontWeight: 600 }}>已完成待关单</span>
+                {overdue > 0 ? (
+                  <span style={{ color: 'var(--color-warning)', fontSize: 11, fontWeight: 600 }}>逾期 {overdue} 天</span>
+                ) : (
+                  <span style={{ color: 'var(--color-text-quaternary)', fontSize: 11 }}>待关单</span>
+                )}
+              </div>
+            </Tooltip>
+          );
         }
         const color = v < 0 ? 'var(--color-danger)' : v <= 7 ? 'var(--color-warning)' : 'var(--color-text-secondary)';
         return <span style={{ color, fontWeight: 600 }}>{v < 0 ? `逾期${-v}天` : `${v}天`}</span>;
@@ -726,6 +763,14 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             hint={m.overdueCount > 0 ? `最久 ${m.maxOverdue} 天` : '无逾期'}
             color={m.overdueCount > 0 ? 'var(--color-danger)' : 'var(--color-success)'}
           />
+          {m.pendingClosureCount > 0 && (
+            <Kpi
+              label="已完成待关单"
+              value={`${m.pendingClosureCount} 单`}
+              hint={m.pendingClosureOverdueCount > 0 ? `${m.pendingClosureOverdueCount} 单已逾期` : '等待关单'}
+              color="var(--color-info)"
+            />
+          )}
           <Kpi
             label="近14天日均"
             value={m.velocity > 0 ? `${fmt(m.velocity, 1)} 件/天` : '无记录'}
