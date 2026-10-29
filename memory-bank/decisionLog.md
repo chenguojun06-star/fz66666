@@ -4981,3 +4981,11 @@ alarms，用户无法区分真逾期与待关单逾期。
 - `StagePopoverContent.tsx`：`' 已逾期'` 前导空格 + 不存在的 `--color-error` token → `'已逾期'` + `--color-danger`。
 
 **验证**：tsc 0 错误，eslint 0 error。
+
+## D-903 IntelligenceCenter ProductionOrdersCard 可读性修复（2026-10-29）
+
+**问题**：总件数使用 `var(--color-border-light)` (#f0f0f0) 作为文字颜色，在白色卡片背景上几乎不可见。
+
+**修复**：改为 `var(--color-text-secondary)` (#6b7280)，保证可读性。
+
+**验证**：tsc 0 错误。

@@ -18,7 +18,7 @@ const ProductionOrdersCard: React.FC<any> = ({
       </span>
       <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)' }}>单生产中</span>
       <span className="u-ml-auto u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)' }}>
-        总&nbsp;<b className="u-fs-28" style={{ color: 'var(--color-border-light)', fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
+        总&nbsp;<b className="u-fs-28" style={{ color: 'var(--color-text-secondary)', fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
       </span>
     </div>
 
