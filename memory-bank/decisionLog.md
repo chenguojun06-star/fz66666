@@ -4960,3 +4960,16 @@ alarms，用户无法区分真逾期与待关单逾期。
 **口径**：completedPendingClosure = productionProgress≥100 且未结案（与 OrderWorkloadHelper 一致），纯前端派生，无后端改动。
 
 **验证**：tsc 0 错误，eslint 0 error。
+
+## D-901 已完成待关单提示扩展到 IntelligenceCenter 订单滚动面板（2026-10-29）
+
+**背景**：IntelligenceCenter 的 OrderRow 仍把已完成待关单的订单按"逾 Xd" danger 红色 alarms，
+与真逾期无法区分。
+
+**改进**：OrderRow 派生 `isPendingClosure = progress≥100 && status 未结案`；
+- 进度条/百分比颜色切换为 info 色；
+- 逾期天数显示为"待关单 逾 Xd"（info 色）而非 danger 红。
+
+**口径**：纯前端派生，与 OrderWorkloadHelper 一致。
+
+**验证**：tsc 0 错误，eslint 0 error。

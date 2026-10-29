@@ -7,10 +7,12 @@ import { OrderPop } from './OrderPop';
 
 export const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   const prog = calcOrderProgress(order);
+  const isPendingClosure = prog >= 100 && !['completed', 'closed', 'cancelled', 'scrapped', 'archived'].includes(String(order.status || '').toLowerCase());
   const daysLeft = order.plannedEndDate
     ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
     : null;
-  const riskColor = daysLeft !== null && daysLeft < 0 ? 'var(--color-danger)'
+  const riskColor = isPendingClosure ? 'var(--color-info, var(--color-primary))'
+    : daysLeft !== null && daysLeft < 0 ? 'var(--color-danger)'
     : daysLeft !== null && daysLeft <= 3 ? 'var(--color-warning-deep)'
     : prog < 20 ? 'var(--color-warning-deep)'
     : 'var(--color-accent-neon)';
@@ -38,13 +40,17 @@ export const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           </div>
           <div className="c-order-right">
             <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
-            {daysLeft !== null && (
+            {isPendingClosure ? (
+              <span className="c-order-days" style={{ color: 'var(--color-info, var(--color-primary))' }}>
+                待关单{daysLeft !== null && daysLeft < 0 ? ` 逾${-daysLeft}d` : ''}
+              </span>
+            ) : daysLeft !== null ? (
               <span className="c-order-days" style={{
                 color: daysLeft < 0 ? 'var(--color-danger)' : daysLeft <= 3 ? 'var(--color-warning-deep)' : 'var(--color-emerald-500)',
               }}>
                 {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
