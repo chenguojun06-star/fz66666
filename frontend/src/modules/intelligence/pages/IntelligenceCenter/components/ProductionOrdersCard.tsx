@@ -13,12 +13,12 @@ const ProductionOrdersCard: React.FC<any> = ({
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
     {/* 主数字 + 总件数 */}
     <div className="u-d-flex u-gap-8 u-mt-6" style={{ alignItems: 'baseline' }}>
-      <span style={{ color: 'var(--color-warning-deep)', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px var(--color-warning-deep)88', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+      <span style={{ color: 'var(--color-warning-deep)', fontSize: 30, fontWeight: 800, textShadow: '0 0 14px var(--color-warning-deep)88', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
         <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
       </span>
       <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)' }}>单生产中</span>
       <span className="u-ml-auto u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)' }}>
-        总&nbsp;<b className="u-fs-28" style={{ color: 'var(--color-text-secondary)', fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
+        总&nbsp;<b className="u-fs-20" style={{ color: 'var(--color-text-secondary)', fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
       </span>
     </div>
 
@@ -31,7 +31,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.1)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-200)', marginBottom: 3, letterSpacing: 1 }}>今日下单</div>
-        <div className="u-fs-28" style={{ color: 'var(--color-warning-deep)', fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span className="u-fs-14 u-fw-600 u-ml-2" style={{ color: 'var(--color-amber-400)' }}>单</span></div>
+        <div className="u-fs-20" style={{ color: 'var(--color-warning-deep)', fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span className="u-fs-14 u-fw-600 u-ml-2" style={{ color: 'var(--color-amber-400)' }}>单</span></div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-amber-400)' }}>{todayBrief.todayOrderQuantity.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>件</span></div>
       </div>
       <div
@@ -41,7 +41,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-200)', marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
-        <div style={{ color: 'var(--color-accent-neon)', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span className="u-fs-14 u-fw-700 u-ml-2" style={{ color: 'var(--color-emerald-400)' }}>件</span></div>
+        <div style={{ color: 'var(--color-accent-neon)', fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span className="u-fs-14 u-fw-700 u-ml-2" style={{ color: 'var(--color-emerald-400)' }}>件</span></div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-emerald-400)' }}>{todayBrief.todayInboundCount.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>单</span></div>
       </div>
       <div
@@ -51,7 +51,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-200)', marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
-        <div style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span className="u-fs-14 u-fw-700 u-ml-2" style={{ color: 'var(--color-cyan-400)' }}>件</span></div>
+        <div style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span className="u-fs-14 u-fw-700 u-ml-2" style={{ color: 'var(--color-cyan-400)' }}>件</span></div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-cyan-400)' }}>{todayBrief.todayOutboundCount.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>单</span></div>
       </div>
     </div>
@@ -65,7 +65,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(224,48,48,0.12)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-coral)', marginBottom: 3, letterSpacing: 1 }}>已逾期</div>
-        <div className="u-fs-28" style={{ color: 'var(--color-danger)', fontWeight: 800, lineHeight: 1.1 }}>
+        <div className="u-fs-20" style={{ color: 'var(--color-danger)', fontWeight: 800, lineHeight: 1.1 }}>
           {overdueRisk.overdue.length}<span className="u-fs-14 u-fw-600 u-ml-2" style={{ color: 'var(--color-red-300)' }}>单</span>
         </div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-red-300)' }}>{orderStats.overdueQty.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>件</span></div>
@@ -77,7 +77,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.12)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-warning-deep)', marginBottom: 3, letterSpacing: 1 }}>高风险</div>
-        <div className="u-fs-28" style={{ color: 'var(--color-warning-deep)', fontWeight: 800, lineHeight: 1.1 }}>
+        <div className="u-fs-20" style={{ color: 'var(--color-warning-deep)', fontWeight: 800, lineHeight: 1.1 }}>
           {overdueRisk.highRisk.length}<span className="u-fs-14 u-fw-600 u-ml-2" style={{ color: 'var(--color-amber-400)' }}>单</span>
         </div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-amber-400)' }}>{orderStats.highRiskQty.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>件</span></div>
@@ -89,7 +89,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.08)')}
       >
         <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)', marginBottom: 3, letterSpacing: 1 }}>关注中</div>
-        <div className="u-fs-28" style={{ color: 'var(--color-cyan-500)', fontWeight: 800, lineHeight: 1.1 }}>
+        <div className="u-fs-20" style={{ color: 'var(--color-cyan-500)', fontWeight: 800, lineHeight: 1.1 }}>
           {overdueRisk.watch.length}<span className="u-fs-14 u-fw-600 u-ml-2" style={{ color: 'var(--color-cyan-400)' }}>单</span>
         </div>
         <div className="u-fs-14 u-fw-700 u-mt-4" style={{ color: 'var(--color-cyan-400)' }}>{orderStats.watchQty.toLocaleString()}<span className="u-fs-14 u-ml-2" style={{ color: 'var(--color-blue-300)' }}>件</span></div>

@@ -4989,3 +4989,13 @@ alarms，用户无法区分真逾期与待关单逾期。
 **修复**：改为 `var(--color-text-secondary)` (#6b7280)，保证可读性。
 
 **验证**：tsc 0 错误。
+
+## D-904 ProductionOrdersCard 字号规范化（2026-10-29）
+
+**问题**：1080p 屏幕上字号过大（主数字 42px、入库/出库 32px、统计值 28px），
+视觉失衡，缺乏设计感。
+
+**修复**：主数字 42→30、入库/出库 32→24、统计值/总件数 28→20，与 design-system 的
+--font-size-display(21px)/--font-size-xl(18px) 档位对齐，1080p 下更舒适。
+
+**验证**：tsc 0 错误，eslint 0 error。
