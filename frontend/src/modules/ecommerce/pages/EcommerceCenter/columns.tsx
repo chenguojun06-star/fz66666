@@ -43,9 +43,39 @@ export function buildAlertCols(ctx: ColumnContext): ColumnsType<StockAlert> {
   return [
     styleImageColumn<StockAlert>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
     styleNoColumn<StockAlert>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
-    { title: '预警类型', dataIndex: 'alertType', width: 100, render: (v: string) => <Tag color="red">{v}</Tag> },
-    { title: '当前库存', dataIndex: 'currentStock', width: 90 },
-    { title: '安全库存', dataIndex: 'safeStock', width: 90 },
+    // 2026-10-31：原来直接渲染 OUT_OF_STOCK 原始枚举 + 安全库存显示 0，
+    // 用户看到"全是 0"会以为没匹配到成品库存。改成中文 + 未设置提示。
+    {
+      title: '预警类型',
+      dataIndex: 'alertType',
+      width: 100,
+      render: (v: string) => {
+        const meta: Record<string, { text: string; color: string }> = {
+          OUT_OF_STOCK: { text: '缺货', color: 'red' },
+          LOW_STOCK: { text: '低于安全库存', color: 'orange' },
+        };
+        const m = meta[v] || { text: v, color: 'default' };
+        return <Tag color={m.color}>{m.text}</Tag>;
+      },
+    },
+    {
+      title: '当前库存',
+      dataIndex: 'currentStock',
+      width: 90,
+      render: (v: number | null) =>
+        v == null ? '-' : <span style={{ color: v <= 0 ? 'var(--color-danger)' : undefined, fontWeight: 600 }}>{v}</span>,
+    },
+    {
+      title: '安全库存',
+      dataIndex: 'safeStock',
+      width: 90,
+      render: (v: number | null) =>
+        v == null || v <= 0 ? (
+          <span style={{ color: 'var(--color-text-tertiary)' }}>未设置</span>
+        ) : (
+          v
+        ),
+    },
     { title: '消息', dataIndex: 'message', ellipsis: true },
     { title: '操作', width: 180, render: (_: unknown, r: StockAlert) => (
       <RowActions actions={[

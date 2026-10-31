@@ -23,7 +23,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -301,9 +307,119 @@ public class EcStockOrchestrator {
      */
     public List<EcStockAlert> listAlerts(Long tenantId, boolean unresolvedOnly) {
         if (unresolvedOnly) {
-            return stockAlertService.listUnresolved(tenantId);
+            // 读时对齐（2026-10-31）：预警表存的是**创建时快照**，不重算就会永远显示当时的 0
+            return reconcileAlerts(tenantId, true);
         }
         return stockAlertService.listByTenant(tenantId);
+    }
+
+    /**
+     * 预警与实时库存对齐（2026-10-31 修「预警列表全是 0 / 匹配不到成品库存」）。
+     *
+     * <h3>线上实测的问题</h3>
+     * 用户看到 14 条未解决预警，全部 {@code currentStock=0 / safeStock=0 / OUT_OF_STOCK}，
+     * 但同一批 SKU 在 {@code t_ec_universal_stock} 里其实有货
+     * （如 BV26Q2C1216A 入库 83 件、可售 78 件）。三个原因叠加：
+     * <ol>
+     *   <li><b>预警是快照</b>：{@link #createAlert} 只在创建时写一次 currentStock/safeStock/message，
+     *       之后永不刷新，库存恢复了也不消失（这批预警创建于 10-09 ~ 10-20，之后没再更新）</li>
+     *   <li><b>库存表会算成 0</b>：入库刚写完就触发重算时，入库事务可能尚未提交 →
+     *       算出 0 并立刻生成 OUT_OF_STOCK（线上 08:40:02 入库 / 08:40:03 预警，正好 1 秒）</li>
+     *   <li><b>安全库存没人配</b>：safeStock=0 让"安全库存"一栏永远显示 0，看起来像没匹配到数据</li>
+     * </ol>
+     *
+     * <h3>本方法做什么</h3>
+     * <ol>
+     *   <li>对未解决预警涉及的 SKU **重新按当前入库/出库重算**（修正"算成 0"的脏数据）</li>
+     *   <li>用重算后的实时值**覆盖快照**（currentStock / safeStock / alertType / message）</li>
+     *   <li>库存已恢复（可售 &gt; 安全库存 且 &gt; 0）的预警**自动关闭**，不再干扰列表</li>
+     * </ol>
+     *
+     * <p>只处理未解决预警涉及的 SKU，不做全量重算，成本与预警条数同阶（线上当前 14 条）。
+     *
+     * @param tenantId 租户
+     * @param persist  true=把"已恢复"结果落库（列表查询/定时任务用）；
+     *                 false=只覆盖返回对象不落库
+     * @return 仍需要关注的预警（库存已恢复的已剔除）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<EcStockAlert> reconcileAlerts(Long tenantId, boolean persist) {
+        List<EcStockAlert> alerts = stockAlertService.listUnresolved(tenantId);
+        if (alerts.isEmpty()) {
+            return alerts;
+        }
+        // 防御：单次最多对齐 300 个 SKU，避免历史脏数据把列表接口拖慢
+        final int maxSku = 300;
+
+        Set<Long> skuIds = new LinkedHashSet<>();
+        for (EcStockAlert a : alerts) {
+            if (a.getSkuId() != null && skuIds.size() < maxSku) {
+                skuIds.add(a.getSkuId());
+            }
+        }
+
+        // 1. 先按当前入库/出库重算（修正"入库了但库存还是 0"的脏数据）
+        for (Long skuId : skuIds) {
+            try {
+                universalStockService.recalculateStock(tenantId, null, skuId);
+            } catch (Exception e) {
+                log.warn("[EcStockAlert] 重算失败，保留原快照: tenantId={}, skuId={}, err={}",
+                        tenantId, skuId, e.getMessage());
+            }
+        }
+
+        // 2. 取实时汇总行（warehouse IS NULL 的款级汇总行才是该 SKU 的可售口径）
+        Map<Long, EcUniversalStock> live = new HashMap<>();
+        if (!skuIds.isEmpty()) {
+            List<EcUniversalStock> rows = universalStockService.list(
+                    new LambdaQueryWrapper<EcUniversalStock>()
+                            .eq(EcUniversalStock::getTenantId, tenantId)
+                            .in(EcUniversalStock::getSkuId, skuIds)
+                            .isNull(EcUniversalStock::getWarehouse));
+            for (EcUniversalStock st : rows) {
+                live.put(st.getSkuId(), st);
+            }
+        }
+
+        // 3. 覆盖快照 + 重判类型；已恢复的自动关闭
+        List<EcStockAlert> result = new ArrayList<>();
+        int recovered = 0;
+        for (EcStockAlert a : alerts) {
+            EcUniversalStock st = a.getSkuId() == null ? null : live.get(a.getSkuId());
+            if (st == null) {
+                // 查不到实时库存（SKU 已删/数据缺失）→ 保留原样，不臆造
+                result.add(a);
+                continue;
+            }
+            int avail = st.getAvailableStock() == null ? 0 : st.getAvailableStock();
+            int safe = st.getSafeStock() == null ? 0 : st.getSafeStock();
+            a.setCurrentStock(avail);
+            a.setSafeStock(safe);
+            if (avail <= 0) {
+                a.setAlertType("OUT_OF_STOCK");
+                a.setMessage(safe > 0
+                        ? "库存为0，请立即补货（安全库存 " + safe + "）"
+                        : "库存为0，请立即补货（未设置安全库存）");
+                result.add(a);
+            } else if (avail <= safe) {
+                a.setAlertType("LOW_STOCK");
+                a.setMessage("库存低于安全库存(" + safe + ")，当前可售" + avail);
+                result.add(a);
+            } else {
+                recovered++;
+                if (persist) {
+                    a.setIsResolved(true);
+                    a.setResolvedTime(LocalDateTime.now());
+                    a.setMessage("库存已恢复（当前可售" + avail + "），预警自动关闭");
+                    stockAlertService.updateById(a);
+                }
+            }
+        }
+        if (recovered > 0) {
+            log.info("[EcStockAlert] 库存已恢复，自动关闭预警 {} 条: tenantId={}, 对齐 SKU {} 个",
+                    recovered, tenantId, skuIds.size());
+        }
+        return result;
     }
 
     /**
