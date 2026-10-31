@@ -6,6 +6,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.OrderRiskTracking;
 import com.fashion.supplychain.intelligence.mapper.OrderRiskTrackingMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,24 @@ public class OrderRiskTrackingOrchestrator {
             log.warn("[订单风险闭环] tenantId为空（非请求线程？），跳过创建");
             return null;
         }
+        // 幂等守卫（D-906）：同一订单已有未闭环风险时**只刷新等级/因子，不再插新记录**。
+        // 历史教训：D-879 之前每次评估都插一条，线上单订单堆到 2850 条、全表 30715 条，
+        // 而 listOpenRisks() 每次风险评估都要全量拉出来 → 越跑越慢、统计全失真。
+        // 防线放在这里（而不是只依赖调用方），任何新调用点都不会再制造重复。
+        try {
+            OrderRiskTracking existing = findOpenByOrderNo(tenantId, orderNo);
+            if (existing != null) {
+                boolean levelChanged = !riskLevel.equals(existing.getRiskLevel());
+                if (levelChanged) {
+                    refreshOpenRisk(existing.getId(), riskLevel, riskFactors);
+                }
+                log.debug("[订单风险闭环] 已有未闭环风险，跳过重复创建: orderNo={}, riskId={}, levelChanged={}",
+                        orderNo, existing.getId(), levelChanged);
+                return existing.getId();
+            }
+        } catch (Exception e) {
+            log.debug("[订单风险闭环] 幂等检查失败，继续走创建: orderNo={}, err={}", orderNo, e.getMessage());
+        }
         try {
             OrderRiskTracking tracking = new OrderRiskTracking();
             tracking.setTenantId(tenantId);
@@ -71,7 +90,38 @@ public class OrderRiskTrackingOrchestrator {
         wrapper.eq(OrderRiskTracking::getTenantId, tenantId);
         wrapper.in(OrderRiskTracking::getHandlingStatus, "pending", "escalated");
         wrapper.orderByDesc(OrderRiskTracking::getCreatedAt);
-        return riskTrackingMapper.selectList(wrapper);
+        // 防御上限（D-906）：历史脏数据可能几万条，宁可截断也不能把调用方拖死
+        wrapper.last("LIMIT 5000");
+        List<OrderRiskTracking> all = riskTrackingMapper.selectList(wrapper);
+        // 按订单去重：**每个订单只返回最新一条**。
+        // 历史上同一订单被重复插入（线上 35 个订单堆了 30715 条），
+        // 不去重的话列表/统计/AI 上下文都会被同一条风险刷屏。
+        Map<String, OrderRiskTracking> byOrder = new LinkedHashMap<>();
+        for (OrderRiskTracking r : all) {
+            if (r.getOrderNo() == null) {
+                continue;
+            }
+            byOrder.putIfAbsent(r.getOrderNo(), r);   // 已按 created_at 倒序，首次即最新
+        }
+        return new ArrayList<>(byOrder.values());
+    }
+
+    /**
+     * 查同一订单当前未闭环的风险（D-906 幂等守卫用）。
+     *
+     * @return 最新一条 pending/escalated 记录；没有则 null
+     */
+    public OrderRiskTracking findOpenByOrderNo(Long tenantId, String orderNo) {
+        if (tenantId == null || orderNo == null || orderNo.isBlank()) {
+            return null;
+        }
+        LambdaQueryWrapper<OrderRiskTracking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderRiskTracking::getTenantId, tenantId);
+        wrapper.eq(OrderRiskTracking::getOrderNo, orderNo);
+        wrapper.in(OrderRiskTracking::getHandlingStatus, "pending", "escalated");
+        wrapper.orderByDesc(OrderRiskTracking::getCreatedAt);
+        wrapper.last("LIMIT 1");
+        return riskTrackingMapper.selectOne(wrapper);
     }
 
     /**
@@ -223,22 +273,52 @@ public class OrderRiskTrackingOrchestrator {
             wrapper.ge(OrderRiskTracking::getCreatedAt, since);
             List<OrderRiskTracking> records = riskTrackingMapper.selectList(wrapper);
 
-            long total = records.size();
-            long pending = records.stream().filter(r -> "pending".equals(r.getHandlingStatus())).count();
-            long resolved = records.stream().filter(r -> "resolved".equals(r.getHandlingStatus())).count();
-            long escalated = records.stream().filter(r -> "escalated".equals(r.getHandlingStatus())).count();
-            long highRisk = records.stream().filter(r -> "high".equals(r.getRiskLevel())).count();
+            // D-906 口径修复（两个错都在线上实锤过）：
+            // ① 原来按**记录行**统计：同一订单被重复插入后，一个订单算成 2850 条"风险"，
+            //    线上 30 天显示 9671 条风险，实际只有 12 个订单 → 数字完全是假的
+            // ② highRisk 用 "high" 匹配，而库里风险等级只有 overdue / danger
+            //    （见 DeliveryRiskItem 枚举）→ 高风险数**恒为 0**
+            // 现在统一按**订单**统计，等级判定兼容 overdue/danger/high。
+            long totalRecords = records.size();
+            Map<String, OrderRiskTracking> latestByOrder = new LinkedHashMap<>();
+            for (OrderRiskTracking r : records) {
+                if (r.getOrderNo() == null) {
+                    continue;
+                }
+                // records 未排序，这里按创建时间保留最新一条
+                OrderRiskTracking prev = latestByOrder.get(r.getOrderNo());
+                if (prev == null || (r.getCreatedAt() != null
+                        && (prev.getCreatedAt() == null || r.getCreatedAt().isAfter(prev.getCreatedAt())))) {
+                    latestByOrder.put(r.getOrderNo(), r);
+                }
+            }
+            long totalOrders = latestByOrder.size();
+            long pending = latestByOrder.values().stream()
+                    .filter(r -> "pending".equals(r.getHandlingStatus())).count();
+            long resolved = latestByOrder.values().stream()
+                    .filter(r -> "resolved".equals(r.getHandlingStatus())).count();
+            long escalated = latestByOrder.values().stream()
+                    .filter(r -> "escalated".equals(r.getHandlingStatus())).count();
+            long highRisk = latestByOrder.values().stream()
+                    .filter(r -> isHighRiskLevel(r.getRiskLevel())).count();
 
             stats.put("period", days + "天");
-            stats.put("totalRisks", total);
+            stats.put("totalRisks", totalOrders);          // 出险订单数（口径=订单）
+            stats.put("totalRiskRecords", totalRecords);   // 原始记录数（排查用，前端可忽略）
             stats.put("pending", pending);
             stats.put("resolved", resolved);
             stats.put("escalated", escalated);
             stats.put("highRisk", highRisk);
-            stats.put("resolutionRate", total > 0 ? Math.round((double) resolved / total * 1000.0) / 10.0 + "%" : "N/A");
+            stats.put("resolutionRate",
+                    totalOrders > 0 ? Math.round((double) resolved / totalOrders * 1000.0) / 10.0 + "%" : "N/A");
         } catch (Exception e) {
             log.warn("[订单风险闭环] 获取统计失败: {}", e.getMessage());
         }
         return stats;
+    }
+
+    /** 高风险等级判定（D-906）：兼容 overdue / danger / high 三种写法 */
+    private static boolean isHighRiskLevel(String level) {
+        return "overdue".equals(level) || "danger".equals(level) || "high".equals(level);
     }
 }

@@ -1229,4 +1229,12 @@
 - [x] 验证：mvn compile / tsc / ESLint 全绿；生产数据 SQL 预演 14 条全部 RECOVERED
 - [ ] 待部署后确认：打开预警列表应只剩真正缺货的（预期 0 条），且日志有「自动关闭预警 N 条」
 
+## 2026-11-01 D-906 订单风险表 3 万条重复（本会话完成）
+- [x] 线上查证：30,715 行只对应 35 个订单（单订单最多 2850 条），全部 pending；10-25 后已停止新增
+- [x] 四个问题：历史脏数据未清 / listOpenRisks 无上限全量拉 / 统计按行算（9671 条 vs 12 单）/ highRisk 用 "high" 匹配恒 0
+- [x] 代码：createRisk 幂等 + listOpenRisks 去重限 5000 + 统计改订单口径 + 等级兼容 overdue/danger
+- [x] 数据：备份 bak_20261101 后清理 30,680 条 → pending 35 条（一单一条）
+- [x] 验证：mvn compile 0 错；清理后 open=35
+- [ ] 待部署后确认：`/api/intelligence/risk-tracking/list` 返回 35 条；stats 的 totalRisks=订单数、highRisk 不再恒 0
+
 > 更早内容（2026-08-31 及以前）已归档：memory-bank/archive/progress-202608.md
