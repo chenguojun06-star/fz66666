@@ -5128,3 +5128,14 @@ alarms，用户无法区分真逾期与待关单逾期。
   按 orderNo 匹配风险记录后调用 resolve/clear。
 
 **验证**：tsc 0 错误，eslint 0 error。
+
+## D-910 门禁加固：前端 ratchet + 密钥扫描进 CI（2026-11-01）
+
+**背景**：前端质量 ratchet（any/eslint-disable/console.log）仅在 pre-push，
+`push --no-verify` 即绕过；密钥明文扫描无 CI 覆盖。
+
+**修复**：
+- CI frontend-lint job 新增「前端质量基线（ratchet）」步骤，与 pre-push 同口径。
+- CI quality-gate job 新增「密钥明文扫描」步骤，禁止 token/key/secret 硬编码（排除 `{{...}}` 模板）。
+
+**验证**：YAML 语法正确；ratchet 通过；密钥扫描 CLEAN。

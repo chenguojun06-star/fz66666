@@ -77,6 +77,15 @@ jobs:
     # lazyPage(() => import('./modules/x'), 'Name') 二次包裹 → React #306 →
     # 全部业务页面崩溃约 33 小时。tsc --noEmit 全绿也拦不住（本次即如此），
     # 只能静态拦截。已用 D-875 原始代码反向验证：能精准命中 81 处。
+    - name: 密钥明文扫描（禁止 token/key/secret 硬编码）
+      run: |
+        if grep -rnE '(verification_token|encrypt_key|api_key|secret_key)\s*[:=]\s*"[A-Za-z0-9]{16,}"' --include="*.json" --include="*.yml" --include="*.yaml" --include="*.properties" . | grep -v node_modules | grep -v '{{' ; then
+          echo "❌ 发现疑似明文密钥，请改用 {{...}} 模板"
+          exit 1
+        else
+          echo "✅ 未发现明文密钥"
+        fi
+
     - name: 禁止 React.lazy 二次包裹（D-885 全站白屏事故门禁）
       run: python3 scripts/check-lazy-wrapper.py
 
@@ -299,6 +308,10 @@ jobs:
     - name: 安装依赖
       working-directory: ./frontend
       run: npm install --legacy-peer-deps
+
+    # 前端质量基线（ratchet）：any / eslint-disable / console.log 只许减少不许增加
+    - name: 前端质量基线（ratchet，与 pre-push 同口径）
+      run: python3 scripts/check-frontend-quality.py
 
     - name: ESLint 代码规范检查
       working-directory: ./frontend
