@@ -5164,3 +5164,19 @@ alarms，用户无法区分真逾期与待关单逾期。
 8. MemoryNudgeSection：消息中心新增记忆提醒响应 UI（采纳/忽略），收口"有端点无入口"。
 
 **验证**：mvn -DskipTests compile 通过；tsc 0 错误；eslint 0 error。
+
+## D-913 sessionId 贯通（AgentModeContext + 任务中心端点）（2026-11-01）
+
+**背景**：Agent 工具执行链路没有贯通 sessionId，任务与会话的绑定方法没有调用方，
+会话维度待办列表永远返回空。
+
+**改进**：
+1. `AgentModeContext` 新增 sessionId ThreadLocal（setSessionId/getSessionId/clear）。
+2. `AiAgentOrchestrator` 在 sync/stream 两条路径的 context build 后设置 sessionId。
+3. `IntelligenceTaskCenterController.listAiTasks` 新增 `sessionId` 查询参数，
+   传入时按会话过滤（调用 `listPendingTasksBySession`），否则按 agent 过滤。
+
+**说明**：HighRiskAuditHook 仍使用 auditId（非 taskId），任务绑定到会话需要后续在
+TaskTracker 创建任务时调用 `bindTaskToSession`；基础设施已贯通，绑定点待后续完善。
+
+**验证**：mvn -DskipTests compile 通过。

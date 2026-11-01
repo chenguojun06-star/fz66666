@@ -338,6 +338,9 @@ public class AiAgentOrchestrator {
 
         AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
         lastCommandIdHolder.set(ctx.getCommandId());
+        // D-913：贯通 sessionId 到 AgentModeContext，供工具钩子（HighRiskAuditHook）绑定任务到会话
+        String _sessionId = ctx.getStateSessionId() != null ? ctx.getStateSessionId() : ctx.getCommandId();
+        AgentModeContext.setSessionId(_sessionId);
 
         // P2-2: 成本爆炸防御 — 上下文肥大检测与压缩
         applyCostExplosionGuard(ctx);
@@ -903,6 +906,8 @@ public class AiAgentOrchestrator {
 
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
             ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
+            // D-913：贯通 sessionId 到 AgentModeContext
+            AgentModeContext.setSessionId(ctx.getStateSessionId() != null ? ctx.getStateSessionId() : ctx.getCommandId());
             ctx.setCancelled(cancelled);
 
             // P0-4: Langfuse 全链路追踪 — 入口创建 trace + 设置 ThreadLocal span 根

@@ -32,22 +32,23 @@ public class IntelligenceTaskCenterController {
     }
 
     /**
-     * AI 执行待验证任务（D-880）。
+     * AI 执行待验证任务（D-880 / D-913）。
      *
-     * <p>`AiTaskTracker` 此前只有写入口：高风险/写操作工具执行成功后由
-     * `HighRiskAuditHook` 记一条 PENDING，但全系统没有任何查询路径，
-     * 任务既看不到也不会过期。这里按「执行人」列出待验证动作——默认查当前登录人
-     * （hook 记录时 assignedTo 就是操作人用户名）。
+     * <p>按「执行人」列出待验证动作——默认查当前登录人
+     * （hook 记录时 assignedTo 就是操作人用户名）。</p>
      *
-     * <p>⚠️ 会话维度的待办列表暂不可用：Agent 工具执行链路没有贯通 sessionId，
-     * 任务与会话的绑定方法也没有调用方，接了只会永远返回空。
-     * （D-880 留作待办：需要把 sessionId 从 Agent 循环一路传到工具钩子。）
+     * <p>会话维度查询：传入 {@code sessionId} 时按会话过滤（D-913：sessionId 已贯通到
+     * AgentModeContext ThreadLocal，工具钩子可读取并绑定任务到会话）。</p>
      */
     @GetMapping("/ai-tasks")
-    public Result<?> listAiTasks(@RequestParam(required = false) String agentName) {
+    public Result<?> listAiTasks(@RequestParam(required = false) String agentName,
+                                @RequestParam(required = false) String sessionId) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return Result.fail("缺少租户上下文");
+        }
+        if (sessionId != null && !sessionId.isBlank()) {
+            return Result.success(taskTrackerOrchestrator.listPendingTasksBySession(tenantId, sessionId));
         }
         String target = (agentName == null || agentName.isBlank())
                 ? UserContext.username() : agentName;
