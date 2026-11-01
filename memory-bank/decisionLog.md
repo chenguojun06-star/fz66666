@@ -5116,3 +5116,15 @@ alarms，用户无法区分真逾期与待关单逾期。
 **修复**：改为 `exportTableToExcel` 内 `await import('exceljs')`，ExcelJS 被拆为独立 chunk（vendor-exceljs，按需加载）。
 
 **验证**：tsc 0 错误，build 通过（exceljs 独立 chunk 936KB）。
+
+## D-909 风险处理前端入口（有端点无入口收口）（2026-11-01）
+
+**背景**：OrderRiskTrackingController 提供 list/resolve/escalate/clear/reopen 五个端点，
+但前端完全无 UI，风险只能写入不能处理，表只增不减、统计恒 0（D-879 同族问题）。
+
+**修复**：
+- 新增 `services/intelligence/riskTrackingApi.ts` 封装 5 个端点。
+- OverdueRiskCard 新增「处理」按钮（打开 Modal：动作下拉 + 结果输入）与「撤销（AI误判）」按钮，
+  按 orderNo 匹配风险记录后调用 resolve/clear。
+
+**验证**：tsc 0 错误，eslint 0 error。
