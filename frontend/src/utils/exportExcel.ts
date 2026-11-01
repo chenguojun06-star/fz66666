@@ -1,5 +1,10 @@
-import ExcelJS from 'exceljs';
 import type { ColumnType } from 'antd/es/table';
+
+// ExcelJS 体积大（~916KB），改为按需动态加载，避免常驻首屏 bundle
+async function loadExcelJS(): Promise<any> {
+  const mod = await import('exceljs');
+  return mod.default ?? mod;
+}
 
 /**
  * 从 ReactNode 中递归提取纯文本（用于 Excel 导出时获取 render 渲染后的可见文本）
@@ -33,6 +38,7 @@ export async function exportTableToExcel<T extends object>(
   filename: string = '导出数据.xlsx',
   selectedColumns?: string[]
 ): Promise<void> {
+  const ExcelJS = await loadExcelJS();
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Sheet1');
 

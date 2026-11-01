@@ -5108,3 +5108,11 @@ alarms，用户无法区分真逾期与待关单逾期。
 3. `cloudbaserc.json`：飞书 verification token / encrypt key 明文 → `{{FEISHU_VERIFICATION_TOKEN}}` / `{{FEISHU_ENCRYPT_KEY}}` 模板。
 
 **验证**：`mvn -DskipTests compile` 通过；`check-silent-catch.py` 通过。
+
+## D-908 首屏瘦身：ExcelJS 改为按需动态加载（2026-11-01）
+
+**背景**：`exportExcel.ts` 静态 `import ExcelJS from 'exceljs'` 让 ~916KB 常驻首屏 bundle。
+
+**修复**：改为 `exportTableToExcel` 内 `await import('exceljs')`，ExcelJS 被拆为独立 chunk（vendor-exceljs，按需加载）。
+
+**验证**：tsc 0 错误，build 通过（exceljs 独立 chunk 936KB）。
