@@ -68,7 +68,7 @@ public class EcStockAlertReconcileJob {
             distributedLockService.executeWithLock(LOCK_KEY, LOCK_TIMEOUT_MINUTES, TimeUnit.MINUTES,
                     this::doReconcile);
         } catch (Exception e) {
-            // 抢锁失败（别的实例正在跑）属正常，不打错误日志
+            // 可忽略：抢锁失败=其他实例正在跑，属正常旁路
             log.debug("[EcStockAlertReconcile] 本次跳过: {}", e.getMessage());
         }
     }

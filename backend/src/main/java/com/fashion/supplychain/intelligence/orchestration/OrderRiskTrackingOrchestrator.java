@@ -57,7 +57,7 @@ public class OrderRiskTrackingOrchestrator {
                 return existing.getId();
             }
         } catch (Exception e) {
-            log.debug("[订单风险闭环] 幂等检查失败，继续走创建: orderNo={}, err={}", orderNo, e.getMessage());
+            log.warn("[订单风险闭环] 幂等检查失败，继续走创建: orderNo={}, err={}", orderNo, e.getMessage(), e);
         }
         try {
             OrderRiskTracking tracking = new OrderRiskTracking();

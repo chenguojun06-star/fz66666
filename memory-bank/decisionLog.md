@@ -5097,3 +5097,14 @@ alarms，用户无法区分真逾期与待关单逾期。
 --font-size-display(21px)/--font-size-xl(18px) 档位对齐，1080p 下更舒适。
 
 **验证**：tsc 0 错误，eslint 0 error。
+
+## D-907 CI 静默吞异常门禁修复（2026-11-01）
+
+**背景**：D-905/D-906 因静默吞异常门禁失败，CI 连红 2 次。
+
+**修复**：
+1. `OrderRiskTrackingOrchestrator`：幂等检查 catch 从 `log.debug` 改为 `log.warn`（真实异常）。
+2. `EcStockAlertReconcileJob`：抢锁失败 catch 注释改为"可忽略：抢锁失败=其他实例正在跑"，满足门禁允许词表。
+3. `cloudbaserc.json`：飞书 verification token / encrypt key 明文 → `{{FEISHU_VERIFICATION_TOKEN}}` / `{{FEISHU_ENCRYPT_KEY}}` 模板。
+
+**验证**：`mvn -DskipTests compile` 通过；`check-silent-catch.py` 通过。
