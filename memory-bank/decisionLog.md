@@ -5150,3 +5150,17 @@ alarms，用户无法区分真逾期与待关单逾期。
    修复"消息提醒不显示"的名称匹配问题。
 
 **验证**：mvn -DskipTests compile 通过。
+
+## D-912 P1/P2 优化批次：假正常值清理 + 静默任务修复 + 门禁加固 + MemoryNudge UI（2026-11-01）
+
+**修复**：
+1. SmartWarehouseAllocator：退货率恒 0.05 → -1 哨兵 + reason 显示"退货率未知"（不再伪造正常值）。
+2. OptimizationSolverOrchestrator：空方案 withinBudget true → false。
+3. DistributorBillReconciliationOrchestrator：添加 mock 数据源警告日志。
+4. AuditLogCleanupJob：审计日志保留期 90→60 天。
+5. DatabaseHealthCheckJob：死锁检查 queryForObject→queryForList；存储 SQL `rows` 保留字加反引号。
+6. MultiAgentDebateOrchestrator：CEO JSON 解析失败 log.error→log.warn，降级通知更友好。
+7. CI：Flyway 版本号唯一性检查进 quality-gate。
+8. MemoryNudgeSection：消息中心新增记忆提醒响应 UI（采纳/忽略），收口"有端点无入口"。
+
+**验证**：mvn -DskipTests compile 通过；tsc 0 错误；eslint 0 error。

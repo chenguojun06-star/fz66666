@@ -131,14 +131,14 @@ public class DatabaseHealthCheckJob {
 
     private void checkDeadlocks(List<String> warnings, List<String> infos) {
         try {
-            Integer deadlocks = jdbcTemplate.queryForObject(
-                    "SHOW STATUS LIKE 'Innodb_deadlocks'",
-                    (rs, rowNum) -> rs.getInt("Value"));
-            if (deadlocks != null) {
-                infos.add("累计死锁 " + deadlocks + " 次");
-                if (deadlocks > 20) {
-                    warnings.add("死锁次数偏多 (" + deadlocks + ")，建议检查事务逻辑");
-                }
+            // SHOW STATUS 返回多行时 queryForObject 会抛 Incorrect result size，改用 queryForList 取首行
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList("SHOW STATUS LIKE 'Innodb_deadlocks'");
+            if (rows == null || rows.isEmpty()) return;
+            Object val = rows.get(0).get("Value");
+            int deadlocks = (val instanceof Number) ? ((Number) val).intValue() : Integer.parseInt(String.valueOf(val));
+            infos.add("累计死锁 " + deadlocks + " 次");
+            if (deadlocks > 20) {
+                warnings.add("死锁次数偏多 (" + deadlocks + ")，建议检查事务逻辑");
             }
         } catch (Exception e) {
             log.warn("[DB健康巡检] 死锁检查失败 (跳过该项): err={}", e.getMessage());
@@ -217,7 +217,7 @@ public class DatabaseHealthCheckJob {
             }
 
             List<Map<String, Object>> bigTables = jdbcTemplate.queryForList(
-                    "SELECT TABLE_NAME as name, TABLE_ROWS as rows " +
+                    "SELECT TABLE_NAME as name, TABLE_ROWS as `rows` " +
                             "FROM information_schema.TABLES WHERE table_schema = DATABASE() " +
                             "AND TABLE_ROWS > 1000000 ORDER BY TABLE_ROWS DESC LIMIT 5");
             if (!bigTables.isEmpty()) {

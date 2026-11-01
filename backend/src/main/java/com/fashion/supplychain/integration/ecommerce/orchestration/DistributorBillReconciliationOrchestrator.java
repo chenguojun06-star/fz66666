@@ -86,6 +86,9 @@ public class DistributorBillReconciliationOrchestrator {
             return r;
         }
 
+        // ⚠️ 数据源未接入真实分销商账单：当前以 EcSalesRevenue (revenue_source=DISTRIBUTOR) 模拟，
+        // 结果仅供参考，不能作为对账依据（CLAUDE.md：缺失不得兜底成正常值）。
+        log.warn("[DistributorReconcile] 数据源为本地 mock（EcSalesRevenue），未接入真实分销商账单，结果仅供参考");
         int total = 0, matched = 0, mismatched = 0, missingLocal = 0, newBills = 0;
         for (DistributorProfile d : distributors) {
             // 1. mock：拉取该分销商账单（以 EcSalesRevenue 中 revenue_source=DISTRIBUTOR 为账单源）

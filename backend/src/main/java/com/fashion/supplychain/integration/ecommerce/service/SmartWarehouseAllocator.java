@@ -113,18 +113,20 @@ public class SmartWarehouseAllocator {
             default -> 50;
         };
 
-        // 4. 历史退货率（0-100）：查询近30天该仓库退货率，无数据默认5%→50分
+        // 4. 历史退货率（0-100）：无真实退货数据时标记未知，不伪造正常值
         double returnRate = queryReturnRate(tenantId, warehouse);
-        double returnScore = Math.max(0, 100 - returnRate * 10);
+        boolean returnRateKnown = returnRate >= 0;
+        double returnScore = returnRateKnown ? Math.max(0, 100 - returnRate * 10) : 50; // 未知时中性分
+        String returnRateText = returnRateKnown ? String.format("退货率%.1f%%", returnRate * 100) : "退货率未知";
 
         // 5. 综合得分
         double totalScore = stockScore * W_STOCK + timeScore * W_TIME + costScore * W_COST + returnScore * W_RETURN;
 
-        String reason = String.format("库存%.0f%%(可分配%d/%d)+时效%d天+成本%s+退货率%.1f%%",
+        String reason = String.format("库存%.0f%%(可分配%d/%d)+时效%d天+成本%s+%s",
                 stockScore, availableStock, requiredQty, estimatedDays,
                 whType.equals("MAIN") || whType.equals("CENTRAL") || whType.equals("PRIMARY") ? "低" :
                         whType.equals("BRANCH") || whType.equals("REGIONAL") || whType.equals("SECONDARY") ? "中" : "高",
-                returnRate * 100);
+                returnRateText);
 
         return new WarehouseScore(warehouse, availableStock, totalScore, reason, estimatedDays,
                 stockScore, timeScore, costScore, returnScore);
@@ -144,8 +146,9 @@ public class SmartWarehouseAllocator {
     }
 
     /**
-     * 查询近30天该仓库的退货率（退货数/已发货数）
-     * 无数据时返回默认值 0.05（5%）
+     * 查询近30天该仓库的退货率（退货数/已发货数）。
+     * 无数据或查询失败时返回 -1（哨兵），由调用方按"未知"处理，
+     * 不再伪造 5% 正常值（CLAUDE.md：缺失不得兜底成正常值）。
      */
     private double queryReturnRate(Long tenantId, String warehouse) {
         try {
@@ -154,13 +157,13 @@ public class SmartWarehouseAllocator {
                     .eq(EcWarehouseAllocation::getTenantId, tenantId)
                     .eq(EcWarehouseAllocation::getWarehouse, warehouse)
                     .ge(EcWarehouseAllocation::getCreateTime, since));
-            if (shipped == null || shipped == 0) return 0.05;
-            // 退货率暂用默认值（退货订单状态需要业务定义，这里先用默认值）
+            if (shipped == null || shipped == 0) return -1; // 无数据，标记未知
+            // 退货率暂用默认值（退货订单状态需要业务定义，接入真实数据后计算）
             // TODO: 接入真实退货数据后计算实际退货率
-            return 0.05;
+            return -1; // 未接入真实退货数据，标记未知
         } catch (Exception e) {
-            log.warn("[SmartAllocator] 查询退货率失败，用默认值: warehouse={}, err={}", warehouse, e.getMessage());
-            return 0.05;
+            log.warn("[SmartAllocator] 查询退货率失败，标记未知: warehouse={}, err={}", warehouse, e.getMessage());
+            return -1;
         }
     }
 

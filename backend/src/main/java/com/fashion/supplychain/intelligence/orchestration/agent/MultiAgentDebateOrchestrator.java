@@ -94,13 +94,13 @@ public class MultiAgentDebateOrchestrator {
             notification.setCreatedAt(System.currentTimeMillis());
             return notification;
         } catch (Exception e) {
-            log.error("[MultiAgent] CEO 智能体输出 JSON 解析失败: {}", ceoDecisionJson, e);
-            // 降级处理
+            // CEO 输出非 JSON 是常见情况（模型偶尔输出纯文本），降级为 WARN，不阻断诊断流程
+            log.warn("[MultiAgent] CEO 智能体输出非 JSON，降级为通用通知: orderId={}, err={}", order.getId(), e.getMessage());
             return SmartNotification.builder()
                     .notificationId(UUID.randomUUID().toString())
                     .orderId(String.valueOf(order.getId()))
-                    .title("多智能体诊断失败")
-                    .content("解析异常：" + e.getMessage())
+                    .title("多智能体诊断（降级）")
+                    .content("CEO 输出非结构化，建议人工复核。原始输出：" + (ceoDecisionJson != null ? ceoDecisionJson.substring(0, Math.min(200, ceoDecisionJson.length())) : "null"))
                     .priority("normal")
                     .build();
         }

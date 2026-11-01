@@ -50,7 +50,7 @@ public class AuditLogCleanupJob {
      */
     private void cleanAuditLog() {
         try {
-            int retentionDays = readRetentionDays("system.auditLog.retentionDays", 90);
+            int retentionDays = readRetentionDays("system.auditLog.retentionDays", 60);
 
             if (tenantService != null) {
                 List<Tenant> tenants = tenantService.list();

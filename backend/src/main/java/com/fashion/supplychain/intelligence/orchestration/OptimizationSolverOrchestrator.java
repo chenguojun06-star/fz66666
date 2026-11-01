@@ -141,8 +141,9 @@ public class OptimizationSolverOrchestrator {
      */
     public ProcurementSolution solveProcurement(String userRequest, String businessContext) {
         ProcurementSolution solution = new ProcurementSolution();
-        solution.setWithinBudget(true);
-        solution.setExplanation("采购优化求解器暂未接入真实约束求解，返回空方案。");
+        // 无真实求解结果时不能声称"在预算内"——缺失不得兜底成正常值
+        solution.setWithinBudget(false);
+        solution.setExplanation("采购优化求解器暂未接入真实约束求解，返回空方案，预算状态未知。");
         return solution;
     }
 }
