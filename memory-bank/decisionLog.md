@@ -5139,3 +5139,14 @@ alarms，用户无法区分真逾期与待关单逾期。
 - CI quality-gate job 新增「密钥明文扫描」步骤，禁止 token/key/secret 硬编码（排除 `{{...}}` 模板）。
 
 **验证**：YAML 语法正确；ratchet 通过；密钥扫描 CLEAN。
+
+## D-911 入库消息通知 + 消息提醒显示修复（2026-11-01）
+
+**改进**：
+1. SysNoticeOrchestrator 新增 `sendInboundNotification` 方法：物料入库时通知跟单员（noticeType=inbound），
+   buildTitle/buildContent 增加 inbound 分支。MaterialInboundOrchestrator.confirmArrivalAndInbound
+   及批量路径成功入库后调用，消息显示在消息中心。
+2. `getMyNotices` 增加兜底查询：按显示名查不到时用登录名再查一次，并记录 debug 日志，
+   修复"消息提醒不显示"的名称匹配问题。
+
+**验证**：mvn -DskipTests compile 通过。

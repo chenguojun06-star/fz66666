@@ -118,6 +118,65 @@ public class SysNoticeOrchestrator {
         log.info("[SysNotice] 通知已发送 orderNo={} to={} type={}", orderNo, merchandiser, noticeType);
     }
 
+    /**
+     * 物料入库时通知跟单员（入库消息显示在消息中心）
+     *
+     * @param tenantId 租户ID
+     * @param orderNo  订单号
+     * @param styleNo  款号
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void sendInboundNotification(Long tenantId, String orderNo, String styleNo) {
+        if (tenantId == null || orderNo == null || orderNo.isBlank()) return;
+
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getOrderNo, orderNo)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        if (order == null) {
+            log.warn("[SysNotice] 入库通知：订单不存在 orderNo={}", orderNo);
+            return;
+        }
+
+        String merchandiser = order.getMerchandiser();
+        if (merchandiser == null || merchandiser.isBlank()) {
+            log.warn("[SysNotice] 入库通知：订单未设置跟单员 orderNo={}", orderNo);
+            return;
+        }
+
+        // Upsert：已有未读同类通知时刷新内容
+        SysNotice existing = sysNoticeService.lambdaQuery()
+                .eq(SysNotice::getTenantId, tenantId)
+                .eq(SysNotice::getOrderNo, orderNo)
+                .eq(SysNotice::getNoticeType, "inbound")
+                .eq(SysNotice::getIsRead, 0)
+                .last("LIMIT 1")
+                .one();
+        if (existing != null) {
+            existing.setContent(buildContent("inbound", order));
+            existing.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.updateById(existing);
+            log.debug("[SysNotice] 刷新已有入库通知 orderNo={}", orderNo);
+            return;
+        }
+
+        SysNotice notice = new SysNotice();
+        notice.setTenantId(tenantId);
+        notice.setToName(merchandiser);
+        notice.setFromName("系统自动检测");
+        notice.setOrderNo(orderNo);
+        notice.setTitle(buildTitle("inbound", order));
+        notice.setContent(buildContent("inbound", order));
+        notice.setNoticeType("inbound");
+        notice.setStyleImage(order.getStyleImage());
+        notice.setIsRead(0);
+        notice.setCreatedAt(LocalDateTime.now());
+
+        sysNoticeService.save(notice);
+        log.info("[SysNotice] 入库通知已发送 orderNo={} to={}", orderNo, merchandiser);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void sendWithUrgeRecord(String orderNo, String noticeType, String urgeRecordId) {
         Long tenantId = UserContext.tenantId();
@@ -592,7 +651,17 @@ public class SysNoticeOrchestrator {
     public List<SysNotice> getMyNotices() {
         Long tenantId  = UserContext.tenantId();
         String[] names = resolveMyNames(tenantId);
-        return sysNoticeService.queryForUser(tenantId, names[0], names[1]);
+        List<SysNotice> result = sysNoticeService.queryForUser(tenantId, names[0], names[1]);
+        // 兜底：按显示名查不到时，用登录名再查一次（防止 toName 存的是 username 而 displayName 不匹配）
+        if (result == null || result.isEmpty()) {
+            if (!names[0].equals(names[1])) {
+                result = sysNoticeService.queryForUser(tenantId, names[1], names[1]);
+            }
+        }
+        if (result == null || result.isEmpty()) {
+            log.debug("[SysNotice] getMyNotices 为空: tenantId={}, names={}", tenantId, java.util.Arrays.toString(names));
+        }
+        return result == null ? java.util.Collections.emptyList() : result;
     }
 
     /**
@@ -675,6 +744,7 @@ public class SysNoticeOrchestrator {
             case "stagnant"   -> "⏸ 停滞预警 — 订单 " + order.getOrderNo();
             case "deadline"   -> "⏰ 临期提醒 — 订单 " + order.getOrderNo();
             case "quality"    -> "🔴 质量问题 — 订单 " + order.getOrderNo();
+            case "inbound"    -> "📥 物料入库 — 订单 " + order.getOrderNo();
             case "urge_order" -> "📦 催单提醒 — 订单 " + order.getOrderNo();
             default           -> "📢 通知 — 订单 " + order.getOrderNo();
         };
@@ -699,7 +769,11 @@ public class SysNoticeOrchestrator {
             }
             case "quality"  -> String.format(
                     "订单 %s（%s）存在质量问题需关注，当前进度 %d%%，工厂：%s。请及时处理。",
-                    order.getOrderNo(), order.getStyleNo(), prog, factory);            case "urge_order" -> {
+                    order.getOrderNo(), order.getStyleNo(), prog, factory);
+            case "inbound"  -> String.format(
+                    "订单 %s（%s）物料已入库，当前进度 %d%%，工厂：%s。请确认后续生产安排。",
+                    order.getOrderNo(), order.getStyleNo(), prog, factory);
+            case "urge_order" -> {
                 String shipDate = order.getExpectedShipDate() != null
                         ? order.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd")) : "未定";
                 yield String.format(

@@ -62,6 +62,9 @@ public class MaterialInboundOrchestrator {
     private OrderRemarkService orderRemarkService;
 
     @Autowired
+    private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
+
+    @Autowired
     private MaterialInboundLogAppendHelper logAppendHelper;
 
     /**
@@ -197,6 +200,16 @@ public class MaterialInboundOrchestrator {
         }
 
         syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND");
+
+        // 入库消息通知跟单员（入库显示在消息中心）
+        try {
+            if (StringUtils.hasText(purchase.getOrderNo())) {
+                sysNoticeOrchestrator.sendInboundNotification(
+                        tenantId, purchase.getOrderNo(), purchase.getStyleNo());
+            }
+        } catch (Exception e) {
+            log.warn("[SysNotice] 入库通知发送失败，不影响主流程: {}", e.getMessage());
+        }
 
         // 自动写入系统备注：采购入库节点
         try {
@@ -512,6 +525,16 @@ public class MaterialInboundOrchestrator {
             log.warn("[确认完成入库] 同步物料对账失败（不阻断）: inboundNo={}, error={}", inboundNo, e.getMessage());
         }
         syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND");
+
+        // 入库消息通知跟单员（入库显示在消息中心）
+        try {
+            if (StringUtils.hasText(purchase.getOrderNo())) {
+                sysNoticeOrchestrator.sendInboundNotification(
+                        tenantId, purchase.getOrderNo(), purchase.getStyleNo());
+            }
+        } catch (Exception e) {
+            log.warn("[SysNotice] 入库通知发送失败，不影响主流程: {}", e.getMessage());
+        }
 
         result.put("skipped", false);
         result.put("inboundNo", inboundNo);
