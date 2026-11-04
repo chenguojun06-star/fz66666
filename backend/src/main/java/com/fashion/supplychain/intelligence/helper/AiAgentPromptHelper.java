@@ -260,6 +260,7 @@ public class AiAgentPromptHelper {
                 toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
+            int originalLen = prompt.length();
             int excess = prompt.length() - maxSystemPromptChars;
             log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
             String[] lowPriorityLabels = intentPriorityRouter.routeLowPriority(userMessage);
@@ -306,13 +307,22 @@ public class AiAgentPromptHelper {
                         String toolGuideContent = prompt.substring(toolStart + toolOpenTag.length());
                         int toolClose = toolGuideContent.indexOf("<!--/BLOCK:toolGuide-->");
                         if (toolClose > 0) toolGuideContent = toolGuideContent.substring(0, toolClose);
-                        prompt = prompt.substring(0, Math.min(prompt.length(), maxSystemPromptChars))
+                        // D-916：给尾部 toolGuide 预留空间。原写法「前 maxSystemPromptChars 字符
+                        // + 完整 toolGuide」拼出来仍可能远超上限，第三轮兜底等于没兜住。
+                        int reserved = toolGuideContent.length() + toolOpenTag.length() + 60;
+                        int prefixLen = Math.max(0, Math.min(prompt.length(), maxSystemPromptChars - reserved));
+                        prompt = prompt.substring(0, prefixLen)
                             + "\n...(上下文已截断)...\n" + toolOpenTag + toolGuideContent + "<!--/BLOCK:toolGuide-->";
                     }
                 } else {
                     prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
                 }
             }
+            // D-916：缩减结果必须可观测。此前只记录「过长」，没有记录「缩完是多少」，
+            // 无法判断三轮缩减是否真的生效——这正是「做了没接/假正常」最容易藏身的地方。
+            log.info("[AiAgent][Perf] systemPrompt缩减: {} → {} 字符 (上限 {}, 工具 {} 个)",
+                    originalLen, prompt.length(), maxSystemPromptChars,
+                    visibleTools == null ? 0 : visibleTools.size());
         }
         // D-856：输出长度软约束——与 maxTokens 硬上限配套。
         // 生产实测：QuickPath 单次 56-82s 的主因是输出跑满 2048 token；
