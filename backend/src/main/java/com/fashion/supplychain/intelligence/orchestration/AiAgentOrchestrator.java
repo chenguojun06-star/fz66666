@@ -749,9 +749,13 @@ public class AiAgentOrchestrator {
             }
             if (cached != null) {
                 log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.length());
-                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+                // D-918：缓存命中只需要一个 commandId，原实现却调 contextBuilder.build()
+                // 跑整套上下文构建（领域路由 + 工具裁剪 + 四路并行 RAG/记忆最长 4s
+                // + 历史消息），只为取 ctx.getCommandId() → 把「秒回」拖成 2~5 秒。
+                // commandId 只是前端标识，无格式约束，直接生成即可。
                 persistConversationTurn(userMessage, cached);
-                emitSse(emitter, "answer", java.util.Map.of("content", cached, "commandId", ctx.getCommandId()));
+                emitSse(emitter, "answer", java.util.Map.of(
+                        "content", cached, "commandId", "cached-" + System.currentTimeMillis()));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
@@ -1529,6 +1533,10 @@ public class AiAgentOrchestrator {
             String fullAnswer = hit.getFullAnswer();
             log.info("[AiAgent-QuickAnswer] 命中: type={}, confidence={}, 长度={}",
                     hit.getType(), hit.getConfidence(), fullAnswer.length());
+
+            // D-918：D-871 给 6 个回答分支持久化时漏了秒答缓存这一路，
+            // 命中时用户能看到答案、历史里却没有这一轮。补齐（失败只留痕，不阻断秒回）。
+            persistConversationTurn(userMessage, fullAnswer);
 
             // 返回answer事件（与其他流程一致的格式）
             String commandId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
