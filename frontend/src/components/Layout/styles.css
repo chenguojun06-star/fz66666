@@ -1254,6 +1254,19 @@
 .mc-center-tabs .ant-tabs-tabpane .sap-body-scroll {
   height: auto;
   overflow: visible;
+  /* D-915：把「我的通知」提到最前。此前它排在第 9 个版块（小云洞察/记忆提醒/
+     AI 待验证/巡检简报/首要关注…之后），用户打开消息中心只看到上面几屏预警，
+     根本滚不到通知，反馈「通知中心不显示通知」。用 flex+order 而非搬动 JSX，
+     避免重排 120 行带来的回归风险。 */
+  display: flex;
+  flex-direction: column;
+}
+/* 用 :has() 认出「我的通知」区块（每条通知都带关闭按钮），避免为了加 class
+   去改 SmartAlertBell.tsx —— 该文件当前有并行会话的未提交改动，且它引用的
+   AiTaskVerifySection 尚未入库，一起提交会把别人的半成品带上线。 */
+.mc-center-tabs .ant-tabs-tabpane .sap-section:has(.sap-notice-dismiss-btn) {
+  order: -1;
+  border-bottom: 2px solid var(--color-warning, #faad14);
 }
 
 /* ── D-626：面板改为右侧侧滑抽屉（.smart-alert-drawer），内容区块复用 sap-* 类 ── */

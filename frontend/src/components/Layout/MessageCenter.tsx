@@ -5,6 +5,7 @@ import SmartAlertBell from './SmartAlertBell';
 import AiSuggestionBell from './AiSuggestionBell';
 import { useProactiveInsights } from './SmartAlertBell/hooks/useProactiveInsights';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { sysNoticeApi } from '@/services/production/productionApi';
 
 /**
  * D-869：顶栏「消息中心」——把「今日预警」与「AI 建议」两个入口合成一个。
@@ -25,6 +26,10 @@ const MessageCenter: React.FC = () => {
   const [tab, setTab] = useState('alerts');
   const { insights } = useProactiveInsights();
   const [aiCount, setAiCount] = useState(0);
+  // D-915：系统通知未读数。此前角标只算「主动洞察 + AI 建议」，
+  // t_sys_notice 里有未读通知时按钮**没有任何提示**（红点/数字都不出现），
+  // 用户看到的就是「通知中心没显示通知」。
+  const [noticeCount, setNoticeCount] = useState(0);
 
   const loadAiCount = useCallback(async () => {
     try {
@@ -35,19 +40,32 @@ const MessageCenter: React.FC = () => {
     }
   }, []);
 
+  const loadNoticeCount = useCallback(async () => {
+    try {
+      setNoticeCount(await sysNoticeApi.getUnreadCount());
+    } catch {
+      setNoticeCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     void loadAiCount();
-    const timer = window.setInterval(() => { void loadAiCount(); }, 5 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, [loadAiCount]);
+    void loadNoticeCount();
+    const aiTimer = window.setInterval(() => { void loadAiCount(); }, 5 * 60 * 1000);
+    const noticeTimer = window.setInterval(() => { void loadNoticeCount(); }, 60 * 1000);
+    return () => {
+      window.clearInterval(aiTimer);
+      window.clearInterval(noticeTimer);
+    };
+  }, [loadAiCount, loadNoticeCount]);
 
-  const total = insights.length + aiCount;
+  const total = insights.length + aiCount + noticeCount;
 
   return (
     <>
       <button
         className={`smart-alert-btn${open ? ' open' : ''}`}
-        title="消息中心（今日预警 + AI 建议）"
+        title="消息中心（我的通知 + 今日预警 + AI 建议）"
         onClick={() => setOpen(true)}
       >
         <span className="smart-alert-btn-icon">
@@ -86,7 +104,7 @@ const MessageCenter: React.FC = () => {
               label: (
                 <span>
                   <BellOutlined style={{ marginRight: 4 }} />
-                  今日预警{insights.length > 0 ? `（${insights.length}）` : ''}
+                  通知/预警{(noticeCount + insights.length) > 0 ? `（${noticeCount + insights.length}）` : ''}
                 </span>
               ),
               children: <SmartAlertBell variant="panel" />,
