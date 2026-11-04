@@ -58,6 +58,27 @@ public class IntelligenceTaskCenterController {
         return Result.success(taskTrackerOrchestrator.listPendingTasksByAgent(tenantId, target));
     }
 
+    /**
+     * 确认/关闭一条 AI 执行待验证任务（D-914）。
+     *
+     * <p>此前 {@code listAiTasks} 只读不写，任务一旦生成只能等 24 小时过期或被后续操作取代，
+     * 用户即使看到也无法响应 —— 属于「有列表无动作」。
+     *
+     * @param taskId 任务ID
+     * @param note   结论说明（可选，默认「用户已确认」）
+     */
+    @PostMapping("/ai-tasks/{taskId}/complete")
+    public Result<?> completeAiTask(@PathVariable Long taskId,
+                                   @RequestParam(required = false) String note) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("缺少租户上下文");
+        }
+        String summary = (note == null || note.isBlank()) ? "用户已确认" : note;
+        boolean ok = taskTrackerOrchestrator.completeTask(tenantId, taskId, summary);
+        return ok ? Result.success(true) : Result.fail("任务不存在、不属于当前租户或已处理");
+    }
+
     @GetMapping("/tasks")
     public Result<Map<String, Object>> listTasks(
             @RequestParam(required = false) String status,

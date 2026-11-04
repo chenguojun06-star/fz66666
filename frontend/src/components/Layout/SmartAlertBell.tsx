@@ -19,6 +19,7 @@ import { choose, getEventNav } from './SmartAlertBell/helpers';
 import UrgeReplyInline from './SmartAlertBell/components/UrgeReplyInline';
 import OneClickActionInline from './SmartAlertBell/components/OneClickActionInline';
 import MemoryNudgeSection from './SmartAlertBell/components/MemoryNudgeSection';
+import AiTaskVerifySection from './SmartAlertBell/components/AiTaskVerifySection';
 
 const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 'button' }) => {
   const navigate = useNavigate();
@@ -106,6 +107,9 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
 
             {/* ── 记忆提醒（D-912：有端点无入口收口） ── */}
             <MemoryNudgeSection />
+
+            {/* ── AI 执行待验证（D-914：有列表无动作收口） ── */}
+            <AiTaskVerifySection />
 
             {/* ── AI 巡检简报（D-654：整卡可关，"今日不再提醒"持久到当天；原缺陷=×只在行级，行清空后标题卡永远关不掉） ── */}
             {patrolSummary && (patrolSummary.autoExecutedToday > 0 || (patrolRows?.length ?? 0) > 0) && !dismissedIds.has('patrolBriefing') && (

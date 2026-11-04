@@ -2,7 +2,8 @@
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
 > ⚠️ **本文件只保留近 30 天**：2026-08-31 及以前的记录已归档到 `archive/progress-202608.md`（首次归档 2026-10-01）
-> 最后更新：2026-10-25 15:20（✅ D-884 生产库实锤修正 D-883：MemoryNudge 生产正常（18 条提醒/5 PENDING/reflection 115 次调用），本地 0 条系无人使用；acceptNudge/dismissNudge 确认为真缺口待前端入口；本地库无数据≠功能坏了铁律固化；baseline 140 不变）
+> 最后更新：2026-11-01 23:10（✅ D-914 sessionId 绑定点补齐 + Flyway ordering 门禁：`recordTask` 自动绑定会话索引，`check-flyway-versions.py --diff` 拦住"新增脚本版本回退"，CI 接入；mvn compile + 8 用例全绿。缺口：ai-tasks 前端无入口）
+> 上一版：2026-10-25 15:20（✅ D-884 生产库实锤修正 D-883：MemoryNudge 生产正常（18 条提醒/5 PENDING/reflection 115 次调用），本地 0 条系无人使用；acceptNudge/dismissNudge 确认为真缺口待前端入口；本地库无数据≠功能坏了铁律固化；baseline 140 不变）
 > 上一版：2026-10-25 11:05（✅ D-879 订单风险闭环：风险表自维护（去重/复现重开/自动解除）+ 补 list/stats/4 个人工动作端点；修掉「每次评估插一条」表膨胀与「处理率恒 0」两个结构性问题；14 用例 + intelligence 包 286 全绿，baseline 149→145）
 > 上一版：2026-10-25 10:45（✅ D-878 工资支付审计接线：D-877 首批 6 处真缺口（取消/退回/驳回/线下确认/建待付/存账户）全部接线 + 修正 3 个 targetId 语义错误；8 用例全绿、finance 回归全绿、baseline 155→149）
 > 上一版：2026-10-25 09:30（✅ D-876 TDZ 高危前向引用守护：白屏事故检查脚本提交入库 + 接入 CI 质量门禁；本地 db-query-mcp 修复（mcp_readonly 密码重置 + 配置去环境变量占位 + 清临时脚本）；已推送 2ef639e42）
@@ -16,6 +17,15 @@
 > 上一版：2026-10-24（补记 10-21~10-24 全部 57 个提交：D-831~D-855——库存对账四层闭环与口径定稿（D-841/845~850）+「做了没接」164 处核实与门禁（D-848/851/852）+ AI 建议闭环（D-853/854）+ 小云跨域修复（D-855）+ 扫码通（D-836）+ 口径审计（D-833/837）+ 入库库位硬闸（D-843）+ 报废出清（D-844）+ 库存双轨（D-838）；代码已全部推送 3a8416e3a，本条为事后补记）
 
 ## 已完成
+
+### 2026-11-01 D-914 sessionId 绑定点 + Flyway ordering 门禁
+
+- `TaskTrackerOrchestrator.recordTask` 写库后自动 `bindTaskToSession`（sessionId 取自 `AgentModeContext`），会话维度待办列表不再恒空
+- 新增 `TaskTrackerSessionBindingTest`（有/无 sessionId 两条路径，锁住 key 格式 `agent:session-tasks:{tenantId}:{sessionId}` 与 7 天 TTL）
+- `scripts/check-flyway-versions.py` 新增 ordering 校验：`--diff` 下新增脚本必须 > 存量最大版本；存量 64 处历史乱序仅提示；CI 命令改 `--diff`
+- 验证：mvn compile 通过、8 用例全绿、脚本全量/diff 基线 exit=0、ordering 正负向用例符合预期
+- 前端入口：`POST /ai-tasks/{id}/complete`（tenant_id + status=PENDING 双条件）+ `aiTaskApi.ts` + 消息中心「AI 执行待验证」区块（AiTaskVerifySection），「已确认/无需处理」两动作
+- 验证：tsc 0 错误、eslint 0 error；真机可见性待一次真实 AI 写操作后确认
 
 ### 2026-10-28 D-894 确认完成弹窗带出上次去向+布局重排、库位明细弹窗修正
 

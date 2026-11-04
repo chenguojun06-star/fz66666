@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
@@ -125,5 +127,19 @@ class TaskTrackerLifecycleTest {
         assertEquals(0, orchestrator.listPendingTasksByAgent(null, "张三").size());
         assertEquals(0, orchestrator.listPendingTasksByAgent(2L, null).size());
         verify(mapper, never()).selectList(any());
+    }
+
+    @Test
+    @DisplayName("完成任务：必须带租户，且只从 PENDING 变更（重复点击不覆盖首次结论）")
+    void completeTaskRequiresTenantAndPending() {
+        when(mapper.update(isNull(), any(UpdateWrapper.class))).thenReturn(1);
+        assertTrue(orchestrator.completeTask(2L, 11L, "用户已确认"));
+
+        // update 影响 0 行 = 不存在 / 非本租户 / 已处理
+        when(mapper.update(isNull(), any(UpdateWrapper.class))).thenReturn(0);
+        assertFalse(orchestrator.completeTask(2L, 12L, "用户已确认"));
+
+        // 无租户上下文直接拒绝，避免跨租户越权（P0 铁律 4）
+        assertFalse(orchestrator.completeTask(null, 12L, "用户已确认"));
     }
 }

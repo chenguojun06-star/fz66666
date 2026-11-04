@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.fashion.supplychain.intelligence.agent.AgentModeContext;
 import com.fashion.supplychain.intelligence.entity.AiTaskTracker;
 import com.fashion.supplychain.intelligence.mapper.AiTaskTrackerMapper;
 import com.fashion.supplychain.common.UserContext;
@@ -90,6 +91,13 @@ public class TaskTrackerOrchestrator {
         mapper.insert(t);
         log.info("[TaskTracker] {} → {}: {}", toolName, targetId, summary);
 
+        // D-914：把任务挂到当前 Agent 会话，任务中心才能按 sessionId 查到它。
+        // 非 Agent 链路（无 ThreadLocal 上下文）保持原行为，不产生额外 Redis 写。
+        String sessionId = AgentModeContext.getSessionId();
+        if (sessionId != null && !sessionId.isBlank()) {
+            bindTaskToSession(tenantId, t.getId(), sessionId);
+        }
+
         // P1-3：双写 Redis（失败不阻塞主流程）
         cacheTaskToRedis(t);
         return t.getId();
@@ -104,7 +112,7 @@ public class TaskTrackerOrchestrator {
                     .eq("target_id", targetId)
                     .eq("status", "PENDING"));
             for (AiTaskTracker old : stale) {
-                completeTask(old.getId(), "已被后续操作取代（" + toolName + "）");
+                completeTask(tenantId, old.getId(), "已被后续操作取代（" + toolName + "）");
             }
         } catch (Exception e) {
             log.debug("[TaskTracker] 收口旧任务失败(不阻断): {}", e.getMessage());
@@ -113,17 +121,30 @@ public class TaskTrackerOrchestrator {
 
     /**
      * 标记任务完成。
+     *
+     * <p>D-914：本方法新增了 HTTP 入口，不再是纯内部调用 —— 必须按 tenant_id 收口
+     * （P0 铁律 4），否则任一租户只要猜到一个自增 ID 就能把别人的任务标记完成。
+     * 同时限定 {@code status = PENDING}：重复点击不会覆盖首次的结论。
+     *
+     * @return true = 确实由 PENDING 变为 COMPLETED；false = 不存在 / 非本租户 / 已处理
      */
-    public void completeTask(Long taskId, String resultSummary) {
-        mapper.update(null, new UpdateWrapper<AiTaskTracker>()
+    public boolean completeTask(Long tenantId, Long taskId, String resultSummary) {
+        if (tenantId == null || taskId == null) return false;
+        int rows = mapper.update(null, new UpdateWrapper<AiTaskTracker>()
                 .set("status", "COMPLETED")
                 .set("completed_at", LocalDateTime.now())
                 .set("result_summary", resultSummary)
-                .eq("id", taskId));
+                .eq("id", taskId)
+                .eq("tenant_id", tenantId)
+                .eq("status", "PENDING"));
+        if (rows == 0) {
+            return false;
+        }
         log.info("[TaskTracker] 任务 #{} 完成: {}", taskId, resultSummary);
 
         // P1-3：同步更新 Redis
-        updateTaskStatusInRedis(taskId, "COMPLETED", resultSummary);
+        updateTaskStatusInRedis(tenantId, taskId, "COMPLETED", resultSummary);
+        return true;
     }
 
     /**
@@ -188,7 +209,8 @@ public class TaskTrackerOrchestrator {
      * 每个 Agent 完成自己的子任务后，通过本接口查看会话内是否还有其他待办。
      *
      * <p>注意：DB 表无 session_id 字段，会话内任务索引仅存 Redis。
-     * Redis 不可用时返回空列表（业务侧应通过 bindTaskToSession 提前绑定）。
+     * Redis 不可用时返回空列表。绑定由 {@link #recordTask} 在写入时自动完成
+     * （读 {@code AgentModeContext.getSessionId()}），无需调用方手工绑定。
      *
      * @param tenantId 租户ID
      * @param sessionId 会话ID（agent 会话 ID）
@@ -246,6 +268,9 @@ public class TaskTrackerOrchestrator {
 
     /**
      * 绑定任务到会话（多 Agent 协作时，记录任务属于哪个会话）。
+     *
+     * <p>{@link #recordTask} 已自动调用本方法（sessionId 取自 {@code AgentModeContext}）；
+     * 只有「任务创建后才知道会话」的手工转交场景需要显式调用。
      *
      * @param tenantId 租户ID
      * @param taskId 任务ID
@@ -332,12 +357,10 @@ public class TaskTrackerOrchestrator {
         }
     }
 
-    /** 更新 Redis 中任务状态 */
-    private void updateTaskStatusInRedis(Long taskId, String status, String resultSummary) {
-        if (redisTemplate == null || taskId == null) return;
+    /** 更新 Redis 中任务状态（租户显式传入，不依赖 UserContext，便于非请求线程调用） */
+    private void updateTaskStatusInRedis(Long tenantId, Long taskId, String status, String resultSummary) {
+        if (redisTemplate == null || tenantId == null || taskId == null) return;
         try {
-            Long tenantId = UserContext.tenantId();
-            if (tenantId == null) return;
             String key = taskRedisKey(tenantId, taskId);
             String json = redisTemplate.opsForValue().get(key);
             if (json == null) {

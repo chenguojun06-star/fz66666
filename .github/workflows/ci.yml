@@ -37,9 +37,12 @@ jobs:
     - name: 校验新增迁移的列依赖（拦截引用不存在列的事故）
       run: python3 scripts/check-flyway-column-deps.py
 
-    # Flyway 版本号唯一性（防止重复迁移导致启动失败）
-    - name: Flyway 版本号唯一性检查
-      run: python3 scripts/check-flyway-versions.py
+    # Flyway 版本号治理：
+    # ① 唯一性——重复版本号会让 Flyway 启动直接报错；
+    # ② ordering——新增脚本必须大于存量最大版本，否则 out-of-order=true 下
+    #    老库照跑、新环境按版本号排队，两边执行顺序分叉（依赖前序 DDL 的脚本会炸在新环境）。
+    - name: Flyway 版本号唯一性 + ordering 检查
+      run: python3 scripts/check-flyway-versions.py --diff
 
     # 本项目有两条"结构真相源"：Flyway 迁移 + DbColumnRepairRunner 的启动自愈清单
     # （DbTableDefinitions 74 张表 / DbColumnDefinitions 1138 条补列）。

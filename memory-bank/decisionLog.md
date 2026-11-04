@@ -5180,3 +5180,46 @@ alarms，用户无法区分真逾期与待关单逾期。
 TaskTracker 创建任务时调用 `bindTaskToSession`；基础设施已贯通，绑定点待后续完善。
 
 **验证**：mvn -DskipTests compile 通过。
+
+## D-914 sessionId 绑定点补齐 + Flyway ordering 门禁（2026-11-01）
+
+**背景**：D-913 只完成了基础设施（AgentModeContext ThreadLocal + 控制器 sessionId 参数），
+`bindTaskToSession` 仍**全仓零调用方**，`recordTask` 也不接收 sessionId ——
+`/intelligence/task-center/ai-tasks?sessionId=x` 恒返回空列表。
+
+**改进**：
+1. `TaskTrackerOrchestrator.recordTask` 在 `mapper.insert` 之后读
+   `AgentModeContext.getSessionId()`，非空则调用 `bindTaskToSession(tenantId, t.getId(), sessionId)`
+   （Redis key `agent:session-tasks:{tenantId}:{sessionId}`，TTL 7 天）。
+   非 Agent 链路 ThreadLocal 为 null → 保持原行为，不产生额外 Redis 写。
+2. `scripts/check-flyway-versions.py` 增加 ordering 校验（`--diff` 模式）：
+   本次新增的迁移脚本版本号必须严格大于仓库存量最大版本（当前 V202710230005）。
+   `--since` 可指定对比基线，默认 `HEAD~1`（CI fetch-depth=2 已满足）。
+3. CI `quality-gate` 的门禁命令改为 `check-flyway-versions.py --diff`。
+
+**为什么需要 ordering**：`application.yml` 配了 `out-of-order: true`，小编号脚本在老库
+"还能跑"，但新环境按版本号排序执行、老库按提交顺序追加执行 —— 两边顺序分叉。
+后加脚本一旦依赖前序 DDL，新环境会炸在老环境不会炸的位置。
+存量 64 处历史乱序（早期 V2..V50 与时间戳版本混排）只统计提示，不阻断。
+
+**踩坑**：新增单测最初用 `@InjectMocks`，因 `@RequiredArgsConstructor` 只有一个 final 字段
+（mapper），Mockito 走构造器注入后**不再做字段注入**，`redisTemplate` 为 null 导致绑定被短路、
+用例假绿变假红。改为 `new TaskTrackerOrchestrator(mapper)` + `ReflectionTestUtils.setField`。
+
+**验证**：`mvn -DskipTests compile` 通过；`TaskTrackerSessionBindingTest`(2) +
+`TaskTrackerLifecycleTest`(6) 共 8 用例全绿；脚本全量/diff 两模式基线 exit=0；
+ordering 负向用例（V2026010100 < 存量最大）返回 1、正向返回 0。
+
+**前端入口补齐（同日追加）**：此前 `ai-tasks` 在 frontend/src 零命中 = 「有列表无动作」。
+本次补：
+1. 后端 `POST /intelligence/task-center/ai-tasks/{taskId}/complete`（note 可选，默认「用户已确认」）；
+   `completeTask` 改为 `completeTask(tenantId, taskId, summary)`，SQL 加 `tenant_id` + `status='PENDING'`
+   双条件（跨租户越权 + 重复点击覆盖双重防护），`updateTaskStatusInRedis` 同步改为显式租户。
+2. 前端 `services/intelligence/aiTaskApi.ts`（pending/complete，List 兜底 `|| []` 按 D-290）。
+3. `SmartAlertBell/components/AiTaskVerifySection.tsx`：消息中心新增「AI 执行待验证」区块，
+   每行「已确认 / 无需处理」两个动作，空列表自动隐藏（与 MemoryNudgeSection 同一套 sap-* 样式）。
+
+**验证（追加）**：`mvn test` 8 用例全绿（含 completeTask 租户/幂等用例）；`tsc --noEmit` 0 错误；
+`eslint` 3 个文件 0 error。
+
+**仍未验证**：真机上是否能在消息中心看到该区块（需一次真实 AI 写操作产生 PENDING 任务）。
