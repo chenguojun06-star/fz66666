@@ -604,6 +604,10 @@ xiaoyun:
     max-turns: ${XIAOYUN_CONVERSATION_MAX_TURNS:20}
     compress-threshold: ${XIAOYUN_CONVERSATION_COMPRESS_THRESHOLD:10}
     ttl-hours: ${XIAOYUN_CONVERSATION_TTL_HOURS:24}
+    # D-917：注入 prompt 的历史消息绝对 token 上限（独立于全局 token-budget）。
+    # 全局预算 D-761 从 30000 提到 100000 后，按百分比触发的三级压缩事实上从未生效，
+    # 历史全量注入把单轮输入推到 13948 token。设为 0 可关闭截断。
+    max-history-tokens: ${XIAOYUN_CONVERSATION_MAX_HISTORY_TOKENS:4000}
   # LLM 语义缓存（减少重复 LLM 推理调用）
   semantic-cache:
     enabled: ${XIAOYUN_SEMANTIC_CACHE_ENABLED:true}

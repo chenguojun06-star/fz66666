@@ -52,6 +52,21 @@ public class AiAgentMemoryHelper {
     @org.springframework.beans.factory.annotation.Value("${xiaoyun.conversation-memory.max-turns:20}")
     private int maxMemoryTurns;
 
+    /**
+     * D-917：注入 prompt 的历史消息绝对 token 上限。
+     *
+     * <p>D-761 把单次对话 tokenBudget 从 30000 提到 100000（修「日配额用完」误报），
+     * 但 {@link #compactConversationHistory} 的压缩触发条件是
+     * {@code usagePct = estimatedTokens * 100 / tokenBudget >= 60}。
+     * 分母放大 3 倍后，20 轮历史上限约 1~2 万 token，usagePct 最高才 20%，
+     * **三级压缩事实上从未触发** → 历史全量注入，与 12 个工具 schema 一起
+     * 把单轮输入推到生产实测的 13948 token（2026-10-25 01:06 日志）。
+     *
+     * <p>这里用独立的绝对上限，不受全局预算调整影响；运维可直接改配置。
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.conversation-memory.max-history-tokens:4000}")
+    private int maxHistoryTokens;
+
     private static final int MAX_USERS_CACHED = 500;
     private static final int COMPACT_THRESHOLD_TURNS = 20;
     private static final String REDIS_MEMORY_PREFIX = "fashion:chat:memory:";
@@ -235,6 +250,26 @@ public class AiAgentMemoryHelper {
 
         // 快速估算: 中文字符约 0.5 tokens/char
         int estimatedTokens = estimateTokens(history);
+
+        // D-917：绝对上限快速截断（**不调 LLM**）。
+        // 原先的三级压缩走 inferenceOrchestrator.chat("history-compact") 是一次同步 LLM 往返，
+        // 触发了反而更慢；且 D-761 放大全局预算后它根本没被触发过。
+        // 直接按 token 预算从最新往前保留，零额外调用、输入量可预期。
+        if (maxHistoryTokens > 0 && estimatedTokens > maxHistoryTokens) {
+            java.util.List<AiMessage> kept = new java.util.ArrayList<>();
+            int used = 0;
+            for (int i = history.size() - 1; i >= 0; i--) {
+                AiMessage m = history.get(i);
+                int t = estimateTokens(java.util.List.of(m));
+                if (used + t > maxHistoryTokens && !kept.isEmpty()) break;
+                kept.add(0, m); // 保持原始时间顺序
+                used += t;
+            }
+            log.info("[AiAgent-Memory][Perf] 历史截断: {}条/约{}token → {}条/约{}token (上限{})",
+                    history.size(), estimatedTokens, kept.size(), used, maxHistoryTokens);
+            return kept;
+        }
+
         boolean isTokenAware = tokenBudget > 0 && estimatedTokens > 0;
         int usagePct = isTokenAware ? (estimatedTokens * 100 / tokenBudget) : 0;
 
