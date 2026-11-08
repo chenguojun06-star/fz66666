@@ -3,33 +3,31 @@ import { Badge, Drawer, Tabs } from 'antd';
 import { BellOutlined, BulbOutlined } from '@ant-design/icons';
 import SmartAlertBell from './SmartAlertBell';
 import AiSuggestionBell from './AiSuggestionBell';
+import { useAlertData } from './SmartAlertBell/hooks/useAlertData';
 import { useProactiveInsights } from './SmartAlertBell/hooks/useProactiveInsights';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import { sysNoticeApi } from '@/services/production/productionApi';
 
 /**
  * D-869：顶栏「消息中心」——把「今日预警」与「AI 建议」两个入口合成一个。
  *
- * 背景：顶栏原来并排两个按钮（今日预警 / AI 建议），再加头像菜单、公告横幅、
- * 小云浮标、智能引导条，入口过于分散；且 AI 建议此前的按钮只在下单列表页出现过，
- * 生产端用户根本不打开那个页面。
- *
  * 设计：
- * · 一个按钮（铃铛 + 文字 + 合并角标：主动洞察数 + AI 建议数）
- * · 点击开右侧抽屉，Tabs 两个页签：今日预警 / AI 建议
- * · 两个页签的内容分别由 `SmartAlertBell variant="panel"` 与 `AiSuggestionBell variant="panel"`
- *   渲染——**不重写任何业务逻辑**，只是把各自的「按钮 + 抽屉外壳」换成父容器提供，
- *   避免合并过程引入回归（这是本次改造唯一的风险点，用 panel 变体隔离掉）
+ * · 一个按钮（铃铛 + 文字 + 合并角标）
+ * · 点击开右侧抽屉，Tabs 两个页签：通知/预警 / AI 建议
+ * · 页签内容由 `SmartAlertBell variant="panel"` 渲染
+ *
+ * D-915 修复：页签上的「（42）」原先用服务端原始未读数
+ * （unread-count 接口 + 一份独立拉的洞察列表），与面板里的
+ * 「点 × 今日不再提醒」各算各的 —— 关闭只写了本地 localStorage，
+ * 数字永远不动，用户看到的就是「关了还显示 42 条」。
+ * 现改为：消息中心持有唯一数据源（useAlertData + useProactiveInsights），
+ * 页签数与顶栏角标都从这份数据的**可见数**导出，并原样注入面板渲染。
  */
 const MessageCenter: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('alerts');
-  const { insights } = useProactiveInsights();
+  const alertData = useAlertData();
+  const insightsState = useProactiveInsights();
   const [aiCount, setAiCount] = useState(0);
-  // D-915：系统通知未读数。此前角标只算「主动洞察 + AI 建议」，
-  // t_sys_notice 里有未读通知时按钮**没有任何提示**（红点/数字都不出现），
-  // 用户看到的就是「通知中心没显示通知」。
-  const [noticeCount, setNoticeCount] = useState(0);
 
   const loadAiCount = useCallback(async () => {
     try {
@@ -40,26 +38,15 @@ const MessageCenter: React.FC = () => {
     }
   }, []);
 
-  const loadNoticeCount = useCallback(async () => {
-    try {
-      setNoticeCount(await sysNoticeApi.getUnreadCount());
-    } catch {
-      setNoticeCount(0);
-    }
-  }, []);
-
   useEffect(() => {
     void loadAiCount();
-    void loadNoticeCount();
     const aiTimer = window.setInterval(() => { void loadAiCount(); }, 5 * 60 * 1000);
-    const noticeTimer = window.setInterval(() => { void loadNoticeCount(); }, 60 * 1000);
-    return () => {
-      window.clearInterval(aiTimer);
-      window.clearInterval(noticeTimer);
-    };
-  }, [loadAiCount, loadNoticeCount]);
+    return () => window.clearInterval(aiTimer);
+  }, [loadAiCount]);
 
-  const total = insights.length + aiCount + noticeCount;
+  // 通知/预警 = 面板可见项（已扣 dismissed）+ 小云主动洞察；点 × 即时扣减
+  const alertsCount = alertData.panelAlertCount + insightsState.insights.length;
+  const total = alertsCount + aiCount;
 
   return (
     <>
@@ -104,10 +91,16 @@ const MessageCenter: React.FC = () => {
               label: (
                 <span>
                   <BellOutlined style={{ marginRight: 4 }} />
-                  通知/预警{(noticeCount + insights.length) > 0 ? `（${noticeCount + insights.length}）` : ''}
+                  通知/预警{alertsCount > 0 ? `（${alertsCount}）` : ''}
                 </span>
               ),
-              children: <SmartAlertBell variant="panel" />,
+              children: (
+                <SmartAlertBell
+                  variant="panel"
+                  data={alertData}
+                  insightsState={insightsState}
+                />
+              ),
             },
             {
               key: 'ai',

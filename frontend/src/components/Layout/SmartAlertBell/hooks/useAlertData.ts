@@ -11,6 +11,7 @@ import {
   loadDismissedNotices,
   saveDismissed,
   saveDismissedNotices,
+  countVisibleSuggestions,
   NOTICE_POLL_INTERVAL,
   MAX_BACKOFF,
 } from '../helpers';
@@ -28,6 +29,15 @@ export interface UseAlertDataReturn {
   dismissedIds: Set<string>;
   alertCount: number;
   unreadNoticeCount: number;
+  /** 提醒建议可见数（dismiss 后扣减，与面板渲染一致） */
+  suggestionsVisibleCount: number;
+  /** 首要关注订单是否可见（未被 dismiss） */
+  topPriorityVisible: boolean;
+  /**
+   * 面板可计数项（不含小云主动洞察，洞察由调用方加上）：
+   * alertCount + 可见未读通知 + 可见提醒建议 + 可见首要关注。
+   */
+  panelAlertCount: number;
   patrolSummary: ReturnType<typeof useAiPatrol>['patrolSummary'];
   /** AI巡检简报行（已过滤"今日不再提醒"，key 稳定可 dismiss） */
   patrolRows: Array<NonNullable<ReturnType<typeof useAiPatrol>['patrolSummary']>['recentActions'][number] & { dismissKey: string }>;
@@ -87,6 +97,14 @@ export function useAlertData(): UseAlertDataReturn {
   const alertCount = visibleEvents.length
     + (dismissedIds.has('patrolBriefing') ? 0 : (patrolSummary?.pendingCount ?? 0));
   const unreadNoticeCount = visibleNotices.filter(n => !n.isRead).length;
+  // D-915 修复：消息中心页签数必须和面板可见数一致。
+  // 原先 MessageCenter 用服务端原始未读数（unread-count 接口）+ 自己那份洞察数，
+  // 与 useAlertData 的 dismissed 过滤各算各的 —— 用户点了「× 今日不再提醒」
+  // 只写了本地 localStorage，页签数完全不动。现统一从这一份可见状态导出。
+  const suggestionsVisibleCount = countVisibleSuggestions(brief, dismissedIds);
+  const topPriorityVisible = !!brief?.topPriorityOrder && !dismissedIds.has('topPriority');
+  const panelAlertCount = alertCount + unreadNoticeCount + suggestionsVisibleCount
+    + (topPriorityVisible ? 1 : 0);
 
   const fetchMyNotices = useCallback(async () => {
     try {
@@ -282,6 +300,9 @@ export function useAlertData(): UseAlertDataReturn {
     dismissedIds,
     alertCount,
     unreadNoticeCount,
+    suggestionsVisibleCount,
+    topPriorityVisible,
+    panelAlertCount,
     patrolSummary,
     patrolRows,
     riskLevel,

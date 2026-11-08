@@ -13,46 +13,57 @@ import { RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hoo
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard from '../common/XiaoyunInsightCard';
 import BackgroundTaskPanel from '../common/BackgroundTaskPanel';
-import { useAlertData } from './SmartAlertBell/hooks/useAlertData';
-import { useProactiveInsights } from './SmartAlertBell/hooks/useProactiveInsights';
-import { choose, getEventNav } from './SmartAlertBell/helpers';
+import { useAlertData, type UseAlertDataReturn } from './SmartAlertBell/hooks/useAlertData';
+import { useProactiveInsights, type UseProactiveInsightsReturn } from './SmartAlertBell/hooks/useProactiveInsights';
+import { choose, decisionCardKey, getEventNav, suggestionKey } from './SmartAlertBell/helpers';
 import UrgeReplyInline from './SmartAlertBell/components/UrgeReplyInline';
 import OneClickActionInline from './SmartAlertBell/components/OneClickActionInline';
 import MemoryNudgeSection from './SmartAlertBell/components/MemoryNudgeSection';
 import AiTaskVerifySection from './SmartAlertBell/components/AiTaskVerifySection';
 
-const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 'button' }) => {
+interface SmartAlertBellProps {
+  variant?: 'button' | 'panel';
+  /**
+   * D-915：父组件（MessageCenter）注入同一份数据源。
+   * 页签上的「（42）」必须由这份数据的可见数导出 —— 若两边各拉各的，
+   * 点了「×」只会清一边，数字永远不动（本次修复的问题）。
+   */
+  data?: UseAlertDataReturn;
+  insightsState?: UseProactiveInsightsReturn;
+}
+
+/**
+ * 面板内容（纯渲染，不自己拉数据）。数据源由父组件注入或由同文件包装组件持有，
+ * 保证「用户看到的」与「计数用的」是同一份状态。
+ */
+const SmartAlertBellBody: React.FC<{
+  alertData: UseAlertDataReturn;
+  insightsState: UseProactiveInsightsReturn;
+}> = ({ alertData, insightsState }) => {
   const navigate = useNavigate();
   const {
-    open,
-    setOpen,
     brief,
     loading,
     visibleEvents,
     visibleNotices,
     dismissedIds,
-    alertCount,
     unreadNoticeCount,
+    suggestionsVisibleCount,
     patrolSummary,
     patrolRows,
-    dotColor,
     patrolSeverityColor,
     goTo,
-    handleToggle,
     dismissEvent,
     dismissNotice,
     markAllNoticesRead,
     handleMarkRead,
     dismissNoticeLocally,
-  } = useAlertData();
+  } = alertData;
 
-  // P1-3: 小云主动洞察（Redis 未读列表，独立于 useAlertData）
-  const { insights: proactiveInsights, markRead: markInsightRead } = useProactiveInsights();
-  const totalWithInsights = alertCount + proactiveInsights.length;
+  // P1-3: 小云主动洞察（Redis 未读列表）
+  const { insights: proactiveInsights, markRead: markInsightRead } = insightsState;
 
-  // D-869：抽屉内容抽成变量——panel 模式（消息中心内嵌）只渲染内容，
-  // 按钮与抽屉外壳由父容器提供；默认 button 模式行为完全不变
-  const drawerBody = (
+  return (
     <>
 
         {loading && (
@@ -235,8 +246,9 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
               </div>
             )}
 
-            {/* ── 提醒建议 ── */}
-            {brief?.suggestions && brief.suggestions.length > 0 && (
+            {/* ── 提醒建议 ── D-915：全部被 dismiss 时整段不渲染，
+                避免只剩一行标题 + 「暂无后台任务」的空壳让人误以为关不掉 */}
+            {brief && suggestionsVisibleCount > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: 'var(--color-sky-500)' }} /> 提醒建议
@@ -247,7 +259,7 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
                     {brief.decisionCards.slice(0, 3).map((card, i) => {
                       // D-626：关闭键按卡片内容（标题）而非序号——面板每10分钟重拉后卡片顺序可能变化，
                       // 序号键会导致"点了 × 又复活"；标题（如"逾期 4单 / 90件"）当日稳定
-                      const cardKey = `decisionCard_${card.title || String(card.summary || '').slice(0, 48)}`;
+                      const cardKey = decisionCardKey(card);
                       if (dismissedIds.has(cardKey)) return null;
                       return (
                         <div key={`${card.title}-${i}`} className="sap-dismissible u-pos-relative" >
@@ -293,14 +305,14 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
                   </div>
                 ) : (
                   brief.suggestions.slice(0, 3).map((s, i) => {
-                    const suggestionKey = `suggestion_${String(s).slice(0, 64)}`;
-                    if (dismissedIds.has(suggestionKey)) return null;
+                    const key = suggestionKey(s);
+                    if (dismissedIds.has(key)) return null;
                     return (
                       <div key={i} className="sap-suggestion u-d-flex u-ai-center u-jc-between" >
                         <span>· {s}</span>
                         <button
                           className="sap-event-dismiss-btn"
-                          onClick={(e) => dismissEvent(suggestionKey, e)}
+                          onClick={(e) => dismissEvent(key, e)}
                           title="今日不再提醒（明天会重新检测）"
                         >
                           <CloseOutlined style={{ fontSize: 9 }} />
@@ -417,9 +429,18 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
         )}
     </>
   );
+};
 
-  // D-869：panel 模式——消息中心内嵌时只渲染内容，按钮与抽屉由 MessageCenter 提供
-  if (variant === 'panel') return drawerBody;
+/** 独立持数据的包装（button 模式 / 未注入时的 panel 兜底） */
+const SmartAlertBellWithOwnData: React.FC<{ variant: 'button' | 'panel' }> = ({ variant }) => {
+  const alertData = useAlertData();
+  const insightsState = useProactiveInsights();
+  const { open, setOpen, alertCount, dotColor, handleToggle, brief } = alertData;
+  const totalWithInsights = alertCount + insightsState.insights.length;
+
+  if (variant === 'panel') {
+    return <SmartAlertBellBody alertData={alertData} insightsState={insightsState} />;
+  }
 
   return (
     <div className="smart-alert-wrap">
@@ -462,10 +483,23 @@ const SmartAlertBell: React.FC<{ variant?: 'button' | 'panel' }> = ({ variant = 
           </div>
         }
       >
-        {drawerBody}
+        <SmartAlertBellBody alertData={alertData} insightsState={insightsState} />
       </Drawer>
     </div>
   );
+};
+
+const SmartAlertBell: React.FC<SmartAlertBellProps> = ({
+  variant = 'button',
+  data,
+  insightsState,
+}) => {
+  // D-869：panel 模式——消息中心内嵌时只渲染内容，按钮与抽屉由 MessageCenter 提供；
+  // D-915：注入父组件的数据，保证页签计数与面板可见数是同一份状态
+  if (variant === 'panel' && data && insightsState) {
+    return <SmartAlertBellBody alertData={data} insightsState={insightsState} />;
+  }
+  return <SmartAlertBellWithOwnData variant={variant} />;
 };
 
 export default SmartAlertBell;
